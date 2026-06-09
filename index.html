@@ -4,20 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Cycle Count</title>
-<!--
-  ┌─────────────────────────────────────────────────────┐
-  │  วิธีตั้งค่า (อ่านก่อนใช้)                          │
-  │  1. Supabase Dashboard → Settings → API              │
-  │  2. Copy "Project URL" → ใส่ใน SUPA_URL             │
-  │  3. Copy "anon public" key → ใส่ใน SUPA_KEY         │
-  │  4. รัน schema.sql ใน SQL Editor ก่อน              │
-  │  5. Authentication → Email → ปิด Confirm email      │
-  │  6. Upload index.html นี้ขึ้น GitHub Pages          │
-  └─────────────────────────────────────────────────────┘
--->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+<!-- SheetJS สำหรับอ่านไฟล์ XLSX -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
 /* ── Reset & Base ── */
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -140,7 +131,6 @@ select{
   background-repeat:no-repeat;background-position:right 13px center;
   padding-right:38px;
 }
-textarea{resize:vertical;min-height:130px;font-family:ui-monospace,monospace;font-size:12px;line-height:1.65}
 
 /* ── Alerts ── */
 .alert{padding:10px 14px;border-radius:9px;font-size:13px;margin-bottom:10px;line-height:1.55}
@@ -213,6 +203,11 @@ textarea{resize:vertical;min-height:130px;font-family:ui-monospace,monospace;fon
 
 /* ── Code font ── */
 .mono{font-family:ui-monospace,'Cascadia Code',monospace}
+
+/* ── Bulk assign box ── */
+.bulk-box{background:#f0f7ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:14px;margin-bottom:14px}
+.bulk-box-title{font-size:12px;font-weight:800;color:#1d4ed8;margin-bottom:10px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 </style>
 </head>
 <body>
@@ -221,14 +216,14 @@ textarea{resize:vertical;min-height:130px;font-family:ui-monospace,monospace;fon
 // ══════════════════════════════════════════════════════════
 //  ⚙️  CONFIG — แก้ 2 บรรทัดนี้ก่อนใช้งาน
 // ══════════════════════════════════════════════════════════
-const SUPA_URL = 'https://uiuaboxsfepyftqjlwil.supabase.co';      // https://xxxx.supabase.co
-const SUPA_KEY = 'sb_publishable_EuJ-IUiXWBLSNvQsG0CJ5w_C2LHJXAL'; // eyJhb...
+const SUPA_URL = 'YOUR_SUPABASE_URL';   // https://xxxx.supabase.co
+const SUPA_KEY = 'YOUR_SUPABASE_KEY';   // sb_publishable_... หรือ eyJhb...
 
 // ══════════════════════════════════════════════════════════
 //  GLOBALS
 // ══════════════════════════════════════════════════════════
 let sb, me, prof;
-let S = {};  // page state
+let S = {};
 
 // ══════════════════════════════════════════════════════════
 //  BOOT
@@ -238,18 +233,14 @@ async function boot() {
     Q('app').innerHTML = `<div class="lbox"><div class="lcard">
       <div style="font-size:36px;text-align:center;margin-bottom:16px">⚙️</div>
       <div class="alert alert-amber" style="background:#451a03;color:#fbbf24;border-color:#d97706">
-        <strong>ยังไม่ได้ตั้งค่า</strong><br>
-        แก้ <code>SUPA_URL</code> และ <code>SUPA_KEY</code> ในไฟล์ index.html<br><br>
-        1. Supabase → Settings → API<br>
-        2. Copy Project URL + anon key<br>
-        3. รัน schema.sql ใน SQL Editor
+        <strong>ยังไม่ได้ตั้งค่า</strong><br>แก้ SUPA_URL และ SUPA_KEY ในไฟล์
       </div>
     </div></div>`;
     return;
   }
   if (typeof supabase === 'undefined') {
     Q('app').innerHTML = `<div class="lbox"><div class="lcard">
-      <div class="alert alert-red">ไม่สามารถโหลด Supabase ได้ — ตรวจสอบการเชื่อมต่ออินเทอร์เน็ต</div>
+      <div class="alert alert-red">ไม่สามารถโหลด Supabase ได้</div>
     </div></div>`;
     return;
   }
@@ -294,16 +285,16 @@ function render() {
   if (page === 'login') { paintLogin(); return; }
 
   const TOPS = {
-    'c-tasks':    { t:'งานของฉัน',          back:null },
-    'c-count':    { t:'บันทึกการนับ',        back:'c-tasks' },
-    'sv-dash':    { t:'ภาพรวม',             back:null },
-    'sv-list':    { t:'รายการ Variance',     back:'sv-dash' },
-    'sv-detail':  { t:'ตรวจสอบ Variance',   back:'sv-list' },
-    'ad-sessions':{ t:'Sessions',            back:null },
-    'ad-new':     { t:'สร้าง Session',       back:'ad-sessions' },
-    'ad-assign':  { t:'มอบหมายงาน',         back:null },
-    'ad-import':  { t:'Import Stock',        back:null },
-    'ad-users':   { t:'ผู้ใช้งาน',          back:null },
+    'c-tasks':    { t:'งานของฉัน',         back:null },
+    'c-count':    { t:'บันทึกการนับ',       back:'c-tasks' },
+    'sv-dash':    { t:'ภาพรวม',            back:null },
+    'sv-list':    { t:'รายการ Variance',    back:'sv-dash' },
+    'sv-detail':  { t:'ตรวจสอบ Variance',  back:'sv-list' },
+    'ad-sessions':{ t:'Sessions',           back:null },
+    'ad-new':     { t:'สร้าง Session',      back:'ad-sessions' },
+    'ad-assign':  { t:'มอบหมายงาน',        back:null },
+    'ad-import':  { t:'Import Stock',       back:null },
+    'ad-users':   { t:'ผู้ใช้งาน',         back:null },
   };
   const tp = TOPS[page] || { t: page, back: null };
   const bk = tp.back ? `<button class="top-back" onclick="go('${tp.back}')">‹</button>` : '';
@@ -476,7 +467,6 @@ async function loadCCount() {
   const l   = asgn.locations;
   const sub = [l.zone, l.area, l.row_no && 'Row '+l.row_no, l.level && 'Lv.'+l.level].filter(Boolean).join(' · ');
 
-  // Load items from snapshot — ไม่แสดง onhand_qty (blind count)
   const { data: snaps } = await sb.from('stock_snapshot')
     .select('item_id,items(id,code,description)')
     .eq('session_id', asgn.session_id)
@@ -488,7 +478,6 @@ async function loadCCount() {
     </div>`; return;
   }
 
-  // โหลดที่เคยกรอกไว้แล้ว (กรณี resume)
   const { data: prev } = await sb.from('count_records')
     .select('item_id,count_qty').eq('assignment_id', aid).eq('round', round);
   const prevMap = Object.fromEntries(prev?.map(r => [r.item_id, r.count_qty]) || []);
@@ -542,7 +531,6 @@ async function submitCount(aid, round, idsStr) {
   const ids = idsStr.split(',');
   const al  = Q('ca'), btn = Q('cb');
 
-  // Collect values
   const recs = [];
   for (const iid of ids) {
     const v = Q('q_'+iid)?.value;
@@ -563,7 +551,6 @@ async function submitCount(aid, round, idsStr) {
     btn.disabled = false; btn.textContent = `✅ ยืนยันรอบที่ ${round}`; return;
   }
 
-  // ตรวจ variance เทียบ snapshot
   const { data: asgn } = await sb.from('assignments')
     .select('location_id,session_id').eq('id', aid).single();
 
@@ -773,9 +760,7 @@ async function loadSvDetail() {
       </div>
       <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
         <span class="tag tag-blue">รอบที่ ${roundNum}</span>
-        ${hasVar
-          ? `<span class="tag tag-amber">⚠️ มี Variance</span>`
-          : `<span class="tag tag-green">✅ ยอดตรง</span>`}
+        ${hasVar ? `<span class="tag tag-amber">⚠️ มี Variance</span>` : `<span class="tag tag-green">✅ ยอดตรง</span>`}
       </div>
     </div>
     <div class="sec">รายละเอียด (${snaps?.length || 0} รายการ) — ระบบ vs นับจริง</div>
@@ -809,7 +794,6 @@ async function doApprove(aid, resolution) {
       .eq('assignment_id', aid).order('round', { ascending: false }),
   ]);
 
-  // ใช้ยอดรอบล่าสุดของแต่ละ item
   const latest = {};
   counts?.forEach(c => { if (!latest[c.item_id]) latest[c.item_id] = +c.count_qty; });
 
@@ -833,7 +817,6 @@ async function doApprove(aid, resolution) {
 }
 
 async function reqRecount(aid, round) {
-  // Counter สามารถนับรอบถัดไปได้ทันทีจาก status ปัจจุบัน
   Q('sva').innerHTML = `<div class="alert alert-blue">
     ✓ Counter สามารถนับรอบที่ ${round} ได้แล้ว — แจ้ง Counter เพื่อดำเนินการต่อ
   </div>`;
@@ -906,7 +889,205 @@ async function closeSess(id) {
 }
 
 // ══════════════════════════════════════════════════════════
-//  ADMIN — ASSIGN
+//  ADMIN — IMPORT STOCK (XLSX จาก RP06)
+// ══════════════════════════════════════════════════════════
+function paintAdImport() {
+  cnt().innerHTML = `
+    <div class="card">
+      <div id="ia"></div>
+      <div class="alert alert-blue" style="margin-bottom:14px;font-size:12px">
+        📁 Upload ไฟล์ <strong>RP06 Inventory Aging Report (.xlsx)</strong><br>
+        ✅ ระบบ import เฉพาะ <strong>Inventory Status = Good</strong> อัตโนมัติ<br>
+        🔢 OH Qty จะถูก <strong>sum</strong> ถ้า item เดียวกันอยู่หลาย LPN ใน location เดียวกัน<br>
+        🔄 Upload ใหม่ได้ทุกครั้งที่ OH เปลี่ยน — ระบบจะ update ยอดให้
+      </div>
+      <div class="fg"><label>SESSION</label>
+        <select id="is"><option value="">กำลังโหลด...</option></select>
+      </div>
+      <div class="fg"><label>เลือกไฟล์ XLSX (RP06)</label>
+        <input type="file" id="ixlsx" accept=".xlsx,.xls"
+          style="padding:10px;border:2px dashed #bfdbfe;border-radius:9px;cursor:pointer;background:#f0f7ff;width:100%;font-size:13px">
+      </div>
+      <div id="ipreview" style="display:none;margin-bottom:10px"></div>
+      <button class="btn btn-blue" id="ibtn" onclick="doImportXlsx()" disabled>📥 Import</button>
+    </div>`;
+
+  sb.from('count_sessions').select('id,name').in('status',['draft','active']).then(({data}) => {
+    Q('is').innerHTML = data?.length
+      ? data.map(s=>`<option value="${s.id}">${s.name} · ${s.status}</option>`).join('')
+      : '<option value="">ไม่มี Session</option>';
+  });
+
+  Q('ixlsx').addEventListener('change', previewXlsx);
+}
+
+let _xlsxParsed = null;
+
+async function previewXlsx() {
+  const file = Q('ixlsx').files[0];
+  if (!file) return;
+  const al = Q('ia'), prev = Q('ipreview'), btn = Q('ibtn');
+  al.innerHTML = `<div class="alert alert-blue">⏳ กำลังอ่านไฟล์ ${file.name} (${(file.size/1024/1024).toFixed(1)} MB)...</div>`;
+  prev.style.display = 'none';
+  btn.disabled = true;
+  _xlsxParsed = null;
+
+  try {
+    const buf = await file.arrayBuffer();
+    if (typeof XLSX === 'undefined') throw new Error('SheetJS ยังโหลดไม่เสร็จ รอสักครู่แล้วลองใหม่');
+
+    al.innerHTML = `<div class="alert alert-blue">⏳ กำลัง parse Excel...</div>`;
+    // Yield to browser to show message
+    await new Promise(r => setTimeout(r, 50));
+
+    const wb  = XLSX.read(buf, { type:'array', dense:true });
+    const ws  = wb.Sheets[wb.SheetNames[0]];
+    const raw = XLSX.utils.sheet_to_json(ws, { header:1, defval:null });
+
+    // Column indices (0-based) from RP06 format
+    // Row 9 (index 8) = header, data starts row 10 (index 9)
+    const iLoc  = 2;   // Location
+    const iItem = 4;   // Item Code
+    const iDesc = 5;   // Description
+    const iOH   = 25;  // On Hand Qty
+    const iStat = 27;  // Inventory Status
+    const iCat  = 10;  // Category 1
+
+    const map = {};
+    let totalRows = 0, goodRows = 0, skipped = 0;
+
+    for (let i = 9; i < raw.length; i++) {
+      const row = raw[i];
+      if (!row) continue;
+      const loc  = row[iLoc]  ? row[iLoc].toString().trim()  : null;
+      const item = row[iItem] ? row[iItem].toString().trim() : null;
+      if (!loc || !item) continue;
+      totalRows++;
+
+      const stat = (row[iStat] || '').toString().trim().toLowerCase();
+      if (stat !== 'good') { skipped++; continue; }
+      goodRows++;
+
+      const desc = (row[iDesc] || '').toString().trim();
+      const oh   = parseFloat(row[iOH]) || 0;
+      const cat  = (row[iCat] || '').toString().trim();
+      const key  = loc + '|||' + item;
+
+      if (map[key]) {
+        map[key].qty += oh;
+      } else {
+        map[key] = { loc, item, desc, qty: oh, cat };
+      }
+    }
+
+    _xlsxParsed = Object.values(map);
+    const uLocs  = new Set(_xlsxParsed.map(r => r.loc)).size;
+    const uItems = new Set(_xlsxParsed.map(r => r.item)).size;
+
+    al.innerHTML = '';
+    prev.style.display = 'block';
+    prev.innerHTML = `<div class="alert alert-green">
+      ✅ อ่านไฟล์สำเร็จ<br>
+      📊 ทั้งหมด <strong>${totalRows.toLocaleString()}</strong> rows
+        → Good: <strong>${goodRows.toLocaleString()}</strong>
+        · ข้าม: ${skipped.toLocaleString()} (Damage/QC/etc.)<br>
+      📍 <strong>${uLocs.toLocaleString()}</strong> locations
+        · 📦 <strong>${uItems.toLocaleString()}</strong> unique items<br>
+      🔢 <strong>${_xlsxParsed.length.toLocaleString()}</strong> loc+item pairs (หลัง aggregate OH)
+    </div>`;
+    btn.disabled = false;
+
+  } catch(e) {
+    al.innerHTML = `<div class="alert alert-red">❌ อ่านไฟล์ไม่ได้: ${e.message}</div>`;
+  }
+}
+
+async function doImportXlsx() {
+  const sid = Q('is').value, al = Q('ia'), btn = Q('ibtn');
+  if (!sid)         { al.innerHTML = `<div class="alert alert-red">เลือก Session ก่อน</div>`; return; }
+  if (!_xlsxParsed) { al.innerHTML = `<div class="alert alert-red">เลือกไฟล์ก่อน</div>`; return; }
+
+  btn.disabled = true;
+
+  async function batchUp(table, rows, conflict, selectCols) {
+    const BATCH = 500, map = {};
+    for (let i = 0; i < rows.length; i += BATCH) {
+      const { data, error } = await sb.from(table)
+        .upsert(rows.slice(i, i+BATCH), { onConflict: conflict })
+        .select(selectCols);
+      if (error) throw error;
+      data?.forEach(r => { map[r.code] = r.id; });
+    }
+    return map;
+  }
+
+  try {
+    // 1) Locations
+    al.innerHTML = `<div class="alert alert-blue">⏳ [1/3] สร้าง/อัพเดท Locations...</div>`;
+    const seenLocs = {}, locRows = [];
+    for (const p of _xlsxParsed) {
+      if (seenLocs[p.loc]) continue;
+      seenLocs[p.loc] = true;
+      const parts = p.loc.split('-');
+      locRows.push({
+        code:     p.loc,
+        zone:     parts[1] || null,
+        row_no:   parts[2] || null,
+        level:    parts[3] || null,
+        category: p.cat || null,
+      });
+    }
+    const locMap = await batchUp('locations', locRows, 'code', 'id,code');
+
+    // 2) Items
+    al.innerHTML = `<div class="alert alert-blue">⏳ [2/3] สร้าง/อัพเดท Items (${new Set(_xlsxParsed.map(r=>r.item)).size.toLocaleString()} รายการ)...</div>`;
+    const seenItems = {}, itemRows = [];
+    for (const p of _xlsxParsed) {
+      if (seenItems[p.item]) continue;
+      seenItems[p.item] = true;
+      itemRows.push({ code: p.item, description: p.desc, category: p.cat || null });
+    }
+    const itemMap = await batchUp('items', itemRows, 'code', 'id,code');
+
+    // 3) Stock snapshot
+    const BATCH = 500;
+    let ok = 0;
+    const snapRows = _xlsxParsed
+      .filter(p => locMap[p.loc] && itemMap[p.item])
+      .map(p => ({
+        session_id:  sid,
+        location_id: locMap[p.loc],
+        item_id:     itemMap[p.item],
+        onhand_qty:  p.qty,
+      }));
+
+    for (let i = 0; i < snapRows.length; i += BATCH) {
+      const { error } = await sb.from('stock_snapshot')
+        .upsert(snapRows.slice(i, i+BATCH), { onConflict:'session_id,location_id,item_id' });
+      if (error) throw error;
+      ok += Math.min(BATCH, snapRows.length - i);
+      al.innerHTML = `<div class="alert alert-blue">⏳ [3/3] Stock Snapshot: ${ok.toLocaleString()} / ${snapRows.length.toLocaleString()} rows...</div>`;
+    }
+
+    al.innerHTML = `<div class="alert alert-green">
+      ✅ Import สำเร็จ!<br>
+      📍 ${locRows.length.toLocaleString()} locations
+      · 📦 ${itemRows.length.toLocaleString()} items
+      · 🔢 ${ok.toLocaleString()} snapshot rows
+    </div>`;
+    _xlsxParsed = null;
+    Q('ixlsx').value = '';
+    Q('ipreview').style.display = 'none';
+    btn.disabled = false;
+
+  } catch(e) {
+    al.innerHTML = `<div class="alert alert-red">❌ ${e?.message || String(e)}</div>`;
+    btn.disabled = false;
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//  ADMIN — ASSIGN (Single + Bulk by Zone/Row/Level)
 // ══════════════════════════════════════════════════════════
 async function loadAdAssign() {
   const [{ data: sessions }, { data: counters }] = await Promise.all([
@@ -925,23 +1106,169 @@ async function loadAdAssign() {
   cnt().innerHTML = `
     <div class="card">
       <div id="aa"></div>
+
       <div class="fg"><label>SESSION</label>
-        <select id="as-sess" onchange="refreshLocs()">${sOpts}</select>
+        <select id="as-sess" onchange="refreshLocs();refreshBulkFilters()">${sOpts}</select>
       </div>
+
+      <!-- ══ BULK ASSIGN ══ -->
+      <div class="bulk-box">
+        <div class="bulk-box-title">⚡ Bulk Assign — มอบหมายหลาย Location พร้อมกัน</div>
+        <div class="grid-3" style="margin-bottom:10px">
+          <div class="fg" style="margin:0">
+            <label>ZONE</label>
+            <select id="bulk-zone" onchange="refreshBulkPreview()"><option value="">ทั้งหมด</option></select>
+          </div>
+          <div class="fg" style="margin:0">
+            <label>ROW</label>
+            <select id="bulk-row" onchange="refreshBulkPreview()"><option value="">ทั้งหมด</option></select>
+          </div>
+          <div class="fg" style="margin:0">
+            <label>LEVEL</label>
+            <select id="bulk-level" onchange="refreshBulkPreview()"><option value="">ทั้งหมด</option></select>
+          </div>
+        </div>
+        <div class="fg" style="margin-bottom:10px">
+          <label>COUNTER</label>
+          <select id="bulk-user">${cOpts}</select>
+        </div>
+        <div id="bulk-preview" style="font-size:12px;color:#1e40af;margin-bottom:10px;font-weight:600"></div>
+        <button class="btn btn-blue" id="bulk-btn" onclick="doBulkAssign()" disabled>
+          ⚡ Assign ทั้งหมดที่เลือก
+        </button>
+      </div>
+
+      <!-- ══ SINGLE ASSIGN ══ -->
+      <div style="font-size:11px;font-weight:700;color:#94a3b8;margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">หรือ Assign ทีละ Location</div>
       <div class="fg"><label>COUNTER</label>
         <select id="as-user">${cOpts}</select>
       </div>
       <div class="fg"><label>LOCATION</label>
         <select id="as-loc"><option value="">กำลังโหลด...</option></select>
       </div>
-      <button class="btn btn-blue" onclick="doAssign()">มอบหมายงาน</button>
+      <button class="btn btn-ghost" onclick="doAssign()">มอบหมายงาน</button>
     </div>
+
     <div class="sec">งานที่ Assign แล้ว</div>
     <div class="card card-flush" id="al"><div class="load" style="padding:20px">⏳</div></div>`;
 
   refreshLocs();
+  refreshBulkFilters();
 }
 
+// ── Bulk: โหลด Zone/Row/Level จาก snapshot ──
+async function refreshBulkFilters() {
+  const sid = Q('as-sess')?.value;
+  if (!sid) return;
+
+  const [{ data: snaps }, { data: existing }] = await Promise.all([
+    sb.from('stock_snapshot')
+      .select('location_id,locations(id,code,zone,row_no,level)')
+      .eq('session_id', sid),
+    sb.from('assignments')
+      .select('location_id').eq('session_id', sid),
+  ]);
+
+  const assignedSet = new Set(existing?.map(a => a.location_id) || []);
+  const zones = new Set(), rows = new Set(), levels = new Set();
+  const seen = new Set();
+
+  for (const s of snaps || []) {
+    const l = s.locations;
+    if (!l || seen.has(l.id) || assignedSet.has(l.id)) continue;
+    seen.add(l.id);
+    if (l.zone)   zones.add(l.zone);
+    if (l.row_no) rows.add(l.row_no);
+    if (l.level)  levels.add(l.level);
+  }
+
+  const fill = (id, vals) => {
+    const el = Q(id);
+    if (!el) return;
+    const cur = el.value;
+    el.innerHTML = '<option value="">ทั้งหมด</option>' +
+      [...vals].sort().map(v => `<option value="${v}" ${v===cur?'selected':''}>${v}</option>`).join('');
+  };
+  fill('bulk-zone',  zones);
+  fill('bulk-row',   rows);
+  fill('bulk-level', levels);
+
+  window._bulkSnaps    = snaps || [];
+  window._bulkAssigned = assignedSet;
+  refreshBulkPreview();
+}
+
+function refreshBulkPreview() {
+  const zone  = Q('bulk-zone')?.value;
+  const row   = Q('bulk-row')?.value;
+  const level = Q('bulk-level')?.value;
+  const snaps = window._bulkSnaps || [];
+  const assignedSet = window._bulkAssigned || new Set();
+
+  const seen = new Set();
+  let count = 0;
+  for (const s of snaps) {
+    const l = s.locations;
+    if (!l || seen.has(l.id) || assignedSet.has(l.id)) continue;
+    if (zone  && l.zone   !== zone)  continue;
+    if (row   && l.row_no !== row)   continue;
+    if (level && l.level  !== level) continue;
+    seen.add(l.id);
+    count++;
+  }
+
+  const prev = Q('bulk-preview'), btn = Q('bulk-btn');
+  if (!prev || !btn) return;
+  if (count > 0) {
+    prev.innerHTML = `📍 จะ Assign <strong>${count} locations</strong> ให้ Counter ที่เลือก`;
+    btn.disabled = false;
+  } else {
+    prev.innerHTML = `<span style="color:#94a3b8">ไม่มี Location ที่ตรงเงื่อนไข (หรือถูก Assign แล้วทั้งหมด)</span>`;
+    btn.disabled = true;
+  }
+}
+
+async function doBulkAssign() {
+  const sid   = Q('as-sess')?.value;
+  const uid   = Q('bulk-user')?.value;
+  const zone  = Q('bulk-zone')?.value;
+  const row   = Q('bulk-row')?.value;
+  const level = Q('bulk-level')?.value;
+  const al = Q('aa'), btn = Q('bulk-btn');
+
+  if (!sid || !uid) { al.innerHTML = `<div class="alert alert-red">เลือก Session และ Counter ก่อน</div>`; return; }
+
+  const snaps = window._bulkSnaps || [];
+  const assignedSet = window._bulkAssigned || new Set();
+  const seen = new Set(), toAssign = [];
+
+  for (const s of snaps) {
+    const l = s.locations;
+    if (!l || seen.has(l.id) || assignedSet.has(l.id)) continue;
+    if (zone  && l.zone   !== zone)  continue;
+    if (row   && l.row_no !== row)   continue;
+    if (level && l.level  !== level) continue;
+    seen.add(l.id);
+    toAssign.push({ session_id: sid, location_id: l.id, assigned_to: uid });
+  }
+
+  if (!toAssign.length) { al.innerHTML = `<div class="alert alert-amber">ไม่มี Location ที่จะ Assign</div>`; return; }
+
+  btn.disabled = true;
+  al.innerHTML = `<div class="alert alert-blue">⏳ กำลัง Assign ${toAssign.length} locations...</div>`;
+
+  const BATCH = 200;
+  for (let i = 0; i < toAssign.length; i += BATCH) {
+    const { error } = await sb.from('assignments')
+      .upsert(toAssign.slice(i, i+BATCH), { onConflict:'session_id,location_id' });
+    if (error) { al.innerHTML = `<div class="alert alert-red">❌ ${error.message}</div>`; btn.disabled=false; return; }
+  }
+
+  al.innerHTML = `<div class="alert alert-green">✅ Assign ${toAssign.length} locations เรียบร้อย!</div>`;
+  setTimeout(() => { al.innerHTML=''; refreshLocs(); refreshBulkFilters(); }, 2000);
+}
+
+// ── Single assign helpers ──
 async function refreshLocs() {
   const sid = Q('as-sess')?.value;
   if (!sid) return;
@@ -963,9 +1290,11 @@ async function refreshLocs() {
 
   const free = locs.filter(l => !assignedSet.has(l.id));
   const sel  = Q('as-loc');
-  sel.innerHTML = free.length
-    ? free.map(l => `<option value="${l.id}">${l.code}${l.zone?' · '+l.zone:''}</option>`).join('')
-    : '<option value="">ทุก Location ถูก Assign แล้ว</option>';
+  if (sel) {
+    sel.innerHTML = free.length
+      ? free.map(l => `<option value="${l.id}">${l.code}${l.zone?' · '+l.zone:''}</option>`).join('')
+      : '<option value="">ทุก Location ถูก Assign แล้ว</option>';
+  }
 
   // แสดงรายการที่ Assign แล้ว
   const { data: asgns } = await sb.from('assignments')
@@ -1004,112 +1333,7 @@ async function doAssign() {
   al.innerHTML = `<div class="alert alert-green">✅ Assign เรียบร้อย</div>`;
   setTimeout(() => al.innerHTML = '', 2500);
   refreshLocs();
-}
-
-// ══════════════════════════════════════════════════════════
-//  ADMIN — IMPORT STOCK
-// ══════════════════════════════════════════════════════════
-function paintAdImport() {
-  cnt().innerHTML = `
-    <div class="card">
-      <div id="ia"></div>
-      <div style="font-size:13px;color:#64748b;line-height:1.75;margin-bottom:14px">
-        รูปแบบ CSV แต่ละบรรทัด:<br>
-        <code style="background:#f1f5f9;padding:2px 8px;border-radius:5px;font-size:12px">
-          location_code, item_code, description, onhand_qty
-        </code><br>
-        <span style="font-size:12px">ตัวอย่าง: <code>B-CA-001-A,BKW001,PREMIUM APRILIA STICKER,200</code></span>
-      </div>
-      <div class="fg"><label>SESSION</label>
-        <select id="is"><option value="">กำลังโหลด...</option></select>
-      </div>
-      <div class="fg"><label>CSV DATA</label>
-        <textarea id="ic" placeholder="B-CA-001-A,BKW001,PREMIUM APRILIA STICKER,200
-B-CA-001-A,BKW002,VESPA SNAKE FLOCK DENIM,10
-B-CA-001-B,BKW001,PREMIUM APRILIA STICKER,50"></textarea>
-      </div>
-      <button class="btn btn-blue" onclick="doImport()">📥 Import</button>
-    </div>`;
-
-  sb.from('count_sessions').select('id,name').in('status',['draft','active']).then(({data}) => {
-    Q('is').innerHTML = data?.length
-      ? data.map(s=>`<option value="${s.id}">${s.name} · ${s.status}</option>`).join('')
-      : '<option value="">ไม่มี Session</option>';
-  });
-}
-
-async function doImport() {
-  const sid = Q('is').value, raw = Q('ic').value.trim(), al = Q('ia');
-  if (!sid) { al.innerHTML = `<div class="alert alert-red">เลือก Session ก่อน</div>`; return; }
-  if (!raw)  { al.innerHTML = `<div class="alert alert-red">วาง CSV data ก่อน</div>`; return; }
-
-  al.innerHTML = `<div class="alert alert-blue">⏳ กำลัง parse...</div>`;
-
-  // Parse CSV
-  const parsed = [];
-  for (const line of raw.split('\n')) {
-    const p = line.trim();
-    if (!p || p.startsWith('#')) continue;
-    const c = p.split(',').map(x => x.trim());
-    if (c.length < 4) continue;
-    const qty = parseFloat(c[3]);
-    if (isNaN(qty)) continue;
-    parsed.push({ loc: c[0], item: c[1], desc: c[2] || c[1], qty });
-  }
-
-  if (!parsed.length) { al.innerHTML = `<div class="alert alert-red">ไม่พบข้อมูลที่ถูกต้อง</div>`; return; }
-
-  al.innerHTML = `<div class="alert alert-blue">⏳ ${parsed.length} rows — กำลัง import...</div>`;
-
-  // Helper: batch upsert → return code→id map
-  async function batchUp(table, rows, conflict) {
-    const BATCH = 500, map = {};
-    for (let i = 0; i < rows.length; i += BATCH) {
-      const { data, error } = await sb.from(table)
-        .upsert(rows.slice(i, i+BATCH), { onConflict: conflict })
-        .select('id,code');
-      if (error) throw error;
-      data?.forEach(r => { map[r.code] = r.id; });
-    }
-    return map;
-  }
-
-  try {
-    // 1) Locations
-    const uniqLocs = [...new Map(parsed.map(p => [p.loc,  { code: p.loc  }])).values()];
-    const locMap   = await batchUp('locations', uniqLocs, 'code');
-
-    // 2) Items (ใช้ desc ของ item code นั้นตัวแรก)
-    const seenI = {}, uniqItems = [];
-    for (const p of parsed) {
-      if (!seenI[p.item]) { seenI[p.item] = true; uniqItems.push({ code: p.item, description: p.desc }); }
-    }
-    const itemMap = await batchUp('items', uniqItems, 'code');
-
-    // 3) Stock snapshot
-    const snapRows = parsed
-      .filter(p => locMap[p.loc] && itemMap[p.item])
-      .map(p => ({ session_id:sid, location_id:locMap[p.loc], item_id:itemMap[p.item], onhand_qty:p.qty }));
-
-    const BATCH = 500;
-    let ok = 0;
-    for (let i = 0; i < snapRows.length; i += BATCH) {
-      const { error } = await sb.from('stock_snapshot')
-        .upsert(snapRows.slice(i, i+BATCH), { onConflict:'session_id,location_id,item_id' });
-      if (error) throw error;
-      ok += Math.min(BATCH, snapRows.length - i);
-      al.innerHTML = `<div class="alert alert-blue">⏳ ${ok} / ${snapRows.length} rows...</div>`;
-    }
-
-    al.innerHTML = `<div class="alert alert-green">
-      ✅ Import สำเร็จ ${ok} rows<br>
-      📍 ${uniqLocs.length} locations · 📦 ${uniqItems.length} items
-    </div>`;
-    Q('ic').value = '';
-
-  } catch (e) {
-    al.innerHTML = `<div class="alert alert-red">❌ ${e?.message || String(e)}</div>`;
-  }
+  refreshBulkFilters();
 }
 
 // ══════════════════════════════════════════════════════════
@@ -1139,8 +1363,7 @@ async function loadAdUsers() {
     <div class="sec" style="padding:0 0 10px;color:#64748b">เพิ่ม User ใหม่</div>
     <div id="ua"></div>
     <div class="alert alert-blue" style="margin-bottom:12px;font-size:12px">
-      💡 สร้าง user แล้วแจ้งให้ Login ด้วย email/password ที่กำหนด<br>
-      หรือสร้างโดยตรงที่ Supabase → Authentication → Users
+      💡 สร้าง user แล้วแจ้งให้ Login ด้วย email/password ที่กำหนด
     </div>
     <div class="fg"><label>ชื่อ</label><input id="un" placeholder="ชื่อ-นามสกุล"></div>
     <div class="fg"><label>EMAIL</label><input id="ue" type="email" placeholder="email@company.com"></div>
@@ -1185,13 +1408,13 @@ async function addUser() {
 // ══════════════════════════════════════════════════════════
 function tagInfo(s) {
   return ({
-    pending:     { cls:'tag-gray',   lbl:'รอนับ'          },
-    in_progress: { cls:'tag-blue',   lbl:'กำลังนับ'       },
-    round1_done: { cls:'tag-amber',  lbl:'รอรอบ 2'        },
-    round2_done: { cls:'tag-amber',  lbl:'รอรอบ 3'        },
-    round3_done: { cls:'tag-red',    lbl:'รอ Supervisor'  },
-    completed:   { cls:'tag-green',  lbl:'เสร็จ'          },
-    approved:    { cls:'tag-green',  lbl:'อนุมัติแล้ว'   },
+    pending:     { cls:'tag-gray',   lbl:'รอนับ'         },
+    in_progress: { cls:'tag-blue',   lbl:'กำลังนับ'      },
+    round1_done: { cls:'tag-amber',  lbl:'รอรอบ 2'       },
+    round2_done: { cls:'tag-amber',  lbl:'รอรอบ 3'       },
+    round3_done: { cls:'tag-red',    lbl:'รอ Supervisor' },
+    completed:   { cls:'tag-green',  lbl:'เสร็จ'         },
+    approved:    { cls:'tag-green',  lbl:'อนุมัติแล้ว'  },
   }[s]) || { cls:'tag-gray', lbl: s };
 }
 
