@@ -216,7 +216,7 @@ select{
 // ══════════════════════════════════════════════════════════
 //  ⚙️  CONFIG — แก้ 2 บรรทัดนี้ก่อนใช้งาน
 // ══════════════════════════════════════════════════════════
-const SUPA_URL = 'https://uiuaboxsfepyftqjlwil.supabase.co';   // https://xxxx.supabase.co
+const SUPA_URL = 'https://uiuaboxsfepyftqjlwil.supabase.co';   // https://xxxx.supabase.co (ห้ามมี /rest/v1/ ต่อท้าย)
 const SUPA_KEY = 'sb_publishable_EuJ-IUiXWBLSNvQsG0CJ5w_C2LHJXAL';   // sb_publishable_... หรือ eyJhb...
 
 // ══════════════════════════════════════════════════════════
@@ -889,22 +889,73 @@ async function closeSess(id) {
 }
 
 // ══════════════════════════════════════════════════════════
-//  ADMIN — IMPORT STOCK (XLSX จาก RP06)
+//  ZONE LOGIC — แปลงจากสูตร Excel ของหน้าคลัง
+//  ลำดับการเช็คมีผล (เช็คจากบนลงล่าง ตัวแรกที่ตรงคือคำตอบ)
+// ══════════════════════════════════════════════════════════
+function computeZone(locCode, desc) {
+  if (!locCode) return '';
+  const A = locCode.toString().trim().toUpperCase();
+  const C = (desc || '').toString().trim().toUpperCase();
+  const left  = (s,n) => s.substring(0,n);
+  const right = (s,n) => s.substring(s.length-n);
+
+  // ── เช็คตรงก่อน (ตามสูตรชั้นนอก) ──
+  if (left(A,3)==='B-0' && right(A,1)==='A') return 'Selective A';
+  if (left(A,3)==='B-1' && right(A,1)==='A') return 'Selective A';
+  if (left(A,3)==='B-2' && right(A,1)==='A') return 'Selective A';
+  if (left(A,3)==='-CW') return '';
+  if (left(A,4)==='ECOM') return 'Overfloor';
+  if (left(A,3)==='B-D') return 'Overfloor';
+  if (left(A,3)==='B-N') return 'Overfloor';
+  if (left(A,3)==='B-L') return 'Overfloor';
+  if (left(A,3)==='B-O') return 'Overfloor';
+  if (left(C,3)==='PKV') return 'Cool Room Floor';
+  if (left(A,2)==='AM' || left(A,2)==='AL') return 'Overfloor';
+  if (left(A,2)==='RM') return 'Raw Material';
+
+  // ── SWITCH(true, ...) ตัวแรกที่ตรงคือคำตอบ ──
+  if (left(A,4)==='B-A-') return 'Overfloor';
+  if (left(A,3)==='B-0') return 'Selective';
+  if (left(A,3)==='B-1') return 'Selective';
+  if (left(A,3)==='B-2') return 'Selective';
+  if (left(A,3)==='PRE') return 'Pre-Transfer';
+  if (left(A,2)==='C-') return 'Cool Room Floor';
+  if (left(A,2)==='DM') return 'DAMAGE';
+  if (left(A,2)==='IS') return 'ISSUE';
+  if (left(A,3)==='B-E') return 'Longspand E';
+  if (left(A,3)==='B-F') return 'Longspand F';
+  if (left(A,3)==='B-C') return 'Cool Room';
+  if (left(A,3)==='B-G') return 'Microrack';
+  if (left(A,3)==='B-3') return 'Consumable Rack';
+  if (left(A,6)==='BORROW') return 'BORROW';
+  if (left(A,2)==='LO') return 'LOST';
+  return 'Overfloor'; // default
+}
+
+// ══════════════════════════════════════════════════════════
+//  ADMIN — IMPORT STOCK (XLSX — Export ทีละ Location เช่น B-EA%)
 // ══════════════════════════════════════════════════════════
 function paintAdImport() {
   cnt().innerHTML = `
     <div class="card">
       <div id="ia"></div>
       <div class="alert alert-blue" style="margin-bottom:14px;font-size:12px">
-        📁 Upload ไฟล์ <strong>RP06 Inventory Aging Report (.xlsx)</strong><br>
+        📁 Upload ไฟล์ Stock Export (.xlsx) — Export มาทีละ Location ก็ได้<br>
+        &nbsp;&nbsp;เช่น กรอง Location เป็น <code>B-EA%</code> ตอน Export จากระบบ<br>
         ✅ ระบบ import เฉพาะ <strong>Inventory Status = Good</strong> อัตโนมัติ<br>
         🔢 OH Qty จะถูก <strong>sum</strong> ถ้า item เดียวกันอยู่หลาย LPN ใน location เดียวกัน<br>
+        🧭 Zone จะคำนวณอัตโนมัติจาก Location code (ตามกฎ Selective/Overfloor/Cool Room ฯลฯ)<br>
         🔄 Upload ใหม่ได้ทุกครั้งที่ OH เปลี่ยน — ระบบจะ update ยอดให้
       </div>
       <div class="fg"><label>SESSION</label>
         <select id="is"><option value="">กำลังโหลด...</option></select>
       </div>
-      <div class="fg"><label>เลือกไฟล์ XLSX (RP06)</label>
+      <div class="fg">
+        <label>กรอง LOCATION (ไม่บังคับ)</label>
+        <input id="ilocfilter" placeholder="เช่น B-EA% (เว้นว่าง = import ทุก Location ในไฟล์)"
+          oninput="refreshXlsxPreview()">
+      </div>
+      <div class="fg"><label>เลือกไฟล์ XLSX</label>
         <input type="file" id="ixlsx" accept=".xlsx,.xls"
           style="padding:10px;border:2px dashed #bfdbfe;border-radius:9px;cursor:pointer;background:#f0f7ff;width:100%;font-size:13px">
       </div>
@@ -918,94 +969,142 @@ function paintAdImport() {
       : '<option value="">ไม่มี Session</option>';
   });
 
-  Q('ixlsx').addEventListener('change', previewXlsx);
+  Q('ixlsx').addEventListener('change', readXlsxFile);
 }
 
-let _xlsxParsed = null;
+let _xlsxRawRows = null;   // ทุกแถวในไฟล์ (ยังไม่ filter) — เก็บไว้เพื่อ refilter โดยไม่ต้องอ่านไฟล์ใหม่
+let _xlsxParsed  = null;   // แถวหลัง filter + aggregate (เตรียม import จริง)
 
-async function previewXlsx() {
+// ── แปลง pattern แบบ SQL LIKE (% = ตัวอักษรอะไรก็ได้, _ = 1 ตัวอักษร) เป็น RegExp ──
+function likeToRegex(pattern) {
+  const esc = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re  = esc.replace(/%/g, '.*').replace(/_/g, '.');
+  return new RegExp('^' + re + '$', 'i');
+}
+
+// ── อ่านไฟล์ XLSX ครั้งเดียว เก็บทุกแถวไว้ใน _xlsxRawRows ──
+async function readXlsxFile() {
   const file = Q('ixlsx').files[0];
   if (!file) return;
   const al = Q('ia'), prev = Q('ipreview'), btn = Q('ibtn');
   al.innerHTML = `<div class="alert alert-blue">⏳ กำลังอ่านไฟล์ ${file.name} (${(file.size/1024/1024).toFixed(1)} MB)...</div>`;
   prev.style.display = 'none';
   btn.disabled = true;
-  _xlsxParsed = null;
+  _xlsxRawRows = null;
+  _xlsxParsed  = null;
 
   try {
     const buf = await file.arrayBuffer();
     if (typeof XLSX === 'undefined') throw new Error('SheetJS ยังโหลดไม่เสร็จ รอสักครู่แล้วลองใหม่');
 
     al.innerHTML = `<div class="alert alert-blue">⏳ กำลัง parse Excel...</div>`;
-    // Yield to browser to show message
     await new Promise(r => setTimeout(r, 50));
 
     const wb  = XLSX.read(buf, { type:'array', dense:true });
     const ws  = wb.Sheets[wb.SheetNames[0]];
     const raw = XLSX.utils.sheet_to_json(ws, { header:1, defval:null });
 
-    // Column indices (0-based) from RP06 format
-    // Row 9 (index 8) = header, data starts row 10 (index 9)
-    const iLoc  = 2;   // Location
-    const iItem = 4;   // Item Code
-    const iDesc = 5;   // Description
-    const iOH   = 25;  // On Hand Qty
-    const iStat = 27;  // Inventory Status
-    const iCat  = 10;  // Category 1
-
-    const map = {};
-    let totalRows = 0, goodRows = 0, skipped = 0;
-
-    for (let i = 9; i < raw.length; i++) {
-      const row = raw[i];
+    // ── หา header row อัตโนมัติ โดยหาแถวที่มีคำว่า "Location" ──
+    let headerRow = -1, col = {};
+    for (let r = 0; r < Math.min(20, raw.length); r++) {
+      const row = raw[r];
       if (!row) continue;
-      const loc  = row[iLoc]  ? row[iLoc].toString().trim()  : null;
-      const item = row[iItem] ? row[iItem].toString().trim() : null;
-      if (!loc || !item) continue;
-      totalRows++;
-
-      const stat = (row[iStat] || '').toString().trim().toLowerCase();
-      if (stat !== 'good') { skipped++; continue; }
-      goodRows++;
-
-      const desc = (row[iDesc] || '').toString().trim();
-      const oh   = parseFloat(row[iOH]) || 0;
-      const cat  = (row[iCat] || '').toString().trim();
-      const key  = loc + '|||' + item;
-
-      if (map[key]) {
-        map[key].qty += oh;
-      } else {
-        map[key] = { loc, item, desc, qty: oh, cat };
+      const norm = row.map(c => (c==null ? '' : c.toString().trim().toLowerCase()));
+      const locIdx = norm.indexOf('location');
+      if (locIdx !== -1) {
+        headerRow = r;
+        col.loc  = locIdx;
+        col.item = norm.indexOf('item');
+        col.desc = norm.findIndex(v => v.includes('description'));
+        col.oh   = norm.findIndex(v => v === 'oh' || v.includes('on hand') || v === 'onhand');
+        col.stat = norm.findIndex(v => v.includes('status'));
+        break;
       }
     }
 
-    _xlsxParsed = Object.values(map);
-    const uLocs  = new Set(_xlsxParsed.map(r => r.loc)).size;
-    const uItems = new Set(_xlsxParsed.map(r => r.item)).size;
+    if (headerRow === -1 || col.loc===-1 || col.item===-1 || col.oh===-1 || col.stat===-1) {
+      throw new Error('ไม่พบคอลัมน์ที่จำเป็น (Location/Item/OH/Status) ในไฟล์ — ตรวจสอบหัวตารางในไฟล์ Export');
+    }
 
+    const rows = [];
+    for (let i = headerRow + 1; i < raw.length; i++) {
+      const row = raw[i];
+      if (!row) continue;
+      const loc  = row[col.loc]  ? row[col.loc].toString().trim()  : null;
+      const item = row[col.item] ? row[col.item].toString().trim() : null;
+      if (!loc || !item) continue;
+      const desc = col.desc!==-1 ? (row[col.desc]||'').toString().trim() : '';
+      const oh   = parseFloat(row[col.oh]) || 0;
+      const stat = (row[col.stat]||'').toString().trim();
+      rows.push({ loc, item, desc, oh, stat });
+    }
+
+    if (!rows.length) throw new Error('ไม่พบข้อมูลในไฟล์ (หลัง header row)');
+
+    _xlsxRawRows = rows;
     al.innerHTML = '';
-    prev.style.display = 'block';
-    prev.innerHTML = `<div class="alert alert-green">
-      ✅ อ่านไฟล์สำเร็จ<br>
-      📊 ทั้งหมด <strong>${totalRows.toLocaleString()}</strong> rows
-        → Good: <strong>${goodRows.toLocaleString()}</strong>
-        · ข้าม: ${skipped.toLocaleString()} (Damage/QC/etc.)<br>
-      📍 <strong>${uLocs.toLocaleString()}</strong> locations
-        · 📦 <strong>${uItems.toLocaleString()}</strong> unique items<br>
-      🔢 <strong>${_xlsxParsed.length.toLocaleString()}</strong> loc+item pairs (หลัง aggregate OH)
-    </div>`;
-    btn.disabled = false;
+    refreshXlsxPreview();
 
   } catch(e) {
     al.innerHTML = `<div class="alert alert-red">❌ อ่านไฟล์ไม่ได้: ${e.message}</div>`;
   }
 }
 
+// ── Filter (location pattern + status=Good) + Aggregate (sum OH) แล้วแสดง preview ──
+// เรียกใหม่ได้ทุกครั้งที่พิมพ์ filter โดยไม่ต้องอ่านไฟล์ใหม่
+function refreshXlsxPreview() {
+  const prev = Q('ipreview'), btn = Q('ibtn');
+  if (!_xlsxRawRows) return;
+
+  const patternStr = Q('ilocfilter')?.value.trim() || '';
+  const re = patternStr ? likeToRegex(patternStr) : null;
+
+  let inScope = 0, goodRows = 0, skippedStatus = 0;
+  const map = {};
+
+  for (const r of _xlsxRawRows) {
+    if (re && !re.test(r.loc)) continue;
+    inScope++;
+    if (r.stat.toLowerCase() !== 'good') { skippedStatus++; continue; }
+    goodRows++;
+    const key = r.loc + '|||' + r.item;
+    if (map[key]) {
+      map[key].qty += r.oh;
+    } else {
+      map[key] = { loc:r.loc, item:r.item, desc:r.desc, qty:r.oh };
+    }
+  }
+
+  _xlsxParsed = Object.values(map);
+  const uLocs  = new Set(_xlsxParsed.map(r => r.loc)).size;
+  const uItems = new Set(_xlsxParsed.map(r => r.item)).size;
+
+  prev.style.display = 'block';
+
+  if (!inScope) {
+    prev.innerHTML = `<div class="alert alert-amber">
+      ⚠️ ไม่พบแถวที่ตรงกับ Location filter "${patternStr}" ในไฟล์นี้ (ทั้งไฟล์มี ${_xlsxRawRows.length.toLocaleString()} แถว)
+    </div>`;
+    btn.disabled = true;
+    return;
+  }
+
+  prev.innerHTML = `<div class="alert alert-green">
+    ✅ พร้อม Import<br>
+    📊 ทั้งไฟล์ <strong>${_xlsxRawRows.length.toLocaleString()}</strong> rows
+      ${patternStr ? `→ ตรง filter: <strong>${inScope.toLocaleString()}</strong>` : ''}<br>
+    Good: <strong>${goodRows.toLocaleString()}</strong> · ข้าม (ไม่ใช่ Good): ${skippedStatus.toLocaleString()}<br>
+    📍 <strong>${uLocs.toLocaleString()}</strong> locations
+      · 📦 <strong>${uItems.toLocaleString()}</strong> unique items<br>
+    🔢 <strong>${_xlsxParsed.length.toLocaleString()}</strong> loc+item pairs (หลัง aggregate OH)
+  </div>`;
+  btn.disabled = false;
+}
+
 async function doImportXlsx() {
   const sid = Q('is').value, al = Q('ia'), btn = Q('ibtn');
   if (!sid)         { al.innerHTML = `<div class="alert alert-red">เลือก Session ก่อน</div>`; return; }
-  if (!_xlsxParsed) { al.innerHTML = `<div class="alert alert-red">เลือกไฟล์ก่อน</div>`; return; }
+  if (!_xlsxParsed || !_xlsxParsed.length) { al.innerHTML = `<div class="alert alert-red">ไม่มีข้อมูลที่จะ Import</div>`; return; }
 
   btn.disabled = true;
 
@@ -1022,7 +1121,7 @@ async function doImportXlsx() {
   }
 
   try {
-    // 1) Locations
+    // 1) Locations — zone คำนวณจาก computeZone(), row_no/level แยกจาก code
     al.innerHTML = `<div class="alert alert-blue">⏳ [1/3] สร้าง/อัพเดท Locations...</div>`;
     const seenLocs = {}, locRows = [];
     for (const p of _xlsxParsed) {
@@ -1030,11 +1129,10 @@ async function doImportXlsx() {
       seenLocs[p.loc] = true;
       const parts = p.loc.split('-');
       locRows.push({
-        code:     p.loc,
-        zone:     parts[1] || null,
-        row_no:   parts[2] || null,
-        level:    parts[3] || null,
-        category: p.cat || null,
+        code:   p.loc,
+        zone:   computeZone(p.loc, p.desc),
+        row_no: parts[1] || null,   // เช่น "EA"
+        level:  parts[3] || null,   // เช่น "A"
       });
     }
     const locMap = await batchUp('locations', locRows, 'code', 'id,code');
@@ -1045,7 +1143,7 @@ async function doImportXlsx() {
     for (const p of _xlsxParsed) {
       if (seenItems[p.item]) continue;
       seenItems[p.item] = true;
-      itemRows.push({ code: p.item, description: p.desc, category: p.cat || null });
+      itemRows.push({ code: p.item, description: p.desc });
     }
     const itemMap = await batchUp('items', itemRows, 'code', 'id,code');
 
@@ -1075,8 +1173,10 @@ async function doImportXlsx() {
       · 📦 ${itemRows.length.toLocaleString()} items
       · 🔢 ${ok.toLocaleString()} snapshot rows
     </div>`;
+    _xlsxRawRows = null;
     _xlsxParsed = null;
     Q('ixlsx').value = '';
+    Q('ilocfilter').value = '';
     Q('ipreview').style.display = 'none';
     btn.disabled = false;
 
