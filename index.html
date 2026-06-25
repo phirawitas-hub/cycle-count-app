@@ -1409,16 +1409,50 @@ async function refreshLocs() {
     al.innerHTML = `<div class="load" style="padding:16px;font-size:13px;color:#94a3b8">ยังไม่มีการ Assign</div>`;
     return;
   }
-  al.innerHTML = asgns.map(a => {
+
+  const stuckCount = asgns.filter(a => !['completed','approved'].includes(a.status)).length;
+  let html = '';
+  if (stuckCount > 0) {
+    html += `<div style="padding:10px 14px;background:#fff7ed;border-bottom:1px solid #fed7aa">
+      <button class="btn btn-ghost btn-sm" style="color:#c2410c;border-color:#fed7aa"
+        onclick="deleteStuckAssignments()">🗑 ลบที่ยังไม่เสร็จทั้งหมด (${stuckCount})</button>
+    </div>`;
+  }
+  html += asgns.map(a => {
     const si = tagInfo(a.status);
+    const code = (a.locations?.code || '').replace(/'/g, '');
     return `<div class="row" style="cursor:default">
       <div class="row-body">
         <div class="row-title mono">${a.locations?.code}</div>
         <div class="row-sub">${a.profiles?.name || '?'}</div>
       </div>
       <span class="tag ${si.cls}">${si.lbl}</span>
+      <button onclick="deleteAssignment('${a.id}','${code}')" title="ลบ Assignment นี้"
+        style="background:none;border:none;color:#cbd5e1;font-size:16px;cursor:pointer;padding:4px;line-height:1;flex-shrink:0">🗑</button>
     </div>`;
   }).join('');
+  al.innerHTML = html;
+}
+
+async function deleteAssignment(id, code) {
+  if (!confirm(`ลบ Assignment ของ "${code}"?\n\nข้อมูลการนับ (ถ้ามี) จะถูกลบไปด้วย — ยอด Stock เดิม (Snapshot) ไม่ถูกลบ\nLocation นี้จะกลับมา "ว่าง" พร้อม Assign ใหม่ได้ทันที`)) return;
+  const { error } = await sb.from('assignments').delete().eq('id', id);
+  if (error) { alert(error.message); return; }
+  refreshLocs();
+  refreshBulkFilters();
+}
+
+async function deleteStuckAssignments() {
+  const sid = Q('as-sess')?.value;
+  if (!sid) return;
+  if (!confirm('ลบ Assignment ที่ "ยังไม่เสร็จ" ทั้งหมดใน Session นี้?\n\n(เฉพาะที่สถานะไม่ใช่ เสร็จ/อนุมัติแล้ว)\nLocation เหล่านี้จะกลับมาว่าง พร้อม Assign ใหม่ได้ทันที')) return;
+  const { error } = await sb.from('assignments')
+    .delete()
+    .eq('session_id', sid)
+    .not('status', 'in', '(completed,approved)');
+  if (error) { alert(error.message); return; }
+  refreshLocs();
+  refreshBulkFilters();
 }
 
 async function doAssign() {
