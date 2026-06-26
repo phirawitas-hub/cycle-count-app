@@ -552,28 +552,39 @@ async function submitCount(aid, round, idsStr) {
     btn.disabled = false; btn.textContent = `✅ ยืนยันรอบที่ ${round}`; return;
   }
 
-  const { data: asgn } = await sb.from('assignments')
-    .select('location_id,session_id').eq('id', aid).single();
+  let needsMore;
+  if (round === 1) {
+    // รอบ 1 อย่างเดียว cross-check ไม่ได้ ต้องมีรอบ 2 เสมอ
+    needsMore = true;
+  } else {
+    const { data: allRounds } = await sb.from('count_records')
+      .select('item_id,round,count_qty').eq('assignment_id', aid);
 
-  const { data: snaps } = await sb.from('stock_snapshot')
-    .select('item_id,onhand_qty')
-    .eq('session_id', asgn.session_id)
-    .eq('location_id', asgn.location_id);
+    const byItem = {};
+    allRounds?.forEach(r => {
+      byItem[r.item_id] = byItem[r.item_id] || {};
+      byItem[r.item_id][r.round] = +r.count_qty;
+    });
 
-  const onhand = Object.fromEntries(snaps?.map(s => [s.item_id, +s.onhand_qty]) || []);
-  const hasVar = recs.some(r => Math.abs((onhand[r.item_id] ?? 0) - r.count_qty) > 0.0001);
+    needsMore = Object.values(byItem).some(v => {
+      const st = computeVarianceStatus(v[1], v[2], v[3], null);
+      return st === 'Diff' || st === 'PENDING';
+    });
+  }
 
-  const newStatus = hasVar
+  const newStatus = needsMore
     ? ['','round1_done','round2_done','round3_done'][round]
     : 'completed';
 
   await sb.from('assignments').update({ status: newStatus }).eq('id', aid);
 
-  if (!hasVar) {
+  if (!needsMore) {
     al.innerHTML = `<div class="alert alert-green">✅ ยอดตรงทุกรายการ! บันทึกสำเร็จ</div>`;
+  } else if (round === 1) {
+    al.innerHTML = `<div class="alert alert-blue">✓ บันทึกรอบที่ 1 แล้ว — ต้องนับรอบ 2 เพื่อ Cross-check ยอด</div>`;
   } else {
     al.innerHTML = `<div class="alert alert-amber">⚠️ พบ Variance ${round < 3
-      ? '— Supervisor อาจขอให้นับรอบ '+(round+1)
+      ? '— ต้องนับรอบ '+(round+1)+' เพื่อเทียบยอด'
       : '— ส่ง Supervisor ตรวจสอบแล้ว'}</div>`;
   }
   setTimeout(() => go('c-tasks'), 1800);
@@ -725,31 +736,42 @@ async function loadSvDetail() {
       .eq('session_id', asgn.session_id)
       .eq('location_id', asgn.location_id),
     sb.from('count_records')
-      .select('item_id,count_qty')
-      .eq('assignment_id', aid)
-      .eq('round', roundNum),
+      .select('item_id,round,count_qty')
+      .eq('assignment_id', aid),
   ]);
 
-  const cMap   = Object.fromEntries(counts?.map(c => [c.item_id, +c.count_qty]) || []);
-  let hasVar   = false;
-  let varRows  = '';
+  const byItem = {};
+  counts?.forEach(c => {
+    byItem[c.item_id] = byItem[c.item_id] || {};
+    byItem[c.item_id][c.round] = +c.count_qty;
+  });
+
+  const VS = {
+    OK:      { cls:'tag-green',  lbl:'OK'      , row:'exact' },
+    Diff:    { cls:'tag-red',    lbl:'Diff'    , row:'diff'  },
+    PENDING: { cls:'tag-amber',  lbl:'PENDING' , row:''      },
+    '':      { cls:'tag-gray',   lbl:'-'       , row:''      },
+  };
+
+  let hasVar  = false;
+  let varRows = '';
+  const fmt = x => (x===undefined || x===null) ? '—' : x;
 
   for (const s of snaps || []) {
-    const it   = s.items;
-    const got  = cMap[it.id];
-    const diff = got !== undefined ? got - +s.onhand_qty : null;
-    const isDiff = diff !== null && Math.abs(diff) > 0.0001;
-    if (isDiff) hasVar = true;
-    varRows += `<div class="vrow ${isDiff ? 'diff' : 'exact'}">
+    const it = s.items;
+    const v  = byItem[it.id] || {};
+    const f = v[1], g = v[2], h = v[3];
+    const stKey = computeVarianceStatus(f, g, h, null);
+    const st = VS[stKey] || { cls:'tag-gray', lbl:stKey, row:'' };
+    if (stKey === 'Diff') hasVar = true;
+
+    varRows += `<div class="vrow ${st.row}">
       <div style="flex:1;min-width:0">
         <div class="mono" style="font-size:12px;font-weight:800">${it.code}</div>
         <div style="font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${it.description||''}</div>
+        <div style="font-size:10px;color:#94a3b8;margin-top:2px">ระบบ: ${s.onhand_qty} · R1: ${fmt(f)} · R2: ${fmt(g)} · R3: ${fmt(h)}</div>
       </div>
-      <div style="text-align:right;flex-shrink:0">
-        <div style="font-size:11px;color:#94a3b8">ระบบ: ${s.onhand_qty}</div>
-        <div class="vqty">${got !== undefined ? got : '—'}</div>
-        ${diff !== null ? `<div class="vqty ${diff >= 0 ? 'vdiff-p' : 'vdiff-n'}">${diff >= 0 ? '+' : ''}${diff.toFixed(0)}</div>` : ''}
-      </div>
+      <span class="tag ${st.cls}" style="flex-shrink:0">${st.lbl}</span>
     </div>`;
   }
 
@@ -764,7 +786,7 @@ async function loadSvDetail() {
         ${hasVar ? `<span class="tag tag-amber">⚠️ มี Variance</span>` : `<span class="tag tag-green">✅ ยอดตรง</span>`}
       </div>
     </div>
-    <div class="sec">รายละเอียด (${snaps?.length || 0} รายการ) — ระบบ vs นับจริง</div>
+    <div class="sec">รายละเอียด (${snaps?.length || 0} รายการ) — เทียบแต่ละรอบกันเอง (ระบบเป็นแค่ข้อมูลอ้างอิง)</div>
     <div class="card card-flush">${varRows}</div>
     <div style="padding:12px">
       <div id="sva"></div>
@@ -934,6 +956,34 @@ function computeZone(locCode, desc) {
 }
 
 // ══════════════════════════════════════════════════════════
+//  VARIANCE LOGIC — แปลงจากสูตร Excel (เทียบรอบนับกันเอง ไม่เทียบกับระบบ)
+//  f = รอบ 1, g = รอบ 2, h = รอบ 3, i = ยอดสรุป/Physical count (ถ้ามี)
+//  คืนค่า: '' (ไม่มีข้อมูล) / 'PENDING' (รอรอบถัดไป) / 'OK' / 'Diff'
+// ══════════════════════════════════════════════════════════
+function computeVarianceStatus(f, g, h, i) {
+  const has = v => v !== null && v !== undefined && v !== '';
+  const n   = v => has(v) ? v : 0;   // Excel: ช่องว่าง = 0 ตอนเทียบค่าตัวเลขกันตรงๆ
+
+  if (!has(f) && !has(g) && !has(h)) return '';
+  if (!has(g)) return 'PENDING';                                  // ยังไม่มีรอบ 2
+
+  if (g === 0 && f !== 0 && !has(h)) return 'Diff';
+  if (f === 0 && g !== 0 && !has(h)) return 'Diff';
+  if (f === 0 && n(g) !== n(h))      return 'Diff';
+  if (n(g)===n(f) || n(h)===n(f) || n(i)===n(f) || n(g)===n(h)) return 'OK'; // มีคู่ใดคู่หนึ่งตรงกัน → OK
+
+  // ── fallback: หา Mode ของค่าที่กรอกแล้วจริง [f,g,h,i] (ไม่รวมช่องที่ยังไม่กรอก) เทียบกับ i ──
+  const vals = [f, g, h, i].filter(has);
+  if (!vals.length) return 'Diff';
+  const freq = {};
+  vals.forEach(v => freq[v] = (freq[v]||0) + 1);
+  let modeVal = vals[0], modeCount = 0;
+  for (const v of vals) { if (freq[v] > modeCount) { modeCount = freq[v]; modeVal = v; } }
+  if (modeCount > 1 && has(i) && modeVal === i) return 'OK';
+  return 'Diff';
+}
+
+// ══════════════════════════════════════════════════════════
 //  ADMIN — IMPORT STOCK (XLSX — Export ทีละ Location เช่น B-EA%)
 // ══════════════════════════════════════════════════════════
 function paintAdImport() {
@@ -943,7 +993,7 @@ function paintAdImport() {
       <div class="alert alert-blue" style="margin-bottom:14px;font-size:12px">
         📁 Upload ไฟล์ Stock Export (.xlsx) — Export มาทีละ Location ก็ได้<br>
         &nbsp;&nbsp;เช่น กรอง Location เป็น <code>B-EA%</code> ตอน Export จากระบบ<br>
-        ✅ ระบบ import เฉพาะ <strong>Inventory Status = Good</strong> อัตโนมัติ<br>
+        ✅ Import ทุก Inventory Status (ไม่กรองสถานะ)<br>
         🔢 OH Qty จะถูก <strong>sum</strong> ถ้า item เดียวกันอยู่หลาย LPN ใน location เดียวกัน<br>
         🧭 Zone จะคำนวณอัตโนมัติจาก Location code (ตามกฎ Selective/Overfloor/Cool Room ฯลฯ)<br>
         🔄 Upload ใหม่ได้ทุกครั้งที่ OH เปลี่ยน — ระบบจะ update ยอดให้
@@ -962,6 +1012,27 @@ function paintAdImport() {
       </div>
       <div id="ipreview" style="display:none;margin-bottom:10px"></div>
       <button class="btn btn-blue" id="ibtn" onclick="doImportXlsx()" disabled>📥 Import</button>
+    </div>
+
+    <div class="card" style="border:1.5px solid #fecaca">
+      <div style="font-size:12px;font-weight:800;color:#b91c1c;margin-bottom:10px">🗑️ ลบ Location ตาม Zone / Row</div>
+      <div class="alert alert-amber" style="font-size:12px">
+        ⚠️ ลบจริงในทุก Session — Location, ยอด Stock, Assignment, ผลนับ, การอนุมัติของ Zone/Row ที่เลือกจะถูกลบทั้งหมด กู้คืนไม่ได้
+      </div>
+      <div class="grid-3" style="margin-bottom:10px">
+        <div class="fg" style="margin:0">
+          <label>ZONE</label>
+          <select id="del-zone" onchange="refreshDeleteZonePreview()"><option value="">ทั้งหมด</option></select>
+        </div>
+        <div class="fg" style="margin:0">
+          <label>ROW</label>
+          <select id="del-row" onchange="refreshDeleteZonePreview()"><option value="">ทั้งหมด</option></select>
+        </div>
+        <div></div>
+      </div>
+      <div id="del-preview" style="font-size:12px;color:#b91c1c;margin-bottom:10px;font-weight:600"></div>
+      <div id="del-alert"></div>
+      <button class="btn btn-red" id="del-btn" onclick="doDeleteByZoneRow()" disabled>🗑️ ลบทั้งหมดที่เลือก</button>
     </div>`;
 
   sb.from('count_sessions').select('id,name').in('status',['draft','active']).then(({data}) => {
@@ -971,7 +1042,117 @@ function paintAdImport() {
   });
 
   Q('ixlsx').addEventListener('change', readXlsxFile);
+  loadDeleteZoneFilters();
 }
+
+// ── ลบ Location ตาม Zone/Row (ทุก Session) ──
+async function loadDeleteZoneFilters() {
+  const { data } = await sb.from('locations').select('zone,row_no');
+  const zones = new Set(), rows = new Set();
+  (data||[]).forEach(l => { if (l.zone) zones.add(l.zone); if (l.row_no) rows.add(l.row_no); });
+
+  const fill = (id, vals) => {
+    const el = Q(id); if (!el) return;
+    el.innerHTML = '<option value="">ทั้งหมด</option>' +
+      [...vals].sort().map(v => `<option value="${v}">${v}</option>`).join('');
+  };
+  fill('del-zone', zones);
+  fill('del-row',  rows);
+  refreshDeleteZonePreview();
+}
+
+async function refreshDeleteZonePreview() {
+  const zone = Q('del-zone')?.value, row = Q('del-row')?.value;
+  const prev = Q('del-preview'), btn = Q('del-btn');
+  if (!prev || !btn) return;
+
+  if (!zone && !row) {
+    prev.innerHTML = `<span style="color:#94a3b8;font-weight:500">เลือก Zone หรือ Row อย่างน้อย 1 อย่าง เพื่อป้องกันการลบทั้งหมดโดยไม่ตั้งใจ</span>`;
+    btn.disabled = true;
+    return;
+  }
+
+  let q = sb.from('locations').select('id', { count:'exact', head:true });
+  if (zone) q = q.eq('zone', zone);
+  if (row)  q = q.eq('row_no', row);
+  const { count, error } = await q;
+
+  if (error) { prev.innerHTML = `<span style="color:#dc2626">${error.message}</span>`; btn.disabled = true; return; }
+  if (!count) {
+    prev.innerHTML = `<span style="color:#94a3b8;font-weight:500">ไม่พบ Location ที่ตรงเงื่อนไข</span>`;
+    btn.disabled = true;
+  } else {
+    prev.innerHTML = `⚠️ จะลบ <strong>${count.toLocaleString()} locations</strong> พร้อมข้อมูลที่เกี่ยวข้องทั้งหมดในทุก Session`;
+    btn.disabled = false;
+  }
+}
+
+async function doDeleteByZoneRow() {
+  const zone = Q('del-zone')?.value, row = Q('del-row')?.value;
+  if (!zone && !row) return;
+  const label = [zone, row].filter(Boolean).join(' / ');
+  if (!confirm(`ยืนยันลบ Zone/Row: "${label}"?\n\nจะลบ Location ทั้งหมดที่ตรงเงื่อนไข พร้อมข้อมูลที่เกี่ยวข้อง (Stock Snapshot, Assignment, ผลนับ, การอนุมัติ) ในทุก Session\n\nการลบนี้กู้คืนไม่ได้`)) return;
+
+  const btn = Q('del-btn'), al = Q('del-alert');
+  btn.disabled = true;
+  al.innerHTML = `<div class="alert alert-blue">⏳ กำลังค้นหา Location ที่ตรงเงื่อนไข...</div>`;
+
+  let q = sb.from('locations').select('id,code');
+  if (zone) q = q.eq('zone', zone);
+  if (row)  q = q.eq('row_no', row);
+  const { data: locs, error: e0 } = await q;
+  if (e0)         { al.innerHTML = errBox(e0.message); btn.disabled = false; return; }
+  if (!locs?.length) { al.innerHTML = `<div class="alert alert-amber">ไม่พบ Location ที่ตรงเงื่อนไข</div>`; btn.disabled = false; return; }
+
+  const locIds = locs.map(l => l.id);
+  const BATCH = 200;
+
+  try {
+    al.innerHTML = `<div class="alert alert-blue">⏳ [1/5] ค้นหา Assignment ที่เกี่ยวข้อง...</div>`;
+    let asgnIds = [];
+    for (let i = 0; i < locIds.length; i += BATCH) {
+      const { data, error } = await sb.from('assignments').select('id').in('location_id', locIds.slice(i, i+BATCH));
+      if (error) throw error;
+      asgnIds.push(...(data||[]).map(a => a.id));
+    }
+
+    if (asgnIds.length) {
+      al.innerHTML = `<div class="alert alert-blue">⏳ [2/5] ลบ Variance Approvals...</div>`;
+      for (let i = 0; i < asgnIds.length; i += BATCH) {
+        const { error } = await sb.from('variance_approvals').delete().in('assignment_id', asgnIds.slice(i, i+BATCH));
+        if (error) throw error;
+      }
+      al.innerHTML = `<div class="alert alert-blue">⏳ [3/5] ลบผลการนับ (Count Records)...</div>`;
+      for (let i = 0; i < asgnIds.length; i += BATCH) {
+        const { error } = await sb.from('count_records').delete().in('assignment_id', asgnIds.slice(i, i+BATCH));
+        if (error) throw error;
+      }
+      al.innerHTML = `<div class="alert alert-blue">⏳ [4/5] ลบ Assignment...</div>`;
+      for (let i = 0; i < asgnIds.length; i += BATCH) {
+        const { error } = await sb.from('assignments').delete().in('id', asgnIds.slice(i, i+BATCH));
+        if (error) throw error;
+      }
+    }
+
+    al.innerHTML = `<div class="alert alert-blue">⏳ [5/5] ลบ Stock Snapshot และ Location...</div>`;
+    for (let i = 0; i < locIds.length; i += BATCH) {
+      const { error } = await sb.from('stock_snapshot').delete().in('location_id', locIds.slice(i, i+BATCH));
+      if (error) throw error;
+    }
+    for (let i = 0; i < locIds.length; i += BATCH) {
+      const { error } = await sb.from('locations').delete().in('id', locIds.slice(i, i+BATCH));
+      if (error) throw error;
+    }
+
+    al.innerHTML = `<div class="alert alert-green">✅ ลบ ${locs.length.toLocaleString()} locations (Zone/Row: ${label}) เรียบร้อย</div>`;
+    Q('del-zone').value = ''; Q('del-row').value = '';
+    loadDeleteZoneFilters();
+  } catch(e) {
+    al.innerHTML = errBox(e?.message || String(e));
+  }
+  btn.disabled = false;
+}
+
 
 let _xlsxRawRows = null;   // ทุกแถวในไฟล์ (ยังไม่ filter) — เก็บไว้เพื่อ refilter โดยไม่ต้องอ่านไฟล์ใหม่
 let _xlsxParsed  = null;   // แถวหลัง filter + aggregate (เตรียม import จริง)
@@ -1023,8 +1204,8 @@ async function readXlsxFile() {
       }
     }
 
-    if (headerRow === -1 || col.loc===-1 || col.item===-1 || col.oh===-1 || col.stat===-1) {
-      throw new Error('ไม่พบคอลัมน์ที่จำเป็น (Location/Item/OH/Status) ในไฟล์ — ตรวจสอบหัวตารางในไฟล์ Export');
+    if (headerRow === -1 || col.loc===-1 || col.item===-1 || col.oh===-1) {
+      throw new Error('ไม่พบคอลัมน์ที่จำเป็น (Location/Item/OH) ในไฟล์ — ตรวจสอบหัวตารางในไฟล์ Export');
     }
 
     const rows = [];
@@ -1051,8 +1232,8 @@ async function readXlsxFile() {
   }
 }
 
-// ── Filter (location pattern + status=Good) + Aggregate (sum OH) แล้วแสดง preview ──
-// เรียกใหม่ได้ทุกครั้งที่พิมพ์ filter โดยไม่ต้องอ่านไฟล์ใหม่
+// ── Filter (location pattern เท่านั้น) + Aggregate (sum OH) แล้วแสดง preview ──
+// เรียกใหม่ได้ทุกครั้งที่พิมพ์ filter โดยไม่ต้องอ่านไฟล์ใหม่ — ไม่กรอง Inventory Status แล้ว (import ทุกสถานะ)
 function refreshXlsxPreview() {
   const prev = Q('ipreview'), btn = Q('ibtn');
   if (!_xlsxRawRows) return;
@@ -1060,14 +1241,12 @@ function refreshXlsxPreview() {
   const patternStr = Q('ilocfilter')?.value.trim() || '';
   const re = patternStr ? likeToRegex(patternStr) : null;
 
-  let inScope = 0, goodRows = 0, skippedStatus = 0;
+  let inScope = 0;
   const map = {};
 
   for (const r of _xlsxRawRows) {
     if (re && !re.test(r.loc)) continue;
     inScope++;
-    if (r.stat.toLowerCase() !== 'good') { skippedStatus++; continue; }
-    goodRows++;
     const key = r.loc + '|||' + r.item;
     if (map[key]) {
       map[key].qty += r.oh;
@@ -1091,10 +1270,9 @@ function refreshXlsxPreview() {
   }
 
   prev.innerHTML = `<div class="alert alert-green">
-    ✅ พร้อม Import<br>
+    ✅ พร้อม Import (ทุก Inventory Status)<br>
     📊 ทั้งไฟล์ <strong>${_xlsxRawRows.length.toLocaleString()}</strong> rows
       ${patternStr ? `→ ตรง filter: <strong>${inScope.toLocaleString()}</strong>` : ''}<br>
-    Good: <strong>${goodRows.toLocaleString()}</strong> · ข้าม (ไม่ใช่ Good): ${skippedStatus.toLocaleString()}<br>
     📍 <strong>${uLocs.toLocaleString()}</strong> locations
       · 📦 <strong>${uItems.toLocaleString()}</strong> unique items<br>
     🔢 <strong>${_xlsxParsed.length.toLocaleString()}</strong> loc+item pairs (หลัง aggregate OH)
