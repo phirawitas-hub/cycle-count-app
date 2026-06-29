@@ -9,6 +9,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
 <!-- SheetJS สำหรับอ่านไฟล์ XLSX -->
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<!-- html5-qrcode สำหรับสแกน Location -->
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
 /* ── Reset & Base ── */
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -208,6 +210,25 @@ select{
 .bulk-box{background:#f0f7ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:14px;margin-bottom:14px}
 .bulk-box-title{font-size:12px;font-weight:800;color:#1d4ed8;margin-bottom:10px}
 .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+
+/* ── Item extra (remark/photo) ── */
+.citem-wrap{border-bottom:1px solid #f1f5f9}
+.citem-wrap:last-child{border-bottom:none}
+.citem-wrap .citem{border-bottom:none}
+.item-toggle{background:none;border:none;color:#94a3b8;font-size:16px;cursor:pointer;padding:4px;flex-shrink:0;line-height:1}
+.item-toggle.has{color:#7c3aed}
+.item-extra{display:none;padding:10px 16px 14px;background:#f8fafc}
+.item-extra.open{display:block}
+.item-extra textarea{min-height:56px;font-size:13px;font-family:inherit;margin-top:4px}
+.photo-thumb{width:64px;height:64px;border-radius:8px;object-fit:cover;margin-top:8px;display:block;border:1px solid #e2e8f0}
+.lpn-chip{display:inline-block;font-size:10px;background:#eef2ff;color:#4338ca;padding:1px 6px;border-radius:5px;margin:2px 3px 0 0;font-family:ui-monospace,monospace}
+
+/* ── Scanner overlay ── */
+.scan-overlay{position:fixed;inset:0;background:#000;z-index:999;display:flex;flex-direction:column}
+.scan-header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:#111827;flex-shrink:0}
+.scan-header span{color:#fff;font-weight:700;font-size:14px}
+.scan-header button{background:none;border:none;color:#fff;font-size:24px;cursor:pointer;line-height:1}
+#scanReader{flex:1;display:flex;align-items:center;justify-content:center}
 </style>
 </head>
 <body>
@@ -419,6 +440,8 @@ async function loadCTasks() {
     </div>`; return;
   }
 
+  window._myTasks = asgns;
+
   const done = asgns.filter(a => ['completed','approved'].includes(a.status)).length;
   const pct  = Math.round(done / asgns.length * 100);
 
@@ -428,6 +451,7 @@ async function loadCTasks() {
       <span style="font-size:14px;font-weight:800;color:#3b82f6">${done} / ${asgns.length}</span>
     </div>
     <div class="prog"><div class="prog-fill" style="width:${pct}%"></div></div>
+    <button class="btn btn-ghost" style="margin-top:10px" onclick="openScanner()">📷 สแกน Location</button>
   </div>
   <div class="card card-flush">`;
 
@@ -451,6 +475,55 @@ async function loadCTasks() {
 }
 
 // ══════════════════════════════════════════════════════════
+//  SCANNER — สแกน Location code เพื่อกระโดดไปงานนั้นทันที
+// ══════════════════════════════════════════════════════════
+let _html5Qr = null;
+
+function openScanner() {
+  if (typeof Html5Qrcode === 'undefined') { alert('ตัวสแกนยังโหลดไม่เสร็จ ลองใหม่อีกครั้ง'); return; }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'scan-overlay';
+  overlay.id = 'scanOverlay';
+  overlay.innerHTML = `
+    <div class="scan-header">
+      <span>📷 สแกน Location</span>
+      <button onclick="closeScanner()">✕</button>
+    </div>
+    <div id="scanReader"></div>`;
+  document.body.appendChild(overlay);
+
+  _html5Qr = new Html5Qrcode('scanReader');
+  _html5Qr.start(
+    { facingMode: 'environment' },
+    { fps: 10, qrbox: 240 },
+    (decodedText) => onScanSuccess(decodedText),
+    () => {}
+  ).catch(err => {
+    alert('เปิดกล้องไม่ได้: ' + (err?.message || err));
+    closeScanner();
+  });
+}
+
+function closeScanner() {
+  if (_html5Qr) {
+    _html5Qr.stop().catch(() => {}).finally(() => { try { _html5Qr.clear(); } catch(e){} _html5Qr = null; });
+  }
+  const overlay = Q('scanOverlay');
+  if (overlay) overlay.remove();
+}
+
+function onScanSuccess(text) {
+  const code = (text || '').trim().toUpperCase();
+  const tasks = window._myTasks || [];
+  const match = tasks.find(a => a.locations?.code?.toUpperCase() === code);
+  closeScanner();
+  if (!match) { alert(`ไม่พบ Location "${code}" ในงานของคุณ`); return; }
+  if (['completed','approved'].includes(match.status)) { alert(`Location "${code}" นับเสร็จแล้ว`); return; }
+  go('c-count', { aid: match.id });
+}
+
+// ══════════════════════════════════════════════════════════
 //  COUNTER — COUNT ENTRY (BLIND)
 // ══════════════════════════════════════════════════════════
 async function loadCCount() {
@@ -468,10 +541,17 @@ async function loadCCount() {
   const l   = asgn.locations;
   const sub = [l.zone, l.area, l.row_no && 'Row '+l.row_no, l.level && 'Lv.'+l.level].filter(Boolean).join(' · ');
 
-  const { data: snaps } = await sb.from('stock_snapshot')
-    .select('item_id,items(id,code,description)')
-    .eq('session_id', asgn.session_id)
-    .eq('location_id', asgn.location_id);
+  const [{ data: snaps }, { data: details }, { data: profs }] = await Promise.all([
+    sb.from('stock_snapshot')
+      .select('item_id,items(id,code,description)')
+      .eq('session_id', asgn.session_id)
+      .eq('location_id', asgn.location_id),
+    sb.from('stock_snapshot_detail')
+      .select('item_id,license_plate,lot,inventory_status,qty')
+      .eq('session_id', asgn.session_id)
+      .eq('location_id', asgn.location_id),
+    sb.from('profiles').select('id,name').order('name'),
+  ]);
 
   if (!snaps?.length) {
     cnt().innerHTML = `<div class="card">
@@ -479,23 +559,57 @@ async function loadCCount() {
     </div>`; return;
   }
 
+  const detailByItem = {};
+  (details||[]).forEach(d => {
+    detailByItem[d.item_id] = detailByItem[d.item_id] || [];
+    detailByItem[d.item_id].push(d);
+  });
+
   const { data: prev } = await sb.from('count_records')
-    .select('item_id,count_qty').eq('assignment_id', aid).eq('round', round);
-  const prevMap = Object.fromEntries(prev?.map(r => [r.item_id, r.count_qty]) || []);
+    .select('item_id,count_qty,remark,photo_url').eq('assignment_id', aid).eq('round', round);
+  const prevMap = Object.fromEntries(prev?.map(r => [r.item_id, r]) || []);
+
+  window._photoMap = {};
+  prev?.forEach(r => { if (r.photo_url) window._photoMap[r.item_id] = r.photo_url; });
+
+  const profOpts = (profs||[]).map(p =>
+    `<option value="${p.id}" ${p.id===me.id?'selected':''}>${p.name}</option>`).join('');
 
   let items = '';
   for (const s of snaps) {
-    const it = s.items;
-    const v  = prevMap[it.id];
-    items += `<div class="citem">
-      <div class="citem-info">
-        <div class="citem-code">${it.code}</div>
-        <div class="citem-desc">${it.description || '—'}</div>
+    const it   = s.items;
+    const pr   = prevMap[it.id];
+    const v    = pr?.count_qty;
+    const dets = detailByItem[it.id] || [];
+    const chips = dets.map(d => {
+      const parts = [d.license_plate, d.lot, d.inventory_status].filter(Boolean);
+      return parts.length ? `<span class="lpn-chip">${parts.join(' · ')} (${d.qty})</span>` : '';
+    }).join('');
+    const hasExtra = !!(pr?.remark || pr?.photo_url);
+
+    items += `<div class="citem-wrap">
+      <div class="citem">
+        <div class="citem-info">
+          <div class="citem-code">${it.code}</div>
+          <div class="citem-desc">${it.description || '—'}</div>
+          ${chips ? `<div style="margin-top:4px">${chips}</div>` : ''}
+        </div>
+        <button class="item-toggle ${hasExtra?'has':''}" id="tg_${it.id}" onclick="toggleExtra('${it.id}')" title="หมายเหตุ/รูป">📝</button>
+        <input type="number" class="cqty ${v !== undefined ? 'ok' : ''}"
+          id="q_${it.id}" min="0" step="1"
+          value="${v !== undefined ? v : ''}" placeholder="0"
+          oninput="this.classList.add('ok')">
       </div>
-      <input type="number" class="cqty ${v !== undefined ? 'ok' : ''}"
-        id="q_${it.id}" min="0" step="1"
-        value="${v !== undefined ? v : ''}" placeholder="0"
-        oninput="this.classList.add('ok')">
+      <div class="item-extra ${hasExtra?'open':''}" id="extra_${it.id}">
+        <label style="font-size:11px">หมายเหตุ (ไม่บังคับ)</label>
+        <textarea id="rmk_${it.id}" placeholder="เช่น สินค้าเสียหาย, นับยาก ฯลฯ">${pr?.remark || ''}</textarea>
+        <div style="margin-top:8px">
+          <label style="font-size:11px">รูปถ่าย (ไม่บังคับ)</label><br>
+          <input type="file" accept="image/*" capture="environment" id="photo_${it.id}"
+            style="font-size:12px;margin-top:4px" onchange="handlePhoto('${it.id}', this)">
+          <img id="thumb_${it.id}" class="photo-thumb" src="${pr?.photo_url||''}" style="${pr?.photo_url?'':'display:none'}">
+        </div>
+      </div>
     </div>`;
   }
 
@@ -510,8 +624,12 @@ async function loadCCount() {
         <span class="tag tag-gray">${asgn.count_sessions.name}</span>
       </div>
       ${round > 1 ? `<div class="alert alert-amber" style="margin-top:12px">
-        🔄 พบ Variance จากรอบที่ ${round-1} — กรุณานับใหม่อย่างระมัดระวัง
+        🔄 ยอดไม่ตรงจากรอบที่ ${round-1} — กรุณานับใหม่อย่างระมัดระวัง
       </div>` : ''}
+      <div class="fg" style="margin-top:12px;margin-bottom:0">
+        <label>ผู้นับจริง (ทีมนับ)</label>
+        <select id="actualCounter">${profOpts}</select>
+      </div>
     </div>
     <div class="sec">📦 ${snaps.length} รายการ — กรอกจำนวนที่นับได้จริง (อย่าดูยอดระบบ)</div>
     <div class="card card-flush">${items}</div>
@@ -528,9 +646,37 @@ async function loadCCount() {
   }
 }
 
+function toggleExtra(itemId) {
+  const el = Q('extra_'+itemId);
+  if (el) el.classList.toggle('open');
+}
+
+async function handlePhoto(itemId, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const thumb = Q('thumb_'+itemId);
+  if (thumb) { thumb.src = URL.createObjectURL(file); thumb.style.display = 'block'; }
+  input.disabled = true;
+  try {
+    const fileName = `${Date.now()}_${itemId}_${file.name}`.replace(/\s+/g, '_');
+    const { error } = await sb.storage.from('count-photos').upload(fileName, file, { upsert:true });
+    if (error) throw error;
+    const { data: urlData } = sb.storage.from('count-photos').getPublicUrl(fileName);
+    window._photoMap = window._photoMap || {};
+    window._photoMap[itemId] = urlData.publicUrl;
+    const tg = Q('tg_'+itemId);
+    if (tg) tg.classList.add('has');
+  } catch(e) {
+    alert('อัปโหลดรูปไม่สำเร็จ: ' + (e?.message || e));
+  }
+  input.disabled = false;
+}
+
 async function submitCount(aid, round, idsStr) {
   const ids = idsStr.split(',');
   const al  = Q('ca'), btn = Q('cb');
+
+  const actualCounterId = Q('actualCounter')?.value || me.id;
 
   const recs = [];
   for (const iid of ids) {
@@ -539,7 +685,14 @@ async function submitCount(aid, round, idsStr) {
       al.innerHTML = `<div class="alert alert-red">กรอกจำนวนให้ครบทุกรายการ (ถ้าไม่มีสินค้าให้กรอก 0)</div>`;
       return;
     }
-    recs.push({ assignment_id:aid, item_id:iid, round, count_qty:parseFloat(v), counted_by:me.id });
+    const remark   = Q('rmk_'+iid)?.value?.trim() || null;
+    const photoUrl = (window._photoMap && window._photoMap[iid]) || null;
+    recs.push({
+      assignment_id: aid, item_id: iid, round,
+      count_qty: parseFloat(v), counted_by: me.id,
+      actual_counter_id: actualCounterId,
+      remark, photo_url: photoUrl,
+    });
   }
 
   btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
@@ -552,42 +705,45 @@ async function submitCount(aid, round, idsStr) {
     btn.disabled = false; btn.textContent = `✅ ยืนยันรอบที่ ${round}`; return;
   }
 
-  let needsMore;
-  if (round === 1) {
-    // รอบ 1 อย่างเดียว cross-check ไม่ได้ ต้องมีรอบ 2 เสมอ
-    needsMore = true;
-  } else {
-    const { data: allRounds } = await sb.from('count_records')
-      .select('item_id,round,count_qty').eq('assignment_id', aid);
+  // ── เทียบกับระบบ (OH) และรอบก่อนหน้า เพื่อตัดสิน OK/Diff ──
+  const { data: asgn } = await sb.from('assignments')
+    .select('location_id,session_id').eq('id', aid).single();
 
-    const byItem = {};
-    allRounds?.forEach(r => {
-      byItem[r.item_id] = byItem[r.item_id] || {};
-      byItem[r.item_id][r.round] = +r.count_qty;
-    });
+  const [{ data: snaps }, { data: allRounds }] = await Promise.all([
+    sb.from('stock_snapshot').select('item_id,onhand_qty')
+      .eq('session_id', asgn.session_id).eq('location_id', asgn.location_id),
+    sb.from('count_records').select('item_id,round,count_qty').eq('assignment_id', aid),
+  ]);
 
-    needsMore = Object.values(byItem).some(v => {
-      const st = computeVarianceStatus(v[1], v[2], v[3], null);
-      return st === 'Diff' || st === 'PENDING';
-    });
-  }
+  const ohMap = Object.fromEntries(snaps?.map(s => [s.item_id, +s.onhand_qty]) || []);
+  const byItem = {};
+  allRounds?.forEach(r => {
+    byItem[r.item_id] = byItem[r.item_id] || {};
+    byItem[r.item_id][r.round] = +r.count_qty;
+  });
+
+  const needsMore = Object.entries(byItem).some(([iid, v]) => {
+    const st = computeItemStatus(ohMap[iid], v[1], v[2], v[3]);
+    return st === 'PENDING' || st === 'Diff';
+  });
 
   const newStatus = needsMore
     ? ['','round1_done','round2_done','round3_done'][round]
     : 'completed';
 
   await sb.from('assignments').update({ status: newStatus }).eq('id', aid);
+  window._photoMap = {};
 
   if (!needsMore) {
-    al.innerHTML = `<div class="alert alert-green">✅ ยอดตรงทุกรายการ! บันทึกสำเร็จ</div>`;
-  } else if (round === 1) {
-    al.innerHTML = `<div class="alert alert-blue">✓ บันทึกรอบที่ 1 แล้ว — ต้องนับรอบ 2 เพื่อ Cross-check ยอด</div>`;
+    alert('✅ ยอดตรงทุกรายการ! บันทึกสำเร็จ');
+    go('c-tasks');
+  } else if (round < 3) {
+    alert(`⚠️ ยอดไม่ตรงกับระบบ — กรุณานับรอบที่ ${round+1} อีกครั้งอย่างระมัดระวัง`);
+    go('c-count', { aid });
   } else {
-    al.innerHTML = `<div class="alert alert-amber">⚠️ พบ Variance ${round < 3
-      ? '— ต้องนับรอบ '+(round+1)+' เพื่อเทียบยอด'
-      : '— ส่ง Supervisor ตรวจสอบแล้ว'}</div>`;
+    alert('⚠️ นับครบ 3 รอบแล้วยังไม่ตรง — ส่ง Supervisor ตรวจสอบแล้ว');
+    go('c-tasks');
   }
-  setTimeout(() => go('c-tasks'), 1800);
 }
 
 function nextRound(st) {
@@ -736,14 +892,14 @@ async function loadSvDetail() {
       .eq('session_id', asgn.session_id)
       .eq('location_id', asgn.location_id),
     sb.from('count_records')
-      .select('item_id,round,count_qty')
+      .select('item_id,round,count_qty,remark,photo_url')
       .eq('assignment_id', aid),
   ]);
 
   const byItem = {};
   counts?.forEach(c => {
     byItem[c.item_id] = byItem[c.item_id] || {};
-    byItem[c.item_id][c.round] = +c.count_qty;
+    byItem[c.item_id][c.round] = c;
   });
 
   const VS = {
@@ -755,21 +911,30 @@ async function loadSvDetail() {
 
   let hasVar  = false;
   let varRows = '';
-  const fmt = x => (x===undefined || x===null) ? '—' : x;
+  const fmt = x => (x===undefined || x===null) ? '—' : x.count_qty;
 
   for (const s of snaps || []) {
     const it = s.items;
     const v  = byItem[it.id] || {};
-    const f = v[1], g = v[2], h = v[3];
-    const stKey = computeVarianceStatus(f, g, h, null);
+    const r1 = v[1]?.count_qty, r2 = v[2]?.count_qty, r3 = v[3]?.count_qty;
+    const stKey = computeItemStatus(+s.onhand_qty, r1, r2, r3);
     const st = VS[stKey] || { cls:'tag-gray', lbl:stKey, row:'' };
     if (stKey === 'Diff') hasVar = true;
+
+    const notes = [v[1],v[2],v[3]].map((rec,idx) => {
+      if (!rec || (!rec.remark && !rec.photo_url)) return '';
+      return `<div style="font-size:10px;color:#7c3aed;margin-top:1px">
+        ${rec.remark ? `📝R${idx+1}: ${rec.remark}` : ''}
+        ${rec.photo_url ? ` <a href="${rec.photo_url}" target="_blank" style="color:#7c3aed">📷 ดูรูป R${idx+1}</a>` : ''}
+      </div>`;
+    }).join('');
 
     varRows += `<div class="vrow ${st.row}">
       <div style="flex:1;min-width:0">
         <div class="mono" style="font-size:12px;font-weight:800">${it.code}</div>
         <div style="font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${it.description||''}</div>
-        <div style="font-size:10px;color:#94a3b8;margin-top:2px">ระบบ: ${s.onhand_qty} · R1: ${fmt(f)} · R2: ${fmt(g)} · R3: ${fmt(h)}</div>
+        <div style="font-size:10px;color:#94a3b8;margin-top:2px">ระบบ(OH): ${s.onhand_qty} · R1: ${fmt(v[1])} · R2: ${fmt(v[2])} · R3: ${fmt(v[3])}</div>
+        ${notes}
       </div>
       <span class="tag ${st.cls}" style="flex-shrink:0">${st.lbl}</span>
     </div>`;
@@ -786,7 +951,7 @@ async function loadSvDetail() {
         ${hasVar ? `<span class="tag tag-amber">⚠️ มี Variance</span>` : `<span class="tag tag-green">✅ ยอดตรง</span>`}
       </div>
     </div>
-    <div class="sec">รายละเอียด (${snaps?.length || 0} รายการ) — เทียบแต่ละรอบกันเอง (ระบบเป็นแค่ข้อมูลอ้างอิง)</div>
+    <div class="sec">รายละเอียด (${snaps?.length || 0} รายการ) — เทียบกับระบบ (OH) และรอบก่อนหน้า</div>
     <div class="card card-flush">${varRows}</div>
     <div style="padding:12px">
       <div id="sva"></div>
@@ -956,30 +1121,19 @@ function computeZone(locCode, desc) {
 }
 
 // ══════════════════════════════════════════════════════════
-//  VARIANCE LOGIC — แปลงจากสูตร Excel (เทียบรอบนับกันเอง ไม่เทียบกับระบบ)
-//  f = รอบ 1, g = รอบ 2, h = รอบ 3, i = ยอดสรุป/Physical count (ถ้ามี)
-//  คืนค่า: '' (ไม่มีข้อมูล) / 'PENDING' (รอรอบถัดไป) / 'OK' / 'Diff'
+//  VARIANCE LOGIC — เทียบแต่ละรอบกับ "ระบบ (OH)" หรือ "รอบก่อนหน้า"
+//  OK ถ้ารอบปัจจุบัน = OH  หรือ  รอบปัจจุบัน = รอบก่อนหน้า
+//  ไม่งั้นต้องนับรอบถัดไป (สูงสุด 3 รอบ) ถ้าครบ 3 รอบยังไม่ OK → ส่ง Supervisor
+//  คืนค่า: '' (ยังไม่มีรอบ1) / 'PENDING' (รอรอบถัดไป) / 'OK' / 'Diff'
 // ══════════════════════════════════════════════════════════
-function computeVarianceStatus(f, g, h, i) {
+function computeItemStatus(oh, r1, r2, r3) {
   const has = v => v !== null && v !== undefined && v !== '';
-  const n   = v => has(v) ? v : 0;   // Excel: ช่องว่าง = 0 ตอนเทียบค่าตัวเลขกันตรงๆ
-
-  if (!has(f) && !has(g) && !has(h)) return '';
-  if (!has(g)) return 'PENDING';                                  // ยังไม่มีรอบ 2
-
-  if (g === 0 && f !== 0 && !has(h)) return 'Diff';
-  if (f === 0 && g !== 0 && !has(h)) return 'Diff';
-  if (f === 0 && n(g) !== n(h))      return 'Diff';
-  if (n(g)===n(f) || n(h)===n(f) || n(i)===n(f) || n(g)===n(h)) return 'OK'; // มีคู่ใดคู่หนึ่งตรงกัน → OK
-
-  // ── fallback: หา Mode ของค่าที่กรอกแล้วจริง [f,g,h,i] (ไม่รวมช่องที่ยังไม่กรอก) เทียบกับ i ──
-  const vals = [f, g, h, i].filter(has);
-  if (!vals.length) return 'Diff';
-  const freq = {};
-  vals.forEach(v => freq[v] = (freq[v]||0) + 1);
-  let modeVal = vals[0], modeCount = 0;
-  for (const v of vals) { if (freq[v] > modeCount) { modeCount = freq[v]; modeVal = v; } }
-  if (modeCount > 1 && has(i) && modeVal === i) return 'OK';
+  if (!has(r1)) return '';
+  if (has(oh) && r1 === oh) return 'OK';
+  if (!has(r2)) return 'PENDING';
+  if ((has(oh) && r2 === oh) || r2 === r1) return 'OK';
+  if (!has(r3)) return 'PENDING';
+  if ((has(oh) && r3 === oh) || r3 === r2) return 'OK';
   return 'Diff';
 }
 
@@ -996,6 +1150,7 @@ function paintAdImport() {
         ✅ Import ทุก Inventory Status (ไม่กรองสถานะ)<br>
         🔢 OH Qty จะถูก <strong>sum</strong> ถ้า item เดียวกันอยู่หลาย LPN ใน location เดียวกัน<br>
         🧭 Zone จะคำนวณอัตโนมัติจาก Location code (ตามกฎ Selective/Overfloor/Cool Room ฯลฯ)<br>
+        🏷️ เก็บ LPN/Lot/Inventory Status ของแต่ละแถวไว้ด้วย (โชว์ตอนนับเป็นข้อมูลอ้างอิง)<br>
         🔄 Upload ใหม่ได้ทุกครั้งที่ OH เปลี่ยน — ระบบจะ update ยอดให้
       </div>
       <div class="fg"><label>SESSION</label>
@@ -1015,9 +1170,14 @@ function paintAdImport() {
     </div>
 
     <div class="card" style="border:1.5px solid #fecaca">
-      <div style="font-size:12px;font-weight:800;color:#b91c1c;margin-bottom:10px">🗑️ ลบ Location ตาม Zone / Row</div>
+      <div style="font-size:12px;font-weight:800;color:#b91c1c;margin-bottom:10px">🗑️ ลบ Location ตาม Zone / Row / Session</div>
       <div class="alert alert-amber" style="font-size:12px">
-        ⚠️ ลบจริงในทุก Session — Location, ยอด Stock, Assignment, ผลนับ, การอนุมัติของ Zone/Row ที่เลือกจะถูกลบทั้งหมด กู้คืนไม่ได้
+        ⚠️ เลือก Session = ลบเฉพาะข้อมูลใน Session นั้น (Location ยังอยู่ใช้กับ Session อื่นได้)<br>
+        เว้น Session ว่าง = ลบ Location ออกจากระบบจริงทุก Session — กู้คืนไม่ได้
+      </div>
+      <div class="fg">
+        <label>SESSION (ไม่บังคับ)</label>
+        <select id="del-session" onchange="refreshDeleteZonePreview()"><option value="">กำลังโหลด...</option></select>
       </div>
       <div class="grid-3" style="margin-bottom:10px">
         <div class="fg" style="margin:0">
@@ -1028,7 +1188,10 @@ function paintAdImport() {
           <label>ROW</label>
           <select id="del-row" onchange="refreshDeleteZonePreview()"><option value="">ทั้งหมด</option></select>
         </div>
-        <div></div>
+        <div class="fg" style="margin:0">
+          <label>LOCATION</label>
+          <input id="del-code" placeholder="เช่น B-EA-001-A" oninput="refreshDeleteZonePreview()">
+        </div>
       </div>
       <div id="del-preview" style="font-size:12px;color:#b91c1c;margin-bottom:10px;font-weight:600"></div>
       <div id="del-alert"></div>
@@ -1045,11 +1208,15 @@ function paintAdImport() {
   loadDeleteZoneFilters();
 }
 
-// ── ลบ Location ตาม Zone/Row (ทุก Session) ──
+// ── ลบ Location ตาม Zone/Row/Location code (เลือก Session ได้ — ไม่เลือก = ลบจริงทุก Session) ──
 async function loadDeleteZoneFilters() {
-  const { data } = await sb.from('locations').select('zone,row_no');
+  const [{ data: locData }, { data: sessData }] = await Promise.all([
+    sb.from('locations').select('zone,row_no'),
+    sb.from('count_sessions').select('id,name').order('created_at',{ascending:false}),
+  ]);
+
   const zones = new Set(), rows = new Set();
-  (data||[]).forEach(l => { if (l.zone) zones.add(l.zone); if (l.row_no) rows.add(l.row_no); });
+  (locData||[]).forEach(l => { if (l.zone) zones.add(l.zone); if (l.row_no) rows.add(l.row_no); });
 
   const fill = (id, vals) => {
     const el = Q(id); if (!el) return;
@@ -1058,94 +1225,125 @@ async function loadDeleteZoneFilters() {
   };
   fill('del-zone', zones);
   fill('del-row',  rows);
+
+  const sEl = Q('del-session');
+  if (sEl) {
+    sEl.innerHTML = '<option value="">ทุก Session (ลบ Location ออกจากระบบจริง)</option>' +
+      (sessData||[]).map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+  }
   refreshDeleteZonePreview();
 }
 
+function buildDelLocQuery(zone, row, code, selectCols, selectOpts) {
+  let q = sb.from('locations').select(selectCols, selectOpts);
+  if (zone) q = q.eq('zone', zone);
+  if (row)  q = q.eq('row_no', row);
+  if (code) q = q.ilike('code', code);
+  return q;
+}
+
 async function refreshDeleteZonePreview() {
-  const zone = Q('del-zone')?.value, row = Q('del-row')?.value;
+  const sid  = Q('del-session')?.value || '';
+  const zone = Q('del-zone')?.value || '';
+  const row  = Q('del-row')?.value || '';
+  const code = Q('del-code')?.value.trim() || '';
   const prev = Q('del-preview'), btn = Q('del-btn');
   if (!prev || !btn) return;
 
-  if (!zone && !row) {
-    prev.innerHTML = `<span style="color:#94a3b8;font-weight:500">เลือก Zone หรือ Row อย่างน้อย 1 อย่าง เพื่อป้องกันการลบทั้งหมดโดยไม่ตั้งใจ</span>`;
+  if (!zone && !row && !code) {
+    prev.innerHTML = `<span style="color:#94a3b8;font-weight:500">เลือก Zone, Row หรือพิมพ์ Location Code อย่างน้อย 1 อย่าง เพื่อป้องกันการลบทั้งหมดโดยไม่ตั้งใจ</span>`;
     btn.disabled = true;
     return;
   }
 
-  let q = sb.from('locations').select('id', { count:'exact', head:true });
-  if (zone) q = q.eq('zone', zone);
-  if (row)  q = q.eq('row_no', row);
-  const { count, error } = await q;
+  const { count, error } = await buildDelLocQuery(zone, row, code, 'id', { count:'exact', head:true });
 
   if (error) { prev.innerHTML = `<span style="color:#dc2626">${error.message}</span>`; btn.disabled = true; return; }
   if (!count) {
     prev.innerHTML = `<span style="color:#94a3b8;font-weight:500">ไม่พบ Location ที่ตรงเงื่อนไข</span>`;
     btn.disabled = true;
   } else {
-    prev.innerHTML = `⚠️ จะลบ <strong>${count.toLocaleString()} locations</strong> พร้อมข้อมูลที่เกี่ยวข้องทั้งหมดในทุก Session`;
+    const scope = sid ? 'เฉพาะ Session ที่เลือก (Location ยังอยู่ ใช้กับ Session อื่นได้)' : 'ทุก Session (ลบ Location ออกจากระบบจริง)';
+    prev.innerHTML = `⚠️ จะลบ <strong>${count.toLocaleString()} locations</strong> — ขอบเขต: ${scope}`;
     btn.disabled = false;
   }
 }
 
 async function doDeleteByZoneRow() {
-  const zone = Q('del-zone')?.value, row = Q('del-row')?.value;
-  if (!zone && !row) return;
-  const label = [zone, row].filter(Boolean).join(' / ');
-  if (!confirm(`ยืนยันลบ Zone/Row: "${label}"?\n\nจะลบ Location ทั้งหมดที่ตรงเงื่อนไข พร้อมข้อมูลที่เกี่ยวข้อง (Stock Snapshot, Assignment, ผลนับ, การอนุมัติ) ในทุก Session\n\nการลบนี้กู้คืนไม่ได้`)) return;
+  const sid  = Q('del-session')?.value || '';
+  const zone = Q('del-zone')?.value || '';
+  const row  = Q('del-row')?.value || '';
+  const code = Q('del-code')?.value.trim() || '';
+  if (!zone && !row && !code) return;
+
+  const label = [zone, row, code].filter(Boolean).join(' / ');
+  const scopeLabel = sid ? 'เฉพาะ Session ที่เลือก (Location จะยังอยู่ในระบบ)' : 'ทุก Session (ลบ Location ออกจากระบบจริง)';
+  if (!confirm(`ยืนยันลบ: "${label}"\nขอบเขต: ${scopeLabel}\n\nการลบนี้กู้คืนไม่ได้`)) return;
 
   const btn = Q('del-btn'), al = Q('del-alert');
   btn.disabled = true;
   al.innerHTML = `<div class="alert alert-blue">⏳ กำลังค้นหา Location ที่ตรงเงื่อนไข...</div>`;
 
-  let q = sb.from('locations').select('id,code');
-  if (zone) q = q.eq('zone', zone);
-  if (row)  q = q.eq('row_no', row);
-  const { data: locs, error: e0 } = await q;
-  if (e0)         { al.innerHTML = errBox(e0.message); btn.disabled = false; return; }
-  if (!locs?.length) { al.innerHTML = `<div class="alert alert-amber">ไม่พบ Location ที่ตรงเงื่อนไข</div>`; btn.disabled = false; return; }
+  const { data: locs, error: e0 } = await buildDelLocQuery(zone, row, code, 'id,code');
+  if (e0)             { al.innerHTML = errBox(e0.message); btn.disabled = false; return; }
+  if (!locs?.length)  { al.innerHTML = `<div class="alert alert-amber">ไม่พบ Location ที่ตรงเงื่อนไข</div>`; btn.disabled = false; return; }
 
   const locIds = locs.map(l => l.id);
   const BATCH = 200;
 
   try {
-    al.innerHTML = `<div class="alert alert-blue">⏳ [1/5] ค้นหา Assignment ที่เกี่ยวข้อง...</div>`;
+    al.innerHTML = `<div class="alert alert-blue">⏳ [1/6] ค้นหา Assignment ที่เกี่ยวข้อง...</div>`;
     let asgnIds = [];
     for (let i = 0; i < locIds.length; i += BATCH) {
-      const { data, error } = await sb.from('assignments').select('id').in('location_id', locIds.slice(i, i+BATCH));
+      let aq = sb.from('assignments').select('id').in('location_id', locIds.slice(i, i+BATCH));
+      if (sid) aq = aq.eq('session_id', sid);
+      const { data, error } = await aq;
       if (error) throw error;
       asgnIds.push(...(data||[]).map(a => a.id));
     }
 
     if (asgnIds.length) {
-      al.innerHTML = `<div class="alert alert-blue">⏳ [2/5] ลบ Variance Approvals...</div>`;
+      al.innerHTML = `<div class="alert alert-blue">⏳ [2/6] ลบ Variance Approvals...</div>`;
       for (let i = 0; i < asgnIds.length; i += BATCH) {
         const { error } = await sb.from('variance_approvals').delete().in('assignment_id', asgnIds.slice(i, i+BATCH));
         if (error) throw error;
       }
-      al.innerHTML = `<div class="alert alert-blue">⏳ [3/5] ลบผลการนับ (Count Records)...</div>`;
+      al.innerHTML = `<div class="alert alert-blue">⏳ [3/6] ลบผลการนับ (Count Records)...</div>`;
       for (let i = 0; i < asgnIds.length; i += BATCH) {
         const { error } = await sb.from('count_records').delete().in('assignment_id', asgnIds.slice(i, i+BATCH));
         if (error) throw error;
       }
-      al.innerHTML = `<div class="alert alert-blue">⏳ [4/5] ลบ Assignment...</div>`;
+      al.innerHTML = `<div class="alert alert-blue">⏳ [4/6] ลบ Assignment...</div>`;
       for (let i = 0; i < asgnIds.length; i += BATCH) {
         const { error } = await sb.from('assignments').delete().in('id', asgnIds.slice(i, i+BATCH));
         if (error) throw error;
       }
     }
 
-    al.innerHTML = `<div class="alert alert-blue">⏳ [5/5] ลบ Stock Snapshot และ Location...</div>`;
+    al.innerHTML = `<div class="alert alert-blue">⏳ [5/6] ลบ Stock Snapshot / Detail (LPN)...</div>`;
     for (let i = 0; i < locIds.length; i += BATCH) {
-      const { error } = await sb.from('stock_snapshot').delete().in('location_id', locIds.slice(i, i+BATCH));
+      let dq = sb.from('stock_snapshot_detail').delete().in('location_id', locIds.slice(i, i+BATCH));
+      if (sid) dq = dq.eq('session_id', sid);
+      const { error } = await dq;
       if (error) throw error;
     }
     for (let i = 0; i < locIds.length; i += BATCH) {
-      const { error } = await sb.from('locations').delete().in('id', locIds.slice(i, i+BATCH));
+      let sq = sb.from('stock_snapshot').delete().in('location_id', locIds.slice(i, i+BATCH));
+      if (sid) sq = sq.eq('session_id', sid);
+      const { error } = await sq;
       if (error) throw error;
     }
 
-    al.innerHTML = `<div class="alert alert-green">✅ ลบ ${locs.length.toLocaleString()} locations (Zone/Row: ${label}) เรียบร้อย</div>`;
-    Q('del-zone').value = ''; Q('del-row').value = '';
+    if (!sid) {
+      al.innerHTML = `<div class="alert alert-blue">⏳ [6/6] ลบ Location (ทุก Session)...</div>`;
+      for (let i = 0; i < locIds.length; i += BATCH) {
+        const { error } = await sb.from('locations').delete().in('id', locIds.slice(i, i+BATCH));
+        if (error) throw error;
+      }
+    }
+
+    al.innerHTML = `<div class="alert alert-green">✅ ลบ ${locs.length.toLocaleString()} locations (${label}) เรียบร้อย${sid?' — เฉพาะ Session ที่เลือก':''}</div>`;
+    Q('del-zone').value = ''; Q('del-row').value = ''; Q('del-code').value = '';
     loadDeleteZoneFilters();
   } catch(e) {
     al.innerHTML = errBox(e?.message || String(e));
@@ -1200,6 +1398,8 @@ async function readXlsxFile() {
         col.desc = norm.findIndex(v => v.includes('description'));
         col.oh   = norm.findIndex(v => v === 'oh' || v.includes('on hand') || v === 'onhand');
         col.stat = norm.findIndex(v => v.includes('status'));
+        col.lot  = norm.findIndex(v => v.includes('lot'));
+        col.lp   = norm.findIndex(v => v.includes('license plate') && !v.includes('parent'));
         break;
       }
     }
@@ -1218,7 +1418,9 @@ async function readXlsxFile() {
       const desc = col.desc!==-1 ? (row[col.desc]||'').toString().trim() : '';
       const oh   = parseFloat(row[col.oh]) || 0;
       const stat = (row[col.stat]||'').toString().trim();
-      rows.push({ loc, item, desc, oh, stat });
+      const lot  = col.lot!==-1 ? (row[col.lot]||'').toString().trim() : '';
+      const lp   = col.lp!==-1  ? (row[col.lp]||'').toString().trim()  : '';
+      rows.push({ loc, item, desc, oh, stat, lot, lp });
     }
 
     if (!rows.length) throw new Error('ไม่พบข้อมูลในไฟล์ (หลัง header row)');
@@ -1301,7 +1503,7 @@ async function doImportXlsx() {
 
   try {
     // 1) Locations — zone คำนวณจาก computeZone(), row_no/level แยกจาก code
-    al.innerHTML = `<div class="alert alert-blue">⏳ [1/3] สร้าง/อัพเดท Locations...</div>`;
+    al.innerHTML = `<div class="alert alert-blue">⏳ [1/4] สร้าง/อัพเดท Locations...</div>`;
     const seenLocs = {}, locRows = [];
     for (const p of _xlsxParsed) {
       if (seenLocs[p.loc]) continue;
@@ -1317,7 +1519,7 @@ async function doImportXlsx() {
     const locMap = await batchUp('locations', locRows, 'code', 'id,code');
 
     // 2) Items
-    al.innerHTML = `<div class="alert alert-blue">⏳ [2/3] สร้าง/อัพเดท Items (${new Set(_xlsxParsed.map(r=>r.item)).size.toLocaleString()} รายการ)...</div>`;
+    al.innerHTML = `<div class="alert alert-blue">⏳ [2/4] สร้าง/อัพเดท Items (${new Set(_xlsxParsed.map(r=>r.item)).size.toLocaleString()} รายการ)...</div>`;
     const seenItems = {}, itemRows = [];
     for (const p of _xlsxParsed) {
       if (seenItems[p.item]) continue;
@@ -1343,7 +1545,41 @@ async function doImportXlsx() {
         .upsert(snapRows.slice(i, i+BATCH), { onConflict:'session_id,location_id,item_id' });
       if (error) throw error;
       ok += Math.min(BATCH, snapRows.length - i);
-      al.innerHTML = `<div class="alert alert-blue">⏳ [3/3] Stock Snapshot: ${ok.toLocaleString()} / ${snapRows.length.toLocaleString()} rows...</div>`;
+      al.innerHTML = `<div class="alert alert-blue">⏳ [3/4] Stock Snapshot: ${ok.toLocaleString()} / ${snapRows.length.toLocaleString()} rows...</div>`;
+    }
+
+    // 4) Stock Snapshot Detail (LPN/Lot/Status) — รายละเอียดดิบต่อแถว ใช้แสดงเป็นข้อมูลอ้างอิงตอนนับ
+    al.innerHTML = `<div class="alert alert-blue">⏳ [4/4] Stock Snapshot Detail (LPN/Lot)...</div>`;
+    const patternStr = Q('ilocfilter')?.value.trim() || '';
+    const re = patternStr ? likeToRegex(patternStr) : null;
+    const detailRows = [];
+    for (const r of _xlsxRawRows) {
+      if (re && !re.test(r.loc)) continue;
+      if (!locMap[r.loc] || !itemMap[r.item]) continue;
+      detailRows.push({
+        session_id:       sid,
+        location_id:      locMap[r.loc],
+        item_id:          itemMap[r.item],
+        license_plate:    r.lp  || null,
+        lot:               r.lot || null,
+        inventory_status: r.stat || null,
+        qty:              r.oh,
+      });
+    }
+
+    // ลบ detail เก่าของ location ที่ import รอบนี้ก่อน (ป้องกัน LPN ซ้ำ/ค้างจากการ import ก่อนหน้า)
+    const importedLocIds = [...new Set(Object.values(locMap))];
+    for (let i = 0; i < importedLocIds.length; i += BATCH) {
+      const { error } = await sb.from('stock_snapshot_detail')
+        .delete().eq('session_id', sid).in('location_id', importedLocIds.slice(i, i+BATCH));
+      if (error) throw error;
+    }
+    let okD = 0;
+    for (let i = 0; i < detailRows.length; i += BATCH) {
+      const { error } = await sb.from('stock_snapshot_detail').insert(detailRows.slice(i, i+BATCH));
+      if (error) throw error;
+      okD += Math.min(BATCH, detailRows.length - i);
+      al.innerHTML = `<div class="alert alert-blue">⏳ [4/4] Stock Snapshot Detail: ${okD.toLocaleString()} / ${detailRows.length.toLocaleString()} rows...</div>`;
     }
 
     al.innerHTML = `<div class="alert alert-green">
@@ -1351,6 +1587,7 @@ async function doImportXlsx() {
       📍 ${locRows.length.toLocaleString()} locations
       · 📦 ${itemRows.length.toLocaleString()} items
       · 🔢 ${ok.toLocaleString()} snapshot rows
+      · 🏷️ ${okD.toLocaleString()} LPN/Lot detail rows
     </div>`;
     _xlsxRawRows = null;
     _xlsxParsed = null;
