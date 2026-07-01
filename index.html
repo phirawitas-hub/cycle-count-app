@@ -3,242 +3,673 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Cycle Count</title>
+<title>Cycle Count - Vintage Vespa Edition</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
 <!-- SheetJS สำหรับอ่านไฟล์ XLSX -->
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <!-- html5-qrcode สำหรับสแกน Location -->
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
+/* ── Vespa Vintage Poster Theme Variables ── */
+:root {
+  --vespa-yellow: #FEF3C7; /* ปรับให้เป็นเหลืองพาสเทลอ่อน (Lighter Yellow) */
+  --vespa-yellow-light: #FFFBEB;
+  --vespa-green: #009246; 
+  --vespa-red: #CE2B37; 
+  --vespa-white: #FFFDF9; 
+  --vespa-brown: #4A3325; 
+  --vespa-shadow: #2D2018;
+  --vespa-mint-dark: #1E4F41;
+  --vespa-gray: #EAE3D9;
+}
+
 /* ── Reset & Base ── */
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
 body{
-  font-family:'Sarabun',-apple-system,BlinkMacSystemFont,sans-serif;
-  background:#e8edf3;
-  color:#1a2332;
+  font-family:'Mitr', 'Fredoka', 'Sarabun', -apple-system, sans-serif;
+  background: #ffffff; /* ปรับพื้นหลังรอบนอกเป็นสีขาว */
+  color: var(--vespa-shadow);
   min-height:100vh;
   overscroll-behavior:none;
   font-size:15px;
 }
-#app{max-width:640px;margin:0 auto;min-height:100vh;background:#e8edf3;position:relative}
 
-/* ── Topbar ── */
-.top{
-  background:#111827;
-  color:#e5e7eb;
-  padding:11px 16px;
-  display:flex;align-items:center;gap:10px;
-  position:sticky;top:0;z-index:300;
-  box-shadow:0 1px 0 #1f2937,0 2px 8px rgba(0,0,0,.25);
+#app{
+  max-width:640px;
+  margin:0 auto;
+  min-height:100vh;
+  background: var(--vespa-yellow); /* เก็บสีเหลืองไว้แค่ในส่วนแอปฯ */
+  position:relative;
+  box-shadow: 0 0 30px rgba(74, 51, 37, 0.2);
+  border-left: 4px solid var(--vespa-brown);
+  border-right: 4px solid var(--vespa-brown);
 }
-.top-back{background:none;border:none;color:#6b7280;font-size:26px;cursor:pointer;padding:0;line-height:1;width:30px;flex-shrink:0;transition:color .15s}
-.top-back:hover{color:#f9fafb}
-.top-info{flex:1;min-width:0}
-.top-title{font-size:15px;font-weight:800;color:#f9fafb;letter-spacing:-.01em}
-.top-sub{font-size:11px;color:#4b5563;margin-top:1px}
-.top-out{background:none;border:1px solid #374151;color:#6b7280;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;flex-shrink:0;transition:all .15s}
-.top-out:hover{border-color:#6b7280;color:#d1d5db}
 
-/* ── Bottom tabs ── */
+/* ── Background Pattern (Vespa & Italy Flag) ── */
+#app::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 1000'%3E%3Cdefs%3E%3Cg id='vb'%3E%3Crect x='75' y='0' width='8' height='12' fill='%23009246'/%3E%3Crect x='83' y='0' width='8' height='12' fill='%23ffffff'/%3E%3Crect x='91' y='0' width='8' height='12' fill='%23ce2b37'/%3E%3Cpath d='M 75 12 L 68 40' stroke='%232D2018' stroke-width='2'/%3E%3Ccircle cx='25' cy='70' r='14' fill='%232D2018'/%3E%3Ccircle cx='25' cy='70' r='6' fill='%23FAF6F0'/%3E%3Ccircle cx='85' cy='70' r='14' fill='%232D2018'/%3E%3Ccircle cx='85' cy='70' r='6' fill='%23FAF6F0'/%3E%3Cpath d='M 55 35 C 55 25 65 25 70 25 L 90 25 C 100 25 100 35 90 35 Z' fill='%234A3325'/%3E%3Cpath d='M 30 15 L 25 5' stroke='%232D2018' stroke-width='3' stroke-linecap='round'/%3E%3Ccircle cx='20' cy='3' r='5' fill='%23F0C43A'/%3E%3C/g%3E%3Cg id='vg'%3E%3Cpath d='M 20 60 C 10 50 15 25 25 15 C 30 10 40 5 45 20 C 48 30 40 50 35 60 Z M 35 55 L 50 55 L 60 35 L 90 35 C 105 35 110 50 105 65 C 100 75 90 75 80 70 L 25 70 Z' fill='%23009246' stroke='%232D2018' stroke-width='3' stroke-linejoin='round'/%3E%3Cuse href='%23vb'/%3E%3C/g%3E%3Cg id='vw'%3E%3Cpath d='M 20 60 C 10 50 15 25 25 15 C 30 10 40 5 45 20 C 48 30 40 50 35 60 Z M 35 55 L 50 55 L 60 35 L 90 35 C 105 35 110 50 105 65 C 100 75 90 75 80 70 L 25 70 Z' fill='%23ffffff' stroke='%232D2018' stroke-width='3' stroke-linejoin='round'/%3E%3Cuse href='%23vb'/%3E%3C/g%3E%3Cg id='vr'%3E%3Cpath d='M 20 60 C 10 50 15 25 25 15 C 30 10 40 5 45 20 C 48 30 40 50 35 60 Z M 35 55 L 50 55 L 60 35 L 90 35 C 105 35 110 50 105 65 C 100 75 90 75 80 70 L 25 70 Z' fill='%23ce2b37' stroke='%232D2018' stroke-width='3' stroke-linejoin='round'/%3E%3Cuse href='%23vb'/%3E%3C/g%3E%3C/defs%3E%3Cg transform='translate(100,100) scale(1.4) rotate(-15)'%3E%3Cuse href='%23vg'/%3E%3C/g%3E%3Cg transform='translate(450,50) scale(0.8) rotate(12)'%3E%3Cuse href='%23vw'/%3E%3C/g%3E%3Cg transform='translate(800,150) scale(1.6) rotate(-5)'%3E%3Cuse href='%23vr'/%3E%3C/g%3E%3Cg transform='translate(150,400) scale(0.9) rotate(22)'%3E%3Cuse href='%23vr'/%3E%3C/g%3E%3Cg transform='translate(500,450) scale(1.8) rotate(-10)'%3E%3Cuse href='%23vg'/%3E%3C/g%3E%3Cg transform='translate(850,350) scale(1.1) rotate(18)'%3E%3Cuse href='%23vw'/%3E%3C/g%3E%3Cg transform='translate(250,750) scale(1.5) rotate(-8)'%3E%3Cuse href='%23vw'/%3E%3C/g%3E%3Cg transform='translate(600,800) scale(1.2) rotate(25)'%3E%3Cuse href='%23vr'/%3E%3C/g%3E%3Cg transform='translate(900,700) scale(1.7) rotate(-15)'%3E%3Cuse href='%23vg'/%3E%3C/g%3E%3Cg transform='translate(50,850) scale(1.0) rotate(5)'%3E%3Cuse href='%23vg'/%3E%3C/g%3E%3Cg transform='translate(350,250) scale(1.3) rotate(-20)'%3E%3Cuse href='%23vr'/%3E%3C/g%3E%3Cg transform='translate(700,600) scale(0.9) rotate(15)'%3E%3Cuse href='%23vg'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 800px;
+  background-repeat: repeat;
+  background-position: center top;
+  opacity: 0.12; /* ปรับความชัดขึ้นเล็กน้อยให้เห็นรูปรถ */
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Topbar (Styled like a Vespa Retro Speedometer Instrument Panel) ── */
+.top{
+  background: var(--vespa-white);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 300;
+  border-bottom: 4px solid var(--vespa-brown);
+  border-radius: 0 0 24px 24px;
+  box-shadow: 0 4px 15px rgba(74, 51, 37, 0.15);
+}
+.top-back{
+  background: var(--vespa-yellow);
+  border: 3px solid var(--vespa-brown);
+  color: var(--vespa-brown);
+  font-size: 24px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 0 var(--vespa-brown);
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.top-back:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--vespa-brown);
+}
+.top-info{flex:1;min-width:0; position: relative; z-index: 2;}
+
+.top-title{
+  font-size:18px;
+  font-weight:900;
+  color: var(--vespa-brown);
+  letter-spacing:-.01em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.top-sub{
+  font-size:12px;
+  color: var(--vespa-mint-dark);
+  margin-top: 2px;
+  font-weight: 700;
+}
+.top-out{
+  background: var(--vespa-red);
+  border: 3px solid var(--vespa-brown);
+  color: var(--vespa-white);
+  border-radius: 12px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  flex-shrink: 0;
+  box-shadow: 0 3px 0 var(--vespa-brown);
+  transition: all .1s;
+  position: relative;
+  z-index: 2;
+}
+.top-out:active{
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--vespa-brown);
+}
+
+/* ── Bottom tabs (3D Vespa Icons) ── */
 .tabs{
   position:fixed;bottom:0;left:50%;transform:translateX(-50%);
   width:100%;max-width:640px;
-  background:#111827;
-  border-top:1px solid #1f2937;
+  background: var(--vespa-white);
+  border-top: 4px solid var(--vespa-brown);
   display:flex;z-index:300;
   padding-bottom:env(safe-area-inset-bottom,0px);
+  border-radius: 24px 24px 0 0;
+  box-shadow: 0 -5px 15px rgba(74, 51, 37, 0.1);
 }
 .tab{
   flex:1;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;padding:8px 4px 10px;
+  justify-content:center;padding:10px 4px 12px;
   border:none;background:none;cursor:pointer;
-  gap:3px;font-size:10px;font-weight:600;
-  color:#374151;transition:color .15s;
+  gap:4px;font-size:11px;font-weight:800;
+  color: var(--vespa-brown);
+  transition:color .15s, transform 0.1s;
   font-family:inherit;
 }
-.tab.on{color:#60a5fa}
-.tab-ico{font-size:18px;line-height:1}
+.tab.on{
+  color: var(--vespa-red);
+  transform: translateY(-4px);
+}
+.tab-ico{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.tab.on .tab-ico {
+  transform: scale(1.15);
+}
 
 /* ── Page wrapper ── */
-.page{padding-bottom:76px}
+.page{padding-bottom:100px; padding-top: 10px; position: relative; z-index: 2;}
 
-/* ── Cards ── */
-.card{background:#fff;border-radius:14px;margin:10px 12px;padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.05),0 2px 6px rgba(0,0,0,.04)}
+/* ── Bubble Cards (Neo-brutalism Cartoon Vibe) ── */
+.card{
+  background: var(--vespa-white);
+  border: 3px solid var(--vespa-brown);
+  border-radius:24px;
+  margin:14px 16px;
+  padding:20px;
+  box-shadow: 4px 4px 0px var(--vespa-shadow);
+  position: relative;
+  overflow: hidden;
+}
 .card-flush{padding:0;overflow:hidden}
 
 /* ── Section label ── */
-.sec{font-size:10px;font-weight:700;color:#94a3b8;padding:12px 16px 5px;text-transform:uppercase;letter-spacing:.08em}
+.sec{
+  font-size:13px;
+  font-weight:900;
+  color: var(--vespa-brown);
+  padding:16px 20px 6px;
+  text-transform:uppercase;
+  letter-spacing:.02em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--vespa-yellow); /* Ensure readability */
+}
 
 /* ── List rows ── */
-.row{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid #f1f5f9;gap:12px}
+.row{
+  display:flex;
+  align-items:center;
+  padding:16px 20px;
+  border-bottom:3px solid var(--vespa-gray);
+  gap:12px;
+  transition: background 0.15s;
+}
 .row:last-child{border-bottom:none}
 .row.click{cursor:pointer}
-.row.click:hover{background:#fafbfc}
-.row.click:active{background:#f1f5f9}
+.row.click:hover{background: #F4F1EB}
+.row.click:active{background: var(--vespa-gray)}
 .row-body{flex:1;min-width:0}
-.row-title{font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.row-sub{font-size:12px;color:#64748b;margin-top:2px;line-height:1.4}
-.caret{font-size:20px;color:#cbd5e1;flex-shrink:0}
+.row-title{
+  font-size:16px;
+  font-weight:900;
+  color: var(--vespa-shadow);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.row-sub{
+  font-size:12px;
+  color: var(--vespa-brown);
+  margin-top:4px;
+  line-height:1.4;
+  font-weight: 600;
+}
+.caret{
+  font-size:24px;
+  color: var(--vespa-brown);
+  flex-shrink:0;
+  font-weight: bold;
+}
 
 /* ── Status badges ── */
-.tag{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;letter-spacing:.01em}
-.tag-gray  {background:#f1f5f9;color:#64748b}
-.tag-blue  {background:#dbeafe;color:#1e40af}
-.tag-amber {background:#fef3c7;color:#854d0e}
-.tag-red   {background:#fee2e2;color:#991b1b}
-.tag-green {background:#dcfce7;color:#14532d}
-.tag-purple{background:#ede9fe;color:#5b21b6}
-
-/* ── Buttons ── */
-.btn{
-  display:flex;align-items:center;justify-content:center;gap:7px;
-  padding:12px 20px;border-radius:10px;
-  font-size:14px;font-weight:700;font-family:inherit;
-  cursor:pointer;border:none;width:100%;
-  transition:filter .12s,opacity .12s;
-  letter-spacing:.01em;
+.tag{
+  display:inline-block;
+  padding:4px 12px;
+  border-radius:12px;
+  font-size:11px;
+  font-weight:900;
+  white-space:nowrap;
+  border: 2px solid var(--vespa-brown);
+  box-shadow: 2px 2px 0px var(--vespa-shadow);
+  text-transform: uppercase;
 }
-.btn:active:not(:disabled){filter:brightness(.9)}
-.btn:disabled{opacity:.4;cursor:not-allowed}
-.btn-blue  {background:#2563eb;color:#fff}
-.btn-green {background:#16a34a;color:#fff}
-.btn-red   {background:#dc2626;color:#fff}
-.btn-amber {background:#d97706;color:#fff}
-.btn-ghost {background:#fff;color:#475569;border:1.5px solid #e2e8f0}
-.btn-sm{padding:6px 13px;font-size:12px;border-radius:8px;width:auto}
-.btn-2col{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tag-gray  {background: var(--vespa-white); color: var(--vespa-brown)}
+.tag-blue  {background: #A0C4E2; color: var(--vespa-shadow)}
+.tag-amber {background: var(--vespa-yellow); color: var(--vespa-brown)}
+.tag-red   {background: var(--vespa-red); color: var(--vespa-white)}
+.tag-green {background: var(--vespa-green); color: var(--vespa-white)}
 
-/* ── Forms ── */
-.fg{margin-bottom:14px}
-label{display:block;font-size:12px;font-weight:700;color:#64748b;margin-bottom:5px;letter-spacing:.03em}
+/* ── Bubbly Buttons ── */
+.btn{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:14px 20px;
+  border-radius:18px;
+  font-size:15px;
+  font-weight:900;
+  font-family:inherit;
+  cursor:pointer;
+  border: 3px solid var(--vespa-brown);
+  width:100%;
+  box-shadow: 0 4px 0px var(--vespa-shadow);
+  transition: transform 0.1s, box-shadow 0.1s;
+  letter-spacing:.02em;
+}
+.btn:active:not(:disabled){
+  transform: translateY(4px);
+  box-shadow: 0 0px 0px var(--vespa-shadow);
+}
+.btn:disabled{
+  opacity:.7;
+  filter: grayscale(0.5);
+  cursor:not-allowed;
+  box-shadow: 0 2px 0px var(--vespa-shadow);
+  transform: translateY(2px);
+}
+.btn-blue  {background: #457B9D; color: var(--vespa-white)}
+.btn-green {background: var(--vespa-green); color: var(--vespa-white)}
+.btn-red   {background: var(--vespa-red); color: var(--vespa-white)}
+.btn-amber {background: #E9C46A; color: var(--vespa-brown)}
+.btn-ghost {background: var(--vespa-white); color: var(--vespa-brown)}
+.btn-sm{
+  padding:8px 14px;
+  font-size:12px;
+  border-radius:12px;
+  width:auto;
+  box-shadow: 0 3px 0px var(--vespa-shadow);
+}
+.btn-sm:active:not(:disabled){
+  transform: translateY(3px);
+  box-shadow: 0 0px 0px var(--vespa-shadow);
+}
+.btn-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* ── Forms with Retro Outlines ── */
+.fg{margin-bottom:16px}
+label{
+  display:block;
+  font-size:13px;
+  font-weight:900;
+  color: var(--vespa-brown);
+  margin-bottom:6px;
+}
 input,select,textarea{
-  width:100%;padding:10px 13px;
-  border:1.5px solid #e2e8f0;border-radius:9px;
-  font-size:14px;font-family:inherit;color:#1a2332;background:#fff;outline:none;
-  transition:border-color .15s,box-shadow .15s;
+  width:100%;
+  padding:12px 14px;
+  border: 3px solid var(--vespa-brown);
+  border-radius:16px;
+  font-size:14px;
+  font-family:inherit;
+  font-weight: 600;
+  color: var(--vespa-shadow);
+  background: var(--vespa-white);
+  outline:none;
+  box-shadow: inset 0 2px 4px rgba(74, 51, 37, 0.05);
+  transition: border-color .15s, box-shadow .15s;
 }
 input:focus,select:focus,textarea:focus{
-  border-color:#3b82f6;
-  box-shadow:0 0 0 3px rgba(59,130,246,.1);
+  border-color: var(--vespa-red);
+  box-shadow: 0 0 0 3px rgba(206, 43, 55, 0.2);
 }
 input[type=number]{-moz-appearance:textfield}
 input[type=number]::-webkit-outer-spin-button,
 input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
 select{
   appearance:none;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;background-position:right 13px center;
-  padding-right:38px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M0 0l6 8 6-8z' fill='%234A3325'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 16px center;
+  padding-right:42px;
 }
 
 /* ── Alerts ── */
-.alert{padding:10px 14px;border-radius:9px;font-size:13px;margin-bottom:10px;line-height:1.55}
-.alert-red   {background:#fee2e2;color:#991b1b;border-left:3px solid #ef4444}
-.alert-green {background:#dcfce7;color:#166534;border-left:3px solid #22c55e}
-.alert-blue  {background:#dbeafe;color:#1e40af;border-left:3px solid #3b82f6}
-.alert-amber {background:#fef9c3;color:#854d0e;border-left:3px solid #eab308}
+.alert{
+  padding:12px 16px;
+  border-radius:18px;
+  font-size:13px;
+  margin-bottom:12px;
+  line-height:1.6;
+  border: 3px solid var(--vespa-brown);
+  font-weight: 700;
+}
+.alert-red   {background: #FFD0D0; color: #991b1b}
+.alert-green {background: #D4E2D4; color: #14532d}
+.alert-blue  {background: #DDF2FD; color: #1e40af}
+.alert-amber {background: var(--vespa-yellow-light); color: var(--vespa-brown)}
 
-/* ── Stats ── */
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 12px}
-.stat{background:#fff;border-radius:12px;padding:12px 8px;text-align:center;box-shadow:0 1px 2px rgba(0,0,0,.05)}
-.stat-n{font-size:28px;font-weight:800;line-height:1}
-.stat-l{font-size:11px;color:#64748b;margin-top:4px;font-weight:600}
+/* ── Stats Dials ── */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 16px; position:relative; z-index:2;}
+.stat{
+  background: var(--vespa-white);
+  border: 3px solid var(--vespa-brown);
+  border-radius:20px;
+  padding:14px 8px;
+  text-align:center;
+  box-shadow: 3px 3px 0px var(--vespa-shadow);
+}
+.stat-n{
+  font-size:30px;
+  font-weight:900;
+  line-height:1;
+  color: var(--vespa-red);
+  font-family: 'Fredoka', sans-serif;
+  text-shadow: 1px 1px 0px var(--vespa-brown);
+}
+.stat-l{
+  font-size:11px;
+  color: var(--vespa-brown);
+  margin-top:6px;
+  font-weight:900;
+}
 
-/* ── Progress ── */
-.prog{height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden}
-.prog-fill{height:100%;background:#3b82f6;border-radius:3px;transition:width .45s cubic-bezier(.4,0,.2,1)}
+/* ── Fuel Gauge (Progress Bar redesign) ── */
+.gauge-container {
+  background: #F4F1EB;
+  border: 3px solid var(--vespa-brown);
+  border-radius: 16px;
+  padding: 12px;
+  margin-top: 10px;
+}
+.prog{
+  height:14px;
+  background: var(--vespa-gray);
+  border-radius:8px;
+  border: 2px solid var(--vespa-brown);
+  overflow:hidden;
+}
+.prog-fill{
+  height:100%;
+  background: var(--vespa-red);
+  border-radius:4px;
+  transition:width .45s cubic-bezier(.4,0,.2,1);
+}
 
 /* ── Count-entry ── */
-.citem{display:flex;align-items:center;padding:11px 16px;border-bottom:1px solid #f1f5f9;gap:12px}
-.citem:last-child{border-bottom:none}
-.citem-info{flex:1;min-width:0}
-.citem-code{font-size:13px;font-weight:800;font-family:ui-monospace,monospace;color:#1a2332}
-.citem-desc{font-size:11px;color:#64748b;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cqty{
-  width:88px;padding:8px;
-  border:2px solid #e2e8f0;border-radius:9px;
-  font-size:22px;font-weight:800;text-align:center;
-  font-family:ui-monospace,monospace;
-  color:#1a2332;outline:none;
-  transition:border-color .15s,background .15s;
+.citem-wrap{
+  border-bottom:3px solid var(--vespa-gray);
+  background: var(--vespa-white);
 }
-.cqty:focus{border-color:#3b82f6}
-.cqty.ok{border-color:#22c55e;background:#f0fdf4}
+.citem-wrap:last-child{border-bottom:none}
+.citem{
+  display:flex;
+  align-items:center;
+  padding:14px 18px;
+  gap:12px;
+}
+.citem-info{flex:1;min-width:0}
+.citem-code{
+  font-size:16px;
+  font-weight:900;
+  font-family:'Fredoka', monospace;
+  color: var(--vespa-shadow);
+}
+.citem-desc{
+  font-size:12px;
+  color: var(--vespa-brown);
+  margin-top:4px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-weight: 600;
+}
+.cqty{
+  width:96px;
+  padding:10px 6px;
+  border: 3px solid var(--vespa-brown);
+  border-radius:14px;
+  font-size:24px;
+  font-weight:900;
+  text-align:center;
+  font-family:'Fredoka', monospace;
+  color: var(--vespa-shadow);
+  outline:none;
+  background: #F4F1EB;
+  box-shadow: inset 0 3px 5px rgba(0,0,0,0.1);
+  transition: all 0.15s;
+}
+.cqty:focus{
+  border-color: var(--vespa-red);
+  background: var(--vespa-white);
+}
+.cqty.ok{
+  border-color: var(--vespa-green);
+  background: #E8F5E9;
+  color: var(--vespa-mint-dark);
+}
 
 /* ── Variance rows ── */
-.vrow{display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid #f1f5f9;gap:10px}
+.vrow{display:flex;align-items:center;padding:12px 16px;border-bottom:2px solid var(--vespa-gray);gap:10px}
 .vrow:last-child{border-bottom:none}
-.vrow.diff{background:#fff7ed}
-.vrow.exact{background:#f0fdf4}
-.vqty{min-width:46px;text-align:right;font-weight:800;font-size:15px;font-family:ui-monospace,monospace}
-.vdiff-p{color:#16a34a}
-.vdiff-n{color:#dc2626}
+.vrow.diff{background: #FFEBEB}
+.vrow.exact{background: #E8F5E9}
+.vqty{min-width:48px;text-align:right;font-weight:900;font-size:16px;font-family:'Fredoka', monospace}
+.vdiff-p{color: var(--vespa-green)}
+.vdiff-n{color: var(--vespa-red)}
 
 /* ── FAB ── */
 .fab{
-  position:fixed;bottom:84px;
+  position:fixed;bottom:94px;
   right:calc(50% - 308px);
-  background:#2563eb;color:#fff;
-  width:52px;height:52px;border-radius:14px;
-  border:none;font-size:30px;font-weight:300;
-  display:flex;align-items:center;justify-content:center;
+  background: var(--vespa-red);
+  color: var(--vespa-white);
+  width:58px;
+  height:58px;
+  border-radius:50%;
+  border: 3px solid var(--vespa-brown);
+  font-size:32px;
+  font-weight:bold;
+  display:flex;
+  align-items:center;
+  justify-content:center;
   cursor:pointer;
-  box-shadow:0 4px 14px rgba(37,99,235,.45);
-  z-index:200;transition:transform .15s;
+  box-shadow: 0 4px 0px var(--vespa-shadow);
+  z-index:200;
+  transition: transform 0.1s, box-shadow 0.1s;
 }
-.fab:active{transform:scale(.94)}
-@media(max-width:640px){.fab{right:16px}}
+.fab:active{
+  transform: scale(.9) translateY(4px);
+  box-shadow: 0 0px 0px var(--vespa-shadow);
+}
+@media(max-width:640px){.fab{right:20px}}
 
-/* ── Login ── */
-.lbox{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0f172a;padding:20px}
-.lcard{background:#1a2535;border:1px solid #1f2937;border-radius:20px;padding:36px 28px;width:100%;max-width:380px}
-.lcard input{background:#111827;border-color:#1f2937;color:#f1f5f9}
-.lcard input::placeholder{color:#374151}
-.lcard input:focus{border-color:#3b82f6;background:#111827}
-.lcard label{color:#6b7280}
+/* ── Login Vespa Retro Garage ── */
+.lbox{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: var(--vespa-yellow); /* Yellow Vintage Background */
+  padding:20px;
+  position: relative;
+  z-index: 2;
+}
+.lcard{
+  background: var(--vespa-white);
+  border: 4px solid var(--vespa-brown);
+  border-radius:28px;
+  padding:40px 24px;
+  width:100%;
+  max-width:380px;
+  box-shadow: 6px 6px 0px var(--vespa-shadow);
+  text-align: center;
+}
+.lcard input{
+  background: #F4F1EB;
+  border-color: var(--vespa-brown);
+  color: var(--vespa-shadow);
+}
 
 /* ── Loader ── */
-.load{display:flex;align-items:center;justify-content:center;padding:52px;color:#94a3b8;font-size:14px;gap:8px}
+.load{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:52px;
+  color: var(--vespa-brown);
+  font-size:16px;
+  font-weight: 800;
+  gap:10px;
+}
 
 /* ── Code font ── */
-.mono{font-family:ui-monospace,'Cascadia Code',monospace}
+.mono{font-family:'Fredoka', ui-monospace, monospace}
 
 /* ── Bulk assign box ── */
-.bulk-box{background:#f0f7ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:14px;margin-bottom:14px}
-.bulk-box-title{font-size:12px;font-weight:800;color:#1d4ed8;margin-bottom:10px}
+.bulk-box{
+  background: #F4F1EB;
+  border: 3px solid var(--vespa-brown);
+  border-radius:20px;
+  padding:16px;
+  margin-bottom:16px;
+  box-shadow: 3px 3px 0px var(--vespa-shadow);
+}
+.bulk-box-title{
+  font-size:14px;
+  font-weight:900;
+  color: var(--vespa-brown);
+  margin-bottom:12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 
 /* ── Item extra (remark/photo) ── */
-.citem-wrap{border-bottom:1px solid #f1f5f9}
-.citem-wrap:last-child{border-bottom:none}
-.citem-wrap .citem{border-bottom:none}
-.item-toggle{background:none;border:none;color:#94a3b8;font-size:16px;cursor:pointer;padding:4px;flex-shrink:0;line-height:1}
-.item-toggle.has{color:#7c3aed}
-.item-extra{display:none;padding:10px 16px 14px;background:#f8fafc}
+.item-toggle{
+  background: var(--vespa-white);
+  border: 3px solid var(--vespa-brown);
+  border-radius: 12px;
+  color: var(--vespa-brown);
+  font-size:16px;
+  cursor:pointer;
+  padding:6px;
+  flex-shrink:0;
+  line-height:1;
+  box-shadow: 0 3px 0px var(--vespa-shadow);
+  transition: all 0.1s;
+}
+.item-toggle:active {
+  transform: translateY(3px);
+  box-shadow: 0 0px 0px var(--vespa-shadow);
+}
+.item-toggle.has{
+  background: var(--vespa-yellow);
+}
+.item-extra{
+  display:none;
+  padding:14px 18px;
+  background: #F4F1EB;
+  border-top: 3px dashed var(--vespa-brown);
+}
 .item-extra.open{display:block}
-.item-extra textarea{min-height:56px;font-size:13px;font-family:inherit;margin-top:4px}
-.photo-thumb{width:64px;height:64px;border-radius:8px;object-fit:cover;margin-top:8px;display:block;border:1px solid #e2e8f0}
-.lpn-chip{display:inline-block;font-size:10px;background:#eef2ff;color:#4338ca;padding:1px 6px;border-radius:5px;margin:2px 3px 0 0;font-family:ui-monospace,monospace}
+.item-extra textarea{min-height:64px;font-size:13px;font-family:inherit;margin-top:6px}
+.photo-thumb{
+  width:80px;
+  height:80px;
+  border-radius:12px;
+  object-fit:cover;
+  margin-top:10px;
+  display:block;
+  border: 3px solid var(--vespa-brown);
+  box-shadow: 2px 2px 0px var(--vespa-shadow);
+}
+.lpn-chip{
+  display:inline-block;
+  font-size:10px;
+  background: var(--vespa-white);
+  color: var(--vespa-brown);
+  border: 2px solid var(--vespa-brown);
+  padding:4px 8px;
+  border-radius:8px;
+  margin:4px 4px 0 0;
+  font-family:'Fredoka', monospace;
+  font-weight: 700;
+}
 
 /* ── Scanner overlay ── */
-.scan-overlay{position:fixed;inset:0;background:#000;z-index:999;display:flex;flex-direction:column}
-.scan-header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:#111827;flex-shrink:0}
-.scan-header span{color:#fff;font-weight:700;font-size:14px}
-.scan-header button{background:none;border:none;color:#fff;font-size:24px;cursor:pointer;line-height:1}
-#scanReader{flex:1;display:flex;align-items:center;justify-content:center}
+.scan-overlay{
+  position:fixed;
+  inset:0;
+  background: rgba(45, 32, 24, 0.95);
+  z-index:999;
+  display:flex;
+  flex-direction:column;
+}
+.scan-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:16px 20px;
+  background: var(--vespa-brown);
+  border-bottom: 4px solid var(--vespa-yellow);
+  flex-shrink:0;
+}
+.scan-header span{
+  color: var(--vespa-white);
+  font-weight:900;
+  font-size:16px;
+}
+.scan-header button{
+  background: var(--vespa-red);
+  border: 3px solid var(--vespa-white);
+  color: var(--vespa-white);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size:20px;
+  font-weight: bold;
+  cursor:pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#scanReader{
+  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* Decor stripe (Italian Vespa Tricolore) */
+.tricolore-stripe {
+  height: 8px;
+  display: flex;
+  width: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 301;
+  border-bottom: 2px solid var(--vespa-brown);
+}
+.stripe-g { background: #009246; flex: 1; }
+.stripe-w { background: #FFFFFF; flex: 1; }
+.stripe-r { background: #CE2B37; flex: 1; }
 </style>
 </head>
 <body>
 <div id="app"></div>
-<script>
+<script>// ══════════════════════════════════════════════════════════
+//  ⚙️  CONFIG
 // ══════════════════════════════════════════════════════════
-//  ⚙️  CONFIG — แก้ 2 บรรทัดนี้ก่อนใช้งาน
-// ══════════════════════════════════════════════════════════
-const SUPA_URL = 'https://uiuaboxsfepyftqjlwil.supabase.co';   // https://xxxx.supabase.co (ห้ามมี /rest/v1/ ต่อท้าย)
-const SUPA_KEY = 'sb_publishable_EuJ-IUiXWBLSNvQsG0CJ5w_C2LHJXAL';   // sb_publishable_... หรือ eyJhb...
+const SUPA_URL = 'https://uiuaboxsfepyftqjlwil.supabase.co';
+const SUPA_KEY = 'sb_publishable_EuJ-IUiXWBLSNvQsG0CJ5w_C2LHJXAL';
 
 // ══════════════════════════════════════════════════════════
 //  GLOBALS
@@ -246,22 +677,21 @@ const SUPA_KEY = 'sb_publishable_EuJ-IUiXWBLSNvQsG0CJ5w_C2LHJXAL';   // sb_publi
 let sb, me, prof;
 let S = {};
 
-// ══════════════════════════════════════════════════════════
-//  BOOT
-// ══════════════════════════════════════════════════════════
+// ══ VESPA UI FUNCTIONS ══
+
 async function boot() {
   if (SUPA_URL === 'YOUR_SUPABASE_URL') {
     Q('app').innerHTML = `<div class="lbox"><div class="lcard">
-      <div style="font-size:36px;text-align:center;margin-bottom:16px">⚙️</div>
-      <div class="alert alert-amber" style="background:#451a03;color:#fbbf24;border-color:#d97706">
-        <strong>ยังไม่ได้ตั้งค่า</strong><br>แก้ SUPA_URL และ SUPA_KEY ในไฟล์
+      <div style="font-size:48px;text-align:center;margin-bottom:16px">🛵💨</div>
+      <div class="alert alert-amber">
+        <strong>ยังไม่ได้ตั้งค่าระบบจ้า!</strong><br>กรุณาแก้ไฟล์เพื่อกำหนดค่า SUPA_URL และ SUPA_KEY ก่อนน้า
       </div>
     </div></div>`;
     return;
   }
   if (typeof supabase === 'undefined') {
     Q('app').innerHTML = `<div class="lbox"><div class="lcard">
-      <div class="alert alert-red">ไม่สามารถโหลด Supabase ได้</div>
+      <div class="alert alert-red">เชื่อมต่อกับระบบฐานข้อมูลไม่ได้จ้า (Supabase SDK missing)</div>
     </div></div>`;
     return;
   }
@@ -292,9 +722,29 @@ function home() {
   return 'login';
 }
 
-// ══════════════════════════════════════════════════════════
-//  ROUTER
-// ══════════════════════════════════════════════════════════
+function vIcon(color, emoji) {
+  return `<div style="position:relative; display:inline-block; width:36px; height:36px;" class="tab-ico">
+    <svg viewBox="0 0 100 100" style="width:100%; height:100%; filter: drop-shadow(2px 3px 0px rgba(74,51,37,0.4));">
+      <!-- Shadow under Vespa -->
+      <ellipse cx="50" cy="85" rx="40" ry="6" fill="rgba(0,0,0,0.15)" />
+      <!-- Vespa Body -->
+      <path d="M 20 60 C 10 50 15 25 25 15 C 30 10 40 5 45 20 C 48 30 40 50 35 60 Z" fill="${color}" />
+      <path d="M 35 55 L 50 55 L 60 35 L 90 35 C 105 35 110 50 105 65 C 100 75 90 75 80 70 L 25 70 Z" fill="${color}" />
+      <!-- Wheels -->
+      <circle cx="25" cy="70" r="14" fill="#2D2018"/>
+      <circle cx="25" cy="70" r="6" fill="#EAE3D9"/>
+      <circle cx="85" cy="70" r="14" fill="#2D2018"/>
+      <circle cx="85" cy="70" r="6" fill="#EAE3D9"/>
+      <!-- Seat -->
+      <path d="M 55 35 C 55 25 65 25 70 25 L 90 25 C 100 25 100 35 90 35 Z" fill="#4A3325"/>
+      <!-- Handlebar & Headlight -->
+      <path d="M 30 15 L 25 5" stroke="#2D2018" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="20" cy="3" r="6" fill="#FFFDF9" stroke="#2D2018" stroke-width="2"/>
+    </svg>
+    <div style="position:absolute; top:-4px; right:-8px; font-size:16px; filter: drop-shadow(1px 1px 0px rgba(0,0,0,0.3));">${emoji}</div>
+  </div>`;
+}
+
 function go(page, extra = {}) {
   S = { page, ...extra };
   render();
@@ -306,47 +756,54 @@ function render() {
   if (page === 'login') { paintLogin(); return; }
 
   const TOPS = {
-    'c-tasks':    { t:'งานของฉัน',         back:null },
-    'c-count':    { t:'บันทึกการนับ',       back:'c-tasks' },
-    'sv-dash':    { t:'ภาพรวม',            back:null },
-    'sv-list':    { t:'รายการ Variance',    back:'sv-dash' },
-    'sv-detail':  { t:'ตรวจสอบ Variance',  back:'sv-list' },
-    'ad-sessions':{ t:'Sessions',           back:null },
-    'ad-new':     { t:'สร้าง Session',      back:'ad-sessions' },
-    'ad-assign':  { t:'มอบหมายงาน',        back:null },
-    'ad-import':  { t:'Import Stock',       back:null },
-    'ad-users':   { t:'ผู้ใช้งาน',         back:null },
+    'c-tasks':    { t:'งานของฉัน 📋',       back:null },
+    'c-count':    { t:'บันทึกการนับ ✍️',       back:'c-tasks' },
+    'sv-dash':    { t:'ภาพรวมงาน 📊',            back:null },
+    'sv-list':    { t:'รายการผันผวน ⚠️',    back:'sv-dash' },
+    'sv-detail':  { t:'ตรวจสอบยอดผันผวน 🧭',  back:'sv-list' },
+    'ad-sessions':{ t:'คลังนับสต็อก 📂',           back:null },
+    'ad-new':     { t:'สร้างรายการนับ 🆕',      back:'ad-sessions' },
+    'ad-assign':  { t:'มอบหมายงาน 👥',        back:null },
+    'ad-import':  { t:'อิมพอร์ตยอดสต็อก 📥',       back:null },
+    'ad-users':   { t:'จัดการทีมงาน 🔑',         back:null },
   };
   const tp = TOPS[page] || { t: page, back: null };
   const bk = tp.back ? `<button class="top-back" onclick="go('${tp.back}')">‹</button>` : '';
 
+  // ใช้ 3D Vespa SVGs เป็นเมนู (เปลี่ยนสีตัวถังและอีโมจิบอกความหมาย)
   const TABS = {
     counter: `<nav class="tabs">
-      <button class="tab on" onclick="go('c-tasks')"><span class="tab-ico">📋</span>งาน</button>
+      <button class="tab on" onclick="go('c-tasks')">${vIcon('#009246', '📦')}<span style="margin-top:4px;">งานนับสต็อก</span></button>
     </nav>`,
     supervisor: `<nav class="tabs">
-      <button class="tab ${['sv-dash'].includes(page)?'on':''}" onclick="go('sv-dash')"><span class="tab-ico">📊</span>Dashboard</button>
-      <button class="tab ${['sv-list','sv-detail'].includes(page)?'on':''}" onclick="go('sv-list')"><span class="tab-ico">⚠️</span>Variance</button>
+      <button class="tab ${['sv-dash'].includes(page)?'on':''}" onclick="go('sv-dash')">${vIcon('#F4D160', '📊')}<span style="margin-top:4px;">แผงควบคุม</span></button>
+      <button class="tab ${['sv-list','sv-detail'].includes(page)?'on':''}" onclick="go('sv-list')">${vIcon('#CE2B37', '⚠️')}<span style="margin-top:4px;">ยอดแกว่ง</span></button>
     </nav>`,
     admin: `<nav class="tabs">
-      <button class="tab ${['sv-dash','sv-list','sv-detail'].includes(page)?'on':''}" onclick="go('sv-dash')"><span class="tab-ico">📊</span>Dashboard</button>
-      <button class="tab ${['ad-sessions','ad-new'].includes(page)?'on':''}" onclick="go('ad-sessions')"><span class="tab-ico">📁</span>Session</button>
-      <button class="tab ${page==='ad-assign'?'on':''}" onclick="go('ad-assign')"><span class="tab-ico">👥</span>Assign</button>
-      <button class="tab ${page==='ad-import'?'on':''}" onclick="go('ad-import')"><span class="tab-ico">📥</span>Import</button>
-      <button class="tab ${page==='ad-users'?'on':''}" onclick="go('ad-users')"><span class="tab-ico">🔑</span>Users</button>
+      <button class="tab ${['sv-dash','sv-list','sv-detail'].includes(page)?'on':''}" onclick="go('sv-dash')">${vIcon('#009246', '📊')}<span style="margin-top:4px;">สรุป</span></button>
+      <button class="tab ${['ad-sessions','ad-new'].includes(page)?'on':''}" onclick="go('ad-sessions')">${vIcon('#F4D160', '📂')}<span style="margin-top:4px;">คลัง</span></button>
+      <button class="tab ${page==='ad-assign'?'on':''}" onclick="go('ad-assign')">${vIcon('#CE2B37', '👥')}<span style="margin-top:4px;">จ่ายงาน</span></button>
+      <button class="tab ${page==='ad-import'?'on':''}" onclick="go('ad-import')">${vIcon('#457B9D', '📥')}<span style="margin-top:4px;">สต็อก</span></button>
+      <button class="tab ${page==='ad-users'?'on':''}" onclick="go('ad-users')">${vIcon('#E76F51', '🔑')}<span style="margin-top:4px;">ทีมงาน</span></button>
     </nav>`,
   };
 
   Q('app').innerHTML = `
+    <div class="tricolore-stripe">
+      <div class="stripe-g"></div><div class="stripe-w"></div><div class="stripe-r"></div>
+    </div>
     <header class="top">
       ${bk}
       <div class="top-info">
-        <div class="top-title">${tp.t}</div>
-        <div class="top-sub">${prof?.name || ''} · ${rLabel(prof?.role)}</div>
+        <div class="top-title">
+          <span style="background:var(--vespa-brown); color:var(--vespa-white); padding:2px 8px; border-radius:8px; font-size:12px; border:2px solid var(--vespa-white); box-shadow:2px 2px 0px var(--vespa-shadow); margin-right:4px;">🇮🇹 </span>
+          ${tp.t}
+        </div>
+        <div class="top-sub">🌟 ${prof?.name || ''} · <span style="text-decoration: underline">${rLabel(prof?.role)}</span></div>
       </div>
-      <button class="top-out" onclick="doLogout()">ออกระบบ</button>
+      <button class="top-out" onclick="doLogout()">Ciao! 👋</button>
     </header>
-    <main class="page" id="cnt"><div class="load">⏳ กำลังโหลด...</div></main>
+    <main class="page" id="cnt"><div class="load">⏳ กำลังสตาร์ทเครื่องยนต์...</div></main>
     ${TABS[prof?.role] || ''}`;
 
   const L = {
@@ -365,55 +822,120 @@ function render() {
 }
 
 function Q(id) { return document.getElementById(id); }
-function cnt() { return Q('cnt'); }
-function rLabel(r) { return {admin:'Admin',counter:'Counter',supervisor:'Supervisor'}[r] || (r||''); }
-function errBox(msg) { return `<div class="card"><div class="alert alert-red">❌ ${msg}</div></div>`; }
 
-// ══════════════════════════════════════════════════════════
-//  AUTH
-// ══════════════════════════════════════════════════════════
+function cnt() { return Q('cnt'); }
+
+function rLabel(r) { return {admin:'ผู้ดูแลระบบ (Admin)',counter:'นักบิดนับสต็อก (Counter)',supervisor:'หัวหน้าทีม (Supervisor)'}[r] || (r||''); }
+
+function errBox(msg) { return `<div class="card"><div class="alert alert-red">❌ เกิดข้อผิดพลาด: ${msg}</div></div>`; }
+
 function paintLogin() {
   Q('app').innerHTML = `
     <div class="lbox">
       <div class="lcard">
         <div style="text-align:center;margin-bottom:28px">
-          <div style="font-size:44px">🏭</div>
-          <div style="font-size:22px;font-weight:800;color:#f9fafb;margin-top:10px;letter-spacing:-.02em">Cycle Count</div>
-          <div style="font-size:13px;color:#4b5563;margin-top:5px">Warehouse Inventory System</div>
+          <div style="font-size:72px; filter: drop-shadow(4px 4px 0px var(--vespa-shadow));">🛵</div>
+          <div style="font-size:28px;font-weight:900;color:var(--vespa-shadow);margin-top:14px;letter-spacing:-.02em; font-family:'Fredoka'">Cycle Count</div>
+          <div style="font-weight:800; font-size:13px;color:var(--vespa-red);margin-top:4px;text-transform:uppercase;letter-spacing:1px">Vespa Vintage Warehouse</div>
         </div>
         <div id="la"></div>
-        <div class="fg"><label>EMAIL</label>
+        <div class="fg" style="text-align: left;"><label>อีเมลทีมงาน</label>
           <input type="email" id="le" placeholder="name@company.com">
         </div>
-        <div class="fg"><label>PASSWORD</label>
+        <div class="fg" style="text-align: left;"><label>รหัสผ่าน</label>
           <input type="password" id="lp" placeholder="••••••••"
             onkeydown="if(event.key==='Enter')doLogin()">
         </div>
-        <button class="btn btn-blue" id="lb" onclick="doLogin()">เข้าสู่ระบบ</button>
+        <button class="btn btn-red" id="lb" onclick="doLogin()" style="margin-top: 10px;">บิดกุญแจเข้าสู่ระบบ 💨</button>
       </div>
     </div>`;
 }
 
 async function doLogin() {
   const email = Q('le').value.trim(), pwd = Q('lp').value;
-  if (!email || !pwd) { Q('la').innerHTML = '<div class="alert alert-red">กรุณากรอก Email และ Password</div>'; return; }
+  if (!email || !pwd) { Q('la').innerHTML = '<div class="alert alert-amber">ใส่รหัสและอีเมลให้ครบถ้วนก่อนน้า 🌸</div>'; return; }
   const btn = Q('lb');
-  btn.disabled = true; btn.textContent = 'กำลังเข้าสู่ระบบ...';
+  btn.disabled = true; btn.textContent = 'สตาร์ทเครื่องยนต์...';
   const { error } = await sb.auth.signInWithPassword({ email, password: pwd });
   if (error) {
-    Q('la').innerHTML = '<div class="alert alert-red">Email หรือ Password ไม่ถูกต้อง</div>';
-    btn.disabled = false; btn.textContent = 'เข้าสู่ระบบ';
+    Q('la').innerHTML = '<div class="alert alert-red font-size:13px">อีเมลหรือรหัสผ่านผิดพลาด ลองใหม่อีกทีนะจ๊ะ</div>';
+    btn.disabled = false; btn.textContent = 'บิดกุญแจเข้าสู่ระบบ 💨';
   } else {
     me = (await sb.auth.getUser()).data.user;
     await loadProf();
     go(home());
   }
 }
+
 async function doLogout() { await sb.auth.signOut(); }
 
-// ══════════════════════════════════════════════════════════
-//  COUNTER — TASK LIST
-// ══════════════════════════════════════════════════════════
+function computeZone(locCode, desc) {
+  if (!locCode) return '';
+  const A = locCode.toString().trim().toUpperCase();
+  const C = (desc || '').toString().trim().toUpperCase();
+  const left  = (s,n) => s.substring(0,n);
+  const right = (s,n) => s.substring(s.length-n);
+
+  if (left(A,3)==='B-0' && right(A,1)==='A') return 'Selective A';
+  if (left(A,3)==='B-1' && right(A,1)==='A') return 'Selective A';
+  if (left(A,3)==='B-2' && right(A,1)==='A') return 'Selective A';
+  if (left(A,3)==='-CW') return '';
+  if (left(A,4)==='ECOM') return 'Overfloor';
+  if (left(A,3)==='B-D') return 'Overfloor';
+  if (left(A,3)==='B-N') return 'Overfloor';
+  if (left(A,3)==='B-L') return 'Overfloor';
+  if (left(A,3)==='B-O') return 'Overfloor';
+  if (left(C,3)==='PKV') return 'Cool Room Floor';
+  if (left(A,2)==='AM' || left(A,2)==='AL') return 'Overfloor';
+  if (left(A,2)==='RM') return 'Raw Material';
+
+  if (left(A,4)==='B-A-') return 'Overfloor';
+  if (left(A,3)==='B-0') return 'Selective';
+  if (left(A,3)==='B-1') return 'Selective';
+  if (left(A,3)==='B-2') return 'Selective';
+  if (left(A,3)==='PRE') return 'Pre-Transfer';
+  if (left(A,2)==='C-') return 'Cool Room Floor';
+  if (left(A,2)==='DM') return 'DAMAGE';
+  if (left(A,2)==='IS') return 'ISSUE';
+  if (left(A,3)==='B-E') return 'Longspand E';
+  if (left(A,3)==='B-F') return 'Longspand F';
+  if (left(A,3)==='B-C') return 'Cool Room';
+  if (left(A,3)==='B-G') return 'Microrack';
+  if (left(A,3)==='B-3') return 'Consumable Rack';
+  if (left(A,6)==='BORROW') return 'BORROW';
+  if (left(A,2)==='LO') return 'LOST';
+  return 'Overfloor';
+}
+
+function computeItemStatus(oh, r1, r2, r3) {
+  const has = v => v !== null && v !== undefined && v !== '';
+  if (!has(r1)) return '';
+  if (has(oh) && r1 === oh) return 'OK';
+  if (!has(r2)) return 'PENDING';
+  if ((has(oh) && r2 === oh) || r2 === r1) return 'OK';
+  if (!has(r3)) return 'PENDING';
+  if ((has(oh) && r3 === oh) || r3 === r2) return 'OK';
+  return 'Diff';
+}
+
+function tagInfo(s) {
+  return ({
+    pending:     { cls:'tag-gray',   lbl:'รอสแกนนับ'         },
+    in_progress: { cls:'tag-blue',   lbl:'กำลังนับยอด'      },
+    round1_done: { cls:'tag-amber',  lbl:'รอแก้นับรอบ 2'       },
+    round2_done: { cls:'tag-amber',  lbl:'รอแก้นับรอบ 3'       },
+    round3_done: { cls:'tag-red',    lbl:'ส่งเคลียร์กับหัวหน้า' },
+    completed:   { cls:'tag-green',  lbl:'นับผ่านสำเร็จ'         },
+    approved:    { cls:'tag-green',  lbl:'อนุมัติผ่านสต็อก'  },
+  }[s]) || { cls:'tag-gray', lbl: s };
+}
+
+let _html5Qr = null;   // QR scanner instance
+let _xlsxRawRows = null;   // raw rows from xlsx file
+let _xlsxParsed  = null;   // filtered + aggregated rows ready to import
+
+// ══ WORKING LOGIC FUNCTIONS ══
+
 async function loadCTasks() {
   const { data: sess } = await sb.from('count_sessions').select('id').eq('status','active');
   const sids = sess?.map(s => s.id) || [];
@@ -534,11 +1056,6 @@ function renderMyTasks() {
   list.innerHTML = html;
 }
 
-// ══════════════════════════════════════════════════════════
-//  SCANNER — สแกน Location code เพื่อกระโดดไปงานนั้นทันที
-// ══════════════════════════════════════════════════════════
-let _html5Qr = null;
-
 function openScanner() {
   if (typeof Html5Qrcode === 'undefined') { alert('ตัวสแกนยังโหลดไม่เสร็จ ลองใหม่อีกครั้ง'); return; }
 
@@ -583,9 +1100,6 @@ function onScanSuccess(text) {
   go('c-count', { aid: match.id });
 }
 
-// ══════════════════════════════════════════════════════════
-//  COUNTER — COUNT ENTRY (BLIND)
-// ══════════════════════════════════════════════════════════
 async function loadCCount() {
   const { aid } = S;
 
@@ -748,6 +1262,7 @@ function toggleExtra(itemId) {
 }
 
 function openCameraFor(itemId)  { Q('cam_'+itemId)?.click(); }
+
 function openGalleryFor(itemId) { Q('gal_'+itemId)?.click(); }
 
 async function handlePhoto(itemId, input) {
@@ -853,9 +1368,6 @@ function nextRound(st) {
   return null;
 }
 
-// ══════════════════════════════════════════════════════════
-//  SUPERVISOR — DASHBOARD
-// ══════════════════════════════════════════════════════════
 async function loadSvDash() {
   const { data: sessions } = await sb.from('count_sessions')
     .select('id,name').eq('status','active').order('created_at',{ascending:false});
@@ -932,9 +1444,6 @@ async function loadSvDash() {
     <div class="card card-flush">${rows}</div>`;
 }
 
-// ══════════════════════════════════════════════════════════
-//  SUPERVISOR — VARIANCE LIST
-// ══════════════════════════════════════════════════════════
 async function loadSvList() {
   const { data: sess } = await sb.from('count_sessions')
     .select('id').eq('status','active');
@@ -971,9 +1480,6 @@ async function loadSvList() {
   cnt().innerHTML = html + '</div>';
 }
 
-// ══════════════════════════════════════════════════════════
-//  SUPERVISOR — VARIANCE DETAIL + APPROVAL
-// ══════════════════════════════════════════════════════════
 async function loadSvDetail() {
   const { aid } = S;
 
@@ -1117,9 +1623,6 @@ async function reqRecount(aid, round) {
   </div>`;
 }
 
-// ══════════════════════════════════════════════════════════
-//  ADMIN — SESSIONS
-// ══════════════════════════════════════════════════════════
 async function loadAdSess() {
   const { data: sessions, error } = await sb.from('count_sessions')
     .select('id,name,status,created_at').order('created_at',{ascending:false});
@@ -1183,139 +1686,6 @@ async function closeSess(id) {
   loadAdSess();
 }
 
-// ══════════════════════════════════════════════════════════
-//  ZONE LOGIC — แปลงจากสูตร Excel ของหน้าคลัง
-//  ลำดับการเช็คมีผล (เช็คจากบนลงล่าง ตัวแรกที่ตรงคือคำตอบ)
-// ══════════════════════════════════════════════════════════
-function computeZone(locCode, desc) {
-  if (!locCode) return '';
-  const A = locCode.toString().trim().toUpperCase();
-  const C = (desc || '').toString().trim().toUpperCase();
-  const left  = (s,n) => s.substring(0,n);
-  const right = (s,n) => s.substring(s.length-n);
-
-  // ── เช็คตรงก่อน (ตามสูตรชั้นนอก) ──
-  if (left(A,3)==='B-0' && right(A,1)==='A') return 'Selective A';
-  if (left(A,3)==='B-1' && right(A,1)==='A') return 'Selective A';
-  if (left(A,3)==='B-2' && right(A,1)==='A') return 'Selective A';
-  if (left(A,3)==='-CW') return '';
-  if (left(A,4)==='ECOM') return 'Overfloor';
-  if (left(A,3)==='B-D') return 'Overfloor';
-  if (left(A,3)==='B-N') return 'Overfloor';
-  if (left(A,3)==='B-L') return 'Overfloor';
-  if (left(A,3)==='B-O') return 'Overfloor';
-  if (left(C,3)==='PKV') return 'Cool Room Floor';
-  if (left(A,2)==='AM' || left(A,2)==='AL') return 'Overfloor';
-  if (left(A,2)==='RM') return 'Raw Material';
-
-  // ── SWITCH(true, ...) ตัวแรกที่ตรงคือคำตอบ ──
-  if (left(A,4)==='B-A-') return 'Overfloor';
-  if (left(A,3)==='B-0') return 'Selective';
-  if (left(A,3)==='B-1') return 'Selective';
-  if (left(A,3)==='B-2') return 'Selective';
-  if (left(A,3)==='PRE') return 'Pre-Transfer';
-  if (left(A,2)==='C-') return 'Cool Room Floor';
-  if (left(A,2)==='DM') return 'DAMAGE';
-  if (left(A,2)==='IS') return 'ISSUE';
-  if (left(A,3)==='B-E') return 'Longspand E';
-  if (left(A,3)==='B-F') return 'Longspand F';
-  if (left(A,3)==='B-C') return 'Cool Room';
-  if (left(A,3)==='B-G') return 'Microrack';
-  if (left(A,3)==='B-3') return 'Consumable Rack';
-  if (left(A,6)==='BORROW') return 'BORROW';
-  if (left(A,2)==='LO') return 'LOST';
-  return 'Overfloor'; // default
-}
-
-// ══════════════════════════════════════════════════════════
-//  VARIANCE LOGIC — เทียบแต่ละรอบกับ "ระบบ (OH)" หรือ "รอบก่อนหน้า"
-//  OK ถ้ารอบปัจจุบัน = OH  หรือ  รอบปัจจุบัน = รอบก่อนหน้า
-//  ไม่งั้นต้องนับรอบถัดไป (สูงสุด 3 รอบ) ถ้าครบ 3 รอบยังไม่ OK → ส่ง Supervisor
-//  คืนค่า: '' (ยังไม่มีรอบ1) / 'PENDING' (รอรอบถัดไป) / 'OK' / 'Diff'
-// ══════════════════════════════════════════════════════════
-function computeItemStatus(oh, r1, r2, r3) {
-  const has = v => v !== null && v !== undefined && v !== '';
-  if (!has(r1)) return '';
-  if (has(oh) && r1 === oh) return 'OK';
-  if (!has(r2)) return 'PENDING';
-  if ((has(oh) && r2 === oh) || r2 === r1) return 'OK';
-  if (!has(r3)) return 'PENDING';
-  if ((has(oh) && r3 === oh) || r3 === r2) return 'OK';
-  return 'Diff';
-}
-
-// ══════════════════════════════════════════════════════════
-//  ADMIN — IMPORT STOCK (XLSX — Export ทีละ Location เช่น B-EA%)
-// ══════════════════════════════════════════════════════════
-function paintAdImport() {
-  cnt().innerHTML = `
-    <div class="card">
-      <div id="ia"></div>
-      <div class="alert alert-blue" style="margin-bottom:14px;font-size:12px">
-        📁 Upload ไฟล์ Stock Export (.xlsx) — Export มาทีละ Location ก็ได้<br>
-        &nbsp;&nbsp;เช่น กรอง Location เป็น <code>B-EA%</code> ตอน Export จากระบบ<br>
-        ✅ Import ทุก Inventory Status (ไม่กรองสถานะ)<br>
-        🔢 OH Qty จะถูก <strong>sum</strong> ถ้า item เดียวกันอยู่หลาย LPN ใน location เดียวกัน<br>
-        🧭 Zone จะคำนวณอัตโนมัติจาก Location code (ตามกฎ Selective/Overfloor/Cool Room ฯลฯ)<br>
-        🏷️ เก็บ LPN/Lot/Inventory Status ของแต่ละแถวไว้ด้วย (โชว์ตอนนับเป็นข้อมูลอ้างอิง)<br>
-        🔄 Upload ใหม่ได้ทุกครั้งที่ OH เปลี่ยน — ระบบจะ update ยอดให้
-      </div>
-      <div class="fg"><label>SESSION</label>
-        <select id="is"><option value="">กำลังโหลด...</option></select>
-      </div>
-      <div class="fg">
-        <label>กรอง LOCATION (ไม่บังคับ)</label>
-        <input id="ilocfilter" placeholder="เช่น B-EA% (เว้นว่าง = import ทุก Location ในไฟล์)"
-          oninput="refreshXlsxPreview()">
-      </div>
-      <div class="fg"><label>เลือกไฟล์ XLSX</label>
-        <input type="file" id="ixlsx" accept=".xlsx,.xls"
-          style="padding:10px;border:2px dashed #bfdbfe;border-radius:9px;cursor:pointer;background:#f0f7ff;width:100%;font-size:13px">
-      </div>
-      <div id="ipreview" style="display:none;margin-bottom:10px"></div>
-      <button class="btn btn-blue" id="ibtn" onclick="doImportXlsx()" disabled>📥 Import</button>
-    </div>
-
-    <div class="card" style="border:1.5px solid #fecaca">
-      <div style="font-size:12px;font-weight:800;color:#b91c1c;margin-bottom:10px">🗑️ ลบ Location ตาม Zone / Row / Session</div>
-      <div class="alert alert-amber" style="font-size:12px">
-        ⚠️ เลือก Session = ลบเฉพาะข้อมูลใน Session นั้น (Location ยังอยู่ใช้กับ Session อื่นได้)<br>
-        เว้น Session ว่าง = ลบ Location ออกจากระบบจริงทุก Session — กู้คืนไม่ได้
-      </div>
-      <div class="fg">
-        <label>SESSION (ไม่บังคับ)</label>
-        <select id="del-session" onchange="refreshDeleteZonePreview()"><option value="">กำลังโหลด...</option></select>
-      </div>
-      <div class="grid-3" style="margin-bottom:10px">
-        <div class="fg" style="margin:0">
-          <label>ZONE</label>
-          <select id="del-zone" onchange="refreshDeleteZonePreview()"><option value="">ทั้งหมด</option></select>
-        </div>
-        <div class="fg" style="margin:0">
-          <label>ROW</label>
-          <select id="del-row" onchange="refreshDeleteZonePreview()"><option value="">ทั้งหมด</option></select>
-        </div>
-        <div class="fg" style="margin:0">
-          <label>LOCATION</label>
-          <input id="del-code" placeholder="เช่น B-EA-001-A" oninput="refreshDeleteZonePreview()">
-        </div>
-      </div>
-      <div id="del-preview" style="font-size:12px;color:#b91c1c;margin-bottom:10px;font-weight:600"></div>
-      <div id="del-alert"></div>
-      <button class="btn btn-red" id="del-btn" onclick="doDeleteByZoneRow()" disabled>🗑️ ลบทั้งหมดที่เลือก</button>
-    </div>`;
-
-  sb.from('count_sessions').select('id,name').in('status',['draft','active']).then(({data}) => {
-    Q('is').innerHTML = data?.length
-      ? data.map(s=>`<option value="${s.id}">${s.name} · ${s.status}</option>`).join('')
-      : '<option value="">ไม่มี Session</option>';
-  });
-
-  Q('ixlsx').addEventListener('change', readXlsxFile);
-  loadDeleteZoneFilters();
-}
-
-// ── ลบ Location ตาม Zone/Row/Location code (เลือก Session ได้ — ไม่เลือก = ลบจริงทุก Session) ──
 async function loadDeleteZoneFilters() {
   const [{ data: locData }, { data: sessData }] = await Promise.all([
     sb.from('locations').select('zone,row_no'),
@@ -1458,18 +1828,12 @@ async function doDeleteByZoneRow() {
   btn.disabled = false;
 }
 
-
-let _xlsxRawRows = null;   // ทุกแถวในไฟล์ (ยังไม่ filter) — เก็บไว้เพื่อ refilter โดยไม่ต้องอ่านไฟล์ใหม่
-let _xlsxParsed  = null;   // แถวหลัง filter + aggregate (เตรียม import จริง)
-
-// ── แปลง pattern แบบ SQL LIKE (% = ตัวอักษรอะไรก็ได้, _ = 1 ตัวอักษร) เป็น RegExp ──
 function likeToRegex(pattern) {
   const esc = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const re  = esc.replace(/%/g, '.*').replace(/_/g, '.');
   return new RegExp('^' + re + '$', 'i');
 }
 
-// ── อ่านไฟล์ XLSX ครั้งเดียว เก็บทุกแถวไว้ใน _xlsxRawRows ──
 async function readXlsxFile() {
   const file = Q('ixlsx').files[0];
   if (!file) return;
@@ -1541,8 +1905,6 @@ async function readXlsxFile() {
   }
 }
 
-// ── Filter (location pattern เท่านั้น) + Aggregate (sum OH) แล้วแสดง preview ──
-// เรียกใหม่ได้ทุกครั้งที่พิมพ์ filter โดยไม่ต้องอ่านไฟล์ใหม่ — ไม่กรอง Inventory Status แล้ว (import ทุกสถานะ)
 function refreshXlsxPreview() {
   const prev = Q('ipreview'), btn = Q('ibtn');
   if (!_xlsxRawRows) return;
@@ -1709,9 +2071,6 @@ async function doImportXlsx() {
   }
 }
 
-// ══════════════════════════════════════════════════════════
-//  ADMIN — ASSIGN (Single + Bulk by Zone/Row/Level)
-// ══════════════════════════════════════════════════════════
 async function loadAdAssign() {
   const [{ data: sessions }, { data: counters }] = await Promise.all([
     sb.from('count_sessions').select('id,name').eq('status','active'),
@@ -1779,7 +2138,6 @@ async function loadAdAssign() {
   refreshBulkFilters();
 }
 
-// ── Bulk: โหลด Zone/Row/Level จาก snapshot ──
 async function refreshBulkFilters() {
   const sid = Q('as-sess')?.value;
   if (!sid) return;
@@ -1891,7 +2249,6 @@ async function doBulkAssign() {
   setTimeout(() => { al.innerHTML=''; refreshLocs(); refreshBulkFilters(); }, 2000);
 }
 
-// ── Single assign helpers ──
 async function refreshLocs() {
   const sid = Q('as-sess')?.value;
   if (!sid) return;
@@ -1993,9 +2350,74 @@ async function doAssign() {
   refreshBulkFilters();
 }
 
-// ══════════════════════════════════════════════════════════
-//  ADMIN — USERS
-// ══════════════════════════════════════════════════════════
+function paintAdImport() {
+  cnt().innerHTML = `
+    <div class="card">
+      <div id="ia"></div>
+      <div class="alert alert-blue" style="margin-bottom:14px;font-size:12px">
+        📁 Upload ไฟล์ Stock Export (.xlsx) — Export มาทีละ Location ก็ได้<br>
+        &nbsp;&nbsp;เช่น กรอง Location เป็น <code>B-EA%</code> ตอน Export จากระบบ<br>
+        ✅ Import ทุก Inventory Status (ไม่กรองสถานะ)<br>
+        🔢 OH Qty จะถูก <strong>sum</strong> ถ้า item เดียวกันอยู่หลาย LPN ใน location เดียวกัน<br>
+        🧭 Zone จะคำนวณอัตโนมัติจาก Location code (ตามกฎ Selective/Overfloor/Cool Room ฯลฯ)<br>
+        🏷️ เก็บ LPN/Lot/Inventory Status ของแต่ละแถวไว้ด้วย (โชว์ตอนนับเป็นข้อมูลอ้างอิง)<br>
+        🔄 Upload ใหม่ได้ทุกครั้งที่ OH เปลี่ยน — ระบบจะ update ยอดให้
+      </div>
+      <div class="fg"><label>SESSION</label>
+        <select id="is"><option value="">กำลังโหลด...</option></select>
+      </div>
+      <div class="fg">
+        <label>กรอง LOCATION (ไม่บังคับ)</label>
+        <input id="ilocfilter" placeholder="เช่น B-EA% (เว้นว่าง = import ทุก Location ในไฟล์)"
+          oninput="refreshXlsxPreview()">
+      </div>
+      <div class="fg"><label>เลือกไฟล์ XLSX</label>
+        <input type="file" id="ixlsx" accept=".xlsx,.xls"
+          style="padding:10px;border:2px dashed #bfdbfe;border-radius:9px;cursor:pointer;background:#f0f7ff;width:100%;font-size:13px">
+      </div>
+      <div id="ipreview" style="display:none;margin-bottom:10px"></div>
+      <button class="btn btn-blue" id="ibtn" onclick="doImportXlsx()" disabled>📥 Import</button>
+    </div>
+
+    <div class="card" style="border:1.5px solid #fecaca">
+      <div style="font-size:12px;font-weight:800;color:#b91c1c;margin-bottom:10px">🗑️ ลบ Location ตาม Zone / Row / Session</div>
+      <div class="alert alert-amber" style="font-size:12px">
+        ⚠️ เลือก Session = ลบเฉพาะข้อมูลใน Session นั้น (Location ยังอยู่ใช้กับ Session อื่นได้)<br>
+        เว้น Session ว่าง = ลบ Location ออกจากระบบจริงทุก Session — กู้คืนไม่ได้
+      </div>
+      <div class="fg">
+        <label>SESSION (ไม่บังคับ)</label>
+        <select id="del-session" onchange="refreshDeleteZonePreview()"><option value="">กำลังโหลด...</option></select>
+      </div>
+      <div class="grid-3" style="margin-bottom:10px">
+        <div class="fg" style="margin:0">
+          <label>ZONE</label>
+          <select id="del-zone" onchange="refreshDeleteZonePreview()"><option value="">ทั้งหมด</option></select>
+        </div>
+        <div class="fg" style="margin:0">
+          <label>ROW</label>
+          <select id="del-row" onchange="refreshDeleteZonePreview()"><option value="">ทั้งหมด</option></select>
+        </div>
+        <div class="fg" style="margin:0">
+          <label>LOCATION</label>
+          <input id="del-code" placeholder="เช่น B-EA-001-A" oninput="refreshDeleteZonePreview()">
+        </div>
+      </div>
+      <div id="del-preview" style="font-size:12px;color:#b91c1c;margin-bottom:10px;font-weight:600"></div>
+      <div id="del-alert"></div>
+      <button class="btn btn-red" id="del-btn" onclick="doDeleteByZoneRow()" disabled>🗑️ ลบทั้งหมดที่เลือก</button>
+    </div>`;
+
+  sb.from('count_sessions').select('id,name').in('status',['draft','active']).then(({data}) => {
+    Q('is').innerHTML = data?.length
+      ? data.map(s=>`<option value="${s.id}">${s.name} · ${s.status}</option>`).join('')
+      : '<option value="">ไม่มี Session</option>';
+  });
+
+  Q('ixlsx').addEventListener('change', readXlsxFile);
+  loadDeleteZoneFilters();
+}
+
 async function loadAdUsers() {
   const { data: users } = await sb.from('profiles')
     .select('id,name,role,created_at').order('created_at');
@@ -2058,21 +2480,6 @@ async function addUser() {
   al.innerHTML = `<div class="alert alert-green">✅ สร้าง User สำเร็จ — แจ้ง ${name} Login ด้วย ${email}</div>`;
   Q('un').value=''; Q('ue').value=''; Q('up').value='';
   setTimeout(() => loadAdUsers(), 1800);
-}
-
-// ══════════════════════════════════════════════════════════
-//  UTILS
-// ══════════════════════════════════════════════════════════
-function tagInfo(s) {
-  return ({
-    pending:     { cls:'tag-gray',   lbl:'รอนับ'         },
-    in_progress: { cls:'tag-blue',   lbl:'กำลังนับ'      },
-    round1_done: { cls:'tag-amber',  lbl:'รอรอบ 2'       },
-    round2_done: { cls:'tag-amber',  lbl:'รอรอบ 3'       },
-    round3_done: { cls:'tag-red',    lbl:'รอ Supervisor' },
-    completed:   { cls:'tag-green',  lbl:'เสร็จ'         },
-    approved:    { cls:'tag-green',  lbl:'อนุมัติแล้ว'  },
-  }[s]) || { cls:'tag-gray', lbl: s };
 }
 
 // ══════════════════════════════════════════════════════════
