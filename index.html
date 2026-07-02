@@ -1115,9 +1115,9 @@ async function loadCCount() {
   const l   = asgn.locations;
   const sub = [l.zone, l.area, l.row_no && 'Row '+l.row_no, l.level && 'Lv.'+l.level].filter(Boolean).join(' · ');
 
-  const [{ data: snaps }, { data: details }, { data: profs }] = await Promise.all([
+  const [{ data: snaps }, { data: details }, { data: profs }, { data: sessInfo }] = await Promise.all([
     sb.from('stock_snapshot')
-      .select('item_id,items(id,code,description)')
+      .select('item_id,onhand_qty,al_qty,items(id,code,description)')
       .eq('session_id', asgn.session_id)
       .eq('location_id', asgn.location_id),
     sb.from('stock_snapshot_detail')
@@ -1125,7 +1125,10 @@ async function loadCCount() {
       .eq('session_id', asgn.session_id)
       .eq('location_id', asgn.location_id),
     sb.from('profiles').select('id,name').order('name'),
+    sb.from('count_sessions').select('show_oh').eq('id', asgn.session_id).single(),
   ]);
+
+  const showOH = sessInfo?.show_oh === true;
 
   if (!snaps?.length) {
     cnt().innerHTML = `<div class="card">
@@ -1163,6 +1166,8 @@ async function loadCCount() {
 
     // ── LPN/Lot/Status detail — แสดงเป็น table ย่อยให้อ่านง่าย ──
     let detHtml = '';
+    const alQty = s.al_qty ?? null;
+    const ohDisplay = showOH ? `<span style="font-size:10px;font-weight:700;color:#1e40af;margin-left:4px">[OH: ${s.onhand_qty}${alQty!==null?` · AL: ${alQty}`:''}]</span>` : (alQty !== null ? `<span style="font-size:10px;color:#d97706;margin-left:4px">[AL: ${alQty}]</span>` : '');
     if (dets.length) {
       const rows = dets.map(d => `
         <tr>
@@ -1194,7 +1199,7 @@ async function loadCCount() {
     items += `<div class="citem-wrap">
       <div class="citem">
         <div class="citem-info">
-          <div class="citem-code">${it.code}</div>
+          <div class="citem-code">${it.code} ${ohDisplay}</div>
           <div class="citem-desc">${it.description || '—'}</div>
           ${detHtml}
         </div>
@@ -1491,10 +1496,11 @@ async function loadSvDetail() {
 
   const roundNum = { round1_done:1, round2_done:2, round3_done:3 }[asgn.status] || 1;
   const l = asgn.locations;
+  const isAdminOrSup = ['admin','supervisor'].includes(prof?.role);
 
   const [{ data: snaps }, { data: counts }] = await Promise.all([
     sb.from('stock_snapshot')
-      .select('item_id,onhand_qty,items(id,code,description)')
+      .select('item_id,onhand_qty,al_qty,items(id,code,description)')
       .eq('session_id', asgn.session_id)
       .eq('location_id', asgn.location_id),
     sb.from('count_records')
@@ -1529,57 +1535,99 @@ async function loadSvDetail() {
 
     const notes = [v[1],v[2],v[3]].map((rec,idx) => {
       if (!rec || (!rec.remark && !rec.photo_url)) return '';
-      return `<div style="font-size:10px;color:#7c3aed;margin-top:1px">
+      return `<div style="font-size:10px;color:#7c3aed;margin-top:2px">
         ${rec.remark ? `📝R${idx+1}: ${rec.remark}` : ''}
-        ${rec.photo_url ? ` <a href="${rec.photo_url}" target="_blank" style="color:#7c3aed">📷 ดูรูป R${idx+1}</a>` : ''}
+        ${rec.photo_url ? ` <a href="${rec.photo_url}" target="_blank" style="color:#7c3aed">📷 รูป R${idx+1}</a>` : ''}
       </div>`;
     }).join('');
 
     const suggested = r3 ?? r2 ?? r1 ?? +s.onhand_qty;
+    const alQty = s.al_qty ?? null;
 
-    varRows += `<div class="vrow ${st.row}">
-      <div style="flex:1;min-width:0">
-        <div class="mono" style="font-size:12px;font-weight:800">${it.code}</div>
-        <div style="font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${it.description||''}</div>
-        <div style="font-size:10px;color:#94a3b8;margin-top:2px">ระบบ(OH): ${s.onhand_qty} · R1: ${fmt(v[1])} · R2: ${fmt(v[2])} · R3: ${fmt(v[3])}</div>
-        ${notes}
+    // OH editable (admin/supervisor) — per item
+    const ohCell = isAdminOrSup
+      ? `<div style="font-size:10px;color:#94a3b8;margin-top:2px">
+           OH: <input type="number" id="oh_${it.id}" value="${s.onhand_qty}"
+             style="width:52px;padding:3px 5px;font-size:11px;font-weight:700;border:1.5px solid #e2e8f0;border-radius:6px;text-align:center"
+             onchange="updateOH('${asgn.session_id}','${asgn.location_id}','${it.id}',this.value)">
+           ${alQty !== null ? `AL: <strong style="color:#d97706">${alQty}</strong>` : ''}
+         </div>`
+      : `<div style="font-size:10px;color:#94a3b8;margin-top:2px">OH: ${s.onhand_qty}${alQty!==null?` · AL: ${alQty}`:''}</div>`;
+
+    varRows += `<div class="vrow ${st.row}" style="flex-direction:column;align-items:stretch;padding:12px 16px;gap:8px">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div class="mono" style="font-size:13px;font-weight:900;color:var(--vespa-shadow)">${it.code}</div>
+          <div style="font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${it.description||''}</div>
+          <div style="font-size:10px;color:#94a3b8;margin-top:2px">R1: ${fmt(v[1])} · R2: ${fmt(v[2])} · R3: ${fmt(v[3])}</div>
+          ${ohCell}
+          ${notes}
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <span class="tag ${st.cls}">${st.lbl}</span>
+          <div style="font-size:9px;color:#94a3b8;margin-top:6px">ยอดยืนยัน</div>
+          <input type="number" id="confirm_${it.id}" value="${suggested}"
+            style="width:72px;padding:6px 4px;font-size:15px;font-weight:900;text-align:center;border:2px solid var(--vespa-brown);border-radius:10px;margin-top:2px;font-family:inherit">
+        </div>
       </div>
-      <div style="text-align:right;flex-shrink:0">
-        <span class="tag ${st.cls}">${st.lbl}</span>
-        <div style="font-size:9px;color:#94a3b8;margin-top:4px">ยอดยืนยัน</div>
-        <input type="number" id="confirm_${it.id}" value="${suggested}"
-          style="width:64px;padding:5px 6px;font-size:13px;font-weight:700;text-align:center;border:1.5px solid #e2e8f0;border-radius:7px;margin-top:2px">
+      <!-- ปุ่มอนุมัติต่อ item -->
+      <div style="display:flex;gap:6px;border-top:1px dashed var(--vespa-gray);padding-top:8px">
+        <button class="btn btn-green btn-sm" style="flex:1" onclick="doApproveItem('${aid}','${it.id}','ok')">✅ ตรงได้</button>
+        <button class="btn btn-red btn-sm"   style="flex:1" onclick="doApproveItem('${aid}','${it.id}','lost')">❌ ขาด</button>
       </div>
     </div>`;
   }
 
   cnt().innerHTML = `
     <div class="card">
-      <div class="mono" style="font-size:17px;font-weight:800">${l.code}</div>
-      <div style="font-size:12px;color:#64748b;margin-top:3px">
+      <div class="mono" style="font-size:19px;font-weight:900;color:var(--vespa-shadow)">${l.code}</div>
+      <div style="font-size:12px;color:var(--vespa-brown);margin-top:4px">
         ${[l.zone,l.area].filter(Boolean).join(' · ')} · Counter: ${asgn.profiles?.name || '?'}
       </div>
-      <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
         <span class="tag tag-blue">รอบที่ ${roundNum}</span>
-        ${hasVar ? `<span class="tag tag-amber">⚠️ มี Variance</span>` : `<span class="tag tag-green">✅ ยอดตรง</span>`}
+        ${hasVar ? `<span class="tag tag-red">⚠️ มี Variance</span>` : `<span class="tag tag-green">✅ ยอดตรง</span>`}
       </div>
     </div>
-    <div class="sec">รายละเอียด (${snaps?.length || 0} รายการ) — เทียบกับระบบ (OH) และรอบก่อนหน้า</div>
+    <div class="sec">รายละเอียด — กด ✅/❌ แต่ละรายการ หรือกดรวมด้านล่าง</div>
     <div class="card card-flush">${varRows}</div>
     <div style="padding:12px">
-      <div class="alert alert-blue" style="font-size:12px">✏️ ตรวจ/แก้ "ยอดยืนยัน" แต่ละรายการให้ถูกต้องก่อนกดอนุมัติ</div>
+      <div class="alert alert-blue" style="font-size:12px;margin-bottom:10px">✏️ แก้ "ยอดยืนยัน" หรือ OH ก่อนกดอนุมัติรวม</div>
       <div id="sva"></div>
       <div class="btn-2col" style="margin-bottom:8px">
-        <button class="btn btn-green btn-sm" style="width:100%"
-          onclick="doApprove('${aid}','ok')">✅ ยอดตรงได้</button>
-        <button class="btn btn-red btn-sm" style="width:100%"
-          onclick="doApprove('${aid}','lost')">❌ สินค้าขาด</button>
+        <button class="btn btn-green" onclick="doApprove('${aid}','ok')">✅ ยอดตรงได้ทั้งหมด</button>
+        <button class="btn btn-red"   onclick="doApprove('${aid}','lost')">❌ สินค้าขาดทั้งหมด</button>
       </div>
       ${roundNum < 3 ? `<button class="btn btn-ghost"
-        onclick="reqRecount('${aid}',${roundNum+1})">
-        🔄 ขอนับรอบที่ ${roundNum+1} อีกครั้ง
-      </button>` : ''}
+        onclick="reqRecount('${aid}',${roundNum+1})">🔄 ขอนับรอบที่ ${roundNum+1} อีกครั้ง</button>` : ''}
     </div>`;
+}
+
+async function updateOH(sessionId, locationId, itemId, newVal) {
+  const val = parseFloat(newVal);
+  if (isNaN(val)) return;
+  await sb.from('stock_snapshot')
+    .update({ onhand_qty: val })
+    .eq('session_id', sessionId)
+    .eq('location_id', locationId)
+    .eq('item_id', itemId);
+}
+
+async function doApproveItem(aid, itemId, resolution) {
+  const input = Q('confirm_'+itemId);
+  const val = input ? parseFloat(input.value) : NaN;
+  const { data: asgn } = await sb.from('assignments').select('location_id,session_id').eq('id', aid).single();
+  const { data: snap } = await sb.from('stock_snapshot').select('onhand_qty').eq('session_id', asgn.session_id).eq('location_id', asgn.location_id).eq('item_id', itemId).single();
+  const finalQty = isNaN(val) ? +(snap?.onhand_qty||0) : val;
+  await sb.from('variance_approvals').upsert({
+    assignment_id: aid, item_id: itemId,
+    final_qty: finalQty, variance: finalQty - +(snap?.onhand_qty||0),
+    resolution, approved_by: me.id,
+  }, { onConflict:'assignment_id,item_id' });
+  const btn1 = input?.closest('.vrow')?.querySelector('.btn-green');
+  const btn2 = input?.closest('.vrow')?.querySelector('.btn-red');
+  if (btn1) btn1.style.opacity = resolution==='ok'?'1':'0.4';
+  if (btn2) btn2.style.opacity = resolution==='lost'?'1':'0.4';
 }
 
 async function doApprove(aid, resolution) {
@@ -1629,6 +1677,7 @@ async function loadAdSess() {
 
   if (error) { cnt().innerHTML = errBox(error.message); return; }
 
+  const isAdminOrSup = ['admin','supervisor'].includes(prof?.role);
   const SBG = { draft:'tag-gray', active:'tag-green', closed:'tag-blue' };
   const SLB = { draft:'Draft',    active:'Active',    closed:'Closed'  };
 
@@ -1636,7 +1685,7 @@ async function loadAdSess() {
     ? '<div class="card card-flush">'
     : `<div class="card" style="text-align:center;padding:44px">
         <div style="font-size:40px">📁</div>
-        <div style="margin-top:14px;color:#64748b;font-weight:500">ยังไม่มี Session</div>
+        <div style="margin-top:14px;color:var(--vespa-brown);font-weight:800">ยังไม่มี Session</div>
       </div>`;
 
   for (const s of sessions || []) {
@@ -1645,10 +1694,12 @@ async function loadAdSess() {
         <div class="row-title">${s.name}</div>
         <div class="row-sub">${new Date(s.created_at).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'})}</div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
         <span class="tag ${SBG[s.status]}">${SLB[s.status]}</span>
-        ${s.status==='draft'  ? `<button class="btn btn-green btn-sm" onclick="activateSess('${s.id}')">เปิดใช้</button>` : ''}
-        ${s.status==='active' ? `<button class="btn btn-ghost btn-sm" onclick="closeSess('${s.id}')">ปิด</button>` : ''}
+        ${isAdminOrSup && s.status==='draft'  ? `<button class="btn btn-green btn-sm" onclick="activateSess('${s.id}')">เปิดใช้</button>` : ''}
+        ${isAdminOrSup && s.status==='active' ? `<button class="btn btn-ghost btn-sm" onclick="closeSess('${s.id}')">ปิด</button>` : ''}
+        ${isAdminOrSup && s.status==='closed' ? `<button class="btn btn-green btn-sm" onclick="reopenSess('${s.id}')">เปิดใหม่</button>` : ''}
+        ${isAdminOrSup ? `<button class="btn btn-red btn-sm" onclick="deleteSess('${s.id}','${s.name.replace(/'/g,"\\'")}')">🗑️</button>` : ''}
       </div>
     </div>`;
   }
@@ -1683,6 +1734,27 @@ async function activateSess(id) {
 async function closeSess(id) {
   if (!confirm('ปิด Session นี้? Counter จะนับเพิ่มไม่ได้แล้ว')) return;
   await sb.from('count_sessions').update({ status:'closed', closed_at:new Date().toISOString() }).eq('id', id);
+  loadAdSess();
+}
+
+async function reopenSess(id) {
+  if (!confirm('เปิด Session นี้ใหม่อีกครั้ง?')) return;
+  await sb.from('count_sessions').update({ status:'active', closed_at:null }).eq('id', id);
+  loadAdSess();
+}
+
+async function deleteSess(id, name) {
+  if (!confirm(`ลบ Session "${name}" ?\n\nจะลบข้อมูลทั้งหมดที่ผูกกับ Session นี้ (Assignment, ผลนับ, Variance, Snapshot) อย่างถาวร`)) return;
+  const { data: asgns } = await sb.from('assignments').select('id').eq('session_id', id);
+  const aIds = (asgns||[]).map(a=>a.id);
+  if (aIds.length) {
+    await sb.from('variance_approvals').delete().in('assignment_id', aIds);
+    await sb.from('count_records').delete().in('assignment_id', aIds);
+    await sb.from('assignments').delete().eq('session_id', id);
+  }
+  await sb.from('stock_snapshot_detail').delete().eq('session_id', id);
+  await sb.from('stock_snapshot').delete().eq('session_id', id);
+  await sb.from('count_sessions').delete().eq('id', id);
   loadAdSess();
 }
 
@@ -2072,9 +2144,10 @@ async function doImportXlsx() {
 }
 
 async function loadAdAssign() {
+  const isAdminOrSup = ['admin','supervisor'].includes(prof?.role);
   const [{ data: sessions }, { data: counters }] = await Promise.all([
-    sb.from('count_sessions').select('id,name').eq('status','active'),
-    sb.from('profiles').select('id,name').eq('role','counter').order('name'),
+    sb.from('count_sessions').select('id,name,show_oh').eq('status','active'),
+    sb.from('profiles').select('id,name').in('role',['counter','supervisor','admin']).order('name'),
   ]);
 
   if (!sessions?.length) {
@@ -2082,16 +2155,33 @@ async function loadAdAssign() {
     return;
   }
 
-  const sOpts = sessions.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  const sOpts = sessions.map(s=>`<option value="${s.id}" data-show-oh="${s.show_oh||false}">${s.name}</option>`).join('');
   const cOpts = counters?.map(u=>`<option value="${u.id}">${u.name}</option>`).join('') || '<option>ไม่มี Counter</option>';
+  const firstSess = sessions[0];
+  const showOHInit = firstSess?.show_oh || false;
 
   cnt().innerHTML = `
     <div class="card">
       <div id="aa"></div>
 
       <div class="fg"><label>SESSION</label>
-        <select id="as-sess" onchange="refreshLocs();refreshBulkFilters()">${sOpts}</select>
+        <select id="as-sess" onchange="refreshLocs();refreshBulkFilters();syncOHToggle()">${sOpts}</select>
       </div>
+
+      ${isAdminOrSup ? `<!-- ══ OH TOGGLE ══ -->
+      <div class="bulk-box" style="background:#fffbeb;border-color:#d97706;margin-bottom:14px">
+        <div class="bulk-box-title" style="color:#92400e">👁️ ควบคุมการแสดงผล OH ให้ Counter</div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:8px;font-weight:700;cursor:pointer">
+            <input type="checkbox" id="oh-toggle" ${showOHInit?'checked':''} onchange="toggleOH()" style="width:20px;height:20px;accent-color:var(--vespa-red);cursor:pointer">
+            <span>เปิดให้ Counter เห็นยอด OH ขณะนับ</span>
+          </label>
+          <span id="oh-status" class="tag ${showOHInit?'tag-green':'tag-gray'}" style="font-size:11px">
+            ${showOHInit?'🔓 เห็น OH':'🔒 Blind Count'}
+          </span>
+        </div>
+        <div style="font-size:11px;color:#92400e;margin-top:6px">⚠️ ปิด = Counter นับแบบ Blind (ไม่เห็นยอด) — เปิด = Counter เห็น OH และ AL ขณะนับ</div>
+      </div>` : ''}
 
       <!-- ══ BULK ASSIGN ══ -->
       <div class="bulk-box">
@@ -2111,7 +2201,7 @@ async function loadAdAssign() {
           </div>
         </div>
         <div class="fg" style="margin-bottom:10px">
-          <label>COUNTER</label>
+          <label>COUNTER (รอบ 1)</label>
           <select id="bulk-user">${cOpts}</select>
         </div>
         <div id="bulk-preview" style="font-size:12px;color:#1e40af;margin-bottom:10px;font-weight:600"></div>
@@ -2119,6 +2209,38 @@ async function loadAdAssign() {
           ⚡ Assign ทั้งหมดที่เลือก
         </button>
       </div>
+
+      <!-- ══ ROUND 2/3 ASSIGN ══ -->
+      ${isAdminOrSup ? `<div class="bulk-box" style="background:#f0fdf4;border-color:var(--vespa-green)">
+        <div class="bulk-box-title" style="color:var(--vespa-mint-dark)">🔄 Assign Counter สำหรับรอบ 2 / 3</div>
+        <div style="font-size:11px;color:var(--vespa-mint-dark);margin-bottom:10px">กรองหา Location ที่อยู่ในสถานะรอนับรอบถัดไป แล้วมอบหมายให้ Counter คนอื่น</div>
+        <div class="grid-3" style="margin-bottom:10px">
+          <div class="fg" style="margin:0">
+            <label>รอบที่</label>
+            <select id="r23-round" onchange="refreshR23Preview()">
+              <option value="round1_done">รอบ 2</option>
+              <option value="round2_done">รอบ 3</option>
+              <option value="round3_done">รอบ Sup</option>
+            </select>
+          </div>
+          <div class="fg" style="margin:0">
+            <label>ZONE</label>
+            <select id="r23-zone" onchange="refreshR23Preview()"><option value="">ทั้งหมด</option></select>
+          </div>
+          <div class="fg" style="margin:0">
+            <label>ROW</label>
+            <select id="r23-row" onchange="refreshR23Preview()"><option value="">ทั้งหมด</option></select>
+          </div>
+        </div>
+        <div class="fg" style="margin-bottom:10px">
+          <label>COUNTER ที่จะนับรอบถัดไป</label>
+          <select id="r23-user">${cOpts}</select>
+        </div>
+        <div id="r23-preview" style="font-size:12px;color:var(--vespa-mint-dark);margin-bottom:10px;font-weight:600"></div>
+        <button class="btn btn-green" id="r23-btn" onclick="doR23Assign()" disabled>
+          🔄 เปลี่ยน Counter รอบถัดไป
+        </button>
+      </div>` : ''}
 
       <!-- ══ SINGLE ASSIGN ══ -->
       <div style="font-size:11px;font-weight:700;color:#94a3b8;margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">หรือ Assign ทีละ Location</div>
@@ -2136,6 +2258,87 @@ async function loadAdAssign() {
 
   refreshLocs();
   refreshBulkFilters();
+  if (isAdminOrSup) refreshR23Preview();
+}
+
+async function syncOHToggle() {
+  const sid = Q('as-sess')?.value;
+  if (!sid) return;
+  const { data } = await sb.from('count_sessions').select('show_oh').eq('id', sid).single();
+  const tog = Q('oh-toggle'), st = Q('oh-status');
+  if (tog) tog.checked = !!data?.show_oh;
+  if (st) { st.textContent = data?.show_oh ? '🔓 เห็น OH' : '🔒 Blind Count'; st.className = `tag ${data?.show_oh?'tag-green':'tag-gray'}`; }
+}
+
+async function toggleOH() {
+  const sid = Q('as-sess')?.value;
+  const val = Q('oh-toggle')?.checked || false;
+  const st  = Q('oh-status');
+  if (!sid) return;
+  await sb.from('count_sessions').update({ show_oh: val }).eq('id', sid);
+  if (st) { st.textContent = val ? '🔓 เห็น OH' : '🔒 Blind Count'; st.className = `tag ${val?'tag-green':'tag-gray'}`; }
+}
+
+async function refreshR23Preview() {
+  const sid    = Q('as-sess')?.value;
+  const status = Q('r23-round')?.value || 'round1_done';
+  const zone   = Q('r23-zone')?.value || '';
+  const row    = Q('r23-row')?.value  || '';
+  const prev   = Q('r23-preview'), btn = Q('r23-btn');
+  if (!sid || !prev || !btn) return;
+
+  let q = sb.from('assignments')
+    .select('id,locations(zone,row_no)')
+    .eq('session_id', sid).eq('status', status);
+  const { data: asgns, error } = await q;
+
+  // Populate zone/row dropdowns from results
+  const zones = new Set(), rows = new Set();
+  asgns?.forEach(a => { if (a.locations?.zone) zones.add(a.locations.zone); if (a.locations?.row_no) rows.add(a.locations.row_no); });
+  const fillSel = (id, vals) => {
+    const el = Q(id); if (!el) return;
+    const cur = el.value;
+    el.innerHTML = '<option value="">ทั้งหมด</option>' + [...vals].sort().map(v=>`<option value="${v}" ${v===cur?'selected':''}>${v}</option>`).join('');
+  };
+  fillSel('r23-zone', zones);
+  fillSel('r23-row',  rows);
+
+  const filtered = (asgns||[]).filter(a => {
+    if (zone && a.locations?.zone !== zone) return false;
+    if (row  && a.locations?.row_no !== row) return false;
+    return true;
+  });
+  window._r23Asgns = filtered;
+
+  if (!filtered.length) {
+    prev.innerHTML = `<span style="color:#94a3b8">ไม่มี Location ในสถานะที่เลือก</span>`;
+    btn.disabled = true;
+  } else {
+    const label = { round1_done:'รอบ 2', round2_done:'รอบ 3', round3_done:'รอบ Sup' }[status]||status;
+    prev.innerHTML = `📍 พบ <strong>${filtered.length}</strong> locations รอ${label}`;
+    btn.disabled = false;
+  }
+}
+
+async function doR23Assign() {
+  const uid   = Q('r23-user')?.value;
+  const asgns = window._r23Asgns || [];
+  if (!uid || !asgns.length) return;
+
+  Q('r23-btn').disabled = true;
+  Q('r23-preview').innerHTML = `<span>⏳ กำลังอัปเดต ${asgns.length} assignments...</span>`;
+
+  const BATCH = 200;
+  for (let i = 0; i < asgns.length; i += BATCH) {
+    const ids = asgns.slice(i, i+BATCH).map(a=>a.id);
+    for (const id of ids) {
+      await sb.from('assignments').update({ assigned_to: uid }).eq('id', id);
+    }
+  }
+  Q('r23-preview').innerHTML = `<span style="color:var(--vespa-green);font-weight:900">✅ เปลี่ยน Counter เรียบร้อย ${asgns.length} locations</span>`;
+  Q('r23-btn').disabled = false;
+  window._r23Asgns = [];
+  refreshLocs();
 }
 
 async function refreshBulkFilters() {
@@ -2422,42 +2625,70 @@ async function loadAdUsers() {
   const { data: users } = await sb.from('profiles')
     .select('id,name,role,created_at').order('created_at');
 
+  const isAdmin = prof?.role === 'admin';
   const rOpts = cur => ['counter','supervisor','admin']
     .map(r => `<option value="${r}" ${r===cur?'selected':''}>${rLabel(r)}</option>`).join('');
 
   let html = '<div class="card card-flush">';
   for (const u of users || []) {
+    const isSelf = u.id === me.id;
     html += `<div class="row" style="cursor:default">
-      <div class="row-body">
-        <div class="row-title">${u.name}</div>
+      <div class="row-body" style="min-width:0">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span id="uname_${u.id}" style="font-size:15px;font-weight:900;color:var(--vespa-shadow)">${u.name}</span>
+          ${isAdmin ? `<button onclick="editUserName('${u.id}')" title="แก้ชื่อ"
+            style="background:none;border:none;color:var(--vespa-brown);font-size:14px;cursor:pointer;padding:2px;">✏️</button>` : ''}
+        </div>
         <div class="row-sub mono" style="font-size:11px">${u.id.slice(0,16)}...</div>
       </div>
-      <select style="width:auto;padding:5px 30px 5px 8px;font-size:12px;border-radius:7px;border:1.5px solid #e2e8f0;font-family:inherit"
-        onchange="chRole('${u.id}',this.value)">${rOpts(u.role)}</select>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        <select style="width:auto;padding:5px 28px 5px 8px;font-size:12px;border-radius:10px;border:2px solid var(--vespa-brown);font-family:inherit;font-weight:700;"
+          onchange="chRole('${u.id}',this.value)" ${!isAdmin?'disabled':''}>${rOpts(u.role)}</select>
+        ${isAdmin && !isSelf ? `<button onclick="deleteUser('${u.id}','${u.name.replace(/'/g,"\\'")}','${u.role}')"
+          title="ลบ User" style="background:none;border:none;color:var(--vespa-red);font-size:18px;cursor:pointer;padding:2px;">🗑️</button>` : ''}
+      </div>
     </div>`;
   }
   html += '</div>';
 
-  html += `<div class="card">
-    <div class="sec" style="padding:0 0 10px;color:#64748b">เพิ่ม User ใหม่</div>
-    <div id="ua"></div>
-    <div class="alert alert-blue" style="margin-bottom:12px;font-size:12px">
-      💡 สร้าง user แล้วแจ้งให้ Login ด้วย email/password ที่กำหนด
-    </div>
-    <div class="fg"><label>ชื่อ</label><input id="un" placeholder="ชื่อ-นามสกุล"></div>
-    <div class="fg"><label>EMAIL</label><input id="ue" type="email" placeholder="email@company.com"></div>
-    <div class="fg"><label>PASSWORD</label><input id="up" type="password" placeholder="อย่างน้อย 6 ตัวอักษร"></div>
-    <div class="fg"><label>ROLE</label>
-      <select id="ur">
-        <option value="counter">Counter</option>
-        <option value="supervisor">Supervisor</option>
-        <option value="admin">Admin</option>
-      </select>
-    </div>
-    <button class="btn btn-blue" onclick="addUser()">+ เพิ่ม User</button>
-  </div>`;
+  if (isAdmin) {
+    html += `<div class="card">
+      <div class="sec" style="padding:0 0 10px;color:var(--vespa-brown);background:var(--vespa-white)">เพิ่ม User ใหม่ 🏍️</div>
+      <div id="ua"></div>
+      <div class="alert alert-blue" style="margin-bottom:12px;font-size:12px">💡 สร้างแล้วแจ้ง Login ด้วย email/password ที่กำหนด</div>
+      <div class="fg"><label>ชื่อ</label><input id="un" placeholder="ชื่อ-นามสกุล"></div>
+      <div class="fg"><label>EMAIL</label><input id="ue" type="email" placeholder="email@company.com"></div>
+      <div class="fg"><label>PASSWORD</label><input id="up" type="password" placeholder="อย่างน้อย 6 ตัวอักษร"></div>
+      <div class="fg"><label>ROLE</label>
+        <select id="ur">
+          <option value="counter">Counter</option>
+          <option value="supervisor">Supervisor</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <button class="btn btn-blue" onclick="addUser()">+ เพิ่ม User</button>
+    </div>`;
+  }
 
   cnt().innerHTML = html;
+}
+
+async function editUserName(uid) {
+  const span = Q('uname_'+uid);
+  const cur = span?.textContent || '';
+  const newName = prompt('แก้ชื่อ User:', cur);
+  if (!newName || newName === cur) return;
+  const { error } = await sb.from('profiles').update({ name: newName.trim() }).eq('id', uid);
+  if (error) { alert(error.message); return; }
+  if (span) span.textContent = newName.trim();
+}
+
+async function deleteUser(uid, name, role) {
+  if (role === 'admin') { alert('ไม่สามารถลบ Admin ผ่านหน้านี้ได้ครับ (ป้องกันไม่ให้ไม่มี Admin เหลือ)'); return; }
+  if (!confirm(`ลบ User "${name}" ออกจากระบบ?\n\nการลบนี้จะลบ Profile แต่ไม่ลบ Auth account — ลบ Auth ได้ใน Supabase Dashboard`)) return;
+  const { error } = await sb.from('profiles').delete().eq('id', uid);
+  if (error) { alert(error.message); return; }
+  loadAdUsers();
 }
 
 async function chRole(uid, role) {
