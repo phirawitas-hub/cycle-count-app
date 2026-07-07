@@ -718,26 +718,21 @@ function home() {
   const r = prof?.role;
   if (r === 'counter')    return 'c-tasks';
   if (r === 'supervisor') return 'sv-dash';
-  if (r === 'admin')      return 'ad-sessions';
+  if (r === 'admin')      return 'sv-dash';
   return 'login';
 }
 
 function vIcon(color, emoji) {
   return `<div style="position:relative; display:inline-block; width:36px; height:36px;" class="tab-ico">
     <svg viewBox="0 0 100 100" style="width:100%; height:100%; filter: drop-shadow(2px 3px 0px rgba(74,51,37,0.4));">
-      <!-- Shadow under Vespa -->
       <ellipse cx="50" cy="85" rx="40" ry="6" fill="rgba(0,0,0,0.15)" />
-      <!-- Vespa Body -->
       <path d="M 20 60 C 10 50 15 25 25 15 C 30 10 40 5 45 20 C 48 30 40 50 35 60 Z" fill="${color}" />
       <path d="M 35 55 L 50 55 L 60 35 L 90 35 C 105 35 110 50 105 65 C 100 75 90 75 80 70 L 25 70 Z" fill="${color}" />
-      <!-- Wheels -->
       <circle cx="25" cy="70" r="14" fill="#2D2018"/>
       <circle cx="25" cy="70" r="6" fill="#EAE3D9"/>
       <circle cx="85" cy="70" r="14" fill="#2D2018"/>
       <circle cx="85" cy="70" r="6" fill="#EAE3D9"/>
-      <!-- Seat -->
       <path d="M 55 35 C 55 25 65 25 70 25 L 90 25 C 100 25 100 35 90 35 Z" fill="#4A3325"/>
-      <!-- Handlebar & Headlight -->
       <path d="M 30 15 L 25 5" stroke="#2D2018" stroke-width="4" stroke-linecap="round"/>
       <circle cx="20" cy="3" r="6" fill="#FFFDF9" stroke="#2D2018" stroke-width="2"/>
     </svg>
@@ -756,35 +751,42 @@ function render() {
   if (page === 'login') { paintLogin(); return; }
 
   const TOPS = {
-    'c-tasks':    { t:'งานของฉัน 📋',       back:null },
-    'c-count':    { t:'บันทึกการนับ ✍️',       back:'c-tasks' },
-    'sv-dash':    { t:'ภาพรวมงาน 📊',            back:null },
-    'sv-list':    { t:'รายการผันผวน ⚠️',    back:'sv-dash' },
-    'sv-detail':  { t:'ตรวจสอบยอดผันผวน 🧭',  back:'sv-list' },
-    'ad-sessions':{ t:'คลังนับสต็อก 📂',           back:null },
-    'ad-new':     { t:'สร้างรายการนับ 🆕',      back:'ad-sessions' },
-    'ad-assign':  { t:'มอบหมายงาน 👥',        back:null },
-    'ad-import':  { t:'อิมพอร์ตยอดสต็อก 📥',       back:null },
+    'c-tasks':    { t:'งานของฉัน 📋',          back:null },
+    'c-count':    { t:'บันทึกการนับ ✍️',         back:'c-tasks' },
+    'sv-dash':    { t:'ภาพรวมงาน 📊',           back:null },
+    'sv-list':    { t:'รายการผันผวน ⚠️',         back:'sv-dash' },
+    'sv-detail':  { t:'ตรวจสอบยอดผันผวน 🧭',    back:'sv-list' },
+    'ad-manage':  { t:'จัดการงาน 📂',            back:null },
+    'ad-sessions':{ t:'จัดการงาน 📂',            back:null },
+    'ad-new':     { t:'สร้างรายการนับ 🆕',        back:'ad-manage' },
+    'ad-assign':  { t:'จัดการงาน 📂',            back:null },
+    'ad-import':  { t:'จัดการงาน 📂',            back:null },
+    'ad-history': { t:'ประวัติการนับ 📦',         back:null },
+    'ad-txlog':   { t:'Transaction Log 📝',       back:'ad-history' },
     'ad-users':   { t:'จัดการทีมงาน 🔑',         back:null },
   };
   const tp = TOPS[page] || { t: page, back: null };
   const bk = tp.back ? `<button class="top-back" onclick="go('${tp.back}')">‹</button>` : '';
 
-  // ใช้ 3D Vespa SVGs เป็นเมนู (เปลี่ยนสีตัวถังและอีโมจิบอกความหมาย)
+  const isAdminOrSup = ['admin','supervisor'].includes(prof?.role);
+  const managePgs = ['ad-manage','ad-sessions','ad-new','ad-assign','ad-import'];
   const TABS = {
     counter: `<nav class="tabs">
-      <button class="tab on" onclick="go('c-tasks')">${vIcon('#009246', '📦')}<span style="margin-top:4px;">งานนับสต็อก</span></button>
+      <button class="tab ${page==='c-tasks'?'on':''}" onclick="go('c-tasks')">${vIcon('#009246','📋')}<span style="margin-top:4px">งานของฉัน</span></button>
+      <button class="tab ${page==='ad-history'?'on':''}" onclick="go('ad-history')">${vIcon('#457B9D','📦')}<span style="margin-top:4px">ประวัติ</span></button>
     </nav>`,
     supervisor: `<nav class="tabs">
-      <button class="tab ${['sv-dash'].includes(page)?'on':''}" onclick="go('sv-dash')">${vIcon('#F4D160', '📊')}<span style="margin-top:4px;">แผงควบคุม</span></button>
-      <button class="tab ${['sv-list','sv-detail'].includes(page)?'on':''}" onclick="go('sv-list')">${vIcon('#CE2B37', '⚠️')}<span style="margin-top:4px;">ยอดแกว่ง</span></button>
+      <button class="tab ${page==='sv-dash'?'on':''}" onclick="go('sv-dash')">${vIcon('#F4D160','📊')}<span style="margin-top:4px">สรุป</span></button>
+      <button class="tab ${page==='c-tasks'?'on':''}" onclick="go('c-tasks')">${vIcon('#009246','📋')}<span style="margin-top:4px">งานของฉัน</span></button>
+      <button class="tab ${['sv-list','sv-detail'].includes(page)?'on':''}" onclick="go('sv-list')">${vIcon('#CE2B37','⚠️')}<span style="margin-top:4px">Variance</span></button>
+      <button class="tab ${page==='ad-history'?'on':''}" onclick="go('ad-history')">${vIcon('#457B9D','📦')}<span style="margin-top:4px">ประวัติ</span></button>
     </nav>`,
     admin: `<nav class="tabs">
-      <button class="tab ${['sv-dash','sv-list','sv-detail'].includes(page)?'on':''}" onclick="go('sv-dash')">${vIcon('#009246', '📊')}<span style="margin-top:4px;">สรุป</span></button>
-      <button class="tab ${['ad-sessions','ad-new'].includes(page)?'on':''}" onclick="go('ad-sessions')">${vIcon('#F4D160', '📂')}<span style="margin-top:4px;">คลัง</span></button>
-      <button class="tab ${page==='ad-assign'?'on':''}" onclick="go('ad-assign')">${vIcon('#CE2B37', '👥')}<span style="margin-top:4px;">จ่ายงาน</span></button>
-      <button class="tab ${page==='ad-import'?'on':''}" onclick="go('ad-import')">${vIcon('#457B9D', '📥')}<span style="margin-top:4px;">สต็อก</span></button>
-      <button class="tab ${page==='ad-users'?'on':''}" onclick="go('ad-users')">${vIcon('#E76F51', '🔑')}<span style="margin-top:4px;">ทีมงาน</span></button>
+      <button class="tab ${page==='sv-dash'?'on':''}" onclick="go('sv-dash')">${vIcon('#F4D160','📊')}<span style="margin-top:4px">สรุป</span></button>
+      <button class="tab ${page==='c-tasks'?'on':''}" onclick="go('c-tasks')">${vIcon('#009246','📋')}<span style="margin-top:4px">งานของฉัน</span></button>
+      <button class="tab ${managePgs.includes(page)?'on':''}" onclick="go('ad-manage')">${vIcon('#CE2B37','📂')}<span style="margin-top:4px">จัดการ</span></button>
+      <button class="tab ${page==='ad-history'?'on':''}" onclick="go('ad-history')">${vIcon('#009246','📦')}<span style="margin-top:4px">ประวัติ</span></button>
+      <button class="tab ${page==='ad-users'?'on':''}" onclick="go('ad-users')">${vIcon('#E76F51','🔑')}<span style="margin-top:4px">ทีมงาน</span></button>
     </nav>`,
   };
 
@@ -796,14 +798,14 @@ function render() {
       ${bk}
       <div class="top-info">
         <div class="top-title">
-          <span style="background:var(--vespa-brown); color:var(--vespa-white); padding:2px 8px; border-radius:8px; font-size:12px; border:2px solid var(--vespa-white); box-shadow:2px 2px 0px var(--vespa-shadow); margin-right:4px;">🇮🇹 </span>
+          <span style="background:var(--vespa-brown); color:var(--vespa-white); padding:2px 8px; border-radius:8px; font-size:12px; border:2px solid var(--vespa-white); box-shadow:2px 2px 0px var(--vespa-shadow); margin-right:4px;">🇮🇹</span>
           ${tp.t}
         </div>
-        <div class="top-sub">🌟 ${prof?.name || ''} · <span style="text-decoration: underline">${rLabel(prof?.role)}</span></div>
+        <div class="top-sub">🌟 ${prof?.name || ''} · <span style="text-decoration:underline">${rLabel(prof?.role)}</span></div>
       </div>
       <button class="top-out" onclick="doLogout()">Ciao! 👋</button>
     </header>
-    <main class="page" id="cnt"><div class="load">⏳ กำลังสตาร์ทเครื่องยนต์...</div></main>
+    <main class="page" id="cnt"><div class="load">⏳ กำลังสตาร์ท...</div></main>
     ${TABS[prof?.role] || ''}`;
 
   const L = {
@@ -812,22 +814,22 @@ function render() {
     'sv-dash':    loadSvDash,
     'sv-list':    loadSvList,
     'sv-detail':  loadSvDetail,
-    'ad-sessions':loadAdSess,
+    'ad-manage':  loadAdManage,
+    'ad-sessions':loadAdManage,
+    'ad-assign':  loadAdManage,
+    'ad-import':  loadAdManage,
     'ad-new':     paintAdNew,
-    'ad-assign':  loadAdAssign,
-    'ad-import':  paintAdImport,
+    'ad-history': loadAdHistory,
+    'ad-txlog':   loadAdTxLog,
     'ad-users':   loadAdUsers,
   };
   L[page]?.();
 }
 
 function Q(id) { return document.getElementById(id); }
-
 function cnt() { return Q('cnt'); }
-
 function rLabel(r) { return {admin:'ผู้ดูแลระบบ (Admin)',counter:'นักบิดนับสต็อก (Counter)',supervisor:'หัวหน้าทีม (Supervisor)'}[r] || (r||''); }
-
-function errBox(msg) { return `<div class="card"><div class="alert alert-red">❌ เกิดข้อผิดพลาด: ${msg}</div></div>`; }
+function errBox(msg) { return `<div class="card"><div class="alert alert-red">❌ ${msg}</div></div>`; }
 
 function paintLogin() {
   Q('app').innerHTML = `
@@ -1167,7 +1169,7 @@ async function loadCCount() {
     // ── LPN/Lot/Status detail — แสดงเป็น table ย่อยให้อ่านง่าย ──
     let detHtml = '';
     const alQty = s.al_qty ?? null;
-    const ohDisplay = showOH ? `<span style="font-size:10px;font-weight:700;color:#1e40af;margin-left:4px">[OH: ${s.onhand_qty}${alQty!==null?` · AL: ${alQty}`:''}]</span>` : (alQty !== null ? `<span style="font-size:10px;color:#d97706;margin-left:4px">[AL: ${alQty}]</span>` : '');
+    const ohDisplay = showOH ? `<span style="font-size:9px;font-weight:700;color:#1e40af;white-space:nowrap">OH:${s.onhand_qty}${alQty!==null?` AL:${alQty}`:''}</span>` : (alQty !== null ? `<span style="font-size:9px;color:#d97706;white-space:nowrap">AL:${alQty}</span>` : '');
     if (dets.length) {
       const rows = dets.map(d => `
         <tr>
@@ -1199,15 +1201,18 @@ async function loadCCount() {
     items += `<div class="citem-wrap">
       <div class="citem">
         <div class="citem-info">
-          <div class="citem-code">${it.code} ${ohDisplay}</div>
+          <div class="citem-code">${it.code}</div>
           <div class="citem-desc">${it.description || '—'}</div>
           ${detHtml}
         </div>
         <button class="item-toggle ${hasExtra?'has':''}" id="tg_${it.id}" onclick="toggleExtra('${it.id}')" title="หมายเหตุ/รูป">📝</button>
-        <input type="number" class="cqty ${v !== undefined ? 'ok' : ''}"
-          id="q_${it.id}" min="0" step="1"
-          value="${v !== undefined ? v : ''}" placeholder="0"
-          oninput="this.classList.add('ok')">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <input type="number" class="cqty ${v !== undefined ? 'ok' : ''}"
+            id="q_${it.id}" min="0" step="1"
+            value="${v !== undefined ? v : ''}" placeholder="0"
+            oninput="this.classList.add('ok')">
+          ${ohDisplay}
+        </div>
       </div>
       <div class="item-extra ${hasExtra?'open':''}" id="extra_${it.id}">
         <label style="font-size:11px">หมายเหตุ (ไม่บังคับ)</label>
@@ -1379,23 +1384,39 @@ async function loadSvDash() {
 
   if (!sessions?.length) {
     cnt().innerHTML = `<div class="card" style="text-align:center;padding:44px">
-      <div style="font-size:40px">📭</div>
-      <div style="margin-top:14px;color:#64748b;font-weight:500">ไม่มี Session ที่ Active อยู่</div>
+      <div style="font-size:54px">🛵🌴</div>
+      <div style="margin-top:14px;color:var(--vespa-brown);font-weight:800">ยังไม่มี Session ที่เปิดอยู่</div>
+      ${ ['admin','supervisor'].includes(prof?.role) ? `<button class="btn btn-blue" style="margin-top:16px" onclick="go('ad-manage')">📂 ไปสร้าง Session</button>` : ''}
     </div>`; return;
   }
 
-  const sid = sessions[0].id, sname = sessions[0].name;
+  // Session selector
+  const sessOpts = sessions.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  const curSid = S._dashSid || sessions[0].id;
+  S._dashSid = curSid;
+  const curName = sessions.find(s=>s.id===curSid)?.name || sessions[0].name;
 
   const { data: asgns } = await sb.from('assignments')
-    .select('id,status,assigned_to,profiles(name)').eq('session_id', sid);
+    .select('id,status,assigned_to,profiles(name)').eq('session_id', curSid);
 
   if (!asgns?.length) {
-    cnt().innerHTML = `<div class="card"><div class="alert alert-blue">Session "${sname}" ยังไม่มีการ Assign งาน</div></div>`; return;
+    cnt().innerHTML = `
+      <div class="card">
+        <div class="fg" style="margin-bottom:0">
+          <label>Session</label>
+          <select onchange="S._dashSid=this.value;loadSvDash()">${sessOpts}</select>
+        </div>
+      </div>
+      <div class="card">
+        <div class="alert alert-blue">Session "${curName}" ยังไม่มีการ Assign งาน</div>
+        ${ ['admin','supervisor'].includes(prof?.role) ? `<button class="btn btn-blue" style="margin-top:10px" onclick="go('ad-manage')">👥 ไปจ่ายงาน</button>` : ''}
+      </div>`; return;
   }
 
   const total    = asgns.length;
   const done     = asgns.filter(a => ['completed','approved'].includes(a.status)).length;
   const varCount = asgns.filter(a => ['round1_done','round2_done','round3_done'].includes(a.status)).length;
+  const pending  = asgns.filter(a => ['pending','in_progress'].includes(a.status)).length;
   const pct      = Math.round(done / total * 100);
 
   const byUser = {};
@@ -1412,39 +1433,43 @@ async function loadSvDash() {
     const p = Math.round(u.done / u.total * 100);
     rows += `<div class="row" style="cursor:default">
       <div class="row-body">
-        <div class="row-title">${u.name}</div>
-        <div style="display:flex;gap:5px;margin-top:5px;flex-wrap:wrap">
+        <div class="row-title">👤 ${u.name}</div>
+        <div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap">
           <span class="tag tag-green">${u.done} เสร็จ</span>
           ${u.var ? `<span class="tag tag-amber">${u.var} variance</span>` : ''}
           <span class="tag tag-gray">${u.total - u.done - u.var} รอ</span>
         </div>
       </div>
       <div style="text-align:right;flex-shrink:0">
-        <div style="font-size:20px;font-weight:800;color:#3b82f6">${p}%</div>
-        <div style="font-size:11px;color:#94a3b8">${u.done}/${u.total}</div>
+        <div style="font-size:26px;font-weight:900;color:var(--vespa-red);font-family:'Fredoka'">${p}%</div>
+        <div style="font-size:11px;color:var(--vespa-brown);font-weight:800">${u.done}/${u.total}</div>
       </div>
     </div>`;
   }
 
   cnt().innerHTML = `
-    <div style="padding:10px 14px 2px">
-      <span style="font-size:12px;font-weight:700;color:#64748b">📁 ${sname}</span>
+    <div class="card">
+      <div class="fg" style="margin-bottom:0">
+        <label>Session ที่ดูอยู่</label>
+        <select onchange="S._dashSid=this.value;loadSvDash()">${sessOpts}</select>
+      </div>
     </div>
     <div class="stats">
       <div class="stat"><div class="stat-n">${total}</div><div class="stat-l">ทั้งหมด</div></div>
-      <div class="stat"><div class="stat-n" style="color:#16a34a">${done}</div><div class="stat-l">เสร็จแล้ว</div></div>
-      <div class="stat"><div class="stat-n" style="color:#d97706">${varCount}</div><div class="stat-l">Variance</div></div>
+      <div class="stat"><div class="stat-n" style="color:var(--vespa-green)">${done}</div><div class="stat-l">เสร็จแล้ว</div></div>
+      <div class="stat"><div class="stat-n" style="color:var(--vespa-red)">${varCount}</div><div class="stat-l">Variance</div></div>
     </div>
     <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <span style="font-size:13px;font-weight:600;color:#64748b">ความคืบหน้ารวม</span>
-        <span style="font-size:15px;font-weight:800;color:#3b82f6">${pct}%</span>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="font-size:14px;font-weight:900;color:var(--vespa-brown)">ความคืบหน้ารวม</span>
+        <span style="font-size:18px;font-weight:900;color:var(--vespa-red);font-family:'Fredoka'">${pct}%</span>
       </div>
       <div class="prog"><div class="prog-fill" style="width:${pct}%"></div></div>
     </div>
-    ${varCount ? `<div style="padding:0 12px 8px">
-      <button class="btn btn-amber" onclick="go('sv-list')">⚠️ ตรวจสอบ ${varCount} รายการ Variance</button>
-    </div>` : ''}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 16px 8px">
+      ${varCount ? `<button class="btn btn-amber" onclick="go('sv-list')">⚠️ Variance ${varCount}</button>` : '<div></div>'}
+      ${pending  ? `<button class="btn btn-ghost"  onclick="go('ad-history')">📦 ประวัติ</button>` : '<div></div>'}
+    </div>
     <div class="sec">ความคืบหน้าแต่ละ Counter</div>
     <div class="card card-flush">${rows}</div>`;
 }
@@ -1671,32 +1696,68 @@ async function reqRecount(aid, round) {
   </div>`;
 }
 
-async function loadAdSess() {
-  const { data: sessions, error } = await sb.from('count_sessions')
-    .select('id,name,status,created_at').order('created_at',{ascending:false});
+// ══════════════════════════════════════════════════════════
+//  ADMIN — UNIFIED MANAGEMENT PAGE (Sessions + Assign + Import)
+// ══════════════════════════════════════════════════════════
+const MANAGE_TABS = ['sessions','assign','import'];
+let _manageTab = 'sessions';
 
-  if (error) { cnt().innerHTML = errBox(error.message); return; }
+async function loadAdManage() {
+  const tab = S._manageTab || _manageTab;
+  _manageTab = tab;
+
+  const tabBtn = (id, label, icon) => `
+    <button onclick="S._manageTab='${id}';_manageTab='${id}';loadAdManage()"
+      style="flex:1;padding:10px 6px;border:none;background:none;font-family:inherit;font-size:12px;font-weight:900;cursor:pointer;border-bottom:3px solid ${tab===id?'var(--vespa-red)':'transparent'};color:${tab===id?'var(--vespa-red)':'var(--vespa-brown)'};transition:all .15s">
+      ${icon} ${label}
+    </button>`;
+
+  cnt().innerHTML = `
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="display:flex;border-bottom:3px solid var(--vespa-gray)">
+        ${tabBtn('sessions','Session','📋')}
+        ${tabBtn('assign','จ่ายงาน','👥')}
+        ${tabBtn('import','Import','📥')}
+      </div>
+      <div id="manage-content" style="padding:16px"><div class="load">⏳</div></div>
+    </div>`;
+
+  const mc = Q('manage-content');
+  if (!mc) return;
+
+  if (tab === 'sessions') await renderManageSessions(mc);
+  else if (tab === 'assign') await renderManageAssign(mc);
+  else await renderManageImport(mc);
+}
+
+async function renderManageSessions(container) {
+  const { data: sessions, error } = await sb.from('count_sessions')
+    .select('id,name,status,show_oh,created_at').order('created_at',{ascending:false});
+  if (error) { container.innerHTML = errBox(error.message); return; }
 
   const isAdminOrSup = ['admin','supervisor'].includes(prof?.role);
   const SBG = { draft:'tag-gray', active:'tag-green', closed:'tag-blue' };
-  const SLB = { draft:'Draft',    active:'Active',    closed:'Closed'  };
+  const SLB = { draft:'Draft', active:'Active', closed:'Closed' };
 
-  let html = sessions?.length
-    ? '<div class="card card-flush">'
-    : `<div class="card" style="text-align:center;padding:44px">
-        <div style="font-size:40px">📁</div>
-        <div style="margin-top:14px;color:var(--vespa-brown);font-weight:800">ยังไม่มี Session</div>
-      </div>`;
+  let html = sessions?.length ? '' : `<div style="text-align:center;padding:32px">
+    <div style="font-size:48px">📁</div>
+    <div style="color:var(--vespa-brown);font-weight:800;margin-top:12px">ยังไม่มี Session</div>
+  </div>`;
 
   for (const s of sessions || []) {
-    html += `<div class="row" style="cursor:default">
-      <div class="row-body">
-        <div class="row-title">${s.name}</div>
-        <div class="row-sub">${new Date(s.created_at).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'})}</div>
+    const ohBadge = s.show_oh
+      ? `<span class="tag tag-green" style="font-size:9px">🔓 เห็น OH</span>`
+      : `<span class="tag tag-gray"  style="font-size:9px">🔒 Blind</span>`;
+    html += `<div style="display:flex;align-items:center;padding:12px 0;border-bottom:2px solid var(--vespa-gray);gap:8px;flex-wrap:wrap">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:15px;font-weight:900;color:var(--vespa-shadow)">${s.name}</div>
+        <div style="font-size:11px;color:var(--vespa-brown);margin-top:2px;display:flex;gap:4px;flex-wrap:wrap">
+          ${new Date(s.created_at).toLocaleDateString('th-TH')} ${ohBadge}
+        </div>
       </div>
-      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
+      <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
         <span class="tag ${SBG[s.status]}">${SLB[s.status]}</span>
-        ${isAdminOrSup && s.status==='draft'  ? `<button class="btn btn-green btn-sm" onclick="activateSess('${s.id}')">เปิดใช้</button>` : ''}
+        ${isAdminOrSup && s.status==='draft'  ? `<button class="btn btn-green btn-sm" onclick="activateSess('${s.id}')">เปิด</button>` : ''}
         ${isAdminOrSup && s.status==='active' ? `<button class="btn btn-ghost btn-sm" onclick="closeSess('${s.id}')">ปิด</button>` : ''}
         ${isAdminOrSup && s.status==='closed' ? `<button class="btn btn-green btn-sm" onclick="reopenSess('${s.id}')">เปิดใหม่</button>` : ''}
         ${isAdminOrSup ? `<button class="btn btn-red btn-sm" onclick="deleteSess('${s.id}','${s.name.replace(/'/g,"\\'")}')">🗑️</button>` : ''}
@@ -1704,446 +1765,11 @@ async function loadAdSess() {
     </div>`;
   }
 
-  if (sessions?.length) html += '</div>';
-  cnt().innerHTML = html + `<button class="fab" onclick="go('ad-new')" title="สร้าง Session ใหม่">＋</button>`;
+  container.innerHTML = html + `
+    <button class="btn btn-blue" style="margin-top:14px" onclick="go('ad-new')">＋ สร้าง Session ใหม่</button>`;
 }
 
-function paintAdNew() {
-  const def = `Cycle Count ${new Date().toLocaleDateString('th-TH',{month:'short',year:'numeric'})}`;
-  cnt().innerHTML = `<div class="card">
-    <div id="na"></div>
-    <div class="fg"><label>ชื่อ Session</label><input id="nn" value="${def}"></div>
-    <button class="btn btn-blue" onclick="createSess()">✓ สร้าง Session</button>
-  </div>`;
-}
-
-async function createSess() {
-  const name = Q('nn').value.trim();
-  if (!name) return;
-  const { error } = await sb.from('count_sessions').insert({ name, created_by:me.id });
-  if (error) { Q('na').innerHTML = errBox(error.message); return; }
-  Q('na').innerHTML = `<div class="alert alert-green">✅ สร้างเรียบร้อย</div>`;
-  setTimeout(() => go('ad-sessions'), 1200);
-}
-
-async function activateSess(id) {
-  await sb.from('count_sessions').update({ status:'active' }).eq('id', id);
-  loadAdSess();
-}
-
-async function closeSess(id) {
-  if (!confirm('ปิด Session นี้? Counter จะนับเพิ่มไม่ได้แล้ว')) return;
-  await sb.from('count_sessions').update({ status:'closed', closed_at:new Date().toISOString() }).eq('id', id);
-  loadAdSess();
-}
-
-async function reopenSess(id) {
-  if (!confirm('เปิด Session นี้ใหม่อีกครั้ง?')) return;
-  await sb.from('count_sessions').update({ status:'active', closed_at:null }).eq('id', id);
-  loadAdSess();
-}
-
-async function deleteSess(id, name) {
-  if (!confirm(`ลบ Session "${name}" ?\n\nจะลบข้อมูลทั้งหมดที่ผูกกับ Session นี้ (Assignment, ผลนับ, Variance, Snapshot) อย่างถาวร`)) return;
-  const { data: asgns } = await sb.from('assignments').select('id').eq('session_id', id);
-  const aIds = (asgns||[]).map(a=>a.id);
-  if (aIds.length) {
-    await sb.from('variance_approvals').delete().in('assignment_id', aIds);
-    await sb.from('count_records').delete().in('assignment_id', aIds);
-    await sb.from('assignments').delete().eq('session_id', id);
-  }
-  await sb.from('stock_snapshot_detail').delete().eq('session_id', id);
-  await sb.from('stock_snapshot').delete().eq('session_id', id);
-  await sb.from('count_sessions').delete().eq('id', id);
-  loadAdSess();
-}
-
-async function loadDeleteZoneFilters() {
-  const [{ data: locData }, { data: sessData }] = await Promise.all([
-    sb.from('locations').select('zone,row_no'),
-    sb.from('count_sessions').select('id,name').order('created_at',{ascending:false}),
-  ]);
-
-  const zones = new Set(), rows = new Set();
-  (locData||[]).forEach(l => { if (l.zone) zones.add(l.zone); if (l.row_no) rows.add(l.row_no); });
-
-  const fill = (id, vals) => {
-    const el = Q(id); if (!el) return;
-    el.innerHTML = '<option value="">ทั้งหมด</option>' +
-      [...vals].sort().map(v => `<option value="${v}">${v}</option>`).join('');
-  };
-  fill('del-zone', zones);
-  fill('del-row',  rows);
-
-  const sEl = Q('del-session');
-  if (sEl) {
-    sEl.innerHTML = '<option value="">ทุก Session (ลบ Location ออกจากระบบจริง)</option>' +
-      (sessData||[]).map(s => `<option value="${s.id}">${s.name}</option>`).join('');
-  }
-  refreshDeleteZonePreview();
-}
-
-function buildDelLocQuery(zone, row, code, selectCols, selectOpts) {
-  let q = sb.from('locations').select(selectCols, selectOpts);
-  if (zone) q = q.eq('zone', zone);
-  if (row)  q = q.eq('row_no', row);
-  if (code) q = q.ilike('code', code);
-  return q;
-}
-
-async function refreshDeleteZonePreview() {
-  const sid  = Q('del-session')?.value || '';
-  const zone = Q('del-zone')?.value || '';
-  const row  = Q('del-row')?.value || '';
-  const code = Q('del-code')?.value.trim() || '';
-  const prev = Q('del-preview'), btn = Q('del-btn');
-  if (!prev || !btn) return;
-
-  if (!zone && !row && !code) {
-    prev.innerHTML = `<span style="color:#94a3b8;font-weight:500">เลือก Zone, Row หรือพิมพ์ Location Code อย่างน้อย 1 อย่าง เพื่อป้องกันการลบทั้งหมดโดยไม่ตั้งใจ</span>`;
-    btn.disabled = true;
-    return;
-  }
-
-  const { count, error } = await buildDelLocQuery(zone, row, code, 'id', { count:'exact', head:true });
-
-  if (error) { prev.innerHTML = `<span style="color:#dc2626">${error.message}</span>`; btn.disabled = true; return; }
-  if (!count) {
-    prev.innerHTML = `<span style="color:#94a3b8;font-weight:500">ไม่พบ Location ที่ตรงเงื่อนไข</span>`;
-    btn.disabled = true;
-  } else {
-    const scope = sid ? 'เฉพาะ Session ที่เลือก (Location ยังอยู่ ใช้กับ Session อื่นได้)' : 'ทุก Session (ลบ Location ออกจากระบบจริง)';
-    prev.innerHTML = `⚠️ จะลบ <strong>${count.toLocaleString()} locations</strong> — ขอบเขต: ${scope}`;
-    btn.disabled = false;
-  }
-}
-
-async function doDeleteByZoneRow() {
-  const sid  = Q('del-session')?.value || '';
-  const zone = Q('del-zone')?.value || '';
-  const row  = Q('del-row')?.value || '';
-  const code = Q('del-code')?.value.trim() || '';
-  if (!zone && !row && !code) return;
-
-  const label = [zone, row, code].filter(Boolean).join(' / ');
-  const scopeLabel = sid ? 'เฉพาะ Session ที่เลือก (Location จะยังอยู่ในระบบ)' : 'ทุก Session (ลบ Location ออกจากระบบจริง)';
-  if (!confirm(`ยืนยันลบ: "${label}"\nขอบเขต: ${scopeLabel}\n\nการลบนี้กู้คืนไม่ได้`)) return;
-
-  const btn = Q('del-btn'), al = Q('del-alert');
-  btn.disabled = true;
-  al.innerHTML = `<div class="alert alert-blue">⏳ กำลังค้นหา Location ที่ตรงเงื่อนไข...</div>`;
-
-  const { data: locs, error: e0 } = await buildDelLocQuery(zone, row, code, 'id,code');
-  if (e0)             { al.innerHTML = errBox(e0.message); btn.disabled = false; return; }
-  if (!locs?.length)  { al.innerHTML = `<div class="alert alert-amber">ไม่พบ Location ที่ตรงเงื่อนไข</div>`; btn.disabled = false; return; }
-
-  const locIds = locs.map(l => l.id);
-  const BATCH = 200;
-
-  try {
-    al.innerHTML = `<div class="alert alert-blue">⏳ [1/6] ค้นหา Assignment ที่เกี่ยวข้อง...</div>`;
-    let asgnIds = [];
-    for (let i = 0; i < locIds.length; i += BATCH) {
-      let aq = sb.from('assignments').select('id').in('location_id', locIds.slice(i, i+BATCH));
-      if (sid) aq = aq.eq('session_id', sid);
-      const { data, error } = await aq;
-      if (error) throw error;
-      asgnIds.push(...(data||[]).map(a => a.id));
-    }
-
-    if (asgnIds.length) {
-      al.innerHTML = `<div class="alert alert-blue">⏳ [2/6] ลบ Variance Approvals...</div>`;
-      for (let i = 0; i < asgnIds.length; i += BATCH) {
-        const { error } = await sb.from('variance_approvals').delete().in('assignment_id', asgnIds.slice(i, i+BATCH));
-        if (error) throw error;
-      }
-      al.innerHTML = `<div class="alert alert-blue">⏳ [3/6] ลบผลการนับ (Count Records)...</div>`;
-      for (let i = 0; i < asgnIds.length; i += BATCH) {
-        const { error } = await sb.from('count_records').delete().in('assignment_id', asgnIds.slice(i, i+BATCH));
-        if (error) throw error;
-      }
-      al.innerHTML = `<div class="alert alert-blue">⏳ [4/6] ลบ Assignment...</div>`;
-      for (let i = 0; i < asgnIds.length; i += BATCH) {
-        const { error } = await sb.from('assignments').delete().in('id', asgnIds.slice(i, i+BATCH));
-        if (error) throw error;
-      }
-    }
-
-    al.innerHTML = `<div class="alert alert-blue">⏳ [5/6] ลบ Stock Snapshot / Detail (LPN)...</div>`;
-    for (let i = 0; i < locIds.length; i += BATCH) {
-      let dq = sb.from('stock_snapshot_detail').delete().in('location_id', locIds.slice(i, i+BATCH));
-      if (sid) dq = dq.eq('session_id', sid);
-      const { error } = await dq;
-      if (error) throw error;
-    }
-    for (let i = 0; i < locIds.length; i += BATCH) {
-      let sq = sb.from('stock_snapshot').delete().in('location_id', locIds.slice(i, i+BATCH));
-      if (sid) sq = sq.eq('session_id', sid);
-      const { error } = await sq;
-      if (error) throw error;
-    }
-
-    if (!sid) {
-      al.innerHTML = `<div class="alert alert-blue">⏳ [6/6] ลบ Location (ทุก Session)...</div>`;
-      for (let i = 0; i < locIds.length; i += BATCH) {
-        const { error } = await sb.from('locations').delete().in('id', locIds.slice(i, i+BATCH));
-        if (error) throw error;
-      }
-    }
-
-    al.innerHTML = `<div class="alert alert-green">✅ ลบ ${locs.length.toLocaleString()} locations (${label}) เรียบร้อย${sid?' — เฉพาะ Session ที่เลือก':''}</div>`;
-    Q('del-zone').value = ''; Q('del-row').value = ''; Q('del-code').value = '';
-    loadDeleteZoneFilters();
-  } catch(e) {
-    al.innerHTML = errBox(e?.message || String(e));
-  }
-  btn.disabled = false;
-}
-
-function likeToRegex(pattern) {
-  const esc = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const re  = esc.replace(/%/g, '.*').replace(/_/g, '.');
-  return new RegExp('^' + re + '$', 'i');
-}
-
-async function readXlsxFile() {
-  const file = Q('ixlsx').files[0];
-  if (!file) return;
-  const al = Q('ia'), prev = Q('ipreview'), btn = Q('ibtn');
-  al.innerHTML = `<div class="alert alert-blue">⏳ กำลังอ่านไฟล์ ${file.name} (${(file.size/1024/1024).toFixed(1)} MB)...</div>`;
-  prev.style.display = 'none';
-  btn.disabled = true;
-  _xlsxRawRows = null;
-  _xlsxParsed  = null;
-
-  try {
-    const buf = await file.arrayBuffer();
-    if (typeof XLSX === 'undefined') throw new Error('SheetJS ยังโหลดไม่เสร็จ รอสักครู่แล้วลองใหม่');
-
-    al.innerHTML = `<div class="alert alert-blue">⏳ กำลัง parse Excel...</div>`;
-    await new Promise(r => setTimeout(r, 50));
-
-    const wb  = XLSX.read(buf, { type:'array', dense:true });
-    const ws  = wb.Sheets[wb.SheetNames[0]];
-    const raw = XLSX.utils.sheet_to_json(ws, { header:1, defval:null });
-
-    // ── หา header row อัตโนมัติ โดยหาแถวที่มีคำว่า "Location" ──
-    let headerRow = -1, col = {};
-    for (let r = 0; r < Math.min(20, raw.length); r++) {
-      const row = raw[r];
-      if (!row) continue;
-      const norm = row.map(c => (c==null ? '' : c.toString().trim().toLowerCase()));
-      const locIdx = norm.indexOf('location');
-      if (locIdx !== -1) {
-        headerRow = r;
-        col.loc  = locIdx;
-        col.item = norm.indexOf('item');
-        col.desc = norm.findIndex(v => v.includes('description'));
-        col.oh   = norm.findIndex(v => v === 'oh' || v.includes('on hand') || v === 'onhand');
-        col.stat = norm.findIndex(v => v.includes('status'));
-        col.lot  = norm.findIndex(v => v.includes('lot'));
-        col.lp   = norm.findIndex(v => v.includes('license plate') && !v.includes('parent'));
-        break;
-      }
-    }
-
-    if (headerRow === -1 || col.loc===-1 || col.item===-1 || col.oh===-1) {
-      throw new Error('ไม่พบคอลัมน์ที่จำเป็น (Location/Item/OH) ในไฟล์ — ตรวจสอบหัวตารางในไฟล์ Export');
-    }
-
-    const rows = [];
-    for (let i = headerRow + 1; i < raw.length; i++) {
-      const row = raw[i];
-      if (!row) continue;
-      const loc  = row[col.loc]  ? row[col.loc].toString().trim()  : null;
-      const item = row[col.item] ? row[col.item].toString().trim() : null;
-      if (!loc || !item) continue;
-      const desc = col.desc!==-1 ? (row[col.desc]||'').toString().trim() : '';
-      const oh   = parseFloat(row[col.oh]) || 0;
-      const stat = (row[col.stat]||'').toString().trim();
-      const lot  = col.lot!==-1 ? (row[col.lot]||'').toString().trim() : '';
-      const lp   = col.lp!==-1  ? (row[col.lp]||'').toString().trim()  : '';
-      rows.push({ loc, item, desc, oh, stat, lot, lp });
-    }
-
-    if (!rows.length) throw new Error('ไม่พบข้อมูลในไฟล์ (หลัง header row)');
-
-    _xlsxRawRows = rows;
-    al.innerHTML = '';
-    refreshXlsxPreview();
-
-  } catch(e) {
-    al.innerHTML = `<div class="alert alert-red">❌ อ่านไฟล์ไม่ได้: ${e.message}</div>`;
-  }
-}
-
-function refreshXlsxPreview() {
-  const prev = Q('ipreview'), btn = Q('ibtn');
-  if (!_xlsxRawRows) return;
-
-  const patternStr = Q('ilocfilter')?.value.trim() || '';
-  const re = patternStr ? likeToRegex(patternStr) : null;
-
-  let inScope = 0;
-  const map = {};
-
-  for (const r of _xlsxRawRows) {
-    if (re && !re.test(r.loc)) continue;
-    inScope++;
-    const key = r.loc + '|||' + r.item;
-    if (map[key]) {
-      map[key].qty += r.oh;
-    } else {
-      map[key] = { loc:r.loc, item:r.item, desc:r.desc, qty:r.oh };
-    }
-  }
-
-  _xlsxParsed = Object.values(map);
-  const uLocs  = new Set(_xlsxParsed.map(r => r.loc)).size;
-  const uItems = new Set(_xlsxParsed.map(r => r.item)).size;
-
-  prev.style.display = 'block';
-
-  if (!inScope) {
-    prev.innerHTML = `<div class="alert alert-amber">
-      ⚠️ ไม่พบแถวที่ตรงกับ Location filter "${patternStr}" ในไฟล์นี้ (ทั้งไฟล์มี ${_xlsxRawRows.length.toLocaleString()} แถว)
-    </div>`;
-    btn.disabled = true;
-    return;
-  }
-
-  prev.innerHTML = `<div class="alert alert-green">
-    ✅ พร้อม Import (ทุก Inventory Status)<br>
-    📊 ทั้งไฟล์ <strong>${_xlsxRawRows.length.toLocaleString()}</strong> rows
-      ${patternStr ? `→ ตรง filter: <strong>${inScope.toLocaleString()}</strong>` : ''}<br>
-    📍 <strong>${uLocs.toLocaleString()}</strong> locations
-      · 📦 <strong>${uItems.toLocaleString()}</strong> unique items<br>
-    🔢 <strong>${_xlsxParsed.length.toLocaleString()}</strong> loc+item pairs (หลัง aggregate OH)
-  </div>`;
-  btn.disabled = false;
-}
-
-async function doImportXlsx() {
-  const sid = Q('is').value, al = Q('ia'), btn = Q('ibtn');
-  if (!sid)         { al.innerHTML = `<div class="alert alert-red">เลือก Session ก่อน</div>`; return; }
-  if (!_xlsxParsed || !_xlsxParsed.length) { al.innerHTML = `<div class="alert alert-red">ไม่มีข้อมูลที่จะ Import</div>`; return; }
-
-  btn.disabled = true;
-
-  async function batchUp(table, rows, conflict, selectCols) {
-    const BATCH = 500, map = {};
-    for (let i = 0; i < rows.length; i += BATCH) {
-      const { data, error } = await sb.from(table)
-        .upsert(rows.slice(i, i+BATCH), { onConflict: conflict })
-        .select(selectCols);
-      if (error) throw error;
-      data?.forEach(r => { map[r.code] = r.id; });
-    }
-    return map;
-  }
-
-  try {
-    // 1) Locations — zone คำนวณจาก computeZone(), row_no/level แยกจาก code
-    al.innerHTML = `<div class="alert alert-blue">⏳ [1/4] สร้าง/อัพเดท Locations...</div>`;
-    const seenLocs = {}, locRows = [];
-    for (const p of _xlsxParsed) {
-      if (seenLocs[p.loc]) continue;
-      seenLocs[p.loc] = true;
-      const parts = p.loc.split('-');
-      locRows.push({
-        code:   p.loc,
-        zone:   computeZone(p.loc, p.desc),
-        row_no: parts[1] || null,   // เช่น "EA"
-        level:  parts[3] || null,   // เช่น "A"
-      });
-    }
-    const locMap = await batchUp('locations', locRows, 'code', 'id,code');
-
-    // 2) Items
-    al.innerHTML = `<div class="alert alert-blue">⏳ [2/4] สร้าง/อัพเดท Items (${new Set(_xlsxParsed.map(r=>r.item)).size.toLocaleString()} รายการ)...</div>`;
-    const seenItems = {}, itemRows = [];
-    for (const p of _xlsxParsed) {
-      if (seenItems[p.item]) continue;
-      seenItems[p.item] = true;
-      itemRows.push({ code: p.item, description: p.desc });
-    }
-    const itemMap = await batchUp('items', itemRows, 'code', 'id,code');
-
-    // 3) Stock snapshot
-    const BATCH = 500;
-    let ok = 0;
-    const snapRows = _xlsxParsed
-      .filter(p => locMap[p.loc] && itemMap[p.item])
-      .map(p => ({
-        session_id:  sid,
-        location_id: locMap[p.loc],
-        item_id:     itemMap[p.item],
-        onhand_qty:  p.qty,
-      }));
-
-    for (let i = 0; i < snapRows.length; i += BATCH) {
-      const { error } = await sb.from('stock_snapshot')
-        .upsert(snapRows.slice(i, i+BATCH), { onConflict:'session_id,location_id,item_id' });
-      if (error) throw error;
-      ok += Math.min(BATCH, snapRows.length - i);
-      al.innerHTML = `<div class="alert alert-blue">⏳ [3/4] Stock Snapshot: ${ok.toLocaleString()} / ${snapRows.length.toLocaleString()} rows...</div>`;
-    }
-
-    // 4) Stock Snapshot Detail (LPN/Lot/Status) — รายละเอียดดิบต่อแถว ใช้แสดงเป็นข้อมูลอ้างอิงตอนนับ
-    al.innerHTML = `<div class="alert alert-blue">⏳ [4/4] Stock Snapshot Detail (LPN/Lot)...</div>`;
-    const patternStr = Q('ilocfilter')?.value.trim() || '';
-    const re = patternStr ? likeToRegex(patternStr) : null;
-    const detailRows = [];
-    for (const r of _xlsxRawRows) {
-      if (re && !re.test(r.loc)) continue;
-      if (!locMap[r.loc] || !itemMap[r.item]) continue;
-      detailRows.push({
-        session_id:       sid,
-        location_id:      locMap[r.loc],
-        item_id:          itemMap[r.item],
-        license_plate:    r.lp  || null,
-        lot:               r.lot || null,
-        inventory_status: r.stat || null,
-        qty:              r.oh,
-      });
-    }
-
-    // ลบ detail เก่าของ location ที่ import รอบนี้ก่อน (ป้องกัน LPN ซ้ำ/ค้างจากการ import ก่อนหน้า)
-    const importedLocIds = [...new Set(Object.values(locMap))];
-    for (let i = 0; i < importedLocIds.length; i += BATCH) {
-      const { error } = await sb.from('stock_snapshot_detail')
-        .delete().eq('session_id', sid).in('location_id', importedLocIds.slice(i, i+BATCH));
-      if (error) throw error;
-    }
-    let okD = 0;
-    for (let i = 0; i < detailRows.length; i += BATCH) {
-      const { error } = await sb.from('stock_snapshot_detail').insert(detailRows.slice(i, i+BATCH));
-      if (error) throw error;
-      okD += Math.min(BATCH, detailRows.length - i);
-      al.innerHTML = `<div class="alert alert-blue">⏳ [4/4] Stock Snapshot Detail: ${okD.toLocaleString()} / ${detailRows.length.toLocaleString()} rows...</div>`;
-    }
-
-    al.innerHTML = `<div class="alert alert-green">
-      ✅ Import สำเร็จ!<br>
-      📍 ${locRows.length.toLocaleString()} locations
-      · 📦 ${itemRows.length.toLocaleString()} items
-      · 🔢 ${ok.toLocaleString()} snapshot rows
-      · 🏷️ ${okD.toLocaleString()} LPN/Lot detail rows
-    </div>`;
-    _xlsxRawRows = null;
-    _xlsxParsed = null;
-    Q('ixlsx').value = '';
-    Q('ilocfilter').value = '';
-    Q('ipreview').style.display = 'none';
-    btn.disabled = false;
-
-  } catch(e) {
-    al.innerHTML = `<div class="alert alert-red">❌ ${e?.message || String(e)}</div>`;
-    btn.disabled = false;
-  }
-}
-
-async function loadAdAssign() {
+async function renderManageAssign(container) {
   const isAdminOrSup = ['admin','supervisor'].includes(prof?.role);
   const [{ data: sessions }, { data: counters }] = await Promise.all([
     sb.from('count_sessions').select('id,name,show_oh').eq('status','active'),
@@ -2151,115 +1777,133 @@ async function loadAdAssign() {
   ]);
 
   if (!sessions?.length) {
-    cnt().innerHTML = `<div class="card"><div class="alert alert-amber">ไม่มี Session ที่ Active — สร้างและเปิด Session ก่อน</div></div>`;
-    return;
+    container.innerHTML = `<div class="alert alert-amber">ไม่มี Session ที่ Active — ไปสร้างและเปิด Session ก่อนน้า</div>`; return;
   }
 
   const sOpts = sessions.map(s=>`<option value="${s.id}" data-show-oh="${s.show_oh||false}">${s.name}</option>`).join('');
   const cOpts = counters?.map(u=>`<option value="${u.id}">${u.name}</option>`).join('') || '<option>ไม่มี Counter</option>';
   const firstSess = sessions[0];
-  const showOHInit = firstSess?.show_oh || false;
 
-  cnt().innerHTML = `
-    <div class="card">
-      <div id="aa"></div>
-
-      <div class="fg"><label>SESSION</label>
-        <select id="as-sess" onchange="refreshLocs();refreshBulkFilters();syncOHToggle()">${sOpts}</select>
-      </div>
-
-      ${isAdminOrSup ? `<!-- ══ OH TOGGLE ══ -->
-      <div class="bulk-box" style="background:#fffbeb;border-color:#d97706;margin-bottom:14px">
-        <div class="bulk-box-title" style="color:#92400e">👁️ ควบคุมการแสดงผล OH ให้ Counter</div>
-        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-          <label style="display:flex;align-items:center;gap:8px;font-weight:700;cursor:pointer">
-            <input type="checkbox" id="oh-toggle" ${showOHInit?'checked':''} onchange="toggleOH()" style="width:20px;height:20px;accent-color:var(--vespa-red);cursor:pointer">
-            <span>เปิดให้ Counter เห็นยอด OH ขณะนับ</span>
-          </label>
-          <span id="oh-status" class="tag ${showOHInit?'tag-green':'tag-gray'}" style="font-size:11px">
-            ${showOHInit?'🔓 เห็น OH':'🔒 Blind Count'}
-          </span>
-        </div>
-        <div style="font-size:11px;color:#92400e;margin-top:6px">⚠️ ปิด = Counter นับแบบ Blind (ไม่เห็นยอด) — เปิด = Counter เห็น OH และ AL ขณะนับ</div>
-      </div>` : ''}
-
-      <!-- ══ BULK ASSIGN ══ -->
-      <div class="bulk-box">
-        <div class="bulk-box-title">⚡ Bulk Assign — มอบหมายหลาย Location พร้อมกัน</div>
-        <div class="grid-3" style="margin-bottom:10px">
-          <div class="fg" style="margin:0">
-            <label>ZONE</label>
-            <select id="bulk-zone" onchange="refreshBulkPreview()"><option value="">ทั้งหมด</option></select>
-          </div>
-          <div class="fg" style="margin:0">
-            <label>ROW</label>
-            <select id="bulk-row" onchange="refreshBulkPreview()"><option value="">ทั้งหมด</option></select>
-          </div>
-          <div class="fg" style="margin:0">
-            <label>LEVEL</label>
-            <select id="bulk-level" onchange="refreshBulkPreview()"><option value="">ทั้งหมด</option></select>
-          </div>
-        </div>
-        <div class="fg" style="margin-bottom:10px">
-          <label>COUNTER (รอบ 1)</label>
-          <select id="bulk-user">${cOpts}</select>
-        </div>
-        <div id="bulk-preview" style="font-size:12px;color:#1e40af;margin-bottom:10px;font-weight:600"></div>
-        <button class="btn btn-blue" id="bulk-btn" onclick="doBulkAssign()" disabled>
-          ⚡ Assign ทั้งหมดที่เลือก
-        </button>
-      </div>
-
-      <!-- ══ ROUND 2/3 ASSIGN ══ -->
-      ${isAdminOrSup ? `<div class="bulk-box" style="background:#f0fdf4;border-color:var(--vespa-green)">
-        <div class="bulk-box-title" style="color:var(--vespa-mint-dark)">🔄 Assign Counter สำหรับรอบ 2 / 3</div>
-        <div style="font-size:11px;color:var(--vespa-mint-dark);margin-bottom:10px">กรองหา Location ที่อยู่ในสถานะรอนับรอบถัดไป แล้วมอบหมายให้ Counter คนอื่น</div>
-        <div class="grid-3" style="margin-bottom:10px">
-          <div class="fg" style="margin:0">
-            <label>รอบที่</label>
-            <select id="r23-round" onchange="refreshR23Preview()">
-              <option value="round1_done">รอบ 2</option>
-              <option value="round2_done">รอบ 3</option>
-              <option value="round3_done">รอบ Sup</option>
-            </select>
-          </div>
-          <div class="fg" style="margin:0">
-            <label>ZONE</label>
-            <select id="r23-zone" onchange="refreshR23Preview()"><option value="">ทั้งหมด</option></select>
-          </div>
-          <div class="fg" style="margin:0">
-            <label>ROW</label>
-            <select id="r23-row" onchange="refreshR23Preview()"><option value="">ทั้งหมด</option></select>
-          </div>
-        </div>
-        <div class="fg" style="margin-bottom:10px">
-          <label>COUNTER ที่จะนับรอบถัดไป</label>
-          <select id="r23-user">${cOpts}</select>
-        </div>
-        <div id="r23-preview" style="font-size:12px;color:var(--vespa-mint-dark);margin-bottom:10px;font-weight:600"></div>
-        <button class="btn btn-green" id="r23-btn" onclick="doR23Assign()" disabled>
-          🔄 เปลี่ยน Counter รอบถัดไป
-        </button>
-      </div>` : ''}
-
-      <!-- ══ SINGLE ASSIGN ══ -->
-      <div style="font-size:11px;font-weight:700;color:#94a3b8;margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">หรือ Assign ทีละ Location</div>
-      <div class="fg"><label>COUNTER</label>
-        <select id="as-user">${cOpts}</select>
-      </div>
-      <div class="fg"><label>LOCATION</label>
-        <select id="as-loc"><option value="">กำลังโหลด...</option></select>
-      </div>
-      <button class="btn btn-ghost" onclick="doAssign()">มอบหมายงาน</button>
+  container.innerHTML = `
+    <div id="aa"></div>
+    <div class="fg"><label>SESSION</label>
+      <select id="as-sess" onchange="refreshLocs();refreshBulkFilters();syncOHToggle()">${sOpts}</select>
     </div>
 
-    <div class="sec">งานที่ Assign แล้ว</div>
-    <div class="card card-flush" id="al"><div class="load" style="padding:20px">⏳</div></div>`;
+    ${isAdminOrSup ? `<div style="background:#fffbeb;border:2px solid #d97706;border-radius:14px;padding:12px;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:900;color:#92400e;margin-bottom:8px">👁️ ควบคุมการแสดง OH ให้ Counter</div>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="oh-toggle" ${firstSess?.show_oh?'checked':''} onchange="toggleOH()" style="width:20px;height:20px;accent-color:var(--vespa-red)">
+        <span style="font-size:13px;font-weight:700">เปิดให้ Counter เห็นยอด OH ขณะนับ</span>
+        <span id="oh-status" class="tag ${firstSess?.show_oh?'tag-green':'tag-gray'}">${firstSess?.show_oh?'🔓 เห็น OH':'🔒 Blind'}</span>
+      </label>
+    </div>` : ''}
+
+    <div style="background:#f0f7ff;border:2px solid #bfdbfe;border-radius:14px;padding:12px;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:900;color:#1d4ed8;margin-bottom:10px">⚡ Bulk Assign</div>
+      <div class="grid-3" style="margin-bottom:8px">
+        <div><label style="font-size:10px">ZONE</label>
+          <select id="bulk-zone" onchange="refreshBulkPreview()"><option value="">ทั้งหมด</option></select></div>
+        <div><label style="font-size:10px">ROW</label>
+          <select id="bulk-row" onchange="refreshBulkPreview()"><option value="">ทั้งหมด</option></select></div>
+        <div><label style="font-size:10px">LEVEL</label>
+          <select id="bulk-level" onchange="refreshBulkPreview()"><option value="">ทั้งหมด</option></select></div>
+      </div>
+      <div class="fg" style="margin-bottom:8px"><label style="font-size:10px">COUNTER รอบ 1</label>
+        <select id="bulk-user">${cOpts}</select></div>
+      <div id="bulk-preview" style="font-size:12px;color:#1e40af;margin-bottom:8px;font-weight:700"></div>
+      <button class="btn btn-blue" id="bulk-btn" onclick="doBulkAssign()" disabled>⚡ Assign ทั้งหมด</button>
+    </div>
+
+    ${isAdminOrSup ? `<div style="background:#f0fdf4;border:2px solid var(--vespa-green);border-radius:14px;padding:12px;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:900;color:var(--vespa-mint-dark);margin-bottom:8px">🔄 เปลี่ยน Counter รอบ 2/3</div>
+      <div class="grid-3" style="margin-bottom:8px">
+        <div><label style="font-size:10px">รอบ</label>
+          <select id="r23-round" onchange="refreshR23Preview()">
+            <option value="round1_done">รอบ 2</option>
+            <option value="round2_done">รอบ 3</option>
+            <option value="round3_done">รอบ Sup</option>
+          </select></div>
+        <div><label style="font-size:10px">ZONE</label>
+          <select id="r23-zone" onchange="refreshR23Preview()"><option value="">ทั้งหมด</option></select></div>
+        <div><label style="font-size:10px">ROW</label>
+          <select id="r23-row" onchange="refreshR23Preview()"><option value="">ทั้งหมด</option></select></div>
+      </div>
+      <div class="fg" style="margin-bottom:8px"><label style="font-size:10px">COUNTER ที่จะนับต่อ</label>
+        <select id="r23-user">${cOpts}</select></div>
+      <div id="r23-preview" style="font-size:12px;color:var(--vespa-mint-dark);margin-bottom:8px;font-weight:700"></div>
+      <button class="btn btn-green" id="r23-btn" onclick="doR23Assign()" disabled>🔄 เปลี่ยน Counter</button>
+    </div>` : ''}
+
+    <div style="font-size:11px;font-weight:900;color:#94a3b8;margin-bottom:8px;text-transform:uppercase">Assign ทีละ Location</div>
+    <div class="fg"><label>COUNTER</label><select id="as-user">${cOpts}</select></div>
+    <div class="fg"><label>LOCATION</label><select id="as-loc"><option value="">กำลังโหลด...</option></select></div>
+    <button class="btn btn-ghost" onclick="doAssign()">มอบหมายงาน</button>
+
+    <div style="margin-top:14px;font-size:13px;font-weight:900;color:var(--vespa-brown)">งานที่ Assign แล้ว</div>
+    <div id="al" style="margin-top:8px"><div class="load" style="padding:16px">⏳</div></div>`;
 
   refreshLocs();
   refreshBulkFilters();
   if (isAdminOrSup) refreshR23Preview();
 }
+
+async function renderManageImport(container) {
+  const { data: sessions } = await sb.from('count_sessions')
+    .select('id,name').in('status',['draft','active']);
+
+  const sessOpts = sessions?.length
+    ? sessions.map(s=>`<option value="${s.id}">${s.name} · ${s.status}</option>`).join('')
+    : '<option value="">ไม่มี Session</option>';
+
+  container.innerHTML = `
+    <div id="ia"></div>
+    <div class="alert alert-blue" style="font-size:12px;margin-bottom:12px">
+      📁 Upload Excel (.xlsx) — ดึงข้อมูลจากระบบ WMS ได้เลย ไม่ต้องเรียงคอลัมน์ใหม่<br>
+      ✅ ระบบอ่านหัวตารางอัตโนมัติ รองรับทุกรูปแบบ Export<br>
+      🏷️ ดึง LPN / Lot / OH / AL มาแสดงตอนนับ<br>
+      🔄 Import ซ้ำได้ — ระบบ update ยอดให้
+    </div>
+    <div class="fg"><label>SESSION</label><select id="is">${sessOpts}</select></div>
+    <div class="fg">
+      <label>กรอง LOCATION (ไม่บังคับ)</label>
+      <input id="ilocfilter" placeholder="เช่น B-EA% หรือเว้นว่างเพื่อ import ทั้งหมด" oninput="refreshXlsxPreview()">
+    </div>
+    <div class="fg"><label>เลือกไฟล์ XLSX</label>
+      <input type="file" id="ixlsx" accept=".xlsx,.xls"
+        style="padding:14px;border:3px dashed var(--vespa-brown);border-radius:16px;cursor:pointer;background:#F4F1EB;width:100%;font-size:13px">
+    </div>
+    <div id="ipreview" style="display:none;margin-bottom:12px"></div>
+    <button class="btn btn-blue" id="ibtn" onclick="doImportXlsx()" disabled>📥 Import</button>
+
+    <div style="border-top:3px dashed var(--vespa-gray);margin:20px 0 16px"></div>
+
+    <div style="font-size:14px;font-weight:900;color:var(--vespa-red);margin-bottom:10px">🗑️ ลบ Location ตาม Zone / Row / Session</div>
+    <div class="alert alert-amber" style="font-size:12px">
+      ⚠️ เลือก Session = ลบเฉพาะข้อมูลใน Session นั้น (Location ยังอยู่ใช้กับ Session อื่นได้)<br>
+      เว้น Session ว่าง = ลบ Location ออกจากระบบจริงทุก Session — กู้คืนไม่ได้
+    </div>
+    <div class="fg">
+      <label>SESSION (ไม่บังคับ)</label>
+      <select id="del-session" onchange="refreshDeleteZonePreview()"><option value="">กำลังโหลด...</option></select>
+    </div>
+    <div class="grid-3" style="margin-bottom:10px">
+      <div class="fg" style="margin:0"><label>ZONE</label>
+        <select id="del-zone" onchange="refreshDeleteZonePreview()"><option value="">ทั้งหมด</option></select></div>
+      <div class="fg" style="margin:0"><label>ROW</label>
+        <select id="del-row" onchange="refreshDeleteZonePreview()"><option value="">ทั้งหมด</option></select></div>
+      <div class="fg" style="margin:0"><label>LOCATION</label>
+        <input id="del-code" placeholder="เช่น B-EA-001-A" oninput="refreshDeleteZonePreview()"></div>
+    </div>
+    <div id="del-preview" style="font-size:12px;color:#b91c1c;margin-bottom:10px;font-weight:700"></div>
+    <div id="del-alert"></div>
+    <button class="btn btn-red" id="del-btn" onclick="doDeleteByZoneRow()" disabled>🗑️ ลบทั้งหมดที่เลือก</button>`;
+
+  Q('ixlsx')?.addEventListener('change', readXlsxFile);
+  loadDeleteZoneFilters();
+}
+
+async function loadAdManage_refresh() { await loadAdManage(); }
 
 async function syncOHToggle() {
   const sid = Q('as-sess')?.value;
@@ -2340,6 +1984,7 @@ async function doR23Assign() {
   window._r23Asgns = [];
   refreshLocs();
 }
+
 
 async function refreshBulkFilters() {
   const sid = Q('as-sess')?.value;
@@ -2553,72 +2198,651 @@ async function doAssign() {
   refreshBulkFilters();
 }
 
-function paintAdImport() {
+async function loadAdHistory() {
+  const { data: sessions } = await sb.from('count_sessions')
+    .select('id,name').order('created_at',{ascending:false});
+
+  const sOpts = '<option value="">ทุก Session</option>' +
+    (sessions||[]).map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  const sid = S._histSid || '';
+  const cid = S._histCid || '';
+  const st  = S._histSt  || '';
+
+  // Counter list
+  const { data: counters } = await sb.from('profiles').select('id,name').order('name');
+  const cOpts = '<option value="">ทุกคน</option>' +
+    (counters||[]).map(u=>`<option value="${u.id}" ${u.id===cid?'selected':''}>${u.name}</option>`).join('');
+
   cnt().innerHTML = `
     <div class="card">
-      <div id="ia"></div>
-      <div class="alert alert-blue" style="margin-bottom:14px;font-size:12px">
-        📁 Upload ไฟล์ Stock Export (.xlsx) — Export มาทีละ Location ก็ได้<br>
-        &nbsp;&nbsp;เช่น กรอง Location เป็น <code>B-EA%</code> ตอน Export จากระบบ<br>
-        ✅ Import ทุก Inventory Status (ไม่กรองสถานะ)<br>
-        🔢 OH Qty จะถูก <strong>sum</strong> ถ้า item เดียวกันอยู่หลาย LPN ใน location เดียวกัน<br>
-        🧭 Zone จะคำนวณอัตโนมัติจาก Location code (ตามกฎ Selective/Overfloor/Cool Room ฯลฯ)<br>
-        🏷️ เก็บ LPN/Lot/Inventory Status ของแต่ละแถวไว้ด้วย (โชว์ตอนนับเป็นข้อมูลอ้างอิง)<br>
-        🔄 Upload ใหม่ได้ทุกครั้งที่ OH เปลี่ยน — ระบบจะ update ยอดให้
+      <div style="font-size:13px;font-weight:900;color:var(--vespa-brown);margin-bottom:10px">🔍 กรองประวัติการนับ</div>
+      <div class="grid-3" style="margin-bottom:8px">
+        <div><label style="font-size:10px">SESSION</label>
+          <select id="hist-sess" onchange="S._histSid=this.value;loadAdHistory()">${sOpts}</select></div>
+        <div><label style="font-size:10px">COUNTER</label>
+          <select id="hist-cnt" onchange="S._histCid=this.value;loadAdHistory()">${cOpts}</select></div>
+        <div><label style="font-size:10px">สถานะ</label>
+          <select id="hist-st" onchange="S._histSt=this.value;loadAdHistory()">
+            <option value="">ทั้งหมด</option>
+            <option value="completed">เสร็จ</option>
+            <option value="approved">อนุมัติแล้ว</option>
+            <option value="round1_done">รอรอบ 2</option>
+            <option value="round2_done">รอรอบ 3</option>
+            <option value="round3_done">รอ Supervisor</option>
+          </select></div>
       </div>
-      <div class="fg"><label>SESSION</label>
-        <select id="is"><option value="">กำลังโหลด...</option></select>
-      </div>
-      <div class="fg">
-        <label>กรอง LOCATION (ไม่บังคับ)</label>
-        <input id="ilocfilter" placeholder="เช่น B-EA% (เว้นว่าง = import ทุก Location ในไฟล์)"
-          oninput="refreshXlsxPreview()">
-      </div>
-      <div class="fg"><label>เลือกไฟล์ XLSX</label>
-        <input type="file" id="ixlsx" accept=".xlsx,.xls"
-          style="padding:10px;border:2px dashed #bfdbfe;border-radius:9px;cursor:pointer;background:#f0f7ff;width:100%;font-size:13px">
-      </div>
-      <div id="ipreview" style="display:none;margin-bottom:10px"></div>
-      <button class="btn btn-blue" id="ibtn" onclick="doImportXlsx()" disabled>📥 Import</button>
     </div>
+    <div id="hist-list"><div class="load">⏳ กำลังโหลด...</div></div>`;
 
-    <div class="card" style="border:1.5px solid #fecaca">
-      <div style="font-size:12px;font-weight:800;color:#b91c1c;margin-bottom:10px">🗑️ ลบ Location ตาม Zone / Row / Session</div>
-      <div class="alert alert-amber" style="font-size:12px">
-        ⚠️ เลือก Session = ลบเฉพาะข้อมูลใน Session นั้น (Location ยังอยู่ใช้กับ Session อื่นได้)<br>
-        เว้น Session ว่าง = ลบ Location ออกจากระบบจริงทุก Session — กู้คืนไม่ได้
-      </div>
-      <div class="fg">
-        <label>SESSION (ไม่บังคับ)</label>
-        <select id="del-session" onchange="refreshDeleteZonePreview()"><option value="">กำลังโหลด...</option></select>
-      </div>
-      <div class="grid-3" style="margin-bottom:10px">
-        <div class="fg" style="margin:0">
-          <label>ZONE</label>
-          <select id="del-zone" onchange="refreshDeleteZonePreview()"><option value="">ทั้งหมด</option></select>
+  // Set initial select values
+  if (Q('hist-sess') && sid) Q('hist-sess').value = sid;
+  if (Q('hist-cnt')  && cid) Q('hist-cnt').value  = cid;
+  if (Q('hist-st')   && st)  Q('hist-st').value   = st;
+
+  let q = sb.from('assignments')
+    .select('id,status,created_at,locations(code,zone),profiles(name),count_sessions(name)')
+    .order('created_at',{ascending:false})
+    .limit(100);
+  if (sid) q = q.eq('session_id', sid);
+  if (cid) q = q.eq('assigned_to', cid);
+  if (st)  q = q.eq('status', st);
+
+  const { data: asgns, error } = await q;
+  const histList = Q('hist-list');
+  if (!histList) return;
+  if (error) { histList.innerHTML = errBox(error.message); return; }
+  if (!asgns?.length) { histList.innerHTML = `<div class="card" style="text-align:center;padding:32px;color:var(--vespa-brown)">ไม่พบข้อมูลตามเงื่อนไข</div>`; return; }
+
+  histList.innerHTML = '<div class="card card-flush">' +
+    asgns.map(a => {
+      const si = tagInfo(a.status);
+      return `<div class="row click" onclick="go('ad-txlog',{aid:'${a.id}'})">
+        <div class="row-body">
+          <div class="row-title mono">${a.locations?.code || '?'}</div>
+          <div class="row-sub">${a.count_sessions?.name||''} · ${a.profiles?.name||'?'}</div>
+          <div class="row-sub">${new Date(a.created_at).toLocaleString('th-TH')}</div>
         </div>
-        <div class="fg" style="margin:0">
-          <label>ROW</label>
-          <select id="del-row" onchange="refreshDeleteZonePreview()"><option value="">ทั้งหมด</option></select>
-        </div>
-        <div class="fg" style="margin:0">
-          <label>LOCATION</label>
-          <input id="del-code" placeholder="เช่น B-EA-001-A" oninput="refreshDeleteZonePreview()">
-        </div>
+        <span class="tag ${si.cls}">${si.lbl}</span>
+        <span class="caret">›</span>
+      </div>`;
+    }).join('') + '</div>';
+}
+
+async function loadAdTxLog() {
+  const { aid } = S;
+  if (!aid) { go('ad-history'); return; }
+
+  const [{ data: asgn }, { data: recs }] = await Promise.all([
+    sb.from('assignments')
+      .select('id,status,locations(code,zone),profiles(name),count_sessions(name)')
+      .eq('id', aid).single(),
+    sb.from('count_records')
+      .select('item_id,round,count_qty,counted_at,remark,photo_url,counted_by,profiles(name),items(code,description)')
+      .eq('assignment_id', aid)
+      .order('counted_at'),
+  ]);
+
+  if (!asgn) { go('ad-history'); return; }
+
+  const si = tagInfo(asgn.status);
+  let rows = '';
+  for (const r of recs||[]) {
+    rows += `<div class="row" style="cursor:default;flex-wrap:wrap">
+      <div class="row-body">
+        <div class="row-title mono" style="font-size:13px">${r.items?.code||'?'}</div>
+        <div class="row-sub">${r.items?.description||''}</div>
+        <div class="row-sub">รอบ ${r.round} · นับโดย: ${r.profiles?.name||'?'}</div>
+        <div class="row-sub">${new Date(r.counted_at).toLocaleString('th-TH')}</div>
+        ${r.remark ? `<div class="row-sub" style="color:#7c3aed">📝 ${r.remark}</div>` : ''}
+        ${r.photo_url ? `<a href="${r.photo_url}" target="_blank" style="font-size:11px;color:var(--vespa-red)">📷 ดูรูป</a>` : ''}
       </div>
-      <div id="del-preview" style="font-size:12px;color:#b91c1c;margin-bottom:10px;font-weight:600"></div>
-      <div id="del-alert"></div>
-      <button class="btn btn-red" id="del-btn" onclick="doDeleteByZoneRow()" disabled>🗑️ ลบทั้งหมดที่เลือก</button>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:28px;font-weight:900;font-family:'Fredoka';color:var(--vespa-shadow)">${r.count_qty}</div>
+        <span class="tag tag-blue" style="font-size:10px">R${r.round}</span>
+      </div>
     </div>`;
+  }
 
-  sb.from('count_sessions').select('id,name').in('status',['draft','active']).then(({data}) => {
-    Q('is').innerHTML = data?.length
-      ? data.map(s=>`<option value="${s.id}">${s.name} · ${s.status}</option>`).join('')
-      : '<option value="">ไม่มี Session</option>';
-  });
+  cnt().innerHTML = `
+    <div class="card">
+      <div class="mono" style="font-size:18px;font-weight:900">${asgn.locations?.code}</div>
+      <div style="font-size:12px;color:var(--vespa-brown);margin-top:4px">${asgn.count_sessions?.name||''} · ${asgn.profiles?.name||'?'}</div>
+      <div style="margin-top:8px"><span class="tag ${si.cls}">${si.lbl}</span></div>
+    </div>
+    <div class="sec">Transaction Log (${recs?.length||0} รายการ)</div>
+    <div class="card card-flush">${rows || '<div class="load" style="padding:20px">ยังไม่มีการนับ</div>'}</div>`;
+}
 
-  Q('ixlsx').addEventListener('change', readXlsxFile);
-  loadDeleteZoneFilters();
+async function loadAdSess() { S._manageTab='sessions'; _manageTab='sessions'; await loadAdManage(); }
+
+function paintAdNew() {
+  const def = `Cycle Count ${new Date().toLocaleDateString('th-TH',{month:'short',year:'numeric'})}`;
+  cnt().innerHTML = `<div class="card">
+    <div id="na"></div>
+    <div class="fg"><label>ชื่อ Session</label><input id="nn" value="${def}"></div>
+    <button class="btn btn-blue" onclick="createSess()">✓ สร้าง Session</button>
+  </div>`;
+}
+
+async function createSess() {
+  const name = Q('nn').value.trim();
+  if (!name) return;
+  const { error } = await sb.from('count_sessions').insert({ name, created_by:me.id });
+  if (error) { Q('na').innerHTML = errBox(error.message); return; }
+  Q('na').innerHTML = `<div class="alert alert-green">✅ สร้างเรียบร้อย</div>`;
+  setTimeout(() => go('ad-manage'), 1200);
+}
+
+async function activateSess(id) {
+  await sb.from('count_sessions').update({ status:'active' }).eq('id', id);
+  loadAdSess();
+}
+
+async function closeSess(id) {
+  if (!confirm('ปิด Session นี้? Counter จะนับเพิ่มไม่ได้แล้ว')) return;
+  await sb.from('count_sessions').update({ status:'closed', closed_at:new Date().toISOString() }).eq('id', id);
+  loadAdSess();
+}
+
+async function reopenSess(id) {
+  if (!confirm('เปิด Session นี้ใหม่อีกครั้ง?')) return;
+  await sb.from('count_sessions').update({ status:'active', closed_at:null }).eq('id', id);
+  loadAdSess();
+}
+
+async function deleteSess(id, name) {
+  if (!confirm(`ลบ Session "${name}" ?\n\nจะลบข้อมูลทั้งหมดที่ผูกกับ Session นี้ (Assignment, ผลนับ, Variance, Snapshot) อย่างถาวร`)) return;
+  const { data: asgns } = await sb.from('assignments').select('id').eq('session_id', id);
+  const aIds = (asgns||[]).map(a=>a.id);
+  if (aIds.length) {
+    await sb.from('variance_approvals').delete().in('assignment_id', aIds);
+    await sb.from('count_records').delete().in('assignment_id', aIds);
+    await sb.from('assignments').delete().eq('session_id', id);
+  }
+  await sb.from('stock_snapshot_detail').delete().eq('session_id', id);
+  await sb.from('stock_snapshot').delete().eq('session_id', id);
+  await sb.from('count_sessions').delete().eq('id', id);
+  loadAdSess();
+}
+
+async function loadDeleteZoneFilters() {
+  const [{ data: locData }, { data: sessData }] = await Promise.all([
+    sb.from('locations').select('zone,row_no'),
+    sb.from('count_sessions').select('id,name').order('created_at',{ascending:false}),
+  ]);
+
+  const zones = new Set(), rows = new Set();
+  (locData||[]).forEach(l => { if (l.zone) zones.add(l.zone); if (l.row_no) rows.add(l.row_no); });
+
+  const fill = (id, vals) => {
+    const el = Q(id); if (!el) return;
+    el.innerHTML = '<option value="">ทั้งหมด</option>' +
+      [...vals].sort().map(v => `<option value="${v}">${v}</option>`).join('');
+  };
+  fill('del-zone', zones);
+  fill('del-row',  rows);
+
+  const sEl = Q('del-session');
+  if (sEl) {
+    sEl.innerHTML = '<option value="">ทุก Session (ลบ Location ออกจากระบบจริง)</option>' +
+      (sessData||[]).map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+  }
+  refreshDeleteZonePreview();
+}
+
+function buildDelLocQuery(zone, row, code, selectCols, selectOpts) {
+  let q = sb.from('locations').select(selectCols, selectOpts);
+  if (zone) q = q.eq('zone', zone);
+  if (row)  q = q.eq('row_no', row);
+  if (code) q = q.ilike('code', code);
+  return q;
+}
+
+async function refreshDeleteZonePreview() {
+  const sid  = Q('del-session')?.value || '';
+  const zone = Q('del-zone')?.value || '';
+  const row  = Q('del-row')?.value || '';
+  const code = Q('del-code')?.value.trim() || '';
+  const prev = Q('del-preview'), btn = Q('del-btn');
+  if (!prev || !btn) return;
+
+  if (!zone && !row && !code) {
+    prev.innerHTML = `<span style="color:#94a3b8;font-weight:500">เลือก Zone, Row หรือพิมพ์ Location Code อย่างน้อย 1 อย่าง เพื่อป้องกันการลบทั้งหมดโดยไม่ตั้งใจ</span>`;
+    btn.disabled = true;
+    return;
+  }
+
+  const { count, error } = await buildDelLocQuery(zone, row, code, 'id', { count:'exact', head:true });
+
+  if (error) { prev.innerHTML = `<span style="color:#dc2626">${error.message}</span>`; btn.disabled = true; return; }
+  if (!count) {
+    prev.innerHTML = `<span style="color:#94a3b8;font-weight:500">ไม่พบ Location ที่ตรงเงื่อนไข</span>`;
+    btn.disabled = true;
+  } else {
+    const scope = sid ? 'เฉพาะ Session ที่เลือก (Location ยังอยู่ ใช้กับ Session อื่นได้)' : 'ทุก Session (ลบ Location ออกจากระบบจริง)';
+    prev.innerHTML = `⚠️ จะลบ <strong>${count.toLocaleString()} locations</strong> — ขอบเขต: ${scope}`;
+    btn.disabled = false;
+  }
+}
+
+async function doDeleteByZoneRow() {
+  const sid  = Q('del-session')?.value || '';
+  const zone = Q('del-zone')?.value || '';
+  const row  = Q('del-row')?.value || '';
+  const code = Q('del-code')?.value.trim() || '';
+  if (!zone && !row && !code) return;
+
+  const label = [zone, row, code].filter(Boolean).join(' / ');
+  const scopeLabel = sid ? 'เฉพาะ Session ที่เลือก (Location จะยังอยู่ในระบบ)' : 'ทุก Session (ลบ Location ออกจากระบบจริง)';
+  if (!confirm(`ยืนยันลบ: "${label}"\nขอบเขต: ${scopeLabel}\n\nการลบนี้กู้คืนไม่ได้`)) return;
+
+  const btn = Q('del-btn'), al = Q('del-alert');
+  btn.disabled = true;
+  al.innerHTML = `<div class="alert alert-blue">⏳ กำลังค้นหา Location ที่ตรงเงื่อนไข...</div>`;
+
+  const { data: locs, error: e0 } = await buildDelLocQuery(zone, row, code, 'id,code');
+  if (e0)             { al.innerHTML = errBox(e0.message); btn.disabled = false; return; }
+  if (!locs?.length)  { al.innerHTML = `<div class="alert alert-amber">ไม่พบ Location ที่ตรงเงื่อนไข</div>`; btn.disabled = false; return; }
+
+  const locIds = locs.map(l => l.id);
+  const BATCH = 200;
+
+  try {
+    al.innerHTML = `<div class="alert alert-blue">⏳ [1/6] ค้นหา Assignment ที่เกี่ยวข้อง...</div>`;
+    let asgnIds = [];
+    for (let i = 0; i < locIds.length; i += BATCH) {
+      let aq = sb.from('assignments').select('id').in('location_id', locIds.slice(i, i+BATCH));
+      if (sid) aq = aq.eq('session_id', sid);
+      const { data, error } = await aq;
+      if (error) throw error;
+      asgnIds.push(...(data||[]).map(a => a.id));
+    }
+
+    if (asgnIds.length) {
+      al.innerHTML = `<div class="alert alert-blue">⏳ [2/6] ลบ Variance Approvals...</div>`;
+      for (let i = 0; i < asgnIds.length; i += BATCH) {
+        const { error } = await sb.from('variance_approvals').delete().in('assignment_id', asgnIds.slice(i, i+BATCH));
+        if (error) throw error;
+      }
+      al.innerHTML = `<div class="alert alert-blue">⏳ [3/6] ลบผลการนับ (Count Records)...</div>`;
+      for (let i = 0; i < asgnIds.length; i += BATCH) {
+        const { error } = await sb.from('count_records').delete().in('assignment_id', asgnIds.slice(i, i+BATCH));
+        if (error) throw error;
+      }
+      al.innerHTML = `<div class="alert alert-blue">⏳ [4/6] ลบ Assignment...</div>`;
+      for (let i = 0; i < asgnIds.length; i += BATCH) {
+        const { error } = await sb.from('assignments').delete().in('id', asgnIds.slice(i, i+BATCH));
+        if (error) throw error;
+      }
+    }
+
+    al.innerHTML = `<div class="alert alert-blue">⏳ [5/6] ลบ Stock Snapshot / Detail (LPN)...</div>`;
+    for (let i = 0; i < locIds.length; i += BATCH) {
+      let dq = sb.from('stock_snapshot_detail').delete().in('location_id', locIds.slice(i, i+BATCH));
+      if (sid) dq = dq.eq('session_id', sid);
+      const { error } = await dq;
+      if (error) throw error;
+    }
+    for (let i = 0; i < locIds.length; i += BATCH) {
+      let sq = sb.from('stock_snapshot').delete().in('location_id', locIds.slice(i, i+BATCH));
+      if (sid) sq = sq.eq('session_id', sid);
+      const { error } = await sq;
+      if (error) throw error;
+    }
+
+    if (!sid) {
+      al.innerHTML = `<div class="alert alert-blue">⏳ [6/6] ลบ Location (ทุก Session)...</div>`;
+      for (let i = 0; i < locIds.length; i += BATCH) {
+        const { error } = await sb.from('locations').delete().in('id', locIds.slice(i, i+BATCH));
+        if (error) throw error;
+      }
+    }
+
+    al.innerHTML = `<div class="alert alert-green">✅ ลบ ${locs.length.toLocaleString()} locations (${label}) เรียบร้อย${sid?' — เฉพาะ Session ที่เลือก':''}</div>`;
+    Q('del-zone').value = ''; Q('del-row').value = ''; Q('del-code').value = '';
+    loadDeleteZoneFilters();
+  } catch(e) {
+    al.innerHTML = errBox(e?.message || String(e));
+  }
+  btn.disabled = false;
+}
+
+function likeToRegex(pattern) {
+  const esc = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re  = esc.replace(/%/g, '.*').replace(/_/g, '.');
+  return new RegExp('^' + re + '$', 'i');
+}
+
+async function readXlsxFile() {
+  const file = Q('ixlsx').files[0];
+  if (!file) return;
+  const al = Q('ia'), prev = Q('ipreview'), btn = Q('ibtn');
+  if (!al || !prev || !btn) return;
+  al.innerHTML = `<div class="alert alert-blue">⏳ กำลังอ่านไฟล์ ${file.name} (${(file.size/1024/1024).toFixed(1)} MB)...</div>`;
+  prev.style.display = 'none';
+  btn.disabled = true;
+  _xlsxRawRows = null;
+  _xlsxParsed  = null;
+
+  try {
+    const buf = await file.arrayBuffer();
+    if (typeof XLSX === 'undefined') throw new Error('SheetJS ยังโหลดไม่เสร็จ รอสักครู่แล้วลองใหม่');
+
+    al.innerHTML = `<div class="alert alert-blue">⏳ กำลัง parse Excel...</div>`;
+    await new Promise(r => setTimeout(r, 50));
+
+    const wb  = XLSX.read(buf, { type:'array', dense:true });
+    const ws  = wb.Sheets[wb.SheetNames[0]];
+    const raw = XLSX.utils.sheet_to_json(ws, { header:1, defval:null });
+
+    // ── หา header row แบบ flexible: ไม่ต้องการ "Location" เป๊ะ ──
+    //    รองรับทุก format ขอแค่มีคอลัมน์ที่ detect ได้
+    let headerRow = -1, col = {};
+    const LOC_KEYWORDS  = ['location','loc','พิกัด','ตำแหน่ง'];
+    const ITEM_KEYWORDS = ['item','sku','barcode','รหัสสินค้า','รหัส'];
+    const OH_KEYWORDS   = ['oh','on hand','onhand','on_hand','ยอดคงเหลือ','qty oh','qtyoh'];
+    const AL_KEYWORDS   = ['al','allocated','จอง','al qty'];
+    const LP_KEYWORDS   = ['license plate','licenseplat','lp no','lp number'];
+    const LOT_KEYWORDS  = ['lot','batch','lot no','lot number'];
+    const STAT_KEYWORDS = ['inventory status','status','สถานะ'];
+    const DESC_KEYWORDS = ['description','desc','ชื่อ','ชื่อสินค้า'];
+
+    const matchCol = (norm, keywords) =>
+      norm.findIndex(v => keywords.some(k => v === k || v.includes(k)));
+
+    for (let r = 0; r < Math.min(30, raw.length); r++) {
+      const row = raw[r];
+      if (!row) continue;
+      const norm = row.map(c => (c==null ? '' : c.toString().trim().toLowerCase()));
+      const locIdx  = matchCol(norm, LOC_KEYWORDS);
+      const itemIdx = matchCol(norm, ITEM_KEYWORDS);
+      const ohIdx   = matchCol(norm, OH_KEYWORDS);
+      // ต้องมีอย่างน้อย loc + item (oh optional ถ้าไม่มีถือว่า 0)
+      if (locIdx !== -1 && itemIdx !== -1) {
+        headerRow   = r;
+        col.loc  = locIdx;
+        col.item = itemIdx;
+        col.oh   = ohIdx;
+        col.al   = matchCol(norm, AL_KEYWORDS);
+        col.desc = matchCol(norm, DESC_KEYWORDS);
+        col.stat = matchCol(norm, STAT_KEYWORDS);
+        col.lot  = matchCol(norm, LOT_KEYWORDS);
+        col.lp   = norm.findIndex(v => LP_KEYWORDS.some(k=>v.includes(k)) && !v.includes('parent'));
+        break;
+      }
+    }
+
+    if (headerRow === -1 || col.loc===-1 || col.item===-1) {
+      throw new Error('ไม่พบคอลัมน์ Location และ Item ในไฟล์\n\nตรวจสอบว่าหัวตารางมีคำว่า "Location" และ "Item" (หรือ SKU/Barcode)\nรองรับทุกรูปแบบ Export ขอแค่มีสองคอลัมน์นี้');
+    }
+
+    const rows = [];
+    for (let i = headerRow + 1; i < raw.length; i++) {
+      const row = raw[i];
+      if (!row) continue;
+      const loc  = row[col.loc]  ? row[col.loc].toString().trim()  : null;
+      const item = row[col.item] ? row[col.item].toString().trim() : null;
+      if (!loc || !item) continue;
+      const desc  = col.desc!==-1 ? (row[col.desc]||'').toString().trim() : '';
+      const oh    = col.oh!==-1  ? (parseFloat(row[col.oh]) || 0) : 0;
+      const alQty = col.al!==-1  ? (parseFloat(row[col.al]) || null) : null;
+      const stat  = col.stat!==-1 ? (row[col.stat]||'').toString().trim() : '';
+      const lot   = col.lot!==-1 ? (row[col.lot]||'').toString().trim() : '';
+      const lp    = col.lp!==-1  ? (row[col.lp]||'').toString().trim()  : '';
+      rows.push({ loc, item, desc, oh, alQty, stat, lot, lp });
+    }
+
+    if (!rows.length) throw new Error('พบ Header แล้ว แต่ไม่มีข้อมูลใต้ header');
+
+    _xlsxRawRows = rows;
+    al.innerHTML = `<div class="alert alert-green" style="font-size:12px">
+      ✅ อ่านไฟล์สำเร็จ — พบ ${rows.length.toLocaleString()} แถว<br>
+      คอลัมน์ที่ตรวจพบ: ${[
+        col.loc!==-1?'Location':null, col.item!==-1?'Item':null,
+        col.oh!==-1?'OH':null, col.al!==-1?'AL':null,
+        col.desc!==-1?'Description':null, col.stat!==-1?'Status':null,
+        col.lot!==-1?'Lot':null, col.lp!==-1?'License Plate':null
+      ].filter(Boolean).join(', ')}
+    </div>`;
+    refreshXlsxPreview();
+
+  } catch(e) {
+    al.innerHTML = `<div class="alert alert-red">❌ อ่านไฟล์ไม่ได้: ${e.message}</div>`;
+  }
+}
+
+let _xlsxConflictLocs = new Set();  // locations user chose to SKIP (already exist in session)
+let _xlsxAllLocsInScope = [];       // all location codes currently in scope (for conflict UI)
+
+function refreshXlsxPreview() {
+  const prev = Q('ipreview'), btn = Q('ibtn');
+  if (!_xlsxRawRows) return;
+
+  const patternStr = Q('ilocfilter')?.value.trim() || '';
+  const re = patternStr ? likeToRegex(patternStr) : null;
+
+  let inScope = 0;
+  const map = {};
+
+  for (const r of _xlsxRawRows) {
+    if (re && !re.test(r.loc)) continue;
+    inScope++;
+    const key = r.loc + '|||' + r.item;
+    if (map[key]) {
+      map[key].qty += r.oh;
+      if (r.alQty !== null) map[key].alQty = (map[key].alQty||0) + r.alQty;
+    } else {
+      map[key] = { loc:r.loc, item:r.item, desc:r.desc, qty:r.oh, alQty:r.alQty };
+    }
+  }
+
+  _xlsxParsed = Object.values(map);
+  const uLocsArr = [...new Set(_xlsxParsed.map(r => r.loc))];
+  const uLocs  = uLocsArr.length;
+  const uItems = new Set(_xlsxParsed.map(r => r.item)).size;
+  _xlsxAllLocsInScope = uLocsArr;
+
+  prev.style.display = 'block';
+
+  if (!inScope) {
+    prev.innerHTML = `<div class="alert alert-amber">
+      ⚠️ ไม่พบแถวที่ตรงกับ Location filter "${patternStr}" ในไฟล์นี้ (ทั้งไฟล์มี ${_xlsxRawRows.length.toLocaleString()} แถว)
+    </div>`;
+    btn.disabled = true;
+    return;
+  }
+
+  prev.innerHTML = `<div class="alert alert-green">
+    ✅ พร้อม Import<br>
+    📊 ทั้งไฟล์ <strong>${_xlsxRawRows.length.toLocaleString()}</strong> rows
+      ${patternStr ? `→ ตรง filter: <strong>${inScope.toLocaleString()}</strong>` : ''}<br>
+    📍 <strong>${uLocs.toLocaleString()}</strong> locations
+      · 📦 <strong>${uItems.toLocaleString()}</strong> unique items<br>
+    🔢 <strong>${_xlsxParsed.length.toLocaleString()}</strong> loc+item pairs (หลัง aggregate OH)
+  </div>
+  <div id="conflict-check-area"></div>`;
+  btn.disabled = false;
+
+  // ── ตรวจสอบ conflict กับ location ที่มีอยู่แล้วใน session นี้ ──
+  checkLocationConflicts(uLocsArr);
+}
+
+async function checkLocationConflicts(locCodes) {
+  const sid = Q('is')?.value;
+  const area = Q('conflict-check-area');
+  if (!sid || !area || !locCodes.length) return;
+
+  area.innerHTML = `<div style="font-size:11px;color:#94a3b8;margin-top:8px">⏳ เช็คว่าโลเคชั่นซ้ำกับข้อมูลเดิมใน Session นี้ไหม...</div>`;
+
+  // หา location ids ที่ตรงกับ code ในไฟล์
+  const { data: locs } = await sb.from('locations').select('id,code').in('code', locCodes);
+  if (!locs?.length) { area.innerHTML = ''; return; }
+
+  const locIdMap = Object.fromEntries(locs.map(l => [l.id, l.code]));
+  const { data: existing } = await sb.from('stock_snapshot')
+    .select('location_id').eq('session_id', sid).in('location_id', Object.keys(locIdMap));
+
+  const dupSet = new Set((existing||[]).map(e => locIdMap[e.location_id]));
+  _xlsxConflictLocs = new Set();
+
+  if (!dupSet.size) {
+    area.innerHTML = `<div style="font-size:11px;color:var(--vespa-green);margin-top:8px;font-weight:700">✅ ไม่มี Location ซ้ำกับข้อมูลเดิมใน Session นี้</div>`;
+    return;
+  }
+
+  const dupList = [...dupSet].sort();
+  area.innerHTML = `
+    <div style="background:#fff7ed;border:2px solid #f59e0b;border-radius:12px;padding:12px;margin-top:8px">
+      <div style="font-size:12px;font-weight:900;color:#92400e;margin-bottom:8px">
+        ⚠️ พบ ${dupList.length} Location ที่มีข้อมูลอยู่แล้วใน Session นี้ — เลือกว่าจะ Import ทับหรือข้าม
+      </div>
+      <div style="max-height:180px;overflow-y:auto;background:#fff;border-radius:8px;padding:8px">
+        ${dupList.map(code => `
+          <label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;cursor:pointer;font-family:ui-monospace,monospace">
+            <input type="checkbox" class="dup-loc-check" data-code="${code}" checked onchange="toggleDupLoc('${code}',this.checked)">
+            <span>${code}</span>
+            <span style="color:#94a3b8;font-size:10px">(ติ๊ก = import ทับยอดเดิม, ไม่ติ๊ก = ข้าม)</span>
+          </label>`).join('')}
+      </div>
+    </div>`;
+}
+
+function toggleDupLoc(code, checked) {
+  if (checked) _xlsxConflictLocs.delete(code);
+  else _xlsxConflictLocs.add(code);
+}
+
+async function doImportXlsx() {
+  const sid = Q('is').value, al = Q('ia'), btn = Q('ibtn');
+  if (!sid)         { al.innerHTML = `<div class="alert alert-red">เลือก Session ก่อน</div>`; return; }
+  if (!_xlsxParsed || !_xlsxParsed.length) { al.innerHTML = `<div class="alert alert-red">ไม่มีข้อมูลที่จะ Import</div>`; return; }
+
+  btn.disabled = true;
+
+  // ── ตัด Location ที่ผู้ใช้เลือก "ข้าม" ออก (จากช่อง conflict checkbox) ──
+  const skipSet = _xlsxConflictLocs || new Set();
+  const importRows = _xlsxParsed.filter(p => !skipSet.has(p.loc));
+
+  if (!importRows.length) {
+    al.innerHTML = `<div class="alert alert-amber">ไม่มีข้อมูลให้ Import (ทุก Location ถูกเลือกให้ข้ามหมด)</div>`;
+    btn.disabled = false;
+    return;
+  }
+
+  async function batchUp(table, rows, conflict, selectCols) {
+    const BATCH = 500, map = {};
+    for (let i = 0; i < rows.length; i += BATCH) {
+      const { data, error } = await sb.from(table)
+        .upsert(rows.slice(i, i+BATCH), { onConflict: conflict })
+        .select(selectCols);
+      if (error) throw error;
+      data?.forEach(r => { map[r.code] = r.id; });
+    }
+    return map;
+  }
+
+  try {
+    // 1) Locations — zone คำนวณจาก computeZone(), row_no/level แยกจาก code
+    al.innerHTML = `<div class="alert alert-blue">⏳ [1/4] สร้าง/อัพเดท Locations...</div>`;
+    const seenLocs = {}, locRows = [];
+    for (const p of importRows) {
+      if (seenLocs[p.loc]) continue;
+      seenLocs[p.loc] = true;
+      const parts = p.loc.split('-');
+      locRows.push({
+        code:   p.loc,
+        zone:   computeZone(p.loc, p.desc),
+        row_no: parts[1] || null,
+        level:  parts[3] || null,
+      });
+    }
+    const locMap = await batchUp('locations', locRows, 'code', 'id,code');
+
+    // 2) Items
+    al.innerHTML = `<div class="alert alert-blue">⏳ [2/4] สร้าง/อัพเดท Items (${new Set(importRows.map(r=>r.item)).size.toLocaleString()} รายการ)...</div>`;
+    const seenItems = {}, itemRows = [];
+    for (const p of importRows) {
+      if (seenItems[p.item]) continue;
+      seenItems[p.item] = true;
+      itemRows.push({ code: p.item, description: p.desc });
+    }
+    const itemMap = await batchUp('items', itemRows, 'code', 'id,code');
+
+    // 3) Stock snapshot (รวม al_qty)
+    const BATCH = 500;
+    let ok = 0;
+    const snapRows = importRows
+      .filter(p => locMap[p.loc] && itemMap[p.item])
+      .map(p => ({
+        session_id:  sid,
+        location_id: locMap[p.loc],
+        item_id:     itemMap[p.item],
+        onhand_qty:  p.qty,
+        al_qty:      p.alQty !== null && p.alQty !== undefined ? p.alQty : null,
+      }));
+
+    for (let i = 0; i < snapRows.length; i += BATCH) {
+      const { error } = await sb.from('stock_snapshot')
+        .upsert(snapRows.slice(i, i+BATCH), { onConflict:'session_id,location_id,item_id' });
+      if (error) throw error;
+      ok += Math.min(BATCH, snapRows.length - i);
+      al.innerHTML = `<div class="alert alert-blue">⏳ [3/4] Stock Snapshot: ${ok.toLocaleString()} / ${snapRows.length.toLocaleString()} rows...</div>`;
+    }
+
+    // 4) Stock Snapshot Detail (LPN/Lot/Status)
+    al.innerHTML = `<div class="alert alert-blue">⏳ [4/4] Stock Snapshot Detail (LPN/Lot)...</div>`;
+    const patternStr = Q('ilocfilter')?.value.trim() || '';
+    const re = patternStr ? likeToRegex(patternStr) : null;
+    const detailRows = [];
+    for (const r of _xlsxRawRows) {
+      if (re && !re.test(r.loc)) continue;
+      if (skipSet.has(r.loc)) continue;
+      if (!locMap[r.loc] || !itemMap[r.item]) continue;
+      detailRows.push({
+        session_id:       sid,
+        location_id:      locMap[r.loc],
+        item_id:          itemMap[r.item],
+        license_plate:    r.lp  || null,
+        lot:              r.lot || null,
+        inventory_status: r.stat || null,
+        qty:              r.oh,
+      });
+    }
+
+    const importedLocIds = [...new Set(Object.values(locMap))];
+    for (let i = 0; i < importedLocIds.length; i += BATCH) {
+      const { error } = await sb.from('stock_snapshot_detail')
+        .delete().eq('session_id', sid).in('location_id', importedLocIds.slice(i, i+BATCH));
+      if (error) throw error;
+    }
+    let okD = 0;
+    for (let i = 0; i < detailRows.length; i += BATCH) {
+      const { error } = await sb.from('stock_snapshot_detail').insert(detailRows.slice(i, i+BATCH));
+      if (error) throw error;
+      okD += Math.min(BATCH, detailRows.length - i);
+      al.innerHTML = `<div class="alert alert-blue">⏳ [4/4] Stock Snapshot Detail: ${okD.toLocaleString()} / ${detailRows.length.toLocaleString()} rows...</div>`;
+    }
+
+    const skippedMsg = skipSet.size ? `<br>⏭️ ข้าม ${skipSet.size} locations ตามที่เลือก` : '';
+    al.innerHTML = `<div class="alert alert-green">
+      ✅ Import สำเร็จ!<br>
+      📍 ${locRows.length.toLocaleString()} locations
+      · 📦 ${itemRows.length.toLocaleString()} items
+      · 🔢 ${ok.toLocaleString()} snapshot rows
+      · 🏷️ ${okD.toLocaleString()} LPN/Lot detail rows${skippedMsg}
+    </div>`;
+    _xlsxRawRows = null;
+    _xlsxParsed = null;
+    _xlsxConflictLocs = new Set();
+    Q('ixlsx').value = '';
+    Q('ilocfilter').value = '';
+    Q('ipreview').style.display = 'none';
+    btn.disabled = false;
+
+  } catch(e) {
+    al.innerHTML = `<div class="alert alert-red">❌ ${e?.message || String(e)}</div>`;
+    btn.disabled = false;
+  }
 }
 
 async function loadAdUsers() {
