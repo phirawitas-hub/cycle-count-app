@@ -773,7 +773,6 @@ function render() {
   const TABS = {
     counter: `<nav class="tabs">
       <button class="tab ${page==='c-tasks'?'on':''}" onclick="go('c-tasks')">${vIcon('#009246','📋')}<span style="margin-top:4px">งานของฉัน</span></button>
-      <button class="tab ${page==='ad-history'?'on':''}" onclick="go('ad-history')">${vIcon('#457B9D','📦')}<span style="margin-top:4px">ประวัติ</span></button>
     </nav>`,
     supervisor: `<nav class="tabs">
       <button class="tab ${page==='sv-dash'?'on':''}" onclick="go('sv-dash')">${vIcon('#F4D160','📊')}<span style="margin-top:4px">สรุป</span></button>
@@ -1167,6 +1166,8 @@ async function loadCCount() {
     const dets = detailByItem[it.id] || [];
 
     // ── LPN/Lot/Status detail — แสดงเป็น table ย่อยให้อ่านง่าย ──
+    //    ⚠️ ถ้า showOH=false (Blind Count) ต้องซ่อนคอลัมน์ QTY ด้วย
+    //    เพราะผลรวม QTY ของทุก LPN = ยอด OH ทำให้เห็นยอดจริงทางอ้อมได้ ขัดกับ Blind Count
     let detHtml = '';
     const alQty = s.al_qty ?? null;
     const ohDisplay = showOH ? `<span style="font-size:9px;font-weight:700;color:#1e40af;white-space:nowrap">OH:${s.onhand_qty}${alQty!==null?` AL:${alQty}`:''}</span>` : (alQty !== null ? `<span style="font-size:9px;color:#d97706;white-space:nowrap">AL:${alQty}</span>` : '');
@@ -1176,7 +1177,7 @@ async function loadCCount() {
           <td style="padding:3px 8px 3px 0;font-size:11px;color:#4b5563;font-family:ui-monospace,monospace">${d.license_plate||'—'}</td>
           <td style="padding:3px 8px 3px 0;font-size:11px;color:#64748b">${d.lot||'—'}</td>
           <td style="padding:3px 0;font-size:11px"><span class="lpn-chip">${d.inventory_status||'—'}</span></td>
-          <td style="padding:3px 0 3px 8px;font-size:11px;font-weight:700;text-align:right">${d.qty}</td>
+          ${showOH ? `<td style="padding:3px 0 3px 8px;font-size:11px;font-weight:700;text-align:right">${d.qty}</td>` : ''}
         </tr>`).join('');
       detHtml = `<div style="margin-top:5px;overflow-x:auto">
         <table style="border-collapse:collapse;min-width:100%">
@@ -1184,7 +1185,7 @@ async function loadCCount() {
             <th style="font-size:9px;color:#94a3b8;font-weight:600;text-align:left;padding:0 8px 2px 0;letter-spacing:.04em">LICENSE PLATE</th>
             <th style="font-size:9px;color:#94a3b8;font-weight:600;text-align:left;padding:0 8px 2px 0;letter-spacing:.04em">LOT</th>
             <th style="font-size:9px;color:#94a3b8;font-weight:600;text-align:left;padding:0 0 2px 0;letter-spacing:.04em">STATUS</th>
-            <th style="font-size:9px;color:#94a3b8;font-weight:600;text-align:right;padding:0 0 2px 8px;letter-spacing:.04em">QTY</th>
+            ${showOH ? `<th style="font-size:9px;color:#94a3b8;font-weight:600;text-align:right;padding:0 0 2px 8px;letter-spacing:.04em">QTY</th>` : ''}
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
@@ -1397,7 +1398,9 @@ async function loadSvDash() {
   const curName = sessions.find(s=>s.id===curSid)?.name || sessions[0].name;
 
   const { data: asgns } = await sb.from('assignments')
-    .select('id,status,assigned_to,profiles(name)').eq('session_id', curSid);
+    .select('id,status,assigned_to,locations(code,zone,row_no,level),profiles!assigned_to(name)')
+    .eq('session_id', curSid)
+    .order('status');
 
   if (!asgns?.length) {
     cnt().innerHTML = `
@@ -1422,16 +1425,18 @@ async function loadSvDash() {
   const byUser = {};
   for (const a of asgns) {
     const uid = a.assigned_to;
-    if (!byUser[uid]) byUser[uid] = { name: a.profiles?.name || '?', total:0, done:0, var:0 };
+    if (!byUser[uid]) byUser[uid] = { name: a.profiles?.name || '?', total:0, done:0, var:0, items:[] };
     byUser[uid].total++;
     if (['completed','approved'].includes(a.status)) byUser[uid].done++;
     if (['round1_done','round2_done','round3_done'].includes(a.status)) byUser[uid].var++;
+    byUser[uid].items.push(a);
   }
 
+  // ── สรุปรายบุคคล (คลิกเพื่อดูรายละเอียด) ──
   let rows = '';
-  for (const u of Object.values(byUser)) {
+  Object.entries(byUser).forEach(([uid, u], idx) => {
     const p = Math.round(u.done / u.total * 100);
-    rows += `<div class="row" style="cursor:default">
+    rows += `<div class="row click" onclick="toggleUserDetail('${idx}')" style="flex-wrap:wrap">
       <div class="row-body">
         <div class="row-title">👤 ${u.name}</div>
         <div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap">
@@ -1444,8 +1449,41 @@ async function loadSvDash() {
         <div style="font-size:26px;font-weight:900;color:var(--vespa-red);font-family:'Fredoka'">${p}%</div>
         <div style="font-size:11px;color:var(--vespa-brown);font-weight:800">${u.done}/${u.total}</div>
       </div>
+      <span class="caret" style="width:100%;text-align:center;font-size:14px">▾ ดูรายการ</span>
+    </div>
+    <div id="udetail_${idx}" style="display:none;background:#faf8f3;padding:8px 14px">
+      ${u.items.map(a => {
+        const si = tagInfo(a.status);
+        const l = a.locations;
+        const loc = [l?.zone,l?.row_no,l?.level].filter(Boolean).join(' · ');
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--vespa-gray);gap:8px">
+          <div style="min-width:0">
+            <div class="mono" style="font-size:12px;font-weight:800">${l?.code||'?'}</div>
+            <div style="font-size:10px;color:#94a3b8">${loc}</div>
+          </div>
+          <span class="tag ${si.cls}" style="font-size:10px;flex-shrink:0">${si.lbl}</span>
+        </div>`;
+      }).join('')}
     </div>`;
-  }
+  });
+
+  // ── รายการที่ต้องติดตาม (รอ Round 2/3) — โชว์รวมทุกคนไว้ด้านบนสุด ──
+  const needsFollowUp = asgns.filter(a => ['round1_done','round2_done','round3_done'].includes(a.status));
+  const followUpHtml = needsFollowUp.length ? `
+    <div class="sec">🔄 รอนับรอบถัดไป (${needsFollowUp.length})</div>
+    <div class="card card-flush">
+      ${needsFollowUp.map(a => {
+        const si = tagInfo(a.status);
+        const l = a.locations;
+        return `<div class="row" style="cursor:default">
+          <div class="row-body">
+            <div class="row-title mono">${l?.code||'?'}</div>
+            <div class="row-sub">👤 ${a.profiles?.name||'?'} · ${[l?.zone,l?.row_no,l?.level].filter(Boolean).join(' · ')}</div>
+          </div>
+          <span class="tag ${si.cls}">${si.lbl}</span>
+        </div>`;
+      }).join('')}
+    </div>` : '';
 
   cnt().innerHTML = `
     <div class="card">
@@ -1466,12 +1504,14 @@ async function loadSvDash() {
       </div>
       <div class="prog"><div class="prog-fill" style="width:${pct}%"></div></div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 16px 8px">
-      ${varCount ? `<button class="btn btn-amber" onclick="go('sv-list')">⚠️ Variance ${varCount}</button>` : '<div></div>'}
-      ${pending  ? `<button class="btn btn-ghost"  onclick="go('ad-history')">📦 ประวัติ</button>` : '<div></div>'}
-    </div>
-    <div class="sec">ความคืบหน้าแต่ละ Counter</div>
+    ${followUpHtml}
+    <div class="sec">ความคืบหน้าแต่ละ Counter (แตะเพื่อดูรายละเอียด)</div>
     <div class="card card-flush">${rows}</div>`;
+}
+
+function toggleUserDetail(idx) {
+  const el = Q('udetail_'+idx);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
 async function loadSvList() {
@@ -1483,7 +1523,7 @@ async function loadSvList() {
   }
 
   const { data: asgns } = await sb.from('assignments')
-    .select('id,status,locations(code,zone,area),profiles(name)')
+    .select('id,status,locations(code,zone,area),profiles!assigned_to(name)')
     .in('session_id', sess.map(s => s.id))
     .in('status', ['round1_done','round2_done','round3_done'])
     .order('status');
@@ -1514,7 +1554,7 @@ async function loadSvDetail() {
   const { aid } = S;
 
   const { data: asgn } = await sb.from('assignments')
-    .select('id,status,location_id,session_id,locations(code,zone,area),profiles(name)')
+    .select('id,status,location_id,session_id,locations(code,zone,area),profiles!assigned_to(name)')
     .eq('id', aid).single();
 
   if (!asgn) { go('sv-list'); return; }
@@ -1799,46 +1839,60 @@ async function renderManageAssign(container) {
       </label>
     </div>` : ''}
 
-    <div style="background:#f0f7ff;border:2px solid #bfdbfe;border-radius:14px;padding:12px;margin-bottom:12px">
-      <div style="font-size:13px;font-weight:900;color:#1d4ed8;margin-bottom:10px">⚡ Bulk Assign</div>
-      <div class="grid-3" style="margin-bottom:8px">
-        <div><label style="font-size:10px">ZONE</label>
-          <select id="bulk-zone" onchange="refreshBulkPreview()"><option value="">ทั้งหมด</option></select></div>
-        <div><label style="font-size:10px">ROW</label>
-          <select id="bulk-row" onchange="refreshBulkPreview()"><option value="">ทั้งหมด</option></select></div>
-        <div><label style="font-size:10px">LEVEL</label>
-          <select id="bulk-level" onchange="refreshBulkPreview()"><option value="">ทั้งหมด</option></select></div>
-      </div>
-      <div class="fg" style="margin-bottom:8px"><label style="font-size:10px">COUNTER รอบ 1</label>
-        <select id="bulk-user">${cOpts}</select></div>
-      <div id="bulk-preview" style="font-size:12px;color:#1e40af;margin-bottom:8px;font-weight:700"></div>
-      <button class="btn btn-blue" id="bulk-btn" onclick="doBulkAssign()" disabled>⚡ Assign ทั้งหมด</button>
+    <!-- ══ SINGLE ASSIGN — ใช้บ่อยสุด อยู่บนสุด ══ -->
+    <div style="background:#f0fdf4;border:2px solid var(--vespa-green);border-radius:14px;padding:14px;margin-bottom:12px">
+      <div style="font-size:14px;font-weight:900;color:var(--vespa-mint-dark);margin-bottom:10px">📍 Assign ทีละ Location</div>
+      <div class="fg"><label>COUNTER</label><select id="as-user">${cOpts}</select></div>
+      <div class="fg" style="margin-bottom:10px"><label>LOCATION</label><select id="as-loc"><option value="">กำลังโหลด...</option></select></div>
+      <button class="btn btn-green" onclick="doAssign()">✓ มอบหมายงาน</button>
     </div>
 
-    ${isAdminOrSup ? `<div style="background:#f0fdf4;border:2px solid var(--vespa-green);border-radius:14px;padding:12px;margin-bottom:12px">
-      <div style="font-size:13px;font-weight:900;color:var(--vespa-mint-dark);margin-bottom:8px">🔄 เปลี่ยน Counter รอบ 2/3</div>
-      <div class="grid-3" style="margin-bottom:8px">
-        <div><label style="font-size:10px">รอบ</label>
-          <select id="r23-round" onchange="refreshR23Preview()">
-            <option value="round1_done">รอบ 2</option>
-            <option value="round2_done">รอบ 3</option>
-            <option value="round3_done">รอบ Sup</option>
-          </select></div>
-        <div><label style="font-size:10px">ZONE</label>
-          <select id="r23-zone" onchange="refreshR23Preview()"><option value="">ทั้งหมด</option></select></div>
-        <div><label style="font-size:10px">ROW</label>
-          <select id="r23-row" onchange="refreshR23Preview()"><option value="">ทั้งหมด</option></select></div>
+    <!-- ══ BULK ASSIGN — ใช้ไม่บ่อย ซ่อนไว้ก่อน ══ -->
+    <details style="background:#f0f7ff;border:2px solid #bfdbfe;border-radius:14px;padding:0;margin-bottom:12px;overflow:hidden">
+      <summary style="cursor:pointer;padding:12px 14px;font-size:13px;font-weight:900;color:#1d4ed8;list-style:none;display:flex;align-items:center;gap:6px">
+        <span style="font-size:15px">⚡</span> Bulk Assign — มอบหมายหลาย Location พร้อมกัน
+        <span style="margin-left:auto;font-size:11px;color:#94a3b8;font-weight:600">แตะเพื่อเปิด</span>
+      </summary>
+      <div style="padding:0 14px 14px">
+        <div class="grid-3" style="margin-bottom:8px">
+          <div><label style="font-size:10px">ZONE</label>
+            <select id="bulk-zone" onchange="refreshBulkPreview()"><option value="">ทั้งหมด</option></select></div>
+          <div><label style="font-size:10px">ROW</label>
+            <select id="bulk-row" onchange="refreshBulkPreview()"><option value="">ทั้งหมด</option></select></div>
+          <div><label style="font-size:10px">LEVEL</label>
+            <select id="bulk-level" onchange="refreshBulkPreview()"><option value="">ทั้งหมด</option></select></div>
+        </div>
+        <div class="fg" style="margin-bottom:8px"><label style="font-size:10px">COUNTER รอบ 1</label>
+          <select id="bulk-user">${cOpts}</select></div>
+        <div id="bulk-preview" style="font-size:12px;color:#1e40af;margin-bottom:8px;font-weight:700"></div>
+        <button class="btn btn-blue" id="bulk-btn" onclick="doBulkAssign()" disabled>⚡ Assign ทั้งหมด</button>
       </div>
-      <div class="fg" style="margin-bottom:8px"><label style="font-size:10px">COUNTER ที่จะนับต่อ</label>
-        <select id="r23-user">${cOpts}</select></div>
-      <div id="r23-preview" style="font-size:12px;color:var(--vespa-mint-dark);margin-bottom:8px;font-weight:700"></div>
-      <button class="btn btn-green" id="r23-btn" onclick="doR23Assign()" disabled>🔄 เปลี่ยน Counter</button>
-    </div>` : ''}
+    </details>
 
-    <div style="font-size:11px;font-weight:900;color:#94a3b8;margin-bottom:8px;text-transform:uppercase">Assign ทีละ Location</div>
-    <div class="fg"><label>COUNTER</label><select id="as-user">${cOpts}</select></div>
-    <div class="fg"><label>LOCATION</label><select id="as-loc"><option value="">กำลังโหลด...</option></select></div>
-    <button class="btn btn-ghost" onclick="doAssign()">มอบหมายงาน</button>
+    ${isAdminOrSup ? `<details style="background:#fef9f0;border:2px solid #E9C46A;border-radius:14px;padding:0;margin-bottom:12px;overflow:hidden">
+      <summary style="cursor:pointer;padding:12px 14px;font-size:13px;font-weight:900;color:#92400e;list-style:none;display:flex;align-items:center;gap:6px">
+        <span style="font-size:15px">🔄</span> เปลี่ยน Counter รอบ 2/3
+        <span style="margin-left:auto;font-size:11px;color:#94a3b8;font-weight:600">แตะเพื่อเปิด</span>
+      </summary>
+      <div style="padding:0 14px 14px">
+        <div class="grid-3" style="margin-bottom:8px">
+          <div><label style="font-size:10px">รอบ</label>
+            <select id="r23-round" onchange="refreshR23Preview()">
+              <option value="round1_done">รอบ 2</option>
+              <option value="round2_done">รอบ 3</option>
+              <option value="round3_done">รอบ Sup</option>
+            </select></div>
+          <div><label style="font-size:10px">ZONE</label>
+            <select id="r23-zone" onchange="refreshR23Preview()"><option value="">ทั้งหมด</option></select></div>
+          <div><label style="font-size:10px">ROW</label>
+            <select id="r23-row" onchange="refreshR23Preview()"><option value="">ทั้งหมด</option></select></div>
+        </div>
+        <div class="fg" style="margin-bottom:8px"><label style="font-size:10px">COUNTER ที่จะนับต่อ</label>
+          <select id="r23-user">${cOpts}</select></div>
+        <div id="r23-preview" style="font-size:12px;color:var(--vespa-mint-dark);margin-bottom:8px;font-weight:700"></div>
+        <button class="btn btn-green" id="r23-btn" onclick="doR23Assign()" disabled>🔄 เปลี่ยน Counter</button>
+      </div>
+    </details>` : ''}
 
     <div style="margin-top:14px;font-size:13px;font-weight:900;color:var(--vespa-brown)">งานที่ Assign แล้ว</div>
     <div id="al" style="margin-top:8px"><div class="load" style="padding:16px">⏳</div></div>`;
@@ -1916,10 +1970,18 @@ async function syncOHToggle() {
 
 async function toggleOH() {
   const sid = Q('as-sess')?.value;
-  const val = Q('oh-toggle')?.checked || false;
+  const tog = Q('oh-toggle');
+  const val = tog?.checked || false;
   const st  = Q('oh-status');
   if (!sid) return;
-  await sb.from('count_sessions').update({ show_oh: val }).eq('id', sid);
+
+  const { error } = await sb.from('count_sessions').update({ show_oh: val }).eq('id', sid);
+
+  if (error) {
+    alert('❌ บันทึกไม่สำเร็จ: ' + error.message + '\n\nลองตรวจสอบว่ารัน schema_v3/v4_update.sql แล้วหรือยัง');
+    if (tog) tog.checked = !val; // revert checkbox visually since save failed
+    return;
+  }
   if (st) { st.textContent = val ? '🔓 เห็น OH' : '🔒 Blind Count'; st.className = `tag ${val?'tag-green':'tag-gray'}`; }
 }
 
@@ -2126,7 +2188,7 @@ async function refreshLocs() {
 
   // แสดงรายการที่ Assign แล้ว
   const { data: asgns } = await sb.from('assignments')
-    .select('id,status,locations(code),profiles(name)')
+    .select('id,status,locations(code),profiles!assigned_to(name)')
     .eq('session_id', sid).order('created_at');
 
   const al = Q('al');
@@ -2199,6 +2261,8 @@ async function doAssign() {
 }
 
 async function loadAdHistory() {
+  if (!['admin','supervisor'].includes(prof?.role)) { go('c-tasks'); return; }
+
   const { data: sessions } = await sb.from('count_sessions')
     .select('id,name').order('created_at',{ascending:false});
 
@@ -2240,7 +2304,7 @@ async function loadAdHistory() {
   if (Q('hist-st')   && st)  Q('hist-st').value   = st;
 
   let q = sb.from('assignments')
-    .select('id,status,created_at,locations(code,zone),profiles(name),count_sessions(name)')
+    .select('id,status,created_at,locations(code,zone),profiles!assigned_to(name),count_sessions(name)')
     .order('created_at',{ascending:false})
     .limit(100);
   if (sid) q = q.eq('session_id', sid);
@@ -2274,10 +2338,10 @@ async function loadAdTxLog() {
 
   const [{ data: asgn }, { data: recs }] = await Promise.all([
     sb.from('assignments')
-      .select('id,status,locations(code,zone),profiles(name),count_sessions(name)')
+      .select('id,status,locations(code,zone),profiles!assigned_to(name),count_sessions(name)')
       .eq('id', aid).single(),
     sb.from('count_records')
-      .select('item_id,round,count_qty,counted_at,remark,photo_url,counted_by,profiles(name),items(code,description)')
+      .select('item_id,round,count_qty,counted_at,remark,photo_url,counted_by,profiles!counted_by(name),actual_counter:profiles!actual_counter_id(name),items(code,description)')
       .eq('assignment_id', aid)
       .order('counted_at'),
   ]);
@@ -2291,7 +2355,7 @@ async function loadAdTxLog() {
       <div class="row-body">
         <div class="row-title mono" style="font-size:13px">${r.items?.code||'?'}</div>
         <div class="row-sub">${r.items?.description||''}</div>
-        <div class="row-sub">รอบ ${r.round} · นับโดย: ${r.profiles?.name||'?'}</div>
+        <div class="row-sub">รอบ ${r.round} · นับโดย: ${r.actual_counter?.name || r.profiles?.name || '?'}</div>
         <div class="row-sub">${new Date(r.counted_at).toLocaleString('th-TH')}</div>
         ${r.remark ? `<div class="row-sub" style="color:#7c3aed">📝 ${r.remark}</div>` : ''}
         ${r.photo_url ? `<a href="${r.photo_url}" target="_blank" style="font-size:11px;color:var(--vespa-red)">📷 ดูรูป</a>` : ''}
