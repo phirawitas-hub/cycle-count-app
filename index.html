@@ -1116,7 +1116,7 @@ async function loadCCount() {
   const l   = asgn.locations;
   const sub = [l.zone, l.area, l.row_no && 'Row '+l.row_no, l.level && 'Lv.'+l.level].filter(Boolean).join(' · ');
 
-  const [{ data: snaps }, { data: details }, { data: profs }, { data: sessInfo }] = await Promise.all([
+  const [{ data: snaps }, { data: details }, { data: sessInfo }] = await Promise.all([
     sb.from('stock_snapshot')
       .select('item_id,onhand_qty,al_qty,items(id,code,description)')
       .eq('session_id', asgn.session_id)
@@ -1125,7 +1125,6 @@ async function loadCCount() {
       .select('item_id,license_plate,lot,inventory_status,qty')
       .eq('session_id', asgn.session_id)
       .eq('location_id', asgn.location_id),
-    sb.from('profiles').select('id,name').order('name'),
     sb.from('count_sessions').select('show_oh').eq('id', asgn.session_id).single(),
   ]);
 
@@ -1154,9 +1153,6 @@ async function loadCCount() {
   allPhotoRecs?.forEach(r => { window._prevPhotoMap[r.item_id] = r.photo_url; }); // round มากสุดทับไว้ล่าสุด
 
   window._photoMap = {};
-
-  const profOpts = (profs||[]).map(p =>
-    `<option value="${p.id}" ${p.id===me.id?'selected':''}>${p.name}</option>`).join('');
 
   let items = '';
   for (const s of snaps) {
@@ -1249,7 +1245,16 @@ async function loadCCount() {
       </div>` : ''}
       <div class="fg" style="margin-top:12px;margin-bottom:0">
         <label>ผู้นับจริง (ทีมนับ)</label>
-        <select id="actualCounter">${profOpts}</select>
+        <div id="counterNameLocked" style="display:${prof?.last_counter_name?'flex':'none'};align-items:center;gap:8px;flex-wrap:wrap">
+          <span class="tag tag-blue" style="font-size:13px;padding:8px 14px">👤 <span id="lockedNameText">${prof?.last_counter_name||''}</span></span>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="unlockCounterName()">✏️ เปลี่ยน</button>
+        </div>
+        <div id="counterNameEdit" style="display:${prof?.last_counter_name?'none':'flex'};gap:8px">
+          <input type="text" id="counterNameInput" placeholder="พิมพ์ชื่อผู้นับจริง เช่น สมชาย"
+            value="${prof?.last_counter_name||''}" style="flex:1"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();confirmCounterName();}">
+          <button type="button" class="btn btn-green btn-sm" onclick="confirmCounterName()" style="flex-shrink:0">✓ ยืนยัน</button>
+        </div>
       </div>
     </div>
     <div class="sec">📦 ${snaps.length} รายการ — กรอกจำนวนที่นับได้จริง (อย่าดูยอดระบบ)</div>
@@ -1265,6 +1270,29 @@ async function loadCCount() {
   if (asgn.status === 'pending') {
     await sb.from('assignments').update({ status:'in_progress' }).eq('id', aid);
   }
+}
+
+function unlockCounterName() {
+  const lockEl = Q('counterNameLocked'), editEl = Q('counterNameEdit'), input = Q('counterNameInput');
+  if (lockEl) lockEl.style.display = 'none';
+  if (editEl) editEl.style.display = 'flex';
+  if (input) { input.value = prof?.last_counter_name || ''; input.focus(); input.select(); }
+}
+
+async function confirmCounterName() {
+  const input = Q('counterNameInput');
+  const name = input?.value.trim();
+  if (!name) { alert('กรุณาพิมพ์ชื่อผู้นับจริงก่อนยืนยัน'); return; }
+
+  const { error } = await sb.from('profiles').update({ last_counter_name: name }).eq('id', me.id);
+  if (error) { alert('บันทึกชื่อไม่สำเร็จ: ' + error.message); return; }
+
+  prof.last_counter_name = name;
+  const lockText = Q('lockedNameText');
+  if (lockText) lockText.textContent = name;
+  const lockEl = Q('counterNameLocked'), editEl = Q('counterNameEdit');
+  if (editEl) editEl.style.display = 'none';
+  if (lockEl) lockEl.style.display = 'flex';
 }
 
 function toggleExtra(itemId) {
@@ -1302,7 +1330,11 @@ async function submitCount(aid, round, idsStr) {
   const ids = idsStr.split(',');
   const al  = Q('ca'), btn = Q('cb');
 
-  const actualCounterId = Q('actualCounter')?.value || me.id;
+  if (!prof?.last_counter_name) {
+    al.innerHTML = `<div class="alert alert-red">⚠️ กรุณายืนยัน "ผู้นับจริง" ด้านบนก่อนบันทึกยอดนับ</div>`;
+    return;
+  }
+  const actualCounterName = prof.last_counter_name;
 
   const recs = [];
   for (const iid of ids) {
@@ -1316,7 +1348,7 @@ async function submitCount(aid, round, idsStr) {
     recs.push({
       assignment_id: aid, item_id: iid, round,
       count_qty: parseFloat(v), counted_by: me.id,
-      actual_counter_id: actualCounterId,
+      actual_counter_name: actualCounterName,
       remark, photo_url: photoUrl,
     });
   }
@@ -1839,13 +1871,18 @@ async function renderManageAssign(container) {
       </label>
     </div>` : ''}
 
-    <!-- ══ SINGLE ASSIGN — ใช้บ่อยสุด อยู่บนสุด ══ -->
-    <div style="background:#f0fdf4;border:2px solid var(--vespa-green);border-radius:14px;padding:14px;margin-bottom:12px">
-      <div style="font-size:14px;font-weight:900;color:var(--vespa-mint-dark);margin-bottom:10px">📍 Assign ทีละ Location</div>
-      <div class="fg"><label>COUNTER</label><select id="as-user">${cOpts}</select></div>
-      <div class="fg" style="margin-bottom:10px"><label>LOCATION</label><select id="as-loc"><option value="">กำลังโหลด...</option></select></div>
-      <button class="btn btn-green" onclick="doAssign()">✓ มอบหมายงาน</button>
-    </div>
+    <!-- ══ SINGLE ASSIGN — ใช้บ่อยสุด อยู่บนสุด แต่พับเก็บได้เหมือนกัน ══ -->
+    <details style="background:#f0fdf4;border:2px solid var(--vespa-green);border-radius:14px;padding:0;margin-bottom:12px;overflow:hidden">
+      <summary style="cursor:pointer;padding:12px 14px;font-size:14px;font-weight:900;color:var(--vespa-mint-dark);list-style:none;display:flex;align-items:center;gap:6px">
+        <span style="font-size:15px">📍</span> Assign ทีละ Location
+        <span style="margin-left:auto;font-size:11px;color:#94a3b8;font-weight:600">แตะเพื่อเปิด</span>
+      </summary>
+      <div style="padding:0 14px 14px">
+        <div class="fg"><label>COUNTER</label><select id="as-user">${cOpts}</select></div>
+        <div class="fg" style="margin-bottom:10px"><label>LOCATION</label><select id="as-loc"><option value="">กำลังโหลด...</option></select></div>
+        <button class="btn btn-green" onclick="doAssign()">✓ มอบหมายงาน</button>
+      </div>
+    </details>
 
     <!-- ══ BULK ASSIGN — ใช้ไม่บ่อย ซ่อนไว้ก่อน ══ -->
     <details style="background:#f0f7ff;border:2px solid #bfdbfe;border-radius:14px;padding:0;margin-bottom:12px;overflow:hidden">
@@ -2341,7 +2378,7 @@ async function loadAdTxLog() {
       .select('id,status,locations(code,zone),profiles!assigned_to(name),count_sessions(name)')
       .eq('id', aid).single(),
     sb.from('count_records')
-      .select('item_id,round,count_qty,counted_at,remark,photo_url,counted_by,profiles!counted_by(name),actual_counter:profiles!actual_counter_id(name),items(code,description)')
+      .select('item_id,round,count_qty,counted_at,remark,photo_url,counted_by,actual_counter_name,profiles!counted_by(name),actual_counter:profiles!actual_counter_id(name),items(code,description)')
       .eq('assignment_id', aid)
       .order('counted_at'),
   ]);
@@ -2355,7 +2392,7 @@ async function loadAdTxLog() {
       <div class="row-body">
         <div class="row-title mono" style="font-size:13px">${r.items?.code||'?'}</div>
         <div class="row-sub">${r.items?.description||''}</div>
-        <div class="row-sub">รอบ ${r.round} · นับโดย: ${r.actual_counter?.name || r.profiles?.name || '?'}</div>
+        <div class="row-sub">รอบ ${r.round} · นับโดย: ${r.actual_counter_name || r.actual_counter?.name || r.profiles?.name || '?'}</div>
         <div class="row-sub">${new Date(r.counted_at).toLocaleString('th-TH')}</div>
         ${r.remark ? `<div class="row-sub" style="color:#7c3aed">📝 ${r.remark}</div>` : ''}
         ${r.photo_url ? `<a href="${r.photo_url}" target="_blank" style="font-size:11px;color:var(--vespa-red)">📷 ดูรูป</a>` : ''}
@@ -2599,39 +2636,68 @@ async function readXlsxFile() {
     const ws  = wb.Sheets[wb.SheetNames[0]];
     const raw = XLSX.utils.sheet_to_json(ws, { header:1, defval:null });
 
-    // ── หา header row แบบ flexible: ไม่ต้องการ "Location" เป๊ะ ──
-    //    รองรับทุก format ขอแค่มีคอลัมน์ที่ detect ได้
+    // ── หา header row แบบ flexible: รองรับหลายรูปแบบไฟล์ Export ──
+    //    กลยุทธ์: เช็ค "ตรงเป๊ะ" ก่อนเสมอ แล้วค่อย fallback เป็น "มีคำนี้อยู่ในนั้น"
+    //    ป้องกันปัญหาเช่น "Locating Zone" ถูกจับผิดเป็น Location (เพราะมีคำว่า "loc" ปนอยู่)
     let headerRow = -1, col = {};
-    const LOC_KEYWORDS  = ['location','loc','พิกัด','ตำแหน่ง'];
-    const ITEM_KEYWORDS = ['item','sku','barcode','รหัสสินค้า','รหัส'];
-    const OH_KEYWORDS   = ['oh','on hand','onhand','on_hand','ยอดคงเหลือ','qty oh','qtyoh'];
-    const AL_KEYWORDS   = ['al','allocated','จอง','al qty'];
-    const LP_KEYWORDS   = ['license plate','licenseplat','lp no','lp number'];
-    const LOT_KEYWORDS  = ['lot','batch','lot no','lot number'];
-    const STAT_KEYWORDS = ['inventory status','status','สถานะ'];
-    const DESC_KEYWORDS = ['description','desc','ชื่อ','ชื่อสินค้า'];
 
-    const matchCol = (norm, keywords) =>
-      norm.findIndex(v => keywords.some(k => v === k || v.includes(k)));
+    // exact = ต้องตรงกับข้อความในเซลล์แบบเป๊ะ (หลัง trim+lowercase+ยุบช่องว่าง/ขึ้นบรรทัดใหม่เป็นช่องว่างเดียว)
+    // contains = ใช้ตอนหาแบบเป๊ะไม่เจอเลย ค่อย fallback มาเช็คว่ามีคำนี้ปนอยู่ไหม
+    // exclude = ถ้าเซลล์มีคำนี้ปนอยู่ ห้ามนับเป็น match ของ field นี้เด็ดขาด (กันจับผิด)
+    const FIELDS = {
+      loc:  { exact:['location','loc','พิกัด','ตำแหน่ง','location code'],
+              contains:['location'], exclude:['zone','type','group'] },
+      item: { exact:['item code','item','sku','barcode','รหัสสินค้า','รหัส'],
+              contains:['item','sku','barcode'], exclude:[] },
+      oh:   { exact:['on hand qty','on hand','onhand','oh','ยอดคงเหลือ','qty oh','qtyoh'],
+              contains:['on hand','onhand'], exclude:[] },
+      al:   { exact:['al qty','al','allocated','จอง'],
+              contains:['allocated'], exclude:[] },
+      lp:   { exact:['license plate','lpn no.','lpn no','lpn number','lpn','license plate no'],
+              contains:['license plate','lpn'], exclude:['parent'] },
+      lot:  { exact:['lot','lot no','lot number','batch'],
+              contains:['lot','batch'], exclude:[] },
+      stat: { exact:['inventory status','status','สถานะ'],
+              contains:['status'], exclude:[] },
+      desc: { exact:['description','desc','ชื่อสินค้า','ชื่อ'],
+              contains:['description'], exclude:[] },
+    };
+
+    // normalize: trim + lowercase + ยุบ whitespace ทุกชนิด (รวมขึ้นบรรทัดใหม่ \n) ให้เหลือช่องว่างเดียว
+    const normalizeCell = c => (c==null ? '' : c.toString().trim().toLowerCase().replace(/\s+/g, ' '));
+
+    function findColumn(norm, def) {
+      // รอบแรก: หาแบบตรงเป๊ะก่อนเสมอ (ไล่ตามลำดับความสำคัญใน exact[])
+      for (const name of def.exact) {
+        const idx = norm.indexOf(name);
+        if (idx !== -1) return idx;
+      }
+      // รอบสอง: ถ้าตรงเป๊ะไม่เจอเลย ค่อย fallback เป็นแบบ "มีคำนี้ปนอยู่"
+      for (let i = 0; i < norm.length; i++) {
+        if (!norm[i]) continue;
+        if (def.exclude.some(ex => norm[i].includes(ex))) continue;
+        if (def.contains.some(c => norm[i].includes(c))) return i;
+      }
+      return -1;
+    }
 
     for (let r = 0; r < Math.min(30, raw.length); r++) {
       const row = raw[r];
       if (!row) continue;
-      const norm = row.map(c => (c==null ? '' : c.toString().trim().toLowerCase()));
-      const locIdx  = matchCol(norm, LOC_KEYWORDS);
-      const itemIdx = matchCol(norm, ITEM_KEYWORDS);
-      const ohIdx   = matchCol(norm, OH_KEYWORDS);
-      // ต้องมีอย่างน้อย loc + item (oh optional ถ้าไม่มีถือว่า 0)
+      const norm = row.map(normalizeCell);
+      const locIdx  = findColumn(norm, FIELDS.loc);
+      const itemIdx = findColumn(norm, FIELDS.item);
+      // ต้องมีอย่างน้อย loc + item ถือว่านี่คือ header row (คอลัมน์อื่น optional)
       if (locIdx !== -1 && itemIdx !== -1) {
-        headerRow   = r;
+        headerRow = r;
         col.loc  = locIdx;
         col.item = itemIdx;
-        col.oh   = ohIdx;
-        col.al   = matchCol(norm, AL_KEYWORDS);
-        col.desc = matchCol(norm, DESC_KEYWORDS);
-        col.stat = matchCol(norm, STAT_KEYWORDS);
-        col.lot  = matchCol(norm, LOT_KEYWORDS);
-        col.lp   = norm.findIndex(v => LP_KEYWORDS.some(k=>v.includes(k)) && !v.includes('parent'));
+        col.oh   = findColumn(norm, FIELDS.oh);
+        col.al   = findColumn(norm, FIELDS.al);
+        col.desc = findColumn(norm, FIELDS.desc);
+        col.stat = findColumn(norm, FIELDS.stat);
+        col.lot  = findColumn(norm, FIELDS.lot);
+        col.lp   = findColumn(norm, FIELDS.lp);
         break;
       }
     }
