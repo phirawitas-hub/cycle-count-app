@@ -722,21 +722,41 @@ function home() {
   return 'login';
 }
 
-function vIcon(color, emoji) {
-  return `<div style="position:relative; display:inline-block; width:36px; height:36px;" class="tab-ico">
-    <svg viewBox="0 0 100 100" style="width:100%; height:100%; filter: drop-shadow(2px 3px 0px rgba(74,51,37,0.4));">
-      <ellipse cx="50" cy="85" rx="40" ry="6" fill="rgba(0,0,0,0.15)" />
-      <path d="M 20 60 C 10 50 15 25 25 15 C 30 10 40 5 45 20 C 48 30 40 50 35 60 Z" fill="${color}" />
-      <path d="M 35 55 L 50 55 L 60 35 L 90 35 C 105 35 110 50 105 65 C 100 75 90 75 80 70 L 25 70 Z" fill="${color}" />
-      <circle cx="25" cy="70" r="14" fill="#2D2018"/>
-      <circle cx="25" cy="70" r="6" fill="#EAE3D9"/>
-      <circle cx="85" cy="70" r="14" fill="#2D2018"/>
-      <circle cx="85" cy="70" r="6" fill="#EAE3D9"/>
-      <path d="M 55 35 C 55 25 65 25 70 25 L 90 25 C 100 25 100 35 90 35 Z" fill="#4A3325"/>
-      <path d="M 30 15 L 25 5" stroke="#2D2018" stroke-width="4" stroke-linecap="round"/>
-      <circle cx="20" cy="3" r="6" fill="#FFFDF9" stroke="#2D2018" stroke-width="2"/>
+function vBadge(accentColor, highlight) {
+  const cream = '#FFFDF9';
+  const ink   = '#2D2018';
+  const hl    = (part) => highlight === part ? accentColor : cream;
+  const ringColor = highlight === 'ring' ? accentColor : ink;
+  const ringWidth = highlight === 'ring' ? 6 : 3.5;
+
+  return `<div style="width:36px;height:36px;flex-shrink:0" class="tab-ico">
+    <svg viewBox="0 0 100 100" style="width:100%;height:100%;filter:drop-shadow(1px 2px 0px rgba(74,51,37,0.35))">
+      <circle cx="50" cy="50" r="46" fill="${cream}" stroke="${ringColor}" stroke-width="${ringWidth}"/>
+      <circle cx="50" cy="50" r="39" fill="none" stroke="${ink}" stroke-width="1.2" opacity="0.25"/>
+
+      <!-- ล้อหน้า (แอบโผล่ด้านล่าง) -->
+      <circle cx="50" cy="80" r="9" fill="${hl('wheel')}" stroke="${ink}" stroke-width="3"/>
+      <circle cx="50" cy="80" r="3" fill="${ink}"/>
+
+      <!-- บังลม/ตัวถังหน้า -->
+      <path d="M 34 55 Q 32 70 50 76 Q 68 70 66 55 Q 66 45 50 43 Q 34 45 34 55 Z"
+            fill="${hl('body')}" stroke="${ink}" stroke-width="3" stroke-linejoin="round"/>
+
+      <!-- ตราสัญลักษณ์กลางบังลม -->
+      <circle cx="50" cy="58" r="5" fill="${hl('emblem')}" stroke="${ink}" stroke-width="2"/>
+
+      <!-- ไฟหน้า -->
+      <circle cx="50" cy="34" r="13" fill="${hl('headlight')}" stroke="${ink}" stroke-width="3"/>
+      <circle cx="50" cy="34" r="4.5" fill="${ink}" opacity="0.18"/>
+
+      <!-- แฮนด์ซ้าย/ขวา -->
+      <rect x="20" y="26" width="22" height="5" rx="2.5" fill="${hl('handlebar')}" stroke="${ink}" stroke-width="2.2" transform="rotate(-15 31 28.5)"/>
+      <rect x="58" y="26" width="22" height="5" rx="2.5" fill="${hl('handlebar')}" stroke="${ink}" stroke-width="2.2" transform="rotate(15 69 28.5)"/>
+
+      <!-- กระจกมองข้าง -->
+      <circle cx="22" cy="24" r="5" fill="${hl('mirror')}" stroke="${ink}" stroke-width="2.2"/>
+      <circle cx="78" cy="24" r="5" fill="${hl('mirror')}" stroke="${ink}" stroke-width="2.2"/>
     </svg>
-    <div style="position:absolute; top:-4px; right:-8px; font-size:16px; filter: drop-shadow(1px 1px 0px rgba(0,0,0,0.3));">${emoji}</div>
   </div>`;
 }
 
@@ -772,20 +792,20 @@ function render() {
   const managePgs = ['ad-manage','ad-sessions','ad-new','ad-assign','ad-import'];
   const TABS = {
     counter: `<nav class="tabs">
-      <button class="tab ${page==='c-tasks'?'on':''}" onclick="go('c-tasks')">${vIcon('#009246','📋')}<span style="margin-top:4px">งานของฉัน</span></button>
+      <button class="tab ${page==='c-tasks'?'on':''}" onclick="go('c-tasks')">${vBadge('#009246','handlebar')}<span style="margin-top:4px">งานของฉัน</span></button>
     </nav>`,
     supervisor: `<nav class="tabs">
-      <button class="tab ${page==='sv-dash'?'on':''}" onclick="go('sv-dash')">${vIcon('#F4D160','📊')}<span style="margin-top:4px">สรุป</span></button>
-      <button class="tab ${page==='c-tasks'?'on':''}" onclick="go('c-tasks')">${vIcon('#009246','📋')}<span style="margin-top:4px">งานของฉัน</span></button>
-      <button class="tab ${['sv-list','sv-detail'].includes(page)?'on':''}" onclick="go('sv-list')">${vIcon('#CE2B37','⚠️')}<span style="margin-top:4px">Variance</span></button>
-      <button class="tab ${page==='ad-history'?'on':''}" onclick="go('ad-history')">${vIcon('#457B9D','📦')}<span style="margin-top:4px">ประวัติ</span></button>
+      <button class="tab ${page==='sv-dash'?'on':''}" onclick="go('sv-dash')">${vBadge('#3B82F6','headlight')}<span style="margin-top:4px">สรุป</span></button>
+      <button class="tab ${page==='c-tasks'?'on':''}" onclick="go('c-tasks')">${vBadge('#009246','handlebar')}<span style="margin-top:4px">งานของฉัน</span></button>
+      <button class="tab ${['sv-list','sv-detail'].includes(page)?'on':''}" onclick="go('sv-list')">${vBadge('#CE2B37','ring')}<span style="margin-top:4px">Variance</span></button>
+      <button class="tab ${page==='ad-history'?'on':''}" onclick="go('ad-history')">${vBadge('#457B9D','mirror')}<span style="margin-top:4px">ประวัติ</span></button>
     </nav>`,
     admin: `<nav class="tabs">
-      <button class="tab ${page==='sv-dash'?'on':''}" onclick="go('sv-dash')">${vIcon('#F4D160','📊')}<span style="margin-top:4px">สรุป</span></button>
-      <button class="tab ${page==='c-tasks'?'on':''}" onclick="go('c-tasks')">${vIcon('#009246','📋')}<span style="margin-top:4px">งานของฉัน</span></button>
-      <button class="tab ${managePgs.includes(page)?'on':''}" onclick="go('ad-manage')">${vIcon('#CE2B37','📂')}<span style="margin-top:4px">จัดการ</span></button>
-      <button class="tab ${page==='ad-history'?'on':''}" onclick="go('ad-history')">${vIcon('#009246','📦')}<span style="margin-top:4px">ประวัติ</span></button>
-      <button class="tab ${page==='ad-users'?'on':''}" onclick="go('ad-users')">${vIcon('#E76F51','🔑')}<span style="margin-top:4px">ทีมงาน</span></button>
+      <button class="tab ${page==='sv-dash'?'on':''}" onclick="go('sv-dash')">${vBadge('#3B82F6','headlight')}<span style="margin-top:4px">สรุป</span></button>
+      <button class="tab ${page==='c-tasks'?'on':''}" onclick="go('c-tasks')">${vBadge('#009246','handlebar')}<span style="margin-top:4px">งานของฉัน</span></button>
+      <button class="tab ${managePgs.includes(page)?'on':''}" onclick="go('ad-manage')">${vBadge('#CE2B37','wheel')}<span style="margin-top:4px">จัดการ</span></button>
+      <button class="tab ${page==='ad-history'?'on':''}" onclick="go('ad-history')">${vBadge('#457B9D','mirror')}<span style="margin-top:4px">ประวัติ</span></button>
+      <button class="tab ${page==='ad-users'?'on':''}" onclick="go('ad-users')">${vBadge('#E76F51','emblem')}<span style="margin-top:4px">ทีมงาน</span></button>
     </nav>`,
   };
 
@@ -1116,7 +1136,7 @@ async function loadCCount() {
   const l   = asgn.locations;
   const sub = [l.zone, l.area, l.row_no && 'Row '+l.row_no, l.level && 'Lv.'+l.level].filter(Boolean).join(' · ');
 
-  const [{ data: snaps }, { data: details }, { data: sessInfo }] = await Promise.all([
+  const [{ data: snaps }, { data: details }, { data: sessInfo }, { data: counterNames }] = await Promise.all([
     sb.from('stock_snapshot')
       .select('item_id,onhand_qty,al_qty,items(id,code,description)')
       .eq('session_id', asgn.session_id)
@@ -1126,7 +1146,10 @@ async function loadCCount() {
       .eq('session_id', asgn.session_id)
       .eq('location_id', asgn.location_id),
     sb.from('count_sessions').select('show_oh').eq('id', asgn.session_id).single(),
+    sb.from('counter_names').select('id,name').order('name'),
   ]);
+
+  window._counterNames = counterNames || [];
 
   const showOH = sessInfo?.show_oh === true;
 
@@ -1245,15 +1268,18 @@ async function loadCCount() {
       </div>` : ''}
       <div class="fg" style="margin-top:12px;margin-bottom:0">
         <label>ผู้นับจริง (ทีมนับ)</label>
-        <div id="counterNameLocked" style="display:${prof?.last_counter_name?'flex':'none'};align-items:center;gap:8px;flex-wrap:wrap">
-          <span class="tag tag-blue" style="font-size:13px;padding:8px 14px">👤 <span id="lockedNameText">${prof?.last_counter_name||''}</span></span>
-          <button type="button" class="btn btn-ghost btn-sm" onclick="unlockCounterName()">✏️ เปลี่ยน</button>
+        <div id="counterNameSelectWrap" style="display:flex;gap:8px">
+          <select id="counterNameSelect" style="flex:1" onchange="onCounterNameSelectChange()">
+            <option value="">— เลือกชื่อผู้นับ —</option>
+            ${(counterNames||[]).map(c => `<option value="${c.name}" ${c.name===window._lastPickedCounterName?'selected':''}>${c.name}</option>`).join('')}
+            <option value="__new__">+ เพิ่มชื่อใหม่...</option>
+          </select>
         </div>
-        <div id="counterNameEdit" style="display:${prof?.last_counter_name?'none':'flex'};gap:8px">
-          <input type="text" id="counterNameInput" placeholder="พิมพ์ชื่อผู้นับจริง เช่น สมชาย"
-            value="${prof?.last_counter_name||''}" style="flex:1"
-            onkeydown="if(event.key==='Enter'){event.preventDefault();confirmCounterName();}">
-          <button type="button" class="btn btn-green btn-sm" onclick="confirmCounterName()" style="flex-shrink:0">✓ ยืนยัน</button>
+        <div id="counterNameNewWrap" style="display:none;gap:8px;margin-top:8px">
+          <input type="text" id="counterNameNewInput" placeholder="พิมพ์ชื่อผู้นับใหม่"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();confirmNewCounterName();}">
+          <button type="button" class="btn btn-green btn-sm" onclick="confirmNewCounterName()" style="flex-shrink:0">✓ เพิ่ม</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="cancelNewCounterName()" style="flex-shrink:0">ยกเลิก</button>
         </div>
       </div>
     </div>
@@ -1272,27 +1298,55 @@ async function loadCCount() {
   }
 }
 
-function unlockCounterName() {
-  const lockEl = Q('counterNameLocked'), editEl = Q('counterNameEdit'), input = Q('counterNameInput');
-  if (lockEl) lockEl.style.display = 'none';
-  if (editEl) editEl.style.display = 'flex';
-  if (input) { input.value = prof?.last_counter_name || ''; input.focus(); input.select(); }
+function onCounterNameSelectChange() {
+  const sel = Q('counterNameSelect');
+  const newWrap = Q('counterNameNewWrap');
+  if (sel?.value === '__new__') {
+    if (newWrap) newWrap.style.display = 'flex';
+    Q('counterNameNewInput')?.focus();
+  } else {
+    if (newWrap) newWrap.style.display = 'none';
+    window._lastPickedCounterName = sel?.value || '';
+  }
 }
 
-async function confirmCounterName() {
-  const input = Q('counterNameInput');
+function cancelNewCounterName() {
+  const sel = Q('counterNameNewWrap');
+  if (sel) sel.style.display = 'none';
+  const dropdown = Q('counterNameSelect');
+  if (dropdown) dropdown.value = window._lastPickedCounterName || '';
+}
+
+async function confirmNewCounterName() {
+  const input = Q('counterNameNewInput');
   const name = input?.value.trim();
-  if (!name) { alert('กรุณาพิมพ์ชื่อผู้นับจริงก่อนยืนยัน'); return; }
+  if (!name) { alert('กรุณาพิมพ์ชื่อผู้นับก่อน'); return; }
 
-  const { error } = await sb.from('profiles').update({ last_counter_name: name }).eq('id', me.id);
-  if (error) { alert('บันทึกชื่อไม่สำเร็จ: ' + error.message); return; }
+  const { data, error } = await sb.from('counter_names')
+    .upsert({ name, created_by: me.id }, { onConflict: 'name', ignoreDuplicates: true })
+    .select('id,name');
 
-  prof.last_counter_name = name;
-  const lockText = Q('lockedNameText');
-  if (lockText) lockText.textContent = name;
-  const lockEl = Q('counterNameLocked'), editEl = Q('counterNameEdit');
-  if (editEl) editEl.style.display = 'none';
-  if (lockEl) lockEl.style.display = 'flex';
+  if (error) { alert('เพิ่มชื่อไม่สำเร็จ: ' + error.message); return; }
+
+  // เพิ่ม option ใหม่เข้า dropdown ทันที (กันต้อง reload)
+  const sel = Q('counterNameSelect');
+  if (sel) {
+    const exists = [...sel.options].some(o => o.value === name);
+    if (!exists) {
+      const opt = document.createElement('option');
+      opt.value = name; opt.textContent = name;
+      sel.insertBefore(opt, sel.options[sel.options.length - 1]);
+    }
+    sel.value = name;
+  }
+  window._lastPickedCounterName = name;
+  window._counterNames = window._counterNames || [];
+  if (!window._counterNames.some(c => c.name === name)) {
+    window._counterNames.push({ name });
+  }
+
+  Q('counterNameNewWrap').style.display = 'none';
+  input.value = '';
 }
 
 function toggleExtra(itemId) {
@@ -1330,11 +1384,12 @@ async function submitCount(aid, round, idsStr) {
   const ids = idsStr.split(',');
   const al  = Q('ca'), btn = Q('cb');
 
-  if (!prof?.last_counter_name) {
-    al.innerHTML = `<div class="alert alert-red">⚠️ กรุณายืนยัน "ผู้นับจริง" ด้านบนก่อนบันทึกยอดนับ</div>`;
+  const selectedName = Q('counterNameSelect')?.value;
+  if (!selectedName || selectedName === '__new__') {
+    al.innerHTML = `<div class="alert alert-red">⚠️ กรุณาเลือก "ผู้นับจริง" ด้านบนก่อนบันทึกยอดนับ</div>`;
     return;
   }
-  const actualCounterName = prof.last_counter_name;
+  const actualCounterName = selectedName;
 
   const recs = [];
   for (const iid of ids) {
@@ -1430,7 +1485,7 @@ async function loadSvDash() {
   const curName = sessions.find(s=>s.id===curSid)?.name || sessions[0].name;
 
   const { data: asgns } = await sb.from('assignments')
-    .select('id,status,assigned_to,locations(code,zone,row_no,level),profiles!assigned_to(name)')
+    .select('id,status,assigned_to,location_id,locations(code,zone,row_no,level),profiles!assigned_to(name)')
     .eq('session_id', curSid)
     .order('status');
 
@@ -1453,6 +1508,51 @@ async function loadSvDash() {
   const varCount = asgns.filter(a => ['round1_done','round2_done','round3_done'].includes(a.status)).length;
   const pending  = asgns.filter(a => ['pending','in_progress'].includes(a.status)).length;
   const pct      = Math.round(done / total * 100);
+
+  // ── คำนวณ Diff+ (นับได้มากกว่า OH) / Diff- (นับได้น้อยกว่า OH) ──
+  //    รวมทั้งที่อนุมัติแล้ว (variance_approvals) และที่ยังค้างรอ (round1/2/3_done ยังไม่อนุมัติ)
+  let diffPlus = 0, diffMinus = 0;
+  const resolvedIds = asgns.filter(a => a.status === 'approved').map(a => a.id);
+  const pendingVarAsgns = asgns.filter(a => ['round1_done','round2_done','round3_done'].includes(a.status));
+
+  if (resolvedIds.length) {
+    const { data: vas } = await sb.from('variance_approvals')
+      .select('variance').in('assignment_id', resolvedIds);
+    (vas||[]).forEach(v => {
+      const d = +v.variance;
+      if (d > 0) diffPlus++; else if (d < 0) diffMinus++;
+    });
+  }
+
+  if (pendingVarAsgns.length) {
+    const pendingIds = pendingVarAsgns.map(a => a.id);
+    const asgnLocMap = {};
+    pendingVarAsgns.forEach(a => { asgnLocMap[a.id] = a.location_id; });
+
+    const [{ data: pendingCounts }] = await Promise.all([
+      sb.from('count_records').select('assignment_id,item_id,round,count_qty').in('assignment_id', pendingIds),
+    ]);
+
+    const locIds = [...new Set(pendingVarAsgns.map(a => a.location_id).filter(Boolean))];
+    const { data: snaps } = locIds.length ? await sb.from('stock_snapshot')
+      .select('location_id,item_id,onhand_qty').eq('session_id', curSid).in('location_id', locIds) : { data: [] };
+    const ohMap = {};
+    (snaps||[]).forEach(s => { ohMap[s.location_id+'|'+s.item_id] = +s.onhand_qty; });
+
+    const latestByKey = {};
+    (pendingCounts||[]).forEach(c => {
+      const key = c.assignment_id+'|'+c.item_id;
+      if (!latestByKey[key] || c.round > latestByKey[key].round) latestByKey[key] = c;
+    });
+
+    Object.values(latestByKey).forEach(c => {
+      const locId = asgnLocMap[c.assignment_id];
+      const oh = ohMap[locId+'|'+c.item_id];
+      if (oh === undefined) return;
+      const diff = +c.count_qty - oh;
+      if (diff > 0) diffPlus++; else if (diff < 0) diffMinus++;
+    });
+  }
 
   const byUser = {};
   for (const a of asgns) {
@@ -1528,6 +1628,17 @@ async function loadSvDash() {
       <div class="stat"><div class="stat-n">${total}</div><div class="stat-l">ทั้งหมด</div></div>
       <div class="stat"><div class="stat-n" style="color:var(--vespa-green)">${done}</div><div class="stat-l">เสร็จแล้ว</div></div>
       <div class="stat"><div class="stat-n" style="color:var(--vespa-red)">${varCount}</div><div class="stat-l">Variance</div></div>
+    </div>
+    <div class="card" style="display:flex;justify-content:space-around;align-items:center;padding:14px">
+      <div style="text-align:center">
+        <div style="font-size:24px;font-weight:900;color:var(--vespa-green);font-family:'Fredoka'">🔺 +${diffPlus}</div>
+        <div style="font-size:11px;color:var(--vespa-brown);font-weight:800;margin-top:2px">นับได้เกิน OH</div>
+      </div>
+      <div style="width:2px;height:36px;background:var(--vespa-gray)"></div>
+      <div style="text-align:center">
+        <div style="font-size:24px;font-weight:900;color:var(--vespa-red);font-family:'Fredoka'">🔻 −${diffMinus}</div>
+        <div style="font-size:11px;color:var(--vespa-brown);font-weight:800;margin-top:2px">นับได้ขาด OH</div>
+      </div>
     </div>
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
@@ -1931,8 +2042,13 @@ async function renderManageAssign(container) {
       </div>
     </details>` : ''}
 
-    <div style="margin-top:14px;font-size:13px;font-weight:900;color:var(--vespa-brown)">งานที่ Assign แล้ว</div>
-    <div id="al" style="margin-top:8px"><div class="load" style="padding:16px">⏳</div></div>`;
+    <details style="background:#faf8f3;border:2px solid var(--vespa-brown);border-radius:14px;padding:0;margin-top:14px;overflow:hidden">
+      <summary style="cursor:pointer;padding:12px 14px;font-size:13px;font-weight:900;color:var(--vespa-brown);list-style:none;display:flex;align-items:center;gap:6px">
+        <span style="font-size:15px">📋</span> งานที่ Assign แล้ว
+        <span style="margin-left:auto;font-size:11px;color:#94a3b8;font-weight:600">แตะเพื่อเปิด</span>
+      </summary>
+      <div id="al" style="padding:0 0 4px"><div class="load" style="padding:16px">⏳</div></div>
+    </details>`;
 
   refreshLocs();
   refreshBulkFilters();
@@ -3024,7 +3140,37 @@ async function loadAdUsers() {
     </div>`;
   }
 
+  html += `<div class="card">
+    <div class="sec" style="padding:0 0 10px;color:var(--vespa-brown);background:var(--vespa-white)">รายชื่อ "ผู้นับจริง" ที่ทุกคนเห็นในหน้านับงาน 👤</div>
+    <div id="cn-list"><div class="load" style="padding:16px">⏳</div></div>
+  </div>`;
+
   cnt().innerHTML = html;
+  loadCounterNamesList();
+}
+
+async function loadCounterNamesList() {
+  const listEl = Q('cn-list');
+  if (!listEl) return;
+  const isAdmin = prof?.role === 'admin';
+
+  const { data: names, error } = await sb.from('counter_names').select('id,name').order('name');
+  if (error) { listEl.innerHTML = errBox(error.message); return; }
+  if (!names?.length) { listEl.innerHTML = `<div style="padding:16px;color:#94a3b8;font-size:13px">ยังไม่มีชื่อในระบบ — จะถูกเพิ่มอัตโนมัติเมื่อ Counter พิมพ์ชื่อใหม่ตอนนับงาน</div>`; return; }
+
+  listEl.innerHTML = names.map(n => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--vespa-gray)">
+      <span style="font-size:14px;font-weight:700">👤 ${n.name}</span>
+      ${isAdmin ? `<button onclick="deleteCounterName('${n.id}','${n.name.replace(/'/g,"\\'")}')"
+        style="background:none;border:none;color:var(--vespa-red);font-size:17px;cursor:pointer;padding:2px">🗑️</button>` : ''}
+    </div>`).join('');
+}
+
+async function deleteCounterName(id, name) {
+  if (!confirm(`ลบชื่อ "${name}" ออกจากรายการ?\n\n(ข้อมูลการนับที่เคยใช้ชื่อนี้ไปแล้วจะยังอยู่ ไม่ถูกลบ)`)) return;
+  const { error } = await sb.from('counter_names').delete().eq('id', id);
+  if (error) { alert(error.message); return; }
+  loadCounterNamesList();
 }
 
 async function editUserName(uid) {
