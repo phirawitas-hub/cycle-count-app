@@ -1031,9 +1031,9 @@ function computeItemStatus(oh, r1, r2, r3) {
   if (!has(r1)) return '';
   if (has(oh) && r1 === oh) return 'OK';
   if (!has(r2)) return 'PENDING';
-  if ((has(oh) && r2 === oh) || r2 === r1) return 'OK';
+  if (has(oh) && r2 === oh) return 'OK';
   if (!has(r3)) return 'PENDING';
-  if ((has(oh) && r3 === oh) || r3 === r2) return 'OK';
+  if (has(oh) && r3 === oh) return 'OK';
   return 'Diff';
 }
 
@@ -2837,7 +2837,7 @@ async function loadAdTxLog() {
 
   const [{ data: asgn }, { data: recs }] = await Promise.all([
     sb.from('assignments')
-      .select('id,status,locations(code,zone),profiles!assigned_to(name),count_sessions(name)')
+      .select('id,status,location_id,session_id,locations(code,zone),profiles!assigned_to(name),count_sessions(name)')
       .eq('id', aid).single(),
     sb.from('count_records')
       .select('item_id,round,count_qty,counted_at,remark,photo_url,counted_by,actual_counter_name,profiles!counted_by(name),actual_counter:profiles!actual_counter_id(name),items(code,description)')
@@ -2847,9 +2847,32 @@ async function loadAdTxLog() {
 
   if (!asgn) { go('ad-history'); return; }
 
+  const { data: snaps } = await sb.from('stock_snapshot')
+    .select('item_id,onhand_qty,al_qty')
+    .eq('session_id', asgn.session_id)
+    .eq('location_id', asgn.location_id);
+  const ohMap = {};
+  (snaps||[]).forEach(s => { ohMap[s.item_id] = { oh: +s.onhand_qty, al: s.al_qty }; });
+
+  // ── เทียบยอดที่บันทึกไว้กับ OH ปัจจุบัน — เผื่อ OH ถูกแก้ทีหลัง หรือเคยปิดงานให้ทั้งที่ยอดไม่ตรง ──
+  const byItemRounds = {};
+  (recs||[]).forEach(r => {
+    byItemRounds[r.item_id] = byItemRounds[r.item_id] || {};
+    byItemRounds[r.item_id][r.round] = r.count_qty;
+  });
+  const mismatchItems = [];
+  Object.entries(byItemRounds).forEach(([itemId, v]) => {
+    const ohInfo = ohMap[itemId];
+    if (!ohInfo) return;
+    const st = computeItemStatus(ohInfo.oh, v[1], v[2], v[3]);
+    if (st === 'PENDING' || st === 'Diff') mismatchItems.push(itemId);
+  });
+  const showMismatchWarning = asgn.status === 'completed' && mismatchItems.length > 0;
+
   const si = tagInfo(asgn.status);
   let rows = '';
   for (const r of recs||[]) {
+    const ohInfo = ohMap[r.item_id];
     rows += `<div class="row" style="cursor:default;flex-wrap:wrap">
       <div class="row-body">
         <div class="row-title mono" style="font-size:13px">${r.items?.code||'?'}</div>
@@ -2862,6 +2885,7 @@ async function loadAdTxLog() {
       <div style="text-align:right;flex-shrink:0">
         <div style="font-size:28px;font-weight:900;font-family:'Fredoka';color:var(--vespa-shadow)">${r.count_qty}</div>
         <span class="tag tag-blue" style="font-size:10px">R${r.round}</span>
+        ${ohInfo ? `<div class="oh-chip" style="margin-top:6px;font-size:11px;padding:3px 8px">OH: ${ohInfo.oh}${ohInfo.al!=null?` <span class="al-part">· AL ${ohInfo.al}</span>`:''}</div>` : ''}
       </div>
     </div>`;
   }
@@ -2871,9 +2895,23 @@ async function loadAdTxLog() {
       <div class="mono" style="font-size:18px;font-weight:900">${asgn.locations?.code}</div>
       <div style="font-size:12px;color:var(--vespa-brown);margin-top:4px">${asgn.count_sessions?.name||''} · ${asgn.profiles?.name||'?'}</div>
       <div style="margin-top:8px"><span class="tag ${si.cls}">${si.lbl}</span></div>
+      ${showMismatchWarning ? `
+      <div class="alert alert-red" style="margin-top:12px">
+        ⚠️ พบ ${mismatchItems.length} รายการที่ยอดนับไม่ตรงกับ OH ปัจจุบัน แต่สถานะถูกปิดเป็น "${si.lbl}" ไปแล้ว<br>
+        (มักเกิดจาก OH ถูกแก้ไขภายหลัง หรือนับซ้ำ 2 รอบตรงกันเองแต่ไม่ตรงกับ OH)
+      </div>
+      <button class="btn btn-red btn-sm" onclick="sendBackToVariance('${aid}')">📤 ส่งกลับไปตรวจสอบใน Variance</button>` : ''}
     </div>
     <div class="sec">Transaction Log (${recs?.length||0} รายการ)</div>
     <div class="card card-flush">${rows || '<div class="load" style="padding:20px">ยังไม่มีการนับ</div>'}</div>`;
+}
+
+async function sendBackToVariance(aid) {
+  if (!confirm('ส่งงานนี้กลับไปให้ Supervisor ตรวจสอบใน Variance?\n\nสถานะจะเปลี่ยนเป็น "ส่งเคลียร์กับหัวหน้า"')) return;
+  const { error } = await sb.from('assignments').update({ status: 'round3_done' }).eq('id', aid);
+  if (error) { alert(error.message); return; }
+  alert('✅ ส่งกลับไปตรวจสอบใน Variance เรียบร้อยแล้ว');
+  loadAdTxLog();
 }
 
 async function loadAdSess() { S._manageTab='sessions'; _manageTab='sessions'; await loadAdManage(); }
