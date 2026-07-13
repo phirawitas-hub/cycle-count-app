@@ -213,6 +213,8 @@ body{
 .row.click{cursor:pointer}
 .row.click:hover{background: #F4F1EB}
 .row.click:active{background: var(--vespa-gray)}
+.tab-row{cursor:pointer;transition:background .12s;border-radius:10px}
+.tab-row:active{background: var(--vespa-gray)}
 .row-body{flex:1;min-width:0}
 .row-title{
   font-size:16px;
@@ -1051,7 +1053,7 @@ let _html5Qr = null;   // QR scanner instance
 let _xlsxRawRows = null;   // raw rows from xlsx file
 let _xlsxParsed  = null;   // filtered + aggregated rows ready to import
 let _svDashOpenVarianceIdx = null;   // which variance row is expanded in sv-dash quick-check panel
-let _svVarianceAccordionOpen = false;   // whether the Variance accordion itself is open (persists across refresh)
+let _dashTab = 'summary';   // active tab on the ภาพรวมงาน page (summary / variance / people), persists like _manageTab
 
 // ══ WORKING LOGIC FUNCTIONS ══
 
@@ -1657,25 +1659,27 @@ async function loadSvDash() {
   }
 
   // ── สรุปรายบุคคล (คลิกเพื่อดูรายละเอียด) ──
-  let rows = '';
+  let peopleRows = '';
   Object.entries(byUser).forEach(([uid, u], idx) => {
     const p = Math.round(u.done / u.total * 100);
-    rows += `<div class="row click" onclick="toggleUserDetail('${idx}')" style="flex-wrap:wrap">
-      <div class="row-body">
-        <div class="row-title">👤 ${u.name}</div>
-        <div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap">
-          <span class="tag tag-green">${u.done} เสร็จ</span>
-          ${u.var ? `<span class="tag tag-amber">${u.var} variance</span>` : ''}
-          <span class="tag tag-gray">${u.total - u.done - u.var} รอ</span>
+    peopleRows += `<div class="tab-row" style="border-bottom:2px solid var(--vespa-gray);padding:12px 0" onclick="toggleUserDetail('${idx}')">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:15px;font-weight:900;color:var(--vespa-shadow)">👤 ${u.name}</div>
+          <div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap">
+            <span class="tag tag-green">${u.done} เสร็จ</span>
+            ${u.var ? `<span class="tag tag-amber">${u.var} variance</span>` : ''}
+            <span class="tag tag-gray">${u.total - u.done - u.var} รอ</span>
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:24px;font-weight:900;color:var(--vespa-red);font-family:'Fredoka'">${p}%</div>
+          <div style="font-size:11px;color:var(--vespa-brown);font-weight:800">${u.done}/${u.total}</div>
         </div>
       </div>
-      <div style="text-align:right;flex-shrink:0">
-        <div style="font-size:26px;font-weight:900;color:var(--vespa-red);font-family:'Fredoka'">${p}%</div>
-        <div style="font-size:11px;color:var(--vespa-brown);font-weight:800">${u.done}/${u.total}</div>
-      </div>
-      <span class="caret" style="width:100%;text-align:center;font-size:14px">▾ ดูรายการ</span>
+      <div style="text-align:center;font-size:11px;color:var(--vespa-brown);font-weight:700;margin-top:6px">▾ ดูรายการ</div>
     </div>
-    <div id="udetail_${idx}" style="display:none;background:#faf8f3;padding:8px 14px">
+    <div id="udetail_${idx}" style="display:none;background:#faf8f3;padding:8px 14px;border-radius:10px;margin:6px 0 10px">
       ${u.items.map(a => {
         const si = tagInfo(a.status);
         const l = a.locations;
@@ -1691,34 +1695,72 @@ async function loadSvDash() {
     </div>`;
   });
 
-  // ── รายการที่ต้องติดตาม (รอ Round 2/3) — เปิดเป็นแผงตรวจสอบ Variance แบบ inline ──
+  // ── รายการที่ต้องติดตาม (รอ Round 2/3) — แผงตรวจสอบ Variance แบบ inline ──
   _svDashOpenVarianceIdx = null;
   const needsFollowUp = asgns.filter(a => ['round1_done','round2_done','round3_done'].includes(a.status));
   const varianceRowsHtml = needsFollowUp.length ? needsFollowUp.map((a, i) => {
     const si = tagInfo(a.status);
     const l = a.locations;
-    const isLast = i === needsFollowUp.length - 1;
-    return `<div style="${isLast?'':'border-bottom:3px solid var(--vespa-gray)'}">
-      <div class="row click" style="flex-wrap:wrap;border-bottom:none" onclick="toggleVarianceDetail('${a.id}',${i})">
-        <div class="row-body">
-          <div class="row-title mono">${l?.code||'?'}</div>
-          <div class="row-sub">👤 ${a.profiles?.name||'?'} · ${[l?.zone,l?.row_no,l?.level].filter(Boolean).join(' · ')}</div>
+    return `<div style="border-bottom:2px solid var(--vespa-gray);padding:10px 0">
+      <div class="tab-row" style="display:flex;align-items:center;gap:10px" onclick="toggleVarianceDetail('${a.id}',${i})">
+        <div style="flex:1;min-width:0">
+          <div class="mono" style="font-size:15px;font-weight:900;color:var(--vespa-shadow)">${l?.code||'?'}</div>
+          <div style="font-size:12px;color:var(--vespa-brown);margin-top:2px;font-weight:600">👤 ${a.profiles?.name||'?'} · ${[l?.zone,l?.row_no,l?.level].filter(Boolean).join(' · ')}</div>
         </div>
         <span class="tag ${si.cls}">${si.lbl}</span>
         <span class="caret" style="font-size:16px">▾</span>
       </div>
-      <div id="vdetail_${i}" style="display:none;background:#faf8f3"></div>
+      <div id="vdetail_${i}" style="display:none;background:#faf8f3;margin-top:8px;border-radius:12px;overflow:hidden"></div>
     </div>`;
-  }).join('') : `<div style="padding:24px;text-align:center;color:#94a3b8;font-size:13px">🎉 ไม่มี Variance ที่ต้องตรวจสอบตอนนี้</div>`;
+  }).join('') : `<div style="padding:28px 0;text-align:center;color:#94a3b8;font-size:13px">🎉 ไม่มี Variance ที่ต้องตรวจสอบตอนนี้</div>`;
 
-  const followUpHtml = `
-    <details id="svVarianceAccordion" ${_svVarianceAccordionOpen?'open':''} ontoggle="_svVarianceAccordionOpen=this.open" style="background:#fff1f0;border:3px solid var(--vespa-red);border-radius:20px;padding:0;margin:14px 16px;overflow:hidden;box-shadow:3px 3px 0px var(--vespa-shadow)">
-      <summary style="cursor:pointer;padding:14px 16px;font-size:14px;font-weight:900;color:var(--vespa-red);list-style:none;display:flex;align-items:center;gap:6px">
-        <span style="font-size:16px">🧭</span> ตรวจสอบ & แก้ไข Variance (${needsFollowUp.length})
-        <span style="margin-left:auto;font-size:11px;color:#94a3b8;font-weight:600">แตะเพื่อเปิด</span>
-      </summary>
-      <div style="border-top:3px solid var(--vespa-gray)">${varianceRowsHtml}</div>
-    </details>`;
+  // ── Tab bar แบบเดียวกับหน้า จัดการงาน (Session / จ่ายงาน / Import) ──
+  const tab = S._dashTab || _dashTab;
+  _dashTab = tab;
+  const tabBtn = (id, label, icon, badge) => `
+    <button onclick="S._dashTab='${id}';_dashTab='${id}';loadSvDash()"
+      style="flex:1;padding:10px 6px;border:none;background:none;font-family:inherit;font-size:12px;font-weight:900;cursor:pointer;border-bottom:3px solid ${tab===id?'var(--vespa-red)':'transparent'};color:${tab===id?'var(--vespa-red)':'var(--vespa-brown)'};transition:all .15s">
+      ${icon} ${label}${badge ? ` <span style="background:var(--vespa-red);color:#fff;border-radius:8px;padding:1px 6px;font-size:10px;margin-left:2px">${badge}</span>` : ''}
+    </button>`;
+
+  const summaryTabHtml = `
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
+      <div style="text-align:center;background:#faf8f3;border:2px solid var(--vespa-gray);border-radius:14px;padding:12px 6px">
+        <div style="font-size:26px;font-weight:900;color:var(--vespa-red);font-family:'Fredoka'">${total}</div>
+        <div style="font-size:10px;color:var(--vespa-brown);font-weight:900;margin-top:4px">ทั้งหมด</div>
+      </div>
+      <div style="text-align:center;background:#faf8f3;border:2px solid var(--vespa-gray);border-radius:14px;padding:12px 6px">
+        <div style="font-size:26px;font-weight:900;color:var(--vespa-green);font-family:'Fredoka'">${done}</div>
+        <div style="font-size:10px;color:var(--vespa-brown);font-weight:900;margin-top:4px">เสร็จแล้ว</div>
+      </div>
+      <div style="text-align:center;background:#faf8f3;border:2px solid var(--vespa-gray);border-radius:14px;padding:12px 6px">
+        <div style="font-size:26px;font-weight:900;color:var(--vespa-red);font-family:'Fredoka'">${varCount}</div>
+        <div style="font-size:10px;color:var(--vespa-brown);font-weight:900;margin-top:4px">Variance</div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-around;align-items:center;padding:12px;background:#faf8f3;border:2px solid var(--vespa-gray);border-radius:14px;margin-bottom:14px">
+      <div style="text-align:center">
+        <div style="font-size:22px;font-weight:900;color:var(--vespa-green);font-family:'Fredoka'">🔺 +${diffPlus}</div>
+        <div style="font-size:10px;color:var(--vespa-brown);font-weight:800;margin-top:2px">นับได้เกิน OH</div>
+      </div>
+      <div style="width:2px;height:32px;background:var(--vespa-gray)"></div>
+      <div style="text-align:center">
+        <div style="font-size:22px;font-weight:900;color:var(--vespa-red);font-family:'Fredoka'">🔻 −${diffMinus}</div>
+        <div style="font-size:10px;color:var(--vespa-brown);font-weight:800;margin-top:2px">นับได้ขาด OH</div>
+      </div>
+    </div>
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:13px;font-weight:900;color:var(--vespa-brown)">ความคืบหน้ารวม</span>
+        <span style="font-size:17px;font-weight:900;color:var(--vespa-red);font-family:'Fredoka'">${pct}%</span>
+      </div>
+      <div class="prog"><div class="prog-fill" style="width:${pct}%"></div></div>
+    </div>`;
+
+  const varianceTabHtml = `<div>${varianceRowsHtml}</div>`;
+  const peopleTabHtml = `<div>${peopleRows || `<div style="padding:24px 0;text-align:center;color:#94a3b8;font-size:13px">ยังไม่มีใครถูก Assign งาน</div>`}</div>`;
+
+  const tabContent = tab === 'variance' ? varianceTabHtml : tab === 'people' ? peopleTabHtml : summaryTabHtml;
 
   cnt().innerHTML = `
     <div class="card">
@@ -1727,32 +1769,14 @@ async function loadSvDash() {
         <select onchange="S._dashSid=this.value;loadSvDash()">${sessOpts}</select>
       </div>
     </div>
-    <div class="stats">
-      <div class="stat"><div class="stat-n">${total}</div><div class="stat-l">ทั้งหมด</div></div>
-      <div class="stat"><div class="stat-n" style="color:var(--vespa-green)">${done}</div><div class="stat-l">เสร็จแล้ว</div></div>
-      <div class="stat"><div class="stat-n" style="color:var(--vespa-red)">${varCount}</div><div class="stat-l">Variance</div></div>
-    </div>
-    <div class="card" style="display:flex;justify-content:space-around;align-items:center;padding:14px">
-      <div style="text-align:center">
-        <div style="font-size:24px;font-weight:900;color:var(--vespa-green);font-family:'Fredoka'">🔺 +${diffPlus}</div>
-        <div style="font-size:11px;color:var(--vespa-brown);font-weight:800;margin-top:2px">นับได้เกิน OH</div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="display:flex;border-bottom:3px solid var(--vespa-gray)">
+        ${tabBtn('summary','สรุป','📊')}
+        ${tabBtn('variance','Variance','🧭', needsFollowUp.length || null)}
+        ${tabBtn('people','รายคน','👥')}
       </div>
-      <div style="width:2px;height:36px;background:var(--vespa-gray)"></div>
-      <div style="text-align:center">
-        <div style="font-size:24px;font-weight:900;color:var(--vespa-red);font-family:'Fredoka'">🔻 −${diffMinus}</div>
-        <div style="font-size:11px;color:var(--vespa-brown);font-weight:800;margin-top:2px">นับได้ขาด OH</div>
-      </div>
-    </div>
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <span style="font-size:14px;font-weight:900;color:var(--vespa-brown)">ความคืบหน้ารวม</span>
-        <span style="font-size:18px;font-weight:900;color:var(--vespa-red);font-family:'Fredoka'">${pct}%</span>
-      </div>
-      <div class="prog"><div class="prog-fill" style="width:${pct}%"></div></div>
-    </div>
-    ${followUpHtml}
-    <div class="sec">ความคืบหน้าแต่ละ Counter (แตะเพื่อดูรายละเอียด)</div>
-    <div class="card card-flush">${rows}</div>`;
+      <div id="dash-content" style="padding:16px">${tabContent}</div>
+    </div>`;
 }
 
 function toggleUserDetail(idx) {
