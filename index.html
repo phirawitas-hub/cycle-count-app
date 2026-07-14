@@ -290,6 +290,7 @@ body{
 .btn-red   {background: var(--vespa-red); color: var(--vespa-white)}
 .btn-amber {background: #E9C46A; color: var(--vespa-brown)}
 .btn-ghost {background: var(--vespa-white); color: var(--vespa-brown)}
+.btn-dark  {background: var(--vespa-shadow); color: var(--vespa-white)}
 .btn-sm{
   padding:8px 14px;
   font-size:12px;
@@ -614,6 +615,25 @@ select{
   color: var(--vespa-shadow);
 }
 
+/* ── Icon-in-field inputs (login) ── */
+.input-icon-wrap{position:relative}
+.input-icon-wrap input{padding-left:44px}
+.input-icon{
+  position:absolute;
+  left:14px;
+  top:50%;
+  transform:translateY(-50%);
+  font-size:18px;
+  pointer-events:none;
+  z-index:2;
+}
+.input-icon-right{
+  left:auto;
+  right:14px;
+  pointer-events:auto;
+  cursor:pointer;
+}
+
 /* ── Loader ── */
 .load{
   display:flex;
@@ -802,8 +822,9 @@ async function boot() {
   } else {
     go('login');
   }
-  sb.auth.onAuthStateChange((e) => {
+  sb.auth.onAuthStateChange((e, session) => {
     if (e === 'SIGNED_OUT') { me = null; prof = null; go('login'); }
+    if (e === 'PASSWORD_RECOVERY') { me = session?.user || me; go('reset-password'); }
   });
 }
 
@@ -867,6 +888,7 @@ function go(page, extra = {}) {
 function render() {
   const { page } = S;
   if (page === 'login') { paintLogin(); return; }
+  if (page === 'reset-password') { paintResetPassword(); return; }
 
   const TOPS = {
     'c-tasks':    { t:'งานของฉัน 📋',          back:null },
@@ -952,22 +974,119 @@ function paintLogin() {
   Q('app').innerHTML = `
     <div class="lbox">
       <div class="lcard">
-        <div style="text-align:center;margin-bottom:28px">
-          <div style="font-size:72px; filter: drop-shadow(4px 4px 0px var(--vespa-shadow));">🛵</div>
-          <div style="font-size:28px;font-weight:900;color:var(--vespa-shadow);margin-top:14px;letter-spacing:-.02em; font-family:'Fredoka'">Cycle Count</div>
-          <div style="font-weight:800; font-size:13px;color:var(--vespa-red);margin-top:4px;text-transform:uppercase;letter-spacing:1px">Vespa Vintage Warehouse</div>
+        <div style="text-align:center;margin-bottom:24px">
+          <div style="font-size:60px; filter: drop-shadow(4px 4px 0px var(--vespa-shadow));">🛵</div>
+          <div style="font-size:26px;font-weight:900;color:var(--vespa-shadow);margin-top:12px;letter-spacing:-.02em; font-family:'Fredoka'">เข้าสู่ระบบ</div>
+          <div style="font-weight:800; font-size:12px;color:var(--vespa-red);margin-top:4px;text-transform:uppercase;letter-spacing:1px">Cycle Count · Vespa Vintage Warehouse</div>
         </div>
         <div id="la"></div>
-        <div class="fg" style="text-align: left;"><label>อีเมลทีมงาน</label>
-          <input type="email" id="le" placeholder="name@company.com">
+        <div class="fg input-icon-wrap" style="text-align:left">
+          <span class="input-icon">✉️</span>
+          <input type="email" id="le" placeholder="อีเมลทีมงาน">
         </div>
-        <div class="fg" style="text-align: left;"><label>รหัสผ่าน</label>
-          <input type="password" id="lp" placeholder="••••••••"
+        <div class="fg input-icon-wrap" style="text-align:left;margin-bottom:6px">
+          <span class="input-icon">🔒</span>
+          <input type="password" id="lp" placeholder="รหัสผ่าน" style="padding-right:44px"
             onkeydown="if(event.key==='Enter')doLogin()">
+          <span class="input-icon input-icon-right" id="lp-eye" onclick="togglePasswordVisibility()">👁️</span>
         </div>
-        <button class="btn btn-red" id="lb" onclick="doLogin()" style="margin-top: 10px;">บิดกุญแจเข้าสู่ระบบ 💨</button>
+        <div style="text-align:right;margin-bottom:16px">
+          <a href="javascript:void(0)" onclick="doForgotPassword()" style="font-size:12px;color:var(--vespa-red);font-weight:800;text-decoration:underline">ลืมรหัสผ่าน?</a>
+        </div>
+        <button class="btn btn-red" id="lb" onclick="doLogin()">บิดกุญแจเข้าสู่ระบบ 💨</button>
+
+        <div style="display:flex;align-items:center;gap:10px;margin:20px 0">
+          <div style="flex:1;height:2px;background:var(--vespa-gray)"></div>
+          <span style="font-size:12px;font-weight:800;color:var(--vespa-brown)">หรือ</span>
+          <div style="flex:1;height:2px;background:var(--vespa-gray)"></div>
+        </div>
+
+        <button class="btn btn-ghost" onclick="doOAuth('google')" style="margin-bottom:10px">
+          <svg width="18" height="18" viewBox="0 0 48 48" style="flex-shrink:0">
+            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.9-2.26 5.36-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+          </svg>
+          ดำเนินการต่อด้วย Google
+        </button>
+        <button class="btn btn-dark" onclick="doOAuth('apple')">
+          <svg width="16" height="18" viewBox="0 0 16 18" fill="white" style="flex-shrink:0">
+            <path d="M11.5 6.2c-0.9-1-2.1-1-2.7-1-0.9 0-1.8 0.5-2.4 0.5-0.6 0-1.4-0.5-2.3-0.5-1.2 0-2.3 0.7-2.9 1.8-1.2 2.1-0.3 5.3 0.9 7 0.6 0.9 1.3 1.9 2.2 1.9 0.9 0 1.2-0.6 2.3-0.6 1.1 0 1.4 0.6 2.3 0.6 0.9 0 1.6-0.9 2.2-1.8 0.7-1 1-2 1-2s-1.9-0.7-1.9-2.8c0-1.8 1.5-2.6 1.5-2.7-0.8-1.2-2.1-1.4-2.2-1.4z"/>
+            <path d="M8.7 4c0.5-0.6 0.8-1.4 0.7-2.2-0.7 0-1.6 0.5-2.1 1.1-0.5 0.5-0.9 1.4-0.7 2.2 0.8 0.1 1.6-0.4 2.1-1.1z"/>
+          </svg>
+          ดำเนินการต่อด้วย Apple
+        </button>
+
+        <div style="text-align:center;margin-top:20px;font-size:13px;color:var(--vespa-brown);font-weight:600">
+          ยังไม่มีบัญชี? <a href="javascript:void(0)" onclick="showSignupInfo()" style="color:var(--vespa-red);font-weight:800;text-decoration:underline">สมัครสมาชิก</a>
+        </div>
       </div>
     </div>`;
+}
+
+function togglePasswordVisibility() {
+  const inp = Q('lp');
+  const eye = Q('lp-eye');
+  if (!inp) return;
+  if (inp.type === 'password') { inp.type = 'text'; if (eye) eye.textContent = '🙈'; }
+  else { inp.type = 'password'; if (eye) eye.textContent = '👁️'; }
+}
+
+async function doForgotPassword() {
+  const email = Q('le')?.value.trim();
+  const al = Q('la');
+  if (!email) { al.innerHTML = `<div class="alert alert-amber">กรอกอีเมลด้านบนก่อน แล้วกด "ลืมรหัสผ่าน?" อีกครั้งน้า 🌸</div>`; return; }
+  al.innerHTML = `<div class="alert alert-blue">⏳ กำลังส่งลิงก์รีเซ็ตรหัสผ่านไปที่ ${email}...</div>`;
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.href.split('#')[0] });
+  if (error) { al.innerHTML = `<div class="alert alert-red">${error.message}</div>`; return; }
+  al.innerHTML = `<div class="alert alert-green">✅ ส่งลิงก์รีเซ็ตรหัสผ่านไปที่ ${email} แล้ว เช็คอีเมลได้เลยจ้า</div>`;
+}
+
+async function doOAuth(provider) {
+  const al = Q('la');
+  al.innerHTML = `<div class="alert alert-blue">⏳ กำลังเชื่อมต่อกับ ${provider === 'google' ? 'Google' : 'Apple'}...</div>`;
+  const { error } = await sb.auth.signInWithOAuth({ provider, options: { redirectTo: window.location.href.split('#')[0] } });
+  if (error) { al.innerHTML = `<div class="alert alert-red">เชื่อมต่อไม่สำเร็จ: ${error.message}<br><span style="font-size:11px">(ต้องเปิดใช้งาน ${provider} provider ใน Supabase Dashboard ก่อน)</span></div>`; }
+}
+
+function showSignupInfo() {
+  Q('la').innerHTML = `<div class="alert alert-blue">📮 ระบบนี้สร้างบัญชีโดย Admin เท่านั้น กรุณาติดต่อผู้ดูแลระบบเพื่อขอบัญชีผู้ใช้งานครับ</div>`;
+}
+
+function paintResetPassword() {
+  Q('app').innerHTML = `
+    <div class="lbox">
+      <div class="lcard">
+        <div style="text-align:center;margin-bottom:24px">
+          <div style="font-size:52px">🔑</div>
+          <div style="font-size:22px;font-weight:900;color:var(--vespa-shadow);margin-top:10px;font-family:'Fredoka'">ตั้งรหัสผ่านใหม่</div>
+        </div>
+        <div id="rpa"></div>
+        <div class="fg input-icon-wrap" style="text-align:left">
+          <span class="input-icon">🔒</span>
+          <input type="password" id="rp1" placeholder="รหัสผ่านใหม่ (อย่างน้อย 6 ตัว)">
+        </div>
+        <div class="fg input-icon-wrap" style="text-align:left">
+          <span class="input-icon">🔒</span>
+          <input type="password" id="rp2" placeholder="ยืนยันรหัสผ่านใหม่"
+            onkeydown="if(event.key==='Enter')doResetPassword()">
+        </div>
+        <button class="btn btn-red" onclick="doResetPassword()">✓ บันทึกรหัสผ่านใหม่</button>
+      </div>
+    </div>`;
+}
+
+async function doResetPassword() {
+  const p1 = Q('rp1')?.value, p2 = Q('rp2')?.value;
+  const al = Q('rpa');
+  if (!p1 || p1.length < 6) { al.innerHTML = `<div class="alert alert-red">รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร</div>`; return; }
+  if (p1 !== p2) { al.innerHTML = `<div class="alert alert-red">รหัสผ่านทั้งสองช่องไม่ตรงกัน</div>`; return; }
+  al.innerHTML = `<div class="alert alert-blue">⏳ กำลังบันทึก...</div>`;
+  const { error } = await sb.auth.updateUser({ password: p1 });
+  if (error) { al.innerHTML = `<div class="alert alert-red">${error.message}</div>`; return; }
+  al.innerHTML = `<div class="alert alert-green">✅ ตั้งรหัสผ่านใหม่สำเร็จ กำลังเข้าสู่ระบบ...</div>`;
+  setTimeout(async () => { await loadProf(); go(home()); }, 1200);
 }
 
 async function doLogin() {
@@ -1026,15 +1145,52 @@ function computeZone(locCode, desc) {
   return 'Overfloor';
 }
 
-function computeItemStatus(oh, r1, r2, r3) {
+function computeItemStatus(oh, r1, r2, r3, rules) {
+  const cfg = Object.assign({ maxRounds: 3, repeatMatchAction: 'recount' }, rules || {});
   const has = v => v !== null && v !== undefined && v !== '';
   if (!has(r1)) return '';
   if (has(oh) && r1 === oh) return 'OK';
+
+  // รอบ 1 ไม่ตรง OH → ต้องนับรอบ 2 เสมอ (ยังไม่มี "รอบก่อนหน้า" ให้เทียบ)
   if (!has(r2)) return 'PENDING';
   if (has(oh) && r2 === oh) return 'OK';
+
+  // รอบ 2 ไม่ตรง OH — เช็คว่านับซ้ำได้ค่าเดิมกับรอบ 1 ไหม ตามกติกาที่ตั้งไว้
+  if (has(r1) && r2 === r1) {
+    if (cfg.repeatMatchAction === 'auto_pass') return 'OK';
+    if (cfg.repeatMatchAction === 'send_variance') return 'Diff';
+    // 'recount' (ค่าเริ่มต้น) → นับต่อรอบ 3 ตามปกติด้านล่าง
+  }
+  if (cfg.maxRounds <= 2) return 'Diff'; // ตั้งไว้แค่ 2 รอบ ไม่มีรอบ 3
+
   if (!has(r3)) return 'PENDING';
   if (has(oh) && r3 === oh) return 'OK';
+  if (has(r2) && r3 === r2 && cfg.repeatMatchAction === 'auto_pass') return 'OK';
   return 'Diff';
+}
+
+// ── ดึงกติกาการนับของ Session (จำนวนรอบสูงสุด / การจัดการเมื่อนับซ้ำได้ค่าเดิม) ──
+async function getSessionRules(sessionId) {
+  const { data } = await sb.from('count_sessions')
+    .select('max_rounds,repeat_match_action').eq('id', sessionId).single();
+  return {
+    maxRounds: data?.max_rounds || 3,
+    repeatMatchAction: data?.repeat_match_action || 'recount',
+  };
+}
+
+// ── บันทึก Audit Log แบบ fire-and-forget ไม่ให้บล็อกงานหลัก ถ้ายังไม่ได้รัน migration จะแค่เตือนใน console ──
+function logAudit(sessionId, locationId, itemId, action, oldValue, newValue, assignmentId) {
+  sb.from('audit_log').insert({
+    session_id: sessionId || null,
+    location_id: locationId || null,
+    item_id: itemId || null,
+    assignment_id: assignmentId || null,
+    action,
+    old_value: (oldValue===undefined||oldValue===null) ? null : String(oldValue),
+    new_value: (newValue===undefined||newValue===null) ? null : String(newValue),
+    performed_by: me?.id || null,
+  }).then(({error}) => { if (error) console.warn('audit_log insert failed (migration อาจยังไม่ได้รัน):', error.message); });
 }
 
 function tagInfo(s) {
@@ -1512,14 +1668,15 @@ async function submitCount(aid, round, idsStr) {
     btn.disabled = false; btn.textContent = `✅ ยืนยันรอบที่ ${round}`; return;
   }
 
-  // ── เทียบกับระบบ (OH) และรอบก่อนหน้า เพื่อตัดสิน OK/Diff ──
+  // ── เทียบกับระบบ (OH) และรอบก่อนหน้า เพื่อตัดสิน OK/PENDING/Diff ตามกติกาที่ตั้งไว้ ──
   const { data: asgn } = await sb.from('assignments')
     .select('location_id,session_id').eq('id', aid).single();
 
-  const [{ data: snaps }, { data: allRounds }] = await Promise.all([
+  const [{ data: snaps }, { data: allRounds }, rules] = await Promise.all([
     sb.from('stock_snapshot').select('item_id,onhand_qty')
       .eq('session_id', asgn.session_id).eq('location_id', asgn.location_id),
     sb.from('count_records').select('item_id,round,count_qty').eq('assignment_id', aid),
+    getSessionRules(asgn.session_id),
   ]);
 
   const ohMap = Object.fromEntries(snaps?.map(s => [s.item_id, +s.onhand_qty]) || []);
@@ -1529,14 +1686,16 @@ async function submitCount(aid, round, idsStr) {
     byItem[r.item_id][r.round] = +r.count_qty;
   });
 
-  const needsMore = Object.entries(byItem).some(([iid, v]) => {
-    const st = computeItemStatus(ohMap[iid], v[1], v[2], v[3]);
-    return st === 'PENDING' || st === 'Diff';
-  });
+  const itemStatuses = Object.entries(byItem).map(([iid, v]) =>
+    computeItemStatus(ohMap[iid], v[1], v[2], v[3], rules));
+  const anyPending = itemStatuses.some(st => st === 'PENDING');
+  const anyDiff    = itemStatuses.some(st => st === 'Diff');
+  const needsMore  = anyPending || anyDiff;
 
-  const newStatus = needsMore
-    ? ['','round1_done','round2_done','round3_done'][round]
-    : 'completed';
+  let newStatus;
+  if (anyPending)   newStatus = ['','round1_done','round2_done','round3_done'][round];
+  else if (anyDiff) newStatus = 'round3_done';
+  else              newStatus = 'completed';
 
   await sb.from('assignments').update({ status: newStatus }).eq('id', aid);
   window._photoMap = {};
@@ -1544,11 +1703,11 @@ async function submitCount(aid, round, idsStr) {
   if (!needsMore) {
     alert('✅ ยอดตรงทุกรายการ! บันทึกสำเร็จ');
     go('c-tasks');
-  } else if (round < 3) {
+  } else if (anyPending) {
     alert(`⚠️ ยอดไม่ตรงกับระบบ — กรุณานับรอบที่ ${round+1} อีกครั้งอย่างระมัดระวัง`);
     go('c-count', { aid });
   } else {
-    alert('⚠️ นับครบ 3 รอบแล้วยังไม่ตรง — ส่ง Supervisor ตรวจสอบแล้ว');
+    alert('⚠️ ยอดไม่ตรงกับระบบ — ส่ง Supervisor ตรวจสอบแล้ว');
     go('c-tasks');
   }
 }
@@ -1735,10 +1894,10 @@ async function loadSvDash() {
       </div>
       <div style="text-align:center;background:#faf8f3;border:2px solid var(--vespa-gray);border-radius:14px;padding:12px 6px">
         <div style="font-size:26px;font-weight:900;color:var(--vespa-red);font-family:'Fredoka'">${varCount}</div>
-        <div style="font-size:10px;color:var(--vespa-brown);font-weight:900;margin-top:4px">Variance</div>
+        <div style="font-size:10px;color:var(--vespa-brown);font-weight:900;margin-top:4px">Variance รอตรวจ</div>
       </div>
     </div>
-    <div style="display:flex;justify-content:space-around;align-items:center;padding:12px;background:#faf8f3;border:2px solid var(--vespa-gray);border-radius:14px;margin-bottom:14px">
+    <div style="display:flex;justify-content:space-around;align-items:center;padding:12px;background:#faf8f3;border:2px solid var(--vespa-gray);border-radius:14px;margin-bottom:6px">
       <div style="text-align:center">
         <div style="font-size:22px;font-weight:900;color:var(--vespa-green);font-family:'Fredoka'">🔺 +${diffPlus}</div>
         <div style="font-size:10px;color:var(--vespa-brown);font-weight:800;margin-top:2px">นับได้เกิน OH</div>
@@ -1749,6 +1908,7 @@ async function loadSvDash() {
         <div style="font-size:10px;color:var(--vespa-brown);font-weight:800;margin-top:2px">นับได้ขาด OH</div>
       </div>
     </div>
+    <div style="text-align:center;font-size:10px;color:#94a3b8;margin-bottom:14px">* นับรวมทั้งที่ Supervisor อนุมัติแล้วและที่ยังรอตรวจสอบ — "Variance รอตรวจ" ด้านบนคือเฉพาะที่ยังไม่อนุมัติ</div>
     <div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <span style="font-size:13px;font-weight:900;color:var(--vespa-brown)">ความคืบหน้ารวม</span>
@@ -1812,7 +1972,7 @@ async function renderVarianceItemDetail(aid, container, idx) {
 
   if (!asgn) { container.innerHTML = `<div class="alert alert-red" style="margin:10px">ไม่พบข้อมูล</div>`; return; }
 
-  const [{ data: snaps }, { data: counts }, { data: counters }] = await Promise.all([
+  const [{ data: snaps }, { data: counts }, { data: counters }, rules] = await Promise.all([
     sb.from('stock_snapshot')
       .select('item_id,onhand_qty,al_qty,items(id,code,description)')
       .eq('session_id', asgn.session_id).eq('location_id', asgn.location_id),
@@ -1820,6 +1980,7 @@ async function renderVarianceItemDetail(aid, container, idx) {
       .select('item_id,round,count_qty,remark,photo_url')
       .eq('assignment_id', aid),
     sb.from('profiles').select('id,name').in('role',['counter','supervisor','admin']).order('name'),
+    getSessionRules(asgn.session_id),
   ]);
 
   const byItem = {};
@@ -1841,7 +2002,7 @@ async function renderVarianceItemDetail(aid, container, idx) {
     const it = s.items;
     const v  = byItem[it.id] || {};
     const r1 = v[1]?.count_qty, r2 = v[2]?.count_qty, r3 = v[3]?.count_qty;
-    const stKey = computeItemStatus(+s.onhand_qty, r1, r2, r3);
+    const stKey = computeItemStatus(+s.onhand_qty, r1, r2, r3, rules);
     const st = VS[stKey] || { cls:'tag-gray', lbl:stKey, row:'' };
     const suggested = r3 ?? r2 ?? r1 ?? +s.onhand_qty;
     const alQty = s.al_qty ?? null;
@@ -1863,10 +2024,6 @@ async function renderVarianceItemDetail(aid, container, idx) {
             style="width:64px;padding:5px 3px;font-size:14px;font-weight:900;text-align:center;border:2px solid var(--vespa-brown);border-radius:10px;margin-top:2px;font-family:inherit">
         </div>
       </div>
-      <div style="display:flex;gap:6px;border-top:1px dashed var(--vespa-gray);padding-top:6px">
-        <button class="btn btn-green btn-sm" style="flex:1" onclick="doApproveItem('${aid}','${it.id}','ok')">✅ ตรงได้</button>
-        <button class="btn btn-red btn-sm"   style="flex:1" onclick="doApproveItem('${aid}','${it.id}','lost')">❌ ขาด</button>
-      </div>
     </div>`;
   }
 
@@ -1876,12 +2033,9 @@ async function renderVarianceItemDetail(aid, container, idx) {
   container.innerHTML = `
     <div>${varRows}</div>
     <div style="padding:12px 14px;border-top:2px solid var(--vespa-gray)">
-      <div class="alert alert-blue" style="font-size:11px;margin-bottom:8px">✏️ แก้ "ยอดยืนยัน" หรือ OH ก่อนกดอนุมัติรวม</div>
+      <div class="alert alert-blue" style="font-size:11px;margin-bottom:8px">✏️ แก้ "ยอดยืนยัน" หรือ OH ก่อนกดคอนเฟิร์ม</div>
       <div id="vda_${idx}"></div>
-      <div class="btn-2col" style="margin-bottom:8px">
-        <button class="btn btn-green btn-sm" onclick="doApproveInline('${aid}','ok','${idx}')">✅ ยอดตรงได้ทั้งหมด</button>
-        <button class="btn btn-red btn-sm"   onclick="doApproveInline('${aid}','lost','${idx}')">❌ สินค้าขาดทั้งหมด</button>
-      </div>
+      <button class="btn btn-green" onclick="doApproveInline('${aid}','${idx}')" style="margin-bottom:8px">✅ คอนเฟิร์มยอดนับ</button>
       ${roundNum < 3 ? `
       <div style="background:#f0fdf4;border:2px solid var(--vespa-green);border-radius:12px;padding:10px">
         <div style="font-size:12px;font-weight:900;color:var(--vespa-mint-dark);margin-bottom:6px">🔄 ส่งนับรอบที่ ${roundNum+1} ต่อ — เลือกผู้นับ</div>
@@ -1893,7 +2047,7 @@ async function renderVarianceItemDetail(aid, container, idx) {
     </div>`;
 }
 
-async function doApproveInline(aid, resolution, idx) {
+async function doApproveInline(aid, idx) {
   const al = Q('vda_'+idx);
   if (al) al.innerHTML = `<div class="alert alert-blue" style="font-size:11px">⏳ กำลังบันทึก...</div>`;
 
@@ -1910,7 +2064,7 @@ async function doApproveInline(aid, resolution, idx) {
     const finalQty = isNaN(val) ? +s.onhand_qty : val;
     approvals.push({
       assignment_id: aid, item_id: s.item_id, final_qty: finalQty,
-      variance: finalQty - +s.onhand_qty, resolution, approved_by: me.id,
+      variance: finalQty - +s.onhand_qty, resolution: finalQty === +s.onhand_qty ? 'ok' : 'lost', approved_by: me.id,
     });
   }
   if (approvals.length) {
@@ -1918,7 +2072,7 @@ async function doApproveInline(aid, resolution, idx) {
   }
   await sb.from('assignments').update({ status:'approved' }).eq('id', aid);
 
-  if (al) al.innerHTML = `<div class="alert alert-green" style="font-size:11px">✅ อนุมัติเรียบร้อย — กำลังรีเฟรช...</div>`;
+  if (al) al.innerHTML = `<div class="alert alert-green" style="font-size:11px">✅ คอนเฟิร์มยอดเรียบร้อย — กำลังรีเฟรช...</div>`;
   setTimeout(() => loadSvDash(), 1000);
 }
 
@@ -1926,8 +2080,11 @@ async function doReassignCounter(aid, idx) {
   const sel = Q('vreassign_'+idx);
   const uid = sel?.value;
   if (!uid) return;
+  const { data: before } = await sb.from('assignments')
+    .select('session_id,location_id,profiles!assigned_to(name)').eq('id', aid).single();
   await sb.from('assignments').update({ assigned_to: uid }).eq('id', aid);
   const label = sel.options[sel.selectedIndex]?.textContent || '';
+  logAudit(before?.session_id, before?.location_id, null, 'reassign', before?.profiles?.name, label, aid);
   alert(`✅ ส่งงานนี้ให้ ${label} นับต่อแล้ว`);
   loadSvDash();
 }
@@ -1981,7 +2138,7 @@ async function loadSvDetail() {
   const l = asgn.locations;
   const isAdminOrSup = ['admin','supervisor'].includes(prof?.role);
 
-  const [{ data: snaps }, { data: counts }, { data: counters }] = await Promise.all([
+  const [{ data: snaps }, { data: counts }, { data: counters }, rules] = await Promise.all([
     sb.from('stock_snapshot')
       .select('item_id,onhand_qty,al_qty,items(id,code,description)')
       .eq('session_id', asgn.session_id)
@@ -1990,6 +2147,7 @@ async function loadSvDetail() {
       .select('item_id,round,count_qty,remark,photo_url')
       .eq('assignment_id', aid),
     sb.from('profiles').select('id,name').in('role',['counter','supervisor','admin']).order('name'),
+    getSessionRules(asgn.session_id),
   ]);
 
   const byItem = {};
@@ -2013,7 +2171,7 @@ async function loadSvDetail() {
     const it = s.items;
     const v  = byItem[it.id] || {};
     const r1 = v[1]?.count_qty, r2 = v[2]?.count_qty, r3 = v[3]?.count_qty;
-    const stKey = computeItemStatus(+s.onhand_qty, r1, r2, r3);
+    const stKey = computeItemStatus(+s.onhand_qty, r1, r2, r3, rules);
     const st = VS[stKey] || { cls:'tag-gray', lbl:stKey, row:'' };
     if (stKey === 'Diff') hasVar = true;
 
@@ -2051,11 +2209,6 @@ async function loadSvDetail() {
             style="width:72px;padding:6px 4px;font-size:15px;font-weight:900;text-align:center;border:2px solid var(--vespa-brown);border-radius:10px;margin-top:2px;font-family:inherit">
         </div>
       </div>
-      <!-- ปุ่มอนุมัติต่อ item -->
-      <div style="display:flex;gap:6px;border-top:1px dashed var(--vespa-gray);padding-top:8px">
-        <button class="btn btn-green btn-sm" style="flex:1" onclick="doApproveItem('${aid}','${it.id}','ok')">✅ ตรงได้</button>
-        <button class="btn btn-red btn-sm"   style="flex:1" onclick="doApproveItem('${aid}','${it.id}','lost')">❌ ขาด</button>
-      </div>
     </div>`;
   }
 
@@ -2070,15 +2223,12 @@ async function loadSvDetail() {
         ${hasVar ? `<span class="tag tag-red">⚠️ มี Variance</span>` : `<span class="tag tag-green">✅ ยอดตรง</span>`}
       </div>
     </div>
-    <div class="sec">รายละเอียด — กด ✅/❌ แต่ละรายการ หรือกดรวมด้านล่าง</div>
+    <div class="sec">รายละเอียด — แก้ยอด/OH แล้วกดคอนเฟิร์มด้านล่าง</div>
     <div class="card card-flush">${varRows}</div>
     <div style="padding:12px">
-      <div class="alert alert-blue" style="font-size:12px;margin-bottom:10px">✏️ แก้ "ยอดยืนยัน" หรือ OH ก่อนกดอนุมัติรวม</div>
+      <div class="alert alert-blue" style="font-size:12px;margin-bottom:10px">✏️ แก้ "ยอดยืนยัน" หรือ OH ก่อนกดคอนเฟิร์ม</div>
       <div id="sva"></div>
-      <div class="btn-2col" style="margin-bottom:8px">
-        <button class="btn btn-green" onclick="doApprove('${aid}','ok')">✅ ยอดตรงได้ทั้งหมด</button>
-        <button class="btn btn-red"   onclick="doApprove('${aid}','lost')">❌ สินค้าขาดทั้งหมด</button>
-      </div>
+      <button class="btn btn-green" onclick="doApprove('${aid}')" style="margin-bottom:8px">✅ คอนเฟิร์มยอดนับ</button>
       ${roundNum < 3 ? `
       <div style="background:#f0fdf4;border:2px solid var(--vespa-green);border-radius:14px;padding:12px">
         <div style="font-size:13px;font-weight:900;color:var(--vespa-mint-dark);margin-bottom:8px">🔄 ส่งนับรอบที่ ${roundNum+1} ต่อ — เลือกผู้นับ</div>
@@ -2093,31 +2243,17 @@ async function loadSvDetail() {
 async function updateOH(sessionId, locationId, itemId, newVal) {
   const val = parseFloat(newVal);
   if (isNaN(val)) return;
+  const { data: before } = await sb.from('stock_snapshot').select('onhand_qty')
+    .eq('session_id', sessionId).eq('location_id', locationId).eq('item_id', itemId).single();
   await sb.from('stock_snapshot')
     .update({ onhand_qty: val })
     .eq('session_id', sessionId)
     .eq('location_id', locationId)
     .eq('item_id', itemId);
+  logAudit(sessionId, locationId, itemId, 'oh_edit', before?.onhand_qty, val);
 }
 
-async function doApproveItem(aid, itemId, resolution) {
-  const input = Q('confirm_'+itemId);
-  const val = input ? parseFloat(input.value) : NaN;
-  const { data: asgn } = await sb.from('assignments').select('location_id,session_id').eq('id', aid).single();
-  const { data: snap } = await sb.from('stock_snapshot').select('onhand_qty').eq('session_id', asgn.session_id).eq('location_id', asgn.location_id).eq('item_id', itemId).single();
-  const finalQty = isNaN(val) ? +(snap?.onhand_qty||0) : val;
-  await sb.from('variance_approvals').upsert({
-    assignment_id: aid, item_id: itemId,
-    final_qty: finalQty, variance: finalQty - +(snap?.onhand_qty||0),
-    resolution, approved_by: me.id,
-  }, { onConflict:'assignment_id,item_id' });
-  const btn1 = input?.closest('.vrow')?.querySelector('.btn-green');
-  const btn2 = input?.closest('.vrow')?.querySelector('.btn-red');
-  if (btn1) btn1.style.opacity = resolution==='ok'?'1':'0.4';
-  if (btn2) btn2.style.opacity = resolution==='lost'?'1':'0.4';
-}
-
-async function doApprove(aid, resolution) {
+async function doApprove(aid) {
   const al = Q('sva');
   al.innerHTML = `<div class="alert alert-blue">⏳ กำลังบันทึก...</div>`;
 
@@ -2137,7 +2273,7 @@ async function doApprove(aid, resolution) {
       item_id:       s.item_id,
       final_qty:     finalQty,
       variance:      finalQty - +s.onhand_qty,
-      resolution,
+      resolution:    finalQty === +s.onhand_qty ? 'ok' : 'lost',
       approved_by:   me.id,
     });
   }
@@ -2148,14 +2284,19 @@ async function doApprove(aid, resolution) {
   }
   await sb.from('assignments').update({ status:'approved' }).eq('id', aid);
 
-  al.innerHTML = `<div class="alert alert-green">✅ อนุมัติเรียบร้อย</div>`;
+  al.innerHTML = `<div class="alert alert-green">✅ คอนเฟิร์มยอดเรียบร้อย</div>`;
   setTimeout(() => go('sv-list'), 1500);
 }
 
 async function reqRecount(aid) {
   const uid = Q('recount-user')?.value;
   if (!uid) { alert('กรุณาเลือกผู้นับก่อน'); return; }
+  const sel = Q('recount-user');
+  const { data: before } = await sb.from('assignments')
+    .select('session_id,location_id,profiles!assigned_to(name)').eq('id', aid).single();
   await sb.from('assignments').update({ assigned_to: uid }).eq('id', aid);
+  const label = sel.options[sel.selectedIndex]?.textContent || '';
+  logAudit(before?.session_id, before?.location_id, null, 'reassign', before?.profiles?.name, label, aid);
   Q('sva').innerHTML = `<div class="alert alert-green">✅ ส่งงานนี้ให้ผู้นับที่เลือกแล้ว — Counter จะเห็นงานนี้ในรายการของเขา</div>`;
   setTimeout(() => go('sv-list'), 1500);
 }
@@ -2236,7 +2377,7 @@ async function renderManageSessions(container) {
 async function renderManageAssign(container) {
   const isAdminOrSup = ['admin','supervisor'].includes(prof?.role);
   const [{ data: sessions }, { data: counters }] = await Promise.all([
-    sb.from('count_sessions').select('id,name,show_oh').eq('status','active'),
+    sb.from('count_sessions').select('id,name,show_oh,max_rounds,repeat_match_action').eq('status','active'),
     sb.from('profiles').select('id,name').in('role',['counter','supervisor','admin']).order('name'),
   ]);
 
@@ -2259,7 +2400,7 @@ async function renderManageAssign(container) {
     </details>
     <div id="aa"></div>
     <div class="fg"><label>SESSION</label>
-      <select id="as-sess" onchange="refreshLocs();refreshBulkFilters();syncOHToggle();if(Q('zoneDashDetails')?.open)refreshZoneDashboard();">${sOpts}</select>
+      <select id="as-sess" onchange="refreshLocs();refreshBulkFilters();syncOHToggle();syncCountingRules();if(Q('zoneDashDetails')?.open)refreshZoneDashboard();">${sOpts}</select>
     </div>
 
     ${isAdminOrSup ? `<div style="background:#fffbeb;border:2px solid #d97706;border-radius:14px;padding:12px;margin-bottom:12px">
@@ -2269,6 +2410,25 @@ async function renderManageAssign(container) {
         <span style="font-size:13px;font-weight:700">เปิดให้ Counter เห็นยอด OH ขณะนับ</span>
         <span id="oh-status" class="tag ${firstSess?.show_oh?'tag-green':'tag-gray'}">${firstSess?.show_oh?'🔓 เห็น OH':'🔒 Blind'}</span>
       </label>
+    </div>
+    <div style="background:#fffbeb;border:2px solid #d97706;border-radius:14px;padding:12px;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:900;color:#92400e;margin-bottom:8px">🎛️ กติกาการนับ (Counting Rules)</div>
+      <div class="fg" style="margin-bottom:10px">
+        <label style="font-size:11px">จำนวนรอบสูงสุด</label>
+        <select id="rule-maxrounds" onchange="saveCountingRules()">
+          <option value="2" ${firstSess?.max_rounds===2?'selected':''}>2 รอบ (ไม่ต้องนับรอบ 3)</option>
+          <option value="3" ${firstSess?.max_rounds!==2?'selected':''}>3 รอบ (ค่ามาตรฐาน)</option>
+        </select>
+      </div>
+      <div class="fg" style="margin-bottom:0">
+        <label style="font-size:11px">ถ้านับซ้ำ 2 รอบได้ค่าเดิม แต่ไม่ตรงกับ OH ระบบควร</label>
+        <select id="rule-repeataction" onchange="saveCountingRules()">
+          <option value="recount" ${(firstSess?.repeat_match_action||'recount')==='recount'?'selected':''}>ให้นับรอบถัดไปต่อ (ค่ามาตรฐาน — ปลอดภัยสุด)</option>
+          <option value="auto_pass" ${firstSess?.repeat_match_action==='auto_pass'?'selected':''}>ถือว่าผ่านทันที (เชื่อยอดนับมากกว่าระบบ)</option>
+          <option value="send_variance" ${firstSess?.repeat_match_action==='send_variance'?'selected':''}>ส่งเคลียร์กับหัวหน้าทันที (ไม่ต้องนับรอบถัดไป)</option>
+        </select>
+      </div>
+      <div id="rule-alert" style="margin-top:8px"></div>
     </div>` : ''}
 
     <!-- ══ SINGLE ASSIGN — ใช้บ่อยสุด อยู่บนสุด แต่พับเก็บได้เหมือนกัน ══ -->
@@ -2484,6 +2644,35 @@ async function toggleOH() {
   if (st) { st.textContent = val ? '🔓 เห็น OH' : '🔒 Blind Count'; st.className = `tag ${val?'tag-green':'tag-gray'}`; }
 }
 
+async function syncCountingRules() {
+  const sid = Q('as-sess')?.value;
+  if (!sid) return;
+  const { data } = await sb.from('count_sessions').select('max_rounds,repeat_match_action').eq('id', sid).single();
+  const mr = Q('rule-maxrounds'), ra = Q('rule-repeataction');
+  if (mr) mr.value = String(data?.max_rounds === 2 ? 2 : 3);
+  if (ra) ra.value = data?.repeat_match_action || 'recount';
+}
+
+async function saveCountingRules() {
+  const sid = Q('as-sess')?.value;
+  const al  = Q('rule-alert');
+  if (!sid) return;
+  const maxRounds = parseInt(Q('rule-maxrounds')?.value || '3');
+  const action    = Q('rule-repeataction')?.value || 'recount';
+
+  const { error } = await sb.from('count_sessions')
+    .update({ max_rounds: maxRounds, repeat_match_action: action }).eq('id', sid);
+
+  if (error) {
+    if (al) al.innerHTML = `<div class="alert alert-red" style="font-size:12px;margin-bottom:0">❌ บันทึกกติกาไม่สำเร็จ: ${error.message}<br>ลองตรวจสอบว่ารัน migration เพิ่มคอลัมน์ max_rounds/repeat_match_action ในตาราง count_sessions แล้วหรือยัง</div>`;
+    return;
+  }
+  if (al) {
+    al.innerHTML = `<div class="alert alert-green" style="font-size:12px;margin-bottom:0">✅ บันทึกกติกาแล้ว — มีผลกับการนับครั้งถัดไป</div>`;
+    setTimeout(() => { al.innerHTML = ''; }, 2500);
+  }
+}
+
 async function refreshR23Preview() {
   const sid    = Q('as-sess')?.value;
   const status = Q('r23-round')?.value || 'round1_done';
@@ -2493,7 +2682,7 @@ async function refreshR23Preview() {
   if (!sid || !prev || !btn) return;
 
   let q = sb.from('assignments')
-    .select('id,locations(zone,row_no)')
+    .select('id,session_id,location_id,assigned_to,locations(zone,row_no)')
     .eq('session_id', sid).eq('status', status);
   const { data: asgns, error } = await q;
 
@@ -2533,11 +2722,13 @@ async function doR23Assign() {
   Q('r23-btn').disabled = true;
   Q('r23-preview').innerHTML = `<span>⏳ กำลังอัปเดต ${asgns.length} assignments...</span>`;
 
+  const newLabel = Q('r23-user').options[Q('r23-user').selectedIndex]?.textContent || '';
   const BATCH = 200;
   for (let i = 0; i < asgns.length; i += BATCH) {
-    const ids = asgns.slice(i, i+BATCH).map(a=>a.id);
-    for (const id of ids) {
-      await sb.from('assignments').update({ assigned_to: uid }).eq('id', id);
+    const chunk = asgns.slice(i, i+BATCH);
+    for (const a of chunk) {
+      await sb.from('assignments').update({ assigned_to: uid }).eq('id', a.id);
+      logAudit(a.session_id, a.location_id, null, 'reassign', a.assigned_to, newLabel, a.id);
     }
   }
   Q('r23-preview').innerHTML = `<span style="color:var(--vespa-green);font-weight:900">✅ เปลี่ยน Counter เรียบร้อย ${asgns.length} locations</span>`;
@@ -2770,6 +2961,7 @@ async function loadAdHistory() {
   const sid = S._histSid || '';
   const cid = S._histCid || '';
   const st  = S._histSt  || '';
+  const searchQ = S._histSearch || '';
 
   // Counter list
   const { data: counters } = await sb.from('profiles').select('id,name').order('name');
@@ -2779,6 +2971,14 @@ async function loadAdHistory() {
   cnt().innerHTML = `
     <div class="card">
       <div style="font-size:13px;font-weight:900;color:var(--vespa-brown);margin-bottom:10px">🔍 กรองประวัติการนับ</div>
+      <div class="fg" style="margin-bottom:10px">
+        <label style="font-size:10px">ค้นหา Location / Item / LPN</label>
+        <div style="display:flex;gap:8px">
+          <input id="hist-search" value="${searchQ}" placeholder="เช่น B-EA-001-A, 2H002981, LPN..."
+            onkeydown="if(event.key==='Enter'){S._histSearch=this.value;loadAdHistory();}">
+          <button class="btn btn-blue btn-sm" onclick="S._histSearch=Q('hist-search').value;loadAdHistory()" style="flex-shrink:0">ค้นหา</button>
+        </div>
+      </div>
       <div class="grid-3" style="margin-bottom:8px">
         <div><label style="font-size:10px">SESSION</label>
           <select id="hist-sess" onchange="S._histSid=this.value;loadAdHistory()">${sOpts}</select></div>
@@ -2803,17 +3003,46 @@ async function loadAdHistory() {
   if (Q('hist-st')   && st)  Q('hist-st').value   = st;
 
   let q = sb.from('assignments')
-    .select('id,status,created_at,locations(code,zone),profiles!assigned_to(name),count_sessions(name)')
+    .select('id,status,created_at,location_id,locations(code,zone),profiles!assigned_to(name),count_sessions(name)')
     .order('created_at',{ascending:false})
     .limit(100);
   if (sid) q = q.eq('session_id', sid);
   if (cid) q = q.eq('assigned_to', cid);
   if (st)  q = q.eq('status', st);
 
-  const { data: asgns, error } = await q;
+  let { data: asgns, error } = await q;
   const histList = Q('hist-list');
   if (!histList) return;
   if (error) { histList.innerHTML = errBox(error.message); return; }
+
+  // ── กรองเพิ่มด้วยคำค้นหา (Location code / Item code / LPN) ──
+  const term = searchQ.trim();
+  if (term && asgns?.length) {
+    const termLower = term.toLowerCase();
+    const candidateLocIds = [...new Set(asgns.map(a => a.location_id).filter(Boolean))];
+
+    const locIdsFromLoc = new Set(
+      asgns.filter(a => (a.locations?.code||'').toLowerCase().includes(termLower)).map(a => a.location_id)
+    );
+
+    let locIdsFromItem = new Set(), locIdsFromLPN = new Set();
+    if (candidateLocIds.length) {
+      const { data: matchedItems } = await sb.from('items').select('id').ilike('code', `%${term}%`);
+      const itemIds = (matchedItems||[]).map(i => i.id);
+      if (itemIds.length) {
+        const { data: snapMatches } = await sb.from('stock_snapshot')
+          .select('location_id').in('location_id', candidateLocIds).in('item_id', itemIds);
+        (snapMatches||[]).forEach(m => locIdsFromItem.add(m.location_id));
+      }
+      const { data: lpnMatches } = await sb.from('stock_snapshot_detail')
+        .select('location_id').in('location_id', candidateLocIds).ilike('license_plate', `%${term}%`);
+      (lpnMatches||[]).forEach(m => locIdsFromLPN.add(m.location_id));
+    }
+
+    const matchSet = new Set([...locIdsFromLoc, ...locIdsFromItem, ...locIdsFromLPN]);
+    asgns = asgns.filter(a => matchSet.has(a.location_id));
+  }
+
   if (!asgns?.length) { histList.innerHTML = `<div class="card" style="text-align:center;padding:32px;color:var(--vespa-brown)">ไม่พบข้อมูลตามเงื่อนไข</div>`; return; }
 
   histList.innerHTML = '<div class="card card-flush">' +
@@ -2835,7 +3064,7 @@ async function loadAdTxLog() {
   const { aid } = S;
   if (!aid) { go('ad-history'); return; }
 
-  const [{ data: asgn }, { data: recs }] = await Promise.all([
+  const [{ data: asgn }, { data: recs }, { data: approvals, error: apprErr }] = await Promise.all([
     sb.from('assignments')
       .select('id,status,location_id,session_id,locations(code,zone),profiles!assigned_to(name),count_sessions(name)')
       .eq('id', aid).single(),
@@ -2843,14 +3072,25 @@ async function loadAdTxLog() {
       .select('item_id,round,count_qty,counted_at,remark,photo_url,counted_by,actual_counter_name,profiles!counted_by(name),actual_counter:profiles!actual_counter_id(name),items(code,description)')
       .eq('assignment_id', aid)
       .order('counted_at'),
+    sb.from('variance_approvals')
+      .select('item_id,final_qty,variance,resolution,approved_by,created_at,items(code,description),profiles!approved_by(name)')
+      .eq('assignment_id', aid)
+      .order('created_at'),
   ]);
 
   if (!asgn) { go('ad-history'); return; }
 
-  const { data: snaps } = await sb.from('stock_snapshot')
-    .select('item_id,onhand_qty,al_qty')
-    .eq('session_id', asgn.session_id)
-    .eq('location_id', asgn.location_id);
+  const [{ data: snaps }, { data: auditRows, error: auditErr }, rules] = await Promise.all([
+    sb.from('stock_snapshot')
+      .select('item_id,onhand_qty,al_qty')
+      .eq('session_id', asgn.session_id)
+      .eq('location_id', asgn.location_id),
+    sb.from('audit_log')
+      .select('action,old_value,new_value,item_id,created_at,items(code,description),profiles!performed_by(name)')
+      .eq('session_id', asgn.session_id).eq('location_id', asgn.location_id)
+      .order('created_at'),
+    getSessionRules(asgn.session_id),
+  ]);
   const ohMap = {};
   (snaps||[]).forEach(s => { ohMap[s.item_id] = { oh: +s.onhand_qty, al: s.al_qty }; });
 
@@ -2864,30 +3104,75 @@ async function loadAdTxLog() {
   Object.entries(byItemRounds).forEach(([itemId, v]) => {
     const ohInfo = ohMap[itemId];
     if (!ohInfo) return;
-    const st = computeItemStatus(ohInfo.oh, v[1], v[2], v[3]);
+    const st = computeItemStatus(ohInfo.oh, v[1], v[2], v[3], rules);
     if (st === 'PENDING' || st === 'Diff') mismatchItems.push(itemId);
   });
   const showMismatchWarning = asgn.status === 'completed' && mismatchItems.length > 0;
 
+  // ── รวม count_records + variance_approvals + audit_log เป็นไทม์ไลน์เดียว เรียงตามเวลา ──
+  //    (apprErr/auditErr อาจเกิดถ้าตาราง/คอลัมน์ยังไม่มี (ยังไม่ได้รัน migration) — ข้ามส่วนนั้นแบบเงียบๆ ไม่ทำให้หน้าพัง)
+  const events = [];
+  (recs||[]).forEach(r => events.push({ type:'count', at: r.counted_at, data: r }));
+  if (!apprErr) (approvals||[]).forEach(a => events.push({ type:'approval', at: a.created_at, data: a }));
+  if (!auditErr) (auditRows||[]).forEach(a => events.push({ type:'audit', at: a.created_at, data: a }));
+  events.sort((a,b) => new Date(a.at||0) - new Date(b.at||0));
+
   const si = tagInfo(asgn.status);
+  const ACTION_META = {
+    oh_edit:  { icon:'✏️', label:'แก้ไขยอด OH' },
+    reassign: { icon:'🔄', label:'เปลี่ยนผู้นับ' },
+  };
   let rows = '';
-  for (const r of recs||[]) {
-    const ohInfo = ohMap[r.item_id];
-    rows += `<div class="row" style="cursor:default;flex-wrap:wrap">
-      <div class="row-body">
-        <div class="row-title mono" style="font-size:13px">${r.items?.code||'?'}</div>
-        <div class="row-sub">${r.items?.description||''}</div>
-        <div class="row-sub">รอบ ${r.round} · นับโดย: ${r.actual_counter_name || r.actual_counter?.name || r.profiles?.name || '?'}</div>
-        <div class="row-sub">${new Date(r.counted_at).toLocaleString('th-TH')}</div>
-        ${r.remark ? `<div class="row-sub" style="color:#7c3aed">📝 ${r.remark}</div>` : ''}
-        ${r.photo_url ? `<a href="${r.photo_url}" target="_blank" style="font-size:11px;color:var(--vespa-red)">📷 ดูรูป</a>` : ''}
-      </div>
-      <div style="text-align:right;flex-shrink:0">
-        <div style="font-size:28px;font-weight:900;font-family:'Fredoka';color:var(--vespa-shadow)">${r.count_qty}</div>
-        <span class="tag tag-blue" style="font-size:10px">R${r.round}</span>
-        ${ohInfo ? `<div class="oh-chip" style="margin-top:6px;font-size:11px;padding:3px 8px">OH: ${ohInfo.oh}${ohInfo.al!=null?` <span class="al-part">· AL ${ohInfo.al}</span>`:''}</div>` : ''}
-      </div>
-    </div>`;
+  for (const ev of events) {
+    if (ev.type === 'count') {
+      const r = ev.data;
+      const ohInfo = ohMap[r.item_id];
+      rows += `<div class="row" style="cursor:default;flex-wrap:wrap">
+        <div class="row-body">
+          <div class="row-title mono" style="font-size:13px">${r.items?.code||'?'}</div>
+          <div class="row-sub">${r.items?.description||''}</div>
+          <div class="row-sub">รอบ ${r.round} · นับโดย: ${r.actual_counter_name || r.actual_counter?.name || r.profiles?.name || '?'}</div>
+          <div class="row-sub">${r.counted_at ? new Date(r.counted_at).toLocaleString('th-TH') : ''}</div>
+          ${r.remark ? `<div class="row-sub" style="color:#7c3aed">📝 ${r.remark}</div>` : ''}
+          ${r.photo_url ? `<a href="${r.photo_url}" target="_blank" style="font-size:11px;color:var(--vespa-red)">📷 ดูรูป</a>` : ''}
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:28px;font-weight:900;font-family:'Fredoka';color:var(--vespa-shadow)">${r.count_qty}</div>
+          <span class="tag tag-blue" style="font-size:10px">R${r.round}</span>
+          ${ohInfo ? `<div class="oh-chip" style="margin-top:6px;font-size:11px;padding:3px 8px">OH: ${ohInfo.oh}${ohInfo.al!=null?` <span class="al-part">· AL ${ohInfo.al}</span>`:''}</div>` : ''}
+        </div>
+      </div>`;
+    } else if (ev.type === 'approval') {
+      const a = ev.data;
+      const isOk = a.resolution === 'ok';
+      rows += `<div class="row" style="cursor:default;flex-wrap:wrap;background:${isOk?'#f0fdf4':'#fff1f0'}">
+        <div class="row-body">
+          <div class="row-title mono" style="font-size:13px">${a.items?.code||'?'}</div>
+          <div class="row-sub">${a.items?.description||''}</div>
+          <div class="row-sub">${isOk?'✅':'❌'} คอนเฟิร์มยอดโดย Supervisor: ${a.profiles?.name||'?'}</div>
+          <div class="row-sub">${a.created_at ? new Date(a.created_at).toLocaleString('th-TH') : ''}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:28px;font-weight:900;font-family:'Fredoka';color:var(--vespa-shadow)">${a.final_qty}</div>
+          <span class="tag ${isOk?'tag-green':'tag-red'}" style="font-size:10px">${a.variance>0?'+':''}${a.variance}</span>
+        </div>
+      </div>`;
+    } else {
+      const a = ev.data;
+      const meta = ACTION_META[a.action] || { icon:'📝', label: a.action };
+      rows += `<div class="row" style="cursor:default;flex-wrap:wrap;background:#eef6ff">
+        <div class="row-body">
+          <div class="row-title mono" style="font-size:13px">${a.items?.code || meta.label}</div>
+          ${a.items?.code ? `<div class="row-sub">${meta.icon} ${meta.label}</div>` : ''}
+          <div class="row-sub">โดย: ${a.profiles?.name||'?'}</div>
+          <div class="row-sub">${a.created_at ? new Date(a.created_at).toLocaleString('th-TH') : ''}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:14px;font-weight:900;color:var(--vespa-shadow)">${a.old_value ?? '—'} → ${a.new_value ?? '—'}</div>
+          <span class="tag tag-blue" style="font-size:10px">${meta.icon} ${meta.label}</span>
+        </div>
+      </div>`;
+    }
   }
 
   cnt().innerHTML = `
@@ -2902,7 +3187,7 @@ async function loadAdTxLog() {
       </div>
       <button class="btn btn-red btn-sm" onclick="sendBackToVariance('${aid}')">📤 ส่งกลับไปตรวจสอบใน Variance</button>` : ''}
     </div>
-    <div class="sec">Transaction Log (${recs?.length||0} รายการ)</div>
+    <div class="sec">Transaction Log (${events.length} รายการ)</div>
     <div class="card card-flush">${rows || '<div class="load" style="padding:20px">ยังไม่มีการนับ</div>'}</div>`;
 }
 
