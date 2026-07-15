@@ -721,6 +721,53 @@ select{
   font-weight: 700;
 }
 
+/* ── Popup Modal (generic) ── */
+.modal-overlay{
+  position:fixed;
+  inset:0;
+  background: rgba(45, 32, 24, 0.65);
+  z-index:998;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
+.modal-card{
+  background: var(--vespa-white);
+  border: 4px solid var(--vespa-brown);
+  border-radius:24px;
+  padding:24px;
+  width:100%;
+  max-width:400px;
+  max-height:85vh;
+  overflow-y:auto;
+  box-shadow: 6px 6px 0px var(--vespa-shadow);
+}
+.modal-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:16px;
+  font-size:16px;
+  font-weight:900;
+  color:var(--vespa-brown);
+}
+.modal-header button{
+  background: var(--vespa-red);
+  border: 3px solid var(--vespa-brown);
+  color: var(--vespa-white);
+  width:32px;
+  height:32px;
+  border-radius:50%;
+  font-size:16px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow: 0 2px 0px var(--vespa-shadow);
+  flex-shrink:0;
+}
+
 /* ── Scanner overlay ── */
 .scan-overlay{
   position:fixed;
@@ -1149,24 +1196,28 @@ function computeItemStatus(oh, r1, r2, r3, rules) {
   const cfg = Object.assign({ maxRounds: 3, repeatMatchAction: 'recount' }, rules || {});
   const has = v => v !== null && v !== undefined && v !== '';
   if (!has(r1)) return '';
-  if (has(oh) && r1 === oh) return 'OK';
 
-  // รอบ 1 ไม่ตรง OH → ต้องนับรอบ 2 เสมอ (ยังไม่มี "รอบก่อนหน้า" ให้เทียบ)
-  if (!has(r2)) return 'PENDING';
-  if (has(oh) && r2 === oh) return 'OK';
+  const rounds = [r1, r2, r3].filter(has).slice(0, cfg.maxRounds);
 
-  // รอบ 2 ไม่ตรง OH — เช็คว่านับซ้ำได้ค่าเดิมกับรอบ 1 ไหม ตามกติกาที่ตั้งไว้
-  if (has(r1) && r2 === r1) {
+  // ตรงกับ OH ไม่ว่ารอบไหน (แม้ไม่ใช่รอบล่าสุด) → ผ่านทันทีเสมอ
+  if (has(oh) && rounds.some(r => r === oh)) return 'OK';
+
+  // ไม่ตรง OH เลย — เช็คว่ามีคู่ไหนในรอบที่นับมาแล้วตรงกันเองไหม (ไม่ต้องติดกัน เช่น รอบ 1 กับ 3 ก็นับ)
+  let repeatFound = false;
+  for (let i = 0; i < rounds.length && !repeatFound; i++) {
+    for (let j = i + 1; j < rounds.length; j++) {
+      if (rounds[i] === rounds[j]) { repeatFound = true; break; }
+    }
+  }
+
+  if (repeatFound) {
     if (cfg.repeatMatchAction === 'auto_pass') return 'OK';
     if (cfg.repeatMatchAction === 'send_variance') return 'Diff';
-    // 'recount' (ค่าเริ่มต้น) → นับต่อรอบ 3 ตามปกติด้านล่าง
+    // 'recount' (ค่าเริ่มต้น) → ยังไม่ตัดสิน ตกไปเช็คว่านับต่อได้อีกไหมด้านล่าง
   }
-  if (cfg.maxRounds <= 2) return 'Diff'; // ตั้งไว้แค่ 2 รอบ ไม่มีรอบ 3
 
-  if (!has(r3)) return 'PENDING';
-  if (has(oh) && r3 === oh) return 'OK';
-  if (has(r2) && r3 === r2 && cfg.repeatMatchAction === 'auto_pass') return 'OK';
-  return 'Diff';
+  if (rounds.length < cfg.maxRounds) return 'PENDING'; // ยังนับรอบถัดไปได้
+  return 'Diff'; // ครบโควตารอบแล้ว ไม่มีคู่ไหนตรงกันเลย (หรือมีแต่กติกาบอกให้นับต่อ)
 }
 
 // ── ดึงกติกาการนับของ Session (จำนวนรอบสูงสุด / การจัดการเมื่อนับซ้ำได้ค่าเดิม) ──
@@ -2377,7 +2428,7 @@ async function renderManageSessions(container) {
 async function renderManageAssign(container) {
   const isAdminOrSup = ['admin','supervisor'].includes(prof?.role);
   const [{ data: sessions }, { data: counters }] = await Promise.all([
-    sb.from('count_sessions').select('id,name,show_oh,max_rounds,repeat_match_action').eq('status','active'),
+    sb.from('count_sessions').select('id,name,show_oh').eq('status','active'),
     sb.from('profiles').select('id,name').in('role',['counter','supervisor','admin']).order('name'),
   ]);
 
@@ -2400,7 +2451,7 @@ async function renderManageAssign(container) {
     </details>
     <div id="aa"></div>
     <div class="fg"><label>SESSION</label>
-      <select id="as-sess" onchange="refreshLocs();refreshBulkFilters();syncOHToggle();syncCountingRules();if(Q('zoneDashDetails')?.open)refreshZoneDashboard();">${sOpts}</select>
+      <select id="as-sess" onchange="refreshLocs();refreshBulkFilters();syncOHToggle();if(Q('zoneDashDetails')?.open)refreshZoneDashboard();">${sOpts}</select>
     </div>
 
     ${isAdminOrSup ? `<div style="background:#fffbeb;border:2px solid #d97706;border-radius:14px;padding:12px;margin-bottom:12px">
@@ -2410,25 +2461,6 @@ async function renderManageAssign(container) {
         <span style="font-size:13px;font-weight:700">เปิดให้ Counter เห็นยอด OH ขณะนับ</span>
         <span id="oh-status" class="tag ${firstSess?.show_oh?'tag-green':'tag-gray'}">${firstSess?.show_oh?'🔓 เห็น OH':'🔒 Blind'}</span>
       </label>
-    </div>
-    <div style="background:#fffbeb;border:2px solid #d97706;border-radius:14px;padding:12px;margin-bottom:12px">
-      <div style="font-size:13px;font-weight:900;color:#92400e;margin-bottom:8px">🎛️ กติกาการนับ (Counting Rules)</div>
-      <div class="fg" style="margin-bottom:10px">
-        <label style="font-size:11px">จำนวนรอบสูงสุด</label>
-        <select id="rule-maxrounds" onchange="saveCountingRules()">
-          <option value="2" ${firstSess?.max_rounds===2?'selected':''}>2 รอบ (ไม่ต้องนับรอบ 3)</option>
-          <option value="3" ${firstSess?.max_rounds!==2?'selected':''}>3 รอบ (ค่ามาตรฐาน)</option>
-        </select>
-      </div>
-      <div class="fg" style="margin-bottom:0">
-        <label style="font-size:11px">ถ้านับซ้ำ 2 รอบได้ค่าเดิม แต่ไม่ตรงกับ OH ระบบควร</label>
-        <select id="rule-repeataction" onchange="saveCountingRules()">
-          <option value="recount" ${(firstSess?.repeat_match_action||'recount')==='recount'?'selected':''}>ให้นับรอบถัดไปต่อ (ค่ามาตรฐาน — ปลอดภัยสุด)</option>
-          <option value="auto_pass" ${firstSess?.repeat_match_action==='auto_pass'?'selected':''}>ถือว่าผ่านทันที (เชื่อยอดนับมากกว่าระบบ)</option>
-          <option value="send_variance" ${firstSess?.repeat_match_action==='send_variance'?'selected':''}>ส่งเคลียร์กับหัวหน้าทันที (ไม่ต้องนับรอบถัดไป)</option>
-        </select>
-      </div>
-      <div id="rule-alert" style="margin-top:8px"></div>
     </div>` : ''}
 
     <!-- ══ SINGLE ASSIGN — ใช้บ่อยสุด อยู่บนสุด แต่พับเก็บได้เหมือนกัน ══ -->
@@ -2644,8 +2676,55 @@ async function toggleOH() {
   if (st) { st.textContent = val ? '🔓 เห็น OH' : '🔒 Blind Count'; st.className = `tag ${val?'tag-green':'tag-gray'}`; }
 }
 
+async function openRulesModal() {
+  const { data: sessions } = await sb.from('count_sessions')
+    .select('id,name,status,max_rounds,repeat_match_action')
+    .order('created_at', { ascending:false });
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'rulesModalOverlay';
+  overlay.onclick = (e) => { if (e.target === overlay) closeRulesModal(); };
+
+  const first = sessions?.[0];
+  const sOpts = (sessions||[]).map(s =>
+    `<option value="${s.id}">${s.name} (${s.status})</option>`).join('') || '<option value="">ไม่มี Session</option>';
+
+  overlay.innerHTML = `
+    <div class="modal-card">
+      <div class="modal-header">
+        <span>🎛️ กติกาการนับ (Counting Rules)</span>
+        <button onclick="closeRulesModal()">✕</button>
+      </div>
+      <div class="fg"><label>Session</label>
+        <select id="rules-modal-sess" onchange="syncCountingRules()">${sOpts}</select>
+      </div>
+      <div class="fg" style="margin-bottom:10px">
+        <label style="font-size:11px">จำนวนรอบสูงสุด</label>
+        <select id="rule-maxrounds" onchange="saveCountingRules()">
+          <option value="2" ${first?.max_rounds===2?'selected':''}>2 รอบ (ไม่ต้องนับรอบ 3)</option>
+          <option value="3" ${first?.max_rounds!==2?'selected':''}>3 รอบ (ค่ามาตรฐาน)</option>
+        </select>
+      </div>
+      <div class="fg" style="margin-bottom:0">
+        <label style="font-size:11px">ถ้านับซ้ำได้ค่าเดิม (คู่ไหนก็ได้) แต่ไม่ตรงกับ OH ระบบควร</label>
+        <select id="rule-repeataction" onchange="saveCountingRules()">
+          <option value="recount" ${(first?.repeat_match_action||'recount')==='recount'?'selected':''}>ให้นับรอบถัดไปต่อ (ค่ามาตรฐาน — ปลอดภัยสุด)</option>
+          <option value="auto_pass" ${first?.repeat_match_action==='auto_pass'?'selected':''}>ถือว่าผ่านทันที (เชื่อยอดนับมากกว่าระบบ)</option>
+          <option value="send_variance" ${first?.repeat_match_action==='send_variance'?'selected':''}>ส่งเคลียร์กับหัวหน้าทันที (ไม่ต้องนับรอบถัดไป)</option>
+        </select>
+      </div>
+      <div id="rule-alert" style="margin-top:10px"></div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function closeRulesModal() {
+  Q('rulesModalOverlay')?.remove();
+}
+
 async function syncCountingRules() {
-  const sid = Q('as-sess')?.value;
+  const sid = Q('rules-modal-sess')?.value;
   if (!sid) return;
   const { data } = await sb.from('count_sessions').select('max_rounds,repeat_match_action').eq('id', sid).single();
   const mr = Q('rule-maxrounds'), ra = Q('rule-repeataction');
@@ -2654,7 +2733,7 @@ async function syncCountingRules() {
 }
 
 async function saveCountingRules() {
-  const sid = Q('as-sess')?.value;
+  const sid = Q('rules-modal-sess')?.value;
   const al  = Q('rule-alert');
   if (!sid) return;
   const maxRounds = parseInt(Q('rule-maxrounds')?.value || '3');
@@ -3789,7 +3868,12 @@ async function loadAdUsers() {
     </div>`;
   }
 
-  let html = `
+  let html = isAdmin ? `
+  <div style="margin:14px 16px">
+    <button class="btn btn-amber" onclick="openRulesModal()">🎛️ กติกาการนับ (Counting Rules)</button>
+  </div>` : '';
+
+  html += `
   <details style="background:var(--vespa-white);border:3px solid var(--vespa-brown);border-radius:20px;padding:0;margin:14px 16px;overflow:hidden;box-shadow:4px 4px 0px var(--vespa-shadow)">
     <summary style="cursor:pointer;padding:16px 20px;font-size:15px;font-weight:900;color:var(--vespa-brown);list-style:none;display:flex;align-items:center;gap:6px">
       <span style="font-size:17px">👥</span> รายชื่อผู้ใช้งานระบบ (${users?.length||0})
