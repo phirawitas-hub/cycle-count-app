@@ -1195,6 +1195,11 @@ function computeZone(locCode, desc) {
 function computeItemStatus(oh, r1, r2, r3, rules) {
   const cfg = Object.assign({ maxRounds: 3, repeatMatchAction: 'recount' }, rules || {});
   const has = v => v !== null && v !== undefined && v !== '';
+  // Supabase ส่งคอลัมน์ numeric/decimal กลับมาเป็น string บางที (กัน precision loss)
+  // แปลงเป็นตัวเลขให้ตรงกันทุกตัวตรงนี้ที่เดียว กันปัญหา "22" !== 22 ที่ทำให้จับคู่ไม่เจอ
+  const num = v => has(v) ? +v : v;
+  oh = num(oh); r1 = num(r1); r2 = num(r2); r3 = num(r3);
+
   if (!has(r1)) return '';
 
   const rounds = [r1, r2, r3].filter(has).slice(0, cfg.maxRounds);
@@ -2697,26 +2702,61 @@ async function openRulesModal() {
         <button onclick="closeRulesModal()">✕</button>
       </div>
       <div class="fg"><label>Session</label>
-        <select id="rules-modal-sess" onchange="syncCountingRules()">${sOpts}</select>
+        <select id="rules-modal-sess" onchange="syncCountingRules();testRule();">${sOpts}</select>
       </div>
       <div class="fg" style="margin-bottom:10px">
         <label style="font-size:11px">จำนวนรอบสูงสุด</label>
-        <select id="rule-maxrounds" onchange="saveCountingRules()">
+        <select id="rule-maxrounds" onchange="saveCountingRules();testRule();">
           <option value="2" ${first?.max_rounds===2?'selected':''}>2 รอบ (ไม่ต้องนับรอบ 3)</option>
           <option value="3" ${first?.max_rounds!==2?'selected':''}>3 รอบ (ค่ามาตรฐาน)</option>
         </select>
       </div>
       <div class="fg" style="margin-bottom:0">
         <label style="font-size:11px">ถ้านับซ้ำได้ค่าเดิม (คู่ไหนก็ได้) แต่ไม่ตรงกับ OH ระบบควร</label>
-        <select id="rule-repeataction" onchange="saveCountingRules()">
+        <select id="rule-repeataction" onchange="saveCountingRules();testRule();">
           <option value="recount" ${(first?.repeat_match_action||'recount')==='recount'?'selected':''}>ให้นับรอบถัดไปต่อ (ค่ามาตรฐาน — ปลอดภัยสุด)</option>
           <option value="auto_pass" ${first?.repeat_match_action==='auto_pass'?'selected':''}>ถือว่าผ่านทันที (เชื่อยอดนับมากกว่าระบบ)</option>
           <option value="send_variance" ${first?.repeat_match_action==='send_variance'?'selected':''}>ส่งเคลียร์กับหัวหน้าทันที (ไม่ต้องนับรอบถัดไป)</option>
         </select>
       </div>
       <div id="rule-alert" style="margin-top:10px"></div>
+
+      <div style="background:#eef6ff;border:2px solid #457B9D;border-radius:14px;padding:12px;margin-top:14px">
+        <div style="font-size:12px;font-weight:900;color:#1d4ed8;margin-bottom:8px">🧪 ทดสอบกติกา — ใส่ตัวเลขดูผลลัพธ์ทันที</div>
+        <div class="grid-3" style="margin-bottom:8px">
+          <div><label style="font-size:10px">OH</label><input type="number" id="test-oh" value="22" oninput="testRule()"></div>
+          <div><label style="font-size:10px">Count 1</label><input type="number" id="test-r1" placeholder="-" oninput="testRule()"></div>
+          <div><label style="font-size:10px">Count 2</label><input type="number" id="test-r2" placeholder="-" oninput="testRule()"></div>
+        </div>
+        <div class="fg" style="margin-bottom:8px"><label style="font-size:10px">Count 3</label><input type="number" id="test-r3" placeholder="-" oninput="testRule()"></div>
+        <div id="test-result" style="text-align:center;padding:10px;border-radius:10px;font-weight:900;font-size:14px;background:#f1f5f9;color:#64748b">กรอกตัวเลขด้านบนเพื่อดูผล</div>
+      </div>
     </div>`;
   document.body.appendChild(overlay);
+  testRule();
+}
+
+function testRule() {
+  const res = Q('test-result');
+  if (!res) return;
+  const ohv = Q('test-oh')?.value;
+  const oh = ohv === '' ? null : parseFloat(ohv);
+  const pick = id => { const v = Q(id)?.value; return (v===undefined||v==='') ? null : parseFloat(v); };
+  const r1 = pick('test-r1'), r2 = pick('test-r2'), r3 = pick('test-r3');
+  const maxRounds = parseInt(Q('rule-maxrounds')?.value || '3');
+  const action = Q('rule-repeataction')?.value || 'recount';
+  const st = r1 === null ? '' : computeItemStatus(oh, r1, r2, r3, { maxRounds, repeatMatchAction: action });
+
+  const MAP = {
+    OK:      ['✅ ผ่าน (ปิดงานได้เลย)',        '#14532d', '#D4E2D4'],
+    PENDING: ['🔄 นับใหม่ (รอนับรอบถัดไป)',      '#92400e', '#FEF3C7'],
+    Diff:    ['❌ ไม่ผ่าน — ส่งเคลียร์กับหัวหน้า', '#991b1b', '#FFD0D0'],
+    '':      ['— กรอก Count 1 อย่างน้อยก่อน',    '#64748b', '#f1f5f9'],
+  };
+  const [txt, color, bg] = MAP[st] || [st, '#000', '#fff'];
+  res.textContent = txt;
+  res.style.color = color;
+  res.style.background = bg;
 }
 
 function closeRulesModal() {
