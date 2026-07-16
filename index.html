@@ -2083,8 +2083,15 @@ async function renderVarianceItemDetail(aid, container, idx) {
     </div>`;
   }
 
-  const roundNum = { round1_done:1, round2_done:2, round3_done:3 }[asgn.status] || 1;
-  const cOpts = (counters||[]).map(u=>`<option value="${u.id}" ${u.id===asgn.assigned_to?'selected':''}>${u.name}</option>`).join('');
+  // รอบถัดไปที่จะส่งนับ อิงจากรอบที่นับจริงแล้ว ไม่ใช่จาก status เพียวๆ
+  // (เพราะกติกา "1 รอบ" อาจทำให้ status กระโดดไป round3_done ทั้งที่นับจริงแค่รอบเดียว)
+  let maxRoundCounted = 0;
+  counts?.forEach(c => { if (c.round > maxRoundCounted) maxRoundCounted = c.round; });
+  const nextPhysicalRound = maxRoundCounted + 1;
+
+  // ตัดคนที่นับรอบก่อนหน้าออกจากตัวเลือก กันนับซ้ำคนเดิม
+  const otherCounters = (counters||[]).filter(u => u.id !== asgn.assigned_to);
+  const cOpts = otherCounters.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
 
   container.innerHTML = `
     <div>${varRows}</div>
@@ -2092,13 +2099,13 @@ async function renderVarianceItemDetail(aid, container, idx) {
       <div class="alert alert-blue" style="font-size:11px;margin-bottom:8px">✏️ แก้ "ยอดยืนยัน" หรือ OH ก่อนกดคอนเฟิร์ม</div>
       <div id="vda_${idx}"></div>
       <button class="btn btn-green" onclick="doApproveInline('${aid}','${idx}')" style="margin-bottom:8px">✅ คอนเฟิร์มยอดนับ</button>
-      ${roundNum < 3 ? `
+      ${nextPhysicalRound <= 3 ? `
       <div style="background:#f0fdf4;border:2px solid var(--vespa-green);border-radius:12px;padding:10px">
-        <div style="font-size:12px;font-weight:900;color:var(--vespa-mint-dark);margin-bottom:6px">🔄 ส่งนับรอบที่ ${roundNum+1} ต่อ — เลือกผู้นับ</div>
-        <div style="display:flex;gap:6px">
+        <div style="font-size:12px;font-weight:900;color:var(--vespa-mint-dark);margin-bottom:6px">🔄 ส่งนับรอบที่ ${nextPhysicalRound} ต่อ — คนละคนกับรอบก่อนหน้า</div>
+        ${otherCounters.length ? `<div style="display:flex;gap:6px">
           <select id="vreassign_${idx}" style="flex:1">${cOpts}</select>
-          <button class="btn btn-green btn-sm" onclick="doReassignCounter('${aid}','${idx}')" style="flex-shrink:0">ส่ง</button>
-        </div>
+          <button class="btn btn-green btn-sm" onclick="doReassignCounter('${aid}','${idx}',${nextPhysicalRound})" style="flex-shrink:0">ส่ง</button>
+        </div>` : `<div style="font-size:12px;color:#94a3b8">ไม่มีผู้นับคนอื่นในระบบให้เลือก</div>`}
       </div>` : ''}
     </div>`;
 }
@@ -2132,16 +2139,19 @@ async function doApproveInline(aid, idx) {
   setTimeout(() => loadSvDash(), 1000);
 }
 
-async function doReassignCounter(aid, idx) {
+async function doReassignCounter(aid, idx, targetRound) {
   const sel = Q('vreassign_'+idx);
   const uid = sel?.value;
   if (!uid) return;
   const { data: before } = await sb.from('assignments')
     .select('session_id,location_id,profiles!assigned_to(name)').eq('id', aid).single();
-  await sb.from('assignments').update({ assigned_to: uid }).eq('id', aid);
+  const statusForTarget = { 2:'round1_done', 3:'round2_done' }[targetRound];
+  const updates = { assigned_to: uid };
+  if (statusForTarget) updates.status = statusForTarget;
+  await sb.from('assignments').update(updates).eq('id', aid);
   const label = sel.options[sel.selectedIndex]?.textContent || '';
   logAudit(before?.session_id, before?.location_id, null, 'reassign', before?.profiles?.name, label, aid);
-  alert(`✅ ส่งงานนี้ให้ ${label} นับต่อแล้ว`);
+  alert(`✅ ส่งงานนี้ให้ ${label} นับรอบที่ ${targetRound||''} ต่อแล้ว`);
   loadSvDash();
 }
 
@@ -2190,7 +2200,6 @@ async function loadSvDetail() {
 
   if (!asgn) { go('sv-list'); return; }
 
-  const roundNum = { round1_done:1, round2_done:2, round3_done:3 }[asgn.status] || 1;
   const l = asgn.locations;
   const isAdminOrSup = ['admin','supervisor'].includes(prof?.role);
 
@@ -2211,6 +2220,13 @@ async function loadSvDetail() {
     byItem[c.item_id] = byItem[c.item_id] || {};
     byItem[c.item_id][c.round] = c;
   });
+
+  // รอบที่นับจริงแล้ว (ไม่ใช้ status เพียวๆ เพราะกติกา "1 รอบ" อาจทำให้ status กระโดดไป round3_done)
+  let maxRoundCounted = 0;
+  counts?.forEach(c => { if (c.round > maxRoundCounted) maxRoundCounted = c.round; });
+  const roundNum = maxRoundCounted || 1;
+  const nextPhysicalRound = maxRoundCounted + 1;
+  const otherCounters = (counters||[]).filter(u => u.id !== asgn.assigned_to);
 
   const VS = {
     OK:      { cls:'tag-green',  lbl:'OK'      , row:'exact' },
@@ -2285,13 +2301,13 @@ async function loadSvDetail() {
       <div class="alert alert-blue" style="font-size:12px;margin-bottom:10px">✏️ แก้ "ยอดยืนยัน" หรือ OH ก่อนกดคอนเฟิร์ม</div>
       <div id="sva"></div>
       <button class="btn btn-green" onclick="doApprove('${aid}')" style="margin-bottom:8px">✅ คอนเฟิร์มยอดนับ</button>
-      ${roundNum < 3 ? `
+      ${nextPhysicalRound <= 3 ? `
       <div style="background:#f0fdf4;border:2px solid var(--vespa-green);border-radius:14px;padding:12px">
-        <div style="font-size:13px;font-weight:900;color:var(--vespa-mint-dark);margin-bottom:8px">🔄 ส่งนับรอบที่ ${roundNum+1} ต่อ — เลือกผู้นับ</div>
-        <div style="display:flex;gap:8px">
-          <select id="recount-user" style="flex:1">${(counters||[]).map(u=>`<option value="${u.id}" ${u.id===asgn.assigned_to?'selected':''}>${u.name}</option>`).join('')}</select>
-          <button class="btn btn-green btn-sm" onclick="reqRecount('${aid}')" style="flex-shrink:0">ส่ง</button>
-        </div>
+        <div style="font-size:13px;font-weight:900;color:var(--vespa-mint-dark);margin-bottom:8px">🔄 ส่งนับรอบที่ ${nextPhysicalRound} ต่อ — คนละคนกับรอบก่อนหน้า</div>
+        ${otherCounters.length ? `<div style="display:flex;gap:8px">
+          <select id="recount-user" style="flex:1">${otherCounters.map(u=>`<option value="${u.id}">${u.name}</option>`).join('')}</select>
+          <button class="btn btn-green btn-sm" onclick="reqRecount('${aid}',${nextPhysicalRound})" style="flex-shrink:0">ส่ง</button>
+        </div>` : `<div style="font-size:12px;color:#94a3b8">ไม่มีผู้นับคนอื่นในระบบให้เลือก</div>`}
       </div>` : ''}
     </div>`;
 }
@@ -2344,13 +2360,16 @@ async function doApprove(aid) {
   setTimeout(() => go('sv-list'), 1500);
 }
 
-async function reqRecount(aid) {
+async function reqRecount(aid, targetRound) {
   const uid = Q('recount-user')?.value;
   if (!uid) { alert('กรุณาเลือกผู้นับก่อน'); return; }
   const sel = Q('recount-user');
   const { data: before } = await sb.from('assignments')
     .select('session_id,location_id,profiles!assigned_to(name)').eq('id', aid).single();
-  await sb.from('assignments').update({ assigned_to: uid }).eq('id', aid);
+  const statusForTarget = { 2:'round1_done', 3:'round2_done' }[targetRound];
+  const updates = { assigned_to: uid };
+  if (statusForTarget) updates.status = statusForTarget;
+  await sb.from('assignments').update(updates).eq('id', aid);
   const label = sel.options[sel.selectedIndex]?.textContent || '';
   logAudit(before?.session_id, before?.location_id, null, 'reassign', before?.profiles?.name, label, aid);
   Q('sva').innerHTML = `<div class="alert alert-green">✅ ส่งงานนี้ให้ผู้นับที่เลือกแล้ว — Counter จะเห็นงานนี้ในรายการของเขา</div>`;
@@ -2702,16 +2721,17 @@ async function openRulesModal() {
         <button onclick="closeRulesModal()">✕</button>
       </div>
       <div class="fg"><label>Session</label>
-        <select id="rules-modal-sess" onchange="syncCountingRules();testRule();">${sOpts}</select>
+        <select id="rules-modal-sess" onchange="syncCountingRules()">${sOpts}</select>
       </div>
       <div class="fg" style="margin-bottom:10px">
         <label style="font-size:11px">จำนวนรอบสูงสุด</label>
-        <select id="rule-maxrounds" onchange="saveCountingRules();testRule();">
+        <select id="rule-maxrounds" onchange="onMaxRoundsChange()">
+          <option value="1" ${first?.max_rounds===1?'selected':''}>1 รอบ (นับครั้งเดียว ไม่ตรงส่งหัวหน้าทันที)</option>
           <option value="2" ${first?.max_rounds===2?'selected':''}>2 รอบ (ไม่ต้องนับรอบ 3)</option>
-          <option value="3" ${first?.max_rounds!==2?'selected':''}>3 รอบ (ค่ามาตรฐาน)</option>
+          <option value="3" ${(!first?.max_rounds || first?.max_rounds===3)?'selected':''}>3 รอบ (ค่ามาตรฐาน)</option>
         </select>
       </div>
-      <div class="fg" style="margin-bottom:0">
+      <div class="fg" style="margin-bottom:0" id="rule-repeataction-wrap">
         <label style="font-size:11px">ถ้านับซ้ำได้ค่าเดิม (คู่ไหนก็ได้) แต่ไม่ตรงกับ OH ระบบควร</label>
         <select id="rule-repeataction" onchange="saveCountingRules();testRule();">
           <option value="recount" ${(first?.repeat_match_action||'recount')==='recount'?'selected':''}>ให้นับรอบถัดไปต่อ (ค่ามาตรฐาน — ปลอดภัยสุด)</option>
@@ -2733,6 +2753,14 @@ async function openRulesModal() {
       </div>
     </div>`;
   document.body.appendChild(overlay);
+  onMaxRoundsChange(true);
+}
+
+function onMaxRoundsChange(skipSave) {
+  const mr = parseInt(Q('rule-maxrounds')?.value || '3');
+  const wrap = Q('rule-repeataction-wrap');
+  if (wrap) wrap.style.display = mr <= 1 ? 'none' : '';
+  if (!skipSave) saveCountingRules();
   testRule();
 }
 
@@ -2768,8 +2796,9 @@ async function syncCountingRules() {
   if (!sid) return;
   const { data } = await sb.from('count_sessions').select('max_rounds,repeat_match_action').eq('id', sid).single();
   const mr = Q('rule-maxrounds'), ra = Q('rule-repeataction');
-  if (mr) mr.value = String(data?.max_rounds === 2 ? 2 : 3);
+  if (mr) mr.value = String(data?.max_rounds === 1 ? 1 : data?.max_rounds === 2 ? 2 : 3);
   if (ra) ra.value = data?.repeat_match_action || 'recount';
+  onMaxRoundsChange(true);
 }
 
 async function saveCountingRules() {
