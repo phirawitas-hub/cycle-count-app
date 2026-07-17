@@ -23,6 +23,15 @@
   --vespa-shadow: #2D2018;
   --vespa-mint-dark: #1E4F41;
   --vespa-gray: #EAE3D9;
+  --app-max-width: 640px; /* ความกว้างแอปฯ — ขยายอัตโนมัติบนจอคอมพิวเตอร์ผ่าน media query ด้านล่าง */
+}
+/* จอแท็บเล็ต/คอมจอเล็ก — กว้างขึ้นพอประมาณ ไม่อึดอัด แต่ยังอ่านง่าย */
+@media (min-width: 860px) {
+  :root { --app-max-width: 860px; }
+}
+/* จอคอมทั่วไป/จอกว้าง — ใช้พื้นที่หน้าจอให้เต็มขึ้นชัดเจน แต่ยังจำกัดไว้ไม่ให้บรรทัดยาวเกินอ่านยาก */
+@media (min-width: 1300px) {
+  :root { --app-max-width: 1100px; }
 }
 
 /* ── Reset & Base ── */
@@ -38,7 +47,7 @@ body{
 }
 
 #app{
-  max-width:640px;
+  max-width:var(--app-max-width);
   margin:0 auto;
   min-height:100vh;
   background: var(--vespa-yellow); /* เก็บสีเหลืองไว้แค่ในส่วนแอปฯ */
@@ -46,6 +55,7 @@ body{
   box-shadow: 0 0 30px rgba(74, 51, 37, 0.2);
   border-left: 4px solid var(--vespa-brown);
   border-right: 4px solid var(--vespa-brown);
+  transition: max-width .15s;
 }
 
 /* ── Background Pattern (Vespa & Italy Flag) ── */
@@ -139,13 +149,14 @@ body{
 /* ── Bottom tabs (3D Vespa Icons) ── */
 .tabs{
   position:fixed;bottom:0;left:50%;transform:translateX(-50%);
-  width:100%;max-width:640px;
+  width:100%;max-width:var(--app-max-width);
   background: var(--vespa-white);
   border-top: 4px solid var(--vespa-brown);
   display:flex;z-index:300;
   padding-bottom:env(safe-area-inset-bottom,0px);
   border-radius: 24px 24px 0 0;
   box-shadow: 0 -5px 15px rgba(74, 51, 37, 0.1);
+  transition: max-width .15s;
 }
 .tab{
   flex:1;display:flex;flex-direction:column;align-items:center;
@@ -565,7 +576,7 @@ select{
 /* ── FAB ── */
 .fab{
   position:fixed;bottom:94px;
-  right:calc(50% - 308px);
+  right:calc(50% - (var(--app-max-width) / 2) + 12px);
   background: var(--vespa-red);
   color: var(--vespa-white);
   width:58px;
@@ -580,7 +591,7 @@ select{
   cursor:pointer;
   box-shadow: 0 4px 0px var(--vespa-shadow);
   z-index:200;
-  transition: transform 0.1s, box-shadow 0.1s;
+  transition: transform 0.1s, box-shadow 0.1s, right .15s;
 }
 .fab:active{
   transform: scale(.9) translateY(4px);
