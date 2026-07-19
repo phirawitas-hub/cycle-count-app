@@ -1838,10 +1838,18 @@ async function loadSvDash() {
   // เก็บ variance_approvals ของ session นี้ไว้ใช้ทั้งคำนวณ Gain/Lost และแสดงในแท็บ "ปรับยอด WMS"
   let wmsRows = [];
   if (resolvedIds.length) {
-    const { data: vas } = await sb.from('variance_approvals')
-      .select('id,assignment_id,item_id,final_qty,variance,resolution,created_at,wms_fixed,wms_fixed_at,items(code,description),profiles!approved_by(name)')
+    let { data: vas, error: vaErr } = await sb.from('variance_approvals')
+      .select('id,assignment_id,item_id,final_qty,variance,resolution,created_at,approved_by,wms_fixed,wms_fixed_at,items(code,description),profiles!approved_by(name)')
       .in('assignment_id', resolvedIds)
       .order('created_at', { ascending:false });
+    if (vaErr) {
+      // อาจยังไม่ได้รัน migration_part3 (เพิ่มคอลัมน์ wms_fixed) — ลองดึงใหม่แบบไม่มีคอลัมน์นั้น กันไม่ให้รายการหายไปเงียบๆ
+      const retry = await sb.from('variance_approvals')
+        .select('id,assignment_id,item_id,final_qty,variance,resolution,created_at,approved_by,items(code,description),profiles!approved_by(name)')
+        .in('assignment_id', resolvedIds)
+        .order('created_at', { ascending:false });
+      vas = retry.data;
+    }
     wmsRows = vas || [];
     wmsRows.forEach(v => {
       const d = +v.variance;
@@ -2000,40 +2008,55 @@ async function loadSvDash() {
   // ── แท็บ "ปรับยอด WMS" — รายการ Diff ที่คอนเฟิร์มแล้ว ต้องเอาไปแก้ในระบบ WMS เอง พร้อมกาเครื่องหมายว่าแก้แล้วหรือยัง ──
   const asgnInfoMap = {};
   asgns.forEach(a => { asgnInfoMap[a.id] = a; });
+  window._wmsRows = wmsRows;
+  window._wmsAsgnInfoMap = asgnInfoMap;
+
   const wmsFilter = S._wmsFilter || 'unfixed';
-  const wmsFiltered = wmsRows.filter(v => {
-    if (wmsFilter === 'unfixed') return !v.wms_fixed;
-    if (wmsFilter === 'fixed') return !!v.wms_fixed;
-    return true;
-  });
-  const wmsListHtml = wmsFiltered.length ? wmsFiltered.map(v => {
+  const wmsZone = S._wmsZone || '';
+  const wmsLevel = S._wmsLevel || '';
+  const wmsUser = S._wmsUser || '';
+  const wmsLocSearch = S._wmsLocSearch || '';
+
+  const wmsZones = new Set(), wmsLevels = new Set();
+  const wmsUsersMap = {};
+  wmsRows.forEach(v => {
     const loc = asgnInfoMap[v.assignment_id]?.locations;
-    const isFixed = !!v.wms_fixed;
-    const varAmt = +v.variance;
-    return `<div style="border-bottom:2px solid var(--vespa-gray);padding:12px 0;display:flex;align-items:center;gap:10px;${isFixed?'opacity:.55':''}">
-      <div style="flex:1;min-width:0">
-        <div class="mono" style="font-size:14px;font-weight:900;color:var(--vespa-shadow)">${loc?.code||'?'}</div>
-        <div style="font-size:12px;color:var(--vespa-brown);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v.items?.code||''}${v.items?.description?' · '+v.items.description:''}</div>
-        <div style="font-size:10px;color:#94a3b8;margin-top:2px">โดย ${v.profiles?.name||'?'} · ${v.created_at?new Date(v.created_at).toLocaleDateString('th-TH'):''}</div>
-      </div>
-      <div style="text-align:right;flex-shrink:0">
-        <div style="font-size:19px;font-weight:900;font-family:'Fredoka';color:${varAmt>0?'var(--vespa-green)':'var(--vespa-red)'}">${varAmt>0?'+':''}${varAmt}</div>
-        <div style="font-size:9px;color:#94a3b8;margin-bottom:4px">ยืนยัน ${v.final_qty}</div>
-        <button class="btn btn-sm ${isFixed?'btn-green':'btn-ghost'}" onclick="toggleWmsFixed('${v.id}',${!isFixed})">${isFixed?'✅ แก้แล้ว':'⬜ แก้แล้ว?'}</button>
-      </div>
-    </div>`;
-  }).join('') : `<div style="padding:28px 0;text-align:center;color:#94a3b8;font-size:13px">${wmsFilter==='unfixed'?'🎉 ไม่มีรายการค้างแก้ WMS':wmsFilter==='fixed'?'ยังไม่มีรายการที่แก้แล้ว':'ยังไม่มีรายการปรับยอดใน Session นี้'}</div>`;
+    if (loc?.zone) wmsZones.add(loc.zone);
+    if (loc?.level) wmsLevels.add(loc.level);
+    if (v.approved_by) wmsUsersMap[v.approved_by] = v.profiles?.name || '?';
+  });
 
   const wmsUnfixedCount = wmsRows.filter(v => !v.wms_fixed).length;
   const wmsTabHtml = `
+    <div class="grid-3" style="margin-bottom:8px">
+      <div><label style="font-size:10px">ZONE</label>
+        <select id="wms-zone" onchange="updateWmsFilter('Zone',this.value)">
+          <option value="">ทั้งหมด</option>
+          ${[...wmsZones].sort().map(z=>`<option value="${z}" ${wmsZone===z?'selected':''}>${z}</option>`).join('')}
+        </select></div>
+      <div><label style="font-size:10px">LEVEL</label>
+        <select id="wms-level" onchange="updateWmsFilter('Level',this.value)">
+          <option value="">ทั้งหมด</option>
+          ${[...wmsLevels].sort().map(l=>`<option value="${l}" ${wmsLevel===l?'selected':''}>${l}</option>`).join('')}
+        </select></div>
+      <div><label style="font-size:10px">ผู้ตรวจนับ</label>
+        <select id="wms-user" onchange="updateWmsFilter('User',this.value)">
+          <option value="">ทั้งหมด</option>
+          ${Object.entries(wmsUsersMap).sort((a,b)=>a[1].localeCompare(b[1])).map(([id,name])=>`<option value="${id}" ${wmsUser===id?'selected':''}>${name}</option>`).join('')}
+        </select></div>
+    </div>
+    <div class="fg" style="margin-bottom:8px">
+      <label style="font-size:10px">ค้นหา Location</label>
+      <input id="wms-loc-search" value="${wmsLocSearch}" placeholder="เช่น B-29-001-A" oninput="updateWmsFilter('LocSearch',this.value)">
+    </div>
     <div class="fg" style="margin-bottom:10px">
-      <select onchange="S._wmsFilter=this.value;loadSvDash()">
+      <select id="wms-status" onchange="updateWmsFilter('Filter',this.value)">
         <option value="unfixed" ${wmsFilter==='unfixed'?'selected':''}>ยังไม่แก้ WMS</option>
         <option value="fixed" ${wmsFilter==='fixed'?'selected':''}>แก้แล้ว</option>
         <option value="all" ${wmsFilter==='all'?'selected':''}>ทั้งหมด</option>
       </select>
     </div>
-    <div>${wmsListHtml}</div>`;
+    <div id="wms-list"></div>`;
 
   const tabContent = tab === 'variance' ? varianceTabHtml : tab === 'wms' ? wmsTabHtml : summaryTabHtml;
 
@@ -2052,6 +2075,7 @@ async function loadSvDash() {
       </div>
       <div id="dash-content" style="padding:16px">${tabContent}</div>
     </div>`;
+  if (tab === 'wms') renderWmsList();
 }
 
 function toggleUserDetail(idx) {
@@ -2064,6 +2088,58 @@ async function toggleWmsFixed(vaId, checked) {
   const { error } = await sb.from('variance_approvals').update(updates).eq('id', vaId);
   if (error) { alert('บันทึกไม่สำเร็จ: ' + error.message + '\n\nลองตรวจสอบว่ารัน migration เพิ่มคอลัมน์ wms_fixed ในตาราง variance_approvals แล้วหรือยัง'); return; }
   loadSvDash();
+}
+
+function updateWmsFilter(key, value) {
+  S['_wms'+key] = value;
+  renderWmsList();
+}
+
+function renderWmsList() {
+  const container = Q('wms-list');
+  if (!container) return;
+  const wmsRows = window._wmsRows || [];
+  const asgnInfoMap = window._wmsAsgnInfoMap || {};
+  const filterStatus = S._wmsFilter || 'unfixed';
+  const filterZone = S._wmsZone || '';
+  const filterLevel = S._wmsLevel || '';
+  const filterUser = S._wmsUser || '';
+  const searchLoc = (S._wmsLocSearch || '').trim().toLowerCase();
+
+  const filtered = wmsRows.filter(v => {
+    if (filterStatus === 'unfixed' && v.wms_fixed) return false;
+    if (filterStatus === 'fixed' && !v.wms_fixed) return false;
+    const loc = asgnInfoMap[v.assignment_id]?.locations;
+    if (filterZone && loc?.zone !== filterZone) return false;
+    if (filterLevel && loc?.level !== filterLevel) return false;
+    if (filterUser && v.approved_by !== filterUser) return false;
+    if (searchLoc && !(loc?.code||'').toLowerCase().includes(searchLoc)) return false;
+    return true;
+  });
+
+  if (!filtered.length) {
+    const msg = filterStatus==='unfixed' ? '🎉 ไม่มีรายการค้างแก้ WMS (ตามตัวกรองที่เลือก)' : filterStatus==='fixed' ? 'ยังไม่มีรายการที่แก้แล้ว (ตามตัวกรองที่เลือก)' : 'ไม่พบรายการตามตัวกรองที่เลือก';
+    container.innerHTML = `<div style="padding:28px 0;text-align:center;color:#94a3b8;font-size:13px">${msg}</div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(v => {
+    const loc = asgnInfoMap[v.assignment_id]?.locations;
+    const isFixed = !!v.wms_fixed;
+    const varAmt = +v.variance;
+    return `<div style="border-bottom:2px solid var(--vespa-gray);padding:12px 0;display:flex;align-items:center;gap:10px;${isFixed?'opacity:.55':''}">
+      <div style="flex:1;min-width:0">
+        <div class="mono" style="font-size:14px;font-weight:900;color:var(--vespa-shadow)">${loc?.code||'?'}</div>
+        <div style="font-size:12px;color:var(--vespa-brown);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v.items?.code||''}${v.items?.description?' · '+v.items.description:''}</div>
+        <div style="font-size:10px;color:#94a3b8;margin-top:2px">โดย ${v.profiles?.name||'?'} · ${v.created_at?new Date(v.created_at).toLocaleDateString('th-TH'):''}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:19px;font-weight:900;font-family:'Fredoka';color:${varAmt>0?'var(--vespa-green)':'var(--vespa-red)'}">${varAmt>0?'+':''}${varAmt}</div>
+        <div style="font-size:9px;color:#94a3b8;margin-bottom:4px">ยืนยัน ${v.final_qty}</div>
+        <button class="btn btn-sm ${isFixed?'btn-green':'btn-ghost'}" onclick="toggleWmsFixed('${v.id}',${!isFixed})">${isFixed?'✅ แก้แล้ว':'⬜ แก้แล้ว?'}</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 // ── Quick Variance Check panel (inline บนหน้า ภาพรวมงาน) ──
@@ -3059,8 +3135,9 @@ async function doBulkAssign() {
     if (error) { al.innerHTML = `<div class="alert alert-red">❌ ${error.message}</div>`; btn.disabled=false; return; }
   }
 
-  al.innerHTML = `<div class="alert alert-green">✅ Assign ${toAssign.length} locations เรียบร้อย!</div>`;
-  setTimeout(() => { al.innerHTML=''; refreshLocs(); refreshBulkFilters(); }, 2000);
+  al.innerHTML = `<div class="alert alert-green">✅ Assign ${toAssign.length} locations เรียบร้อย!</div>
+    <button class="btn btn-ghost btn-sm" onclick='printCountForm(${JSON.stringify(toAssign.map(a=>a.location_id))},"${sid}")'>🖨️ พิมพ์ฟอร์มนับสำหรับ ${toAssign.length} Locations</button>`;
+  setTimeout(() => { refreshLocs(); refreshBulkFilters(); }, 2000);
 }
 
 async function refreshLocs() {
@@ -3148,6 +3225,126 @@ async function deleteStuckAssignments() {
   refreshBulkFilters();
 }
 
+// ══════════════════════════════════════════════════════════
+//  PRINTABLE COUNT FORM (สำหรับพิมพ์แจกทีมนับกระดาษ)
+// ══════════════════════════════════════════════════════════
+const PF_LOGO_B64 = 'data:image/jpeg;base64,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';
+
+function pfEscapeHtml(s) {
+  return (s==null?'':String(s)).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function printCountForm(locationIds, sessionId) {
+  if (!locationIds || !locationIds.length) return;
+
+  const { data: sessData } = await sb.from('count_sessions').select('name').eq('id', sessionId).single();
+  const sessionName = sessData?.name || 'Cycle Count';
+
+  const [{ data: snaps }, { data: details }] = await Promise.all([
+    sb.from('stock_snapshot')
+      .select('location_id,item_id,locations(code),items(code,description)')
+      .eq('session_id', sessionId).in('location_id', locationIds),
+    sb.from('stock_snapshot_detail')
+      .select('location_id,item_id,inventory_status')
+      .eq('session_id', sessionId).in('location_id', locationIds),
+  ]);
+
+  const statusMap = {};
+  (details||[]).forEach(d => {
+    const key = d.location_id+'|'+d.item_id;
+    if (!statusMap[key] && d.inventory_status) statusMap[key] = d.inventory_status;
+  });
+
+  const rows = (snaps||[]).map(s => ({
+    locCode:  s.locations?.code || '?',
+    itemCode: s.items?.code || '',
+    desc:     s.items?.description || '',
+    status:   statusMap[s.location_id+'|'+s.item_id] || '',
+  })).sort((a,b) => a.locCode.localeCompare(b.locCode) || a.itemCode.localeCompare(b.itemCode));
+
+  if (!rows.length) { alert('ไม่พบรายการสินค้าสำหรับ Location ที่เลือก'); return; }
+
+  openPrintFormWindow(rows, sessionName);
+}
+
+function openPrintFormWindow(rows, title) {
+  const ROWS_PER_PAGE = 24;
+  const pages = [];
+  for (let i = 0; i < rows.length; i += ROWS_PER_PAGE) pages.push(rows.slice(i, i+ROWS_PER_PAGE));
+  if (!pages.length) pages.push([]);
+  const totalPages = pages.length;
+  const todayStr = new Date().toLocaleDateString('th-TH', { year:'numeric', month:'long', day:'numeric' });
+
+  const pagesHtml = pages.map((pageRows, pIdx) => `
+    <section class="pf-page">
+      <header class="pf-header">
+        <img class="pf-logo" src="${PF_LOGO_B64}" alt="logo">
+        <div class="pf-title">${pfEscapeHtml(title)}</div>
+        <div class="pf-meta"><div>${todayStr}</div><div>Page ${pIdx+1} / ${totalPages}</div></div>
+      </header>
+      <table class="pf-table">
+        <thead><tr>
+          <th style="width:11%">Location</th>
+          <th style="width:13%">Item</th>
+          <th style="width:23%">Description</th>
+          <th style="width:9%">Inventory status</th>
+          <th style="width:9%">Storage Template</th>
+          <th style="width:8%">Count 1</th>
+          <th style="width:8%">Count 2</th>
+          <th style="width:8%">Count 3</th>
+          <th style="width:11%">Remark</th>
+        </tr></thead>
+        <tbody>
+          ${pageRows.length ? pageRows.map(r => `<tr>
+            <td>${pfEscapeHtml(r.locCode)}</td>
+            <td>${pfEscapeHtml(r.itemCode)}</td>
+            <td>${pfEscapeHtml(r.desc)}</td>
+            <td>${pfEscapeHtml(r.status)}</td>
+            <td></td><td></td><td></td><td></td><td></td>
+          </tr>`).join('') : `<tr><td colspan="9" style="text-align:center;color:#888">ไม่มีรายการ</td></tr>`}
+        </tbody>
+      </table>
+      <footer class="pf-footer">
+        <div>ผู้ทำรายการ...........................</div>
+        <div>เวลาเริ่ม...........................</div>
+        <div>เวลาจบ...........................</div>
+      </footer>
+    </section>`).join('');
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>${pfEscapeHtml(title)}</title>
+<style>
+  @page { size: A4 landscape; margin: 8mm 6mm; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family: Arial, 'Sarabun', 'Tahoma', sans-serif; color:#000; }
+  .pf-page { page-break-after: always; }
+  .pf-page:last-child { page-break-after: auto; }
+  .pf-header { display:flex; align-items:center; gap:14px; border-bottom:2.5px solid #000; padding-bottom:6px; margin-bottom:8px; }
+  .pf-logo { height:42px; }
+  .pf-title { flex:1; text-align:center; font-size:24px; font-weight:bold; }
+  .pf-meta { font-size:11px; text-align:right; line-height:1.5; white-space:nowrap; }
+  .pf-table { width:100%; border-collapse:collapse; font-size:11px; table-layout:fixed; }
+  .pf-table th, .pf-table td { border:1px solid #000; padding:5px 6px; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pf-table th { background:#f0f0f0; font-weight:bold; font-size:10.5px; }
+  .pf-table td { height:22px; }
+  .pf-footer { display:flex; justify-content:space-between; margin-top:12px; font-size:12px; }
+  @media print { .pf-noprint { display:none; } }
+</style>
+</head>
+<body>
+  <div class="pf-noprint" style="padding:10px;background:#fffbe6;border-bottom:1px solid #ccc;font-family:sans-serif;font-size:13px">
+    กำลังเปิดหน้าต่างพิมพ์... ถ้าไม่เด้งอัตโนมัติ กด Ctrl+P (หรือ Cmd+P บน Mac) เพื่อพิมพ์
+  </div>
+  ${pagesHtml}
+  <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 300); };<\/script>
+</body></html>`;
+
+  const win = window.open('', '_blank');
+  if (!win) { alert('เบราว์เซอร์บล็อกป๊อปอัพ กรุณาอนุญาต popup สำหรับเว็บนี้แล้วลองใหม่'); return; }
+  win.document.write(html);
+  win.document.close();
+}
+
 async function doAssign() {
   const sid = Q('as-sess').value, uid = Q('as-user').value, lid = Q('as-loc').value;
   const al = Q('aa');
@@ -3158,8 +3355,8 @@ async function doAssign() {
 
   if (error) { al.innerHTML = `<div class="alert alert-red">${error.message}</div>`; return; }
 
-  al.innerHTML = `<div class="alert alert-green">✅ Assign เรียบร้อย</div>`;
-  setTimeout(() => al.innerHTML = '', 2500);
+  al.innerHTML = `<div class="alert alert-green">✅ Assign เรียบร้อย</div>
+    <button class="btn btn-ghost btn-sm" onclick="printCountForm(['${lid}'],'${sid}')">🖨️ พิมพ์ฟอร์มนับสำหรับ Location นี้</button>`;
   refreshLocs();
   refreshBulkFilters();
 }
@@ -4166,3 +4363,4 @@ boot();
 </script>
 </body>
 </html>
+
