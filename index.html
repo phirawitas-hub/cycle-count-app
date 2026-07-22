@@ -1864,29 +1864,38 @@ async function loadSvDash() {
     if (hasDiff || hasPending) diffAssignments.push({ ...a, _hasDiff: hasDiff, _hasPending: hasPending });
   }
 
+  // ══════════════════════════════════════════════════════════
+  //  ดึง variance_approvals แบบปลอดภัย (ไม่ใช้คอลัมน์ที่อาจไม่มี)
+  // ══════════════════════════════════════════════════════════
   let wmsRows = [];
   let vaError = null;
+
   try {
+    // Query แบบง่ายที่สุด - ใช้แค่คอลัมน์ที่แน่ใจว่ามี
     const { data: vaData, error: vaErr } = await sb.from('variance_approvals')
-      .select('id,assignment_id,item_id,final_qty,variance,resolution,created_at,approved_by,wms_fixed,wms_fixed_at,wms_fixed_by')
-      .in('assignment_id', allAsgnIds)
-      .order('created_at', { ascending: false });
+      .select('id,assignment_id,item_id,final_qty,variance,resolution,approved_by')
+      .in('assignment_id', allAsgnIds);
+
     if (vaErr) {
       vaError = vaErr;
       console.error('variance_approvals query error:', vaErr);
-      const { data: vaRetry } = await sb.from('variance_approvals')
-        .select('id,assignment_id,item_id,final_qty,variance,resolution,created_at,approved_by')
-        .in('assignment_id', allAsgnIds)
-        .order('created_at', { ascending: false });
-      wmsRows = (vaRetry || []).map(v => ({...v, wms_fixed: false, wms_fixed_at: null, wms_fixed_by: null}));
+      wmsRows = [];
     } else {
-      wmsRows = vaData || [];
+      wmsRows = (vaData || []).map(v => ({
+        ...v,
+        wms_fixed: false,
+        wms_fixed_at: null,
+        wms_fixed_by: null,
+        created_at: null,
+        _fromVA: true
+      }));
     }
   } catch (e) {
     console.error('variance_approvals exception:', e);
     vaError = e;
   }
 
+  // ดึง items + approvers แยก
   const allItemIds = [...new Set(wmsRows.map(v => v.item_id).filter(Boolean))];
   const allApproverIds = [...new Set(wmsRows.map(v => v.approved_by).filter(Boolean))];
   const [{ data: itemsData }, { data: approversData }] = await Promise.all([
@@ -1900,6 +1909,9 @@ async function loadSvDash() {
     v.profiles = approverMap[v.approved_by] || { name: '?' };
   });
 
+  // ══════════════════════════════════════════════════════════
+  //  รายการ "รอคอนเฟิร์ม" - คำนวณจาก count_records + snapshot
+  // ══════════════════════════════════════════════════════════
   const approvedAsgnIds = new Set(wmsRows.map(v => v.assignment_id));
   const pendingWmsRows = [];
   for (const a of diffAssignments) {
@@ -1921,12 +1933,12 @@ async function loadSvDash() {
         final_qty: countQty,
         variance: variance,
         resolution: st === 'Diff' ? 'pending_diff' : 'pending_recount',
-        created_at: null,
         approved_by: null,
         wms_fixed: false,
         wms_fixed_at: null,
         wms_fixed_by: null,
-        items: { code: '?', description: '(กำลังโหลด...)' },
+        created_at: null,
+        items: { code: '?', description: '' },
         profiles: { name: '(ยังไม่คอนเฟิร์ม)' },
       });
     }
@@ -1943,18 +1955,15 @@ async function loadSvDash() {
   window._wmsRows = allWmsRows;
   window._wmsAsgnInfoMap = asgnInfoMap;
 
+  // คำนวณ Gain/Lost
   let diffPlus = 0, diffMinus = 0, diffPlusCount = 0, diffMinusCount = 0;
-  wmsRows.forEach(v => {
-    const d = +v.variance;
-    if (d > 0) { diffPlus += d; diffPlusCount++; }
-    else if (d < 0) { diffMinus += Math.abs(d); diffMinusCount++; }
-  });
-  pendingWmsRows.forEach(v => {
+  allWmsRows.forEach(v => {
     const d = +v.variance;
     if (d > 0) { diffPlus += d; diffPlusCount++; }
     else if (d < 0) { diffMinus += Math.abs(d); diffMinusCount++; }
   });
 
+  // ── สรุปรายบุคคล ──
   const byUser = {};
   for (const a of asgns) {
     const uid = a.assigned_to;
@@ -2086,6 +2095,7 @@ async function loadSvDash() {
 
   const wmsUnfixedCount = allWmsRows.filter(v => !v.wms_fixed).length;
   const wmsPendingCount = allWmsRows.filter(v => v._isPending).length;
+  const wmsApprovedCount = wmsRows.length;
 
   const errorBanner = vaError 
     ? `<div class="alert alert-red" style="margin-bottom:10px;font-size:12px">⚠️ ไม่สามารถดึงข้อมูลคอนเฟิร์มแล้วได้ (Error: ${vaError.message || vaError})<br>แสดงเฉพาะรายการ "รอคอนเฟิร์ม" ที่คำนวณได้</div>`
@@ -2095,7 +2105,7 @@ async function loadSvDash() {
     ${errorBanner}
     <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
       <span class="tag tag-amber">⏳ รอคอนเฟิร์ม: ${wmsPendingCount}</span>
-      <span class="tag tag-blue">✅ คอนเฟิร์มแล้ว: ${wmsRows.length}</span>
+      <span class="tag tag-blue">✅ คอนเฟิร์มแล้ว: ${wmsApprovedCount}</span>
       <span class="tag tag-red">🔧 ยังไม่แก้ WMS: ${wmsUnfixedCount}</span>
     </div>
     <div class="grid-3" style="margin-bottom:8px">
@@ -2157,15 +2167,18 @@ function toggleUserDetail(idx) {
 
 async function toggleWmsFixed(vaId, checked) {
   try {
-    const updates = { 
-      wms_fixed: checked, 
-      wms_fixed_at: checked ? new Date().toISOString() : null, 
-      wms_fixed_by: checked ? me.id : null 
-    };
+    const updates = { wms_fixed: checked };
+    if (checked) {
+      updates.wms_fixed_at = new Date().toISOString();
+      updates.wms_fixed_by = me.id;
+    } else {
+      updates.wms_fixed_at = null;
+      updates.wms_fixed_by = null;
+    }
     const { error } = await sb.from('variance_approvals').update(updates).eq('id', vaId);
     if (error) {
       if (error.message?.includes('column') || error.message?.includes('wms_fixed')) {
-        alert('⚠️ ยังไม่ได้รัน migration เพิ่มคอลัมน์ wms_fixed ในตาราง variance_approvals\n\nกรุณารัน SQL นี้ใน Supabase SQL Editor:\n\nALTER TABLE variance_approvals ADD COLUMN IF NOT EXISTS wms_fixed boolean DEFAULT false, ADD COLUMN IF NOT EXISTS wms_fixed_at timestamptz, ADD COLUMN IF NOT EXISTS wms_fixed_by uuid REFERENCES profiles(id);');
+        alert('⚠️ ตาราง variance_approvals ยังไม่มีคอลัมน์ wms_fixed\n\nกรุณารัน SQL นี้ใน Supabase SQL Editor:\n\nALTER TABLE variance_approvals ADD COLUMN IF NOT EXISTS wms_fixed boolean DEFAULT false;\nALTER TABLE variance_approvals ADD COLUMN IF NOT EXISTS wms_fixed_at timestamptz;\nALTER TABLE variance_approvals ADD COLUMN IF NOT EXISTS wms_fixed_by uuid REFERENCES profiles(id);');
       } else {
         alert('บันทึกไม่สำเร็จ: ' + error.message);
       }
@@ -2242,7 +2255,7 @@ function renderWmsList() {
         <div style="font-size:10px;color:#94a3b8;margin-top:2px">
           ${isPending 
             ? `นับได้: ${v.final_qty} · OH: ${v.final_qty - varAmt} · โดย: ${v.profiles?.name||'?'}`
-            : `โดย ${v.profiles?.name||'?'} · ${v.created_at?new Date(v.created_at).toLocaleDateString('th-TH'):''}`
+            : `โดย ${v.profiles?.name||'?'}`
           }
         </div>
       </div>
