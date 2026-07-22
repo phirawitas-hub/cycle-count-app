@@ -838,6 +838,7 @@ select{
 .stripe-w { background: #FFFFFF; flex: 1; }
 .stripe-r { background: #CE2B37; flex: 1; }
 </style>
+<base target="_blank">
 </head>
 <body>
 <div id="app"></div>
@@ -1798,7 +1799,6 @@ async function loadSvDash() {
     </div>`; return;
   }
 
-  // Session selector
   const sessOpts = sessions.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
   const curSid = S._dashSid || sessions[0].id;
   S._dashSid = curSid;
@@ -1829,65 +1829,131 @@ async function loadSvDash() {
   const pending  = asgns.filter(a => ['pending','in_progress'].includes(a.status)).length;
   const pct      = Math.round(done / total * 100);
 
-  // ── คำนวณ Gain (นับได้มากกว่า OH) / Lost (นับได้น้อยกว่า OH) — ผลรวมจำนวนจริง ไม่ใช่จำนวนรายการ ──
-  //    รวมทั้งที่อนุมัติแล้ว (variance_approvals) และที่ยังค้างรอ (round1/2/3_done ยังไม่อนุมัติ)
-  let diffPlus = 0, diffMinus = 0, diffPlusCount = 0, diffMinusCount = 0;
-  const resolvedIds = asgns.filter(a => a.status === 'approved').map(a => a.id);
-  const pendingVarAsgns = asgns.filter(a => ['round1_done','round2_done','round3_done'].includes(a.status));
+  const asgnInfoMap = {};
+  asgns.forEach(a => { asgnInfoMap[a.id] = a; });
 
-  // เก็บ variance_approvals ของ session นี้ไว้ใช้ทั้งคำนวณ Gain/Lost และแสดงในแท็บ "ปรับยอด WMS"
-  let wmsRows = [];
-  if (resolvedIds.length) {
-    let { data: vas, error: vaErr } = await sb.from('variance_approvals')
-      .select('id,assignment_id,item_id,final_qty,variance,resolution,created_at,approved_by,wms_fixed,wms_fixed_at,items(code,description),profiles!approved_by(name)')
-      .in('assignment_id', resolvedIds)
-      .order('created_at', { ascending:false });
-    if (vaErr) {
-      // อาจยังไม่ได้รัน migration_part3 (เพิ่มคอลัมน์ wms_fixed) — ลองดึงใหม่แบบไม่มีคอลัมน์นั้น กันไม่ให้รายการหายไปเงียบๆ
-      const retry = await sb.from('variance_approvals')
-        .select('id,assignment_id,item_id,final_qty,variance,resolution,created_at,approved_by,items(code,description),profiles!approved_by(name)')
-        .in('assignment_id', resolvedIds)
-        .order('created_at', { ascending:false });
-      vas = retry.data;
+  const allAsgnIds = asgns.map(a => a.id);
+  const [{ data: allCounts }, { data: allSnapshots }, rules] = await Promise.all([
+    sb.from('count_records').select('assignment_id,item_id,round,count_qty').in('assignment_id', allAsgnIds),
+    sb.from('stock_snapshot').select('location_id,item_id,onhand_qty').eq('session_id', curSid),
+    getSessionRules(curSid),
+  ]);
+
+  const ohMap = {};
+  (allSnapshots||[]).forEach(s => { ohMap[s.location_id + '|' + s.item_id] = +s.onhand_qty; });
+
+  const countByAsgn = {};
+  (allCounts||[]).forEach(c => {
+    if (!countByAsgn[c.assignment_id]) countByAsgn[c.assignment_id] = {};
+    if (!countByAsgn[c.assignment_id][c.item_id]) countByAsgn[c.assignment_id][c.item_id] = {};
+    countByAsgn[c.assignment_id][c.item_id][c.round] = +c.count_qty;
+  });
+
+  const diffAssignments = [];
+  for (const a of asgns) {
+    const itemCounts = countByAsgn[a.id] || {};
+    const locId = a.location_id;
+    let hasDiff = false, hasPending = false;
+    for (const [itemId, rounds] of Object.entries(itemCounts)) {
+      const oh = ohMap[locId + '|' + itemId];
+      if (oh === undefined) continue;
+      const st = computeItemStatus(oh, rounds[1], rounds[2], rounds[3], rules);
+      if (st === 'Diff') hasDiff = true;
+      if (st === 'PENDING') hasPending = true;
     }
-    wmsRows = vas || [];
-    wmsRows.forEach(v => {
-      const d = +v.variance;
-      if (d > 0) { diffPlus += d; diffPlusCount++; }
-      else if (d < 0) { diffMinus += Math.abs(d); diffMinusCount++; }
-    });
+    if (hasDiff || hasPending) diffAssignments.push({ ...a, _hasDiff: hasDiff, _hasPending: hasPending });
   }
 
-  if (pendingVarAsgns.length) {
-    const pendingIds = pendingVarAsgns.map(a => a.id);
-    const asgnLocMap = {};
-    pendingVarAsgns.forEach(a => { asgnLocMap[a.id] = a.location_id; });
-
-    const [{ data: pendingCounts }] = await Promise.all([
-      sb.from('count_records').select('assignment_id,item_id,round,count_qty').in('assignment_id', pendingIds),
-    ]);
-
-    const locIds = [...new Set(pendingVarAsgns.map(a => a.location_id).filter(Boolean))];
-    const { data: snaps } = locIds.length ? await sb.from('stock_snapshot')
-      .select('location_id,item_id,onhand_qty').eq('session_id', curSid).in('location_id', locIds) : { data: [] };
-    const ohMap = {};
-    (snaps||[]).forEach(s => { ohMap[s.location_id+'|'+s.item_id] = +s.onhand_qty; });
-
-    const latestByKey = {};
-    (pendingCounts||[]).forEach(c => {
-      const key = c.assignment_id+'|'+c.item_id;
-      if (!latestByKey[key] || c.round > latestByKey[key].round) latestByKey[key] = c;
-    });
-
-    Object.values(latestByKey).forEach(c => {
-      const locId = asgnLocMap[c.assignment_id];
-      const oh = ohMap[locId+'|'+c.item_id];
-      if (oh === undefined) return;
-      const diff = +c.count_qty - oh;
-      if (diff > 0) { diffPlus += diff; diffPlusCount++; }
-      else if (diff < 0) { diffMinus += Math.abs(diff); diffMinusCount++; }
-    });
+  let wmsRows = [];
+  let vaError = null;
+  try {
+    const { data: vaData, error: vaErr } = await sb.from('variance_approvals')
+      .select('id,assignment_id,item_id,final_qty,variance,resolution,created_at,approved_by,wms_fixed,wms_fixed_at,wms_fixed_by')
+      .in('assignment_id', allAsgnIds)
+      .order('created_at', { ascending: false });
+    if (vaErr) {
+      vaError = vaErr;
+      console.error('variance_approvals query error:', vaErr);
+      const { data: vaRetry } = await sb.from('variance_approvals')
+        .select('id,assignment_id,item_id,final_qty,variance,resolution,created_at,approved_by')
+        .in('assignment_id', allAsgnIds)
+        .order('created_at', { ascending: false });
+      wmsRows = (vaRetry || []).map(v => ({...v, wms_fixed: false, wms_fixed_at: null, wms_fixed_by: null}));
+    } else {
+      wmsRows = vaData || [];
+    }
+  } catch (e) {
+    console.error('variance_approvals exception:', e);
+    vaError = e;
   }
+
+  const allItemIds = [...new Set(wmsRows.map(v => v.item_id).filter(Boolean))];
+  const allApproverIds = [...new Set(wmsRows.map(v => v.approved_by).filter(Boolean))];
+  const [{ data: itemsData }, { data: approversData }] = await Promise.all([
+    allItemIds.length ? sb.from('items').select('id,code,description').in('id', allItemIds) : { data: [] },
+    allApproverIds.length ? sb.from('profiles').select('id,name').in('id', allApproverIds) : { data: [] },
+  ]);
+  const itemMap = Object.fromEntries((itemsData||[]).map(i => [i.id, i]));
+  const approverMap = Object.fromEntries((approversData||[]).map(p => [p.id, p]));
+  wmsRows.forEach(v => {
+    v.items = itemMap[v.item_id] || { code: '?', description: '' };
+    v.profiles = approverMap[v.approved_by] || { name: '?' };
+  });
+
+  const approvedAsgnIds = new Set(wmsRows.map(v => v.assignment_id));
+  const pendingWmsRows = [];
+  for (const a of diffAssignments) {
+    if (approvedAsgnIds.has(a.id)) continue;
+    const itemCounts = countByAsgn[a.id] || {};
+    const locId = a.location_id;
+    for (const [itemId, rounds] of Object.entries(itemCounts)) {
+      const oh = ohMap[locId + '|' + itemId];
+      if (oh === undefined) continue;
+      const st = computeItemStatus(oh, rounds[1], rounds[2], rounds[3], rules);
+      if (st !== 'Diff' && st !== 'PENDING') continue;
+      const latestRound = rounds[3] !== undefined ? 3 : rounds[2] !== undefined ? 2 : 1;
+      const countQty = rounds[latestRound];
+      const variance = countQty - oh;
+      pendingWmsRows.push({
+        _isPending: true,
+        assignment_id: a.id,
+        item_id: itemId,
+        final_qty: countQty,
+        variance: variance,
+        resolution: st === 'Diff' ? 'pending_diff' : 'pending_recount',
+        created_at: null,
+        approved_by: null,
+        wms_fixed: false,
+        wms_fixed_at: null,
+        wms_fixed_by: null,
+        items: { code: '?', description: '(กำลังโหลด...)' },
+        profiles: { name: '(ยังไม่คอนเฟิร์ม)' },
+      });
+    }
+  }
+
+  const pendingItemIds = [...new Set(pendingWmsRows.map(v => v.item_id).filter(Boolean))];
+  if (pendingItemIds.length) {
+    const { data: pendingItems } = await sb.from('items').select('id,code,description').in('id', pendingItemIds);
+    const pItemMap = Object.fromEntries((pendingItems||[]).map(i => [i.id, i]));
+    pendingWmsRows.forEach(v => { v.items = pItemMap[v.item_id] || { code: '?', description: '' }; });
+  }
+
+  const allWmsRows = [...wmsRows, ...pendingWmsRows];
+  window._wmsRows = allWmsRows;
+  window._wmsAsgnInfoMap = asgnInfoMap;
+
+  let diffPlus = 0, diffMinus = 0, diffPlusCount = 0, diffMinusCount = 0;
+  wmsRows.forEach(v => {
+    const d = +v.variance;
+    if (d > 0) { diffPlus += d; diffPlusCount++; }
+    else if (d < 0) { diffMinus += Math.abs(d); diffMinusCount++; }
+  });
+  pendingWmsRows.forEach(v => {
+    const d = +v.variance;
+    if (d > 0) { diffPlus += d; diffPlusCount++; }
+    else if (d < 0) { diffMinus += Math.abs(d); diffMinusCount++; }
+  });
 
   const byUser = {};
   for (const a of asgns) {
@@ -1899,7 +1965,6 @@ async function loadSvDash() {
     byUser[uid].items.push(a);
   }
 
-  // ── สรุปรายบุคคล (คลิกเพื่อดูรายละเอียด) ──
   let peopleRows = '';
   Object.entries(byUser).forEach(([uid, u], idx) => {
     const p = Math.round(u.done / u.total * 100);
@@ -1936,7 +2001,6 @@ async function loadSvDash() {
     </div>`;
   });
 
-  // ── รายการที่ต้องติดตาม (รอ Round 2/3) — แผงตรวจสอบ Variance แบบ inline ──
   _svDashOpenVarianceIdx = null;
   const needsFollowUp = asgns.filter(a => ['round1_done','round2_done','round3_done'].includes(a.status));
   const varianceRowsHtml = needsFollowUp.length ? needsFollowUp.map((a, i) => {
@@ -1955,7 +2019,6 @@ async function loadSvDash() {
     </div>`;
   }).join('') : `<div style="padding:28px 0;text-align:center;color:#94a3b8;font-size:13px">🎉 ไม่มี Variance ที่ต้องตรวจสอบตอนนี้</div>`;
 
-  // ── Tab bar แบบเดียวกับหน้า จัดการงาน (Session / จ่ายงาน / Import) ──
   const tab = S._dashTab || _dashTab;
   _dashTab = tab;
   const tabBtn = (id, label, icon, badge) => `
@@ -2005,12 +2068,6 @@ async function loadSvDash() {
 
   const varianceTabHtml = `<div>${varianceRowsHtml}</div>`;
 
-  // ── แท็บ "ปรับยอด WMS" — รายการ Diff ที่คอนเฟิร์มแล้ว ต้องเอาไปแก้ในระบบ WMS เอง พร้อมกาเครื่องหมายว่าแก้แล้วหรือยัง ──
-  const asgnInfoMap = {};
-  asgns.forEach(a => { asgnInfoMap[a.id] = a; });
-  window._wmsRows = wmsRows;
-  window._wmsAsgnInfoMap = asgnInfoMap;
-
   const wmsFilter = S._wmsFilter || 'unfixed';
   const wmsZone = S._wmsZone || '';
   const wmsLevel = S._wmsLevel || '';
@@ -2019,15 +2076,28 @@ async function loadSvDash() {
 
   const wmsZones = new Set(), wmsLevels = new Set();
   const wmsUsersMap = {};
-  wmsRows.forEach(v => {
+  allWmsRows.forEach(v => {
     const loc = asgnInfoMap[v.assignment_id]?.locations;
     if (loc?.zone) wmsZones.add(loc.zone);
     if (loc?.level) wmsLevels.add(loc.level);
     if (v.approved_by) wmsUsersMap[v.approved_by] = v.profiles?.name || '?';
+    else if (v._isPending) wmsUsersMap['_pending'] = '(รอคอนเฟิร์ม)';
   });
 
-  const wmsUnfixedCount = wmsRows.filter(v => !v.wms_fixed).length;
+  const wmsUnfixedCount = allWmsRows.filter(v => !v.wms_fixed).length;
+  const wmsPendingCount = allWmsRows.filter(v => v._isPending).length;
+
+  const errorBanner = vaError 
+    ? `<div class="alert alert-red" style="margin-bottom:10px;font-size:12px">⚠️ ไม่สามารถดึงข้อมูลคอนเฟิร์มแล้วได้ (Error: ${vaError.message || vaError})<br>แสดงเฉพาะรายการ "รอคอนเฟิร์ม" ที่คำนวณได้</div>`
+    : '';
+
   const wmsTabHtml = `
+    ${errorBanner}
+    <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+      <span class="tag tag-amber">⏳ รอคอนเฟิร์ม: ${wmsPendingCount}</span>
+      <span class="tag tag-blue">✅ คอนเฟิร์มแล้ว: ${wmsRows.length}</span>
+      <span class="tag tag-red">🔧 ยังไม่แก้ WMS: ${wmsUnfixedCount}</span>
+    </div>
     <div class="grid-3" style="margin-bottom:8px">
       <div><label style="font-size:10px">ZONE</label>
         <select id="wms-zone" onchange="updateWmsFilter('Zone',this.value)">
@@ -2042,7 +2112,8 @@ async function loadSvDash() {
       <div><label style="font-size:10px">ผู้ตรวจนับ</label>
         <select id="wms-user" onchange="updateWmsFilter('User',this.value)">
           <option value="">ทั้งหมด</option>
-          ${Object.entries(wmsUsersMap).sort((a,b)=>a[1].localeCompare(b[1])).map(([id,name])=>`<option value="${id}" ${wmsUser===id?'selected':''}>${name}</option>`).join('')}
+          <option value="_pending" ${wmsUser==='_pending'?'selected':''}>⏳ รอคอนเฟิร์ม</option>
+          ${Object.entries(wmsUsersMap).filter(([k]) => k !== '_pending').sort((a,b)=>a[1].localeCompare(b[1])).map(([id,name])=>`<option value="${id}" ${wmsUser===id?'selected':''}>${name}</option>`).join('')}
         </select></div>
     </div>
     <div class="fg" style="margin-bottom:8px">
@@ -2053,6 +2124,7 @@ async function loadSvDash() {
       <select id="wms-status" onchange="updateWmsFilter('Filter',this.value)">
         <option value="unfixed" ${wmsFilter==='unfixed'?'selected':''}>ยังไม่แก้ WMS</option>
         <option value="fixed" ${wmsFilter==='fixed'?'selected':''}>แก้แล้ว</option>
+        <option value="pending" ${wmsFilter==='pending'?'selected':''}>⏳ รอคอนเฟิร์ม</option>
         <option value="all" ${wmsFilter==='all'?'selected':''}>ทั้งหมด</option>
       </select>
     </div>
@@ -2084,10 +2156,25 @@ function toggleUserDetail(idx) {
 }
 
 async function toggleWmsFixed(vaId, checked) {
-  const updates = { wms_fixed: checked, wms_fixed_at: checked ? new Date().toISOString() : null, wms_fixed_by: checked ? me.id : null };
-  const { error } = await sb.from('variance_approvals').update(updates).eq('id', vaId);
-  if (error) { alert('บันทึกไม่สำเร็จ: ' + error.message + '\n\nลองตรวจสอบว่ารัน migration เพิ่มคอลัมน์ wms_fixed ในตาราง variance_approvals แล้วหรือยัง'); return; }
-  loadSvDash();
+  try {
+    const updates = { 
+      wms_fixed: checked, 
+      wms_fixed_at: checked ? new Date().toISOString() : null, 
+      wms_fixed_by: checked ? me.id : null 
+    };
+    const { error } = await sb.from('variance_approvals').update(updates).eq('id', vaId);
+    if (error) {
+      if (error.message?.includes('column') || error.message?.includes('wms_fixed')) {
+        alert('⚠️ ยังไม่ได้รัน migration เพิ่มคอลัมน์ wms_fixed ในตาราง variance_approvals\n\nกรุณารัน SQL นี้ใน Supabase SQL Editor:\n\nALTER TABLE variance_approvals ADD COLUMN IF NOT EXISTS wms_fixed boolean DEFAULT false, ADD COLUMN IF NOT EXISTS wms_fixed_at timestamptz, ADD COLUMN IF NOT EXISTS wms_fixed_by uuid REFERENCES profiles(id);');
+      } else {
+        alert('บันทึกไม่สำเร็จ: ' + error.message);
+      }
+      return;
+    }
+    loadSvDash();
+  } catch (e) {
+    alert('เกิดข้อผิดพลาด: ' + e.message);
+  }
 }
 
 function updateWmsFilter(key, value) {
@@ -2109,16 +2196,24 @@ function renderWmsList() {
   const filtered = wmsRows.filter(v => {
     if (filterStatus === 'unfixed' && v.wms_fixed) return false;
     if (filterStatus === 'fixed' && !v.wms_fixed) return false;
+    if (filterStatus === 'pending' && !v._isPending) return false;
+    if (filterStatus === 'all') { /* ไม่กรอง */ }
+    else if (filterStatus !== 'pending' && v._isPending) return false;
+
     const loc = asgnInfoMap[v.assignment_id]?.locations;
     if (filterZone && loc?.zone !== filterZone) return false;
     if (filterLevel && loc?.level !== filterLevel) return false;
-    if (filterUser && v.approved_by !== filterUser) return false;
+    if (filterUser === '_pending' && !v._isPending) return false;
+    if (filterUser && filterUser !== '_pending' && v.approved_by !== filterUser) return false;
     if (searchLoc && !(loc?.code||'').toLowerCase().includes(searchLoc)) return false;
     return true;
   });
 
   if (!filtered.length) {
-    const msg = filterStatus==='unfixed' ? '🎉 ไม่มีรายการค้างแก้ WMS (ตามตัวกรองที่เลือก)' : filterStatus==='fixed' ? 'ยังไม่มีรายการที่แก้แล้ว (ตามตัวกรองที่เลือก)' : 'ไม่พบรายการตามตัวกรองที่เลือก';
+    const msg = filterStatus==='unfixed' ? '🎉 ไม่มีรายการค้างแก้ WMS (ตามตัวกรองที่เลือก)' 
+      : filterStatus==='fixed' ? 'ยังไม่มีรายการที่แก้แล้ว (ตามตัวกรองที่เลือก)' 
+      : filterStatus==='pending' ? '⏳ ไม่มีรายการที่รอคอนเฟิร์ม (ตามตัวกรองที่เลือก)'
+      : 'ไม่พบรายการตามตัวกรองที่เลือก';
     container.innerHTML = `<div style="padding:28px 0;text-align:center;color:#94a3b8;font-size:13px">${msg}</div>`;
     return;
   }
@@ -2126,23 +2221,40 @@ function renderWmsList() {
   container.innerHTML = filtered.map(v => {
     const loc = asgnInfoMap[v.assignment_id]?.locations;
     const isFixed = !!v.wms_fixed;
+    const isPending = !!v._isPending;
     const varAmt = +v.variance;
+
+    const statusBadge = isPending
+      ? `<span class="tag tag-amber" style="font-size:10px">⏳ รอคอนเฟิร์ม</span>`
+      : `<span class="tag tag-blue" style="font-size:10px">✅ คอนเฟิร์มแล้ว</span>`;
+
+    const wmsButton = isPending
+      ? `<button class="btn btn-sm btn-amber" onclick="go('sv-detail',{aid:'${v.assignment_id}'})">🔍 ไปคอนเฟิร์ม</button>`
+      : `<button class="btn btn-sm ${isFixed?'btn-green':'btn-ghost'}" onclick="toggleWmsFixed('${v.id}',${!isFixed})">${isFixed?'✅ แก้แล้ว':'⬜ แก้แล้ว?'}</button>`;
+
     return `<div style="border-bottom:2px solid var(--vespa-gray);padding:12px 0;display:flex;align-items:center;gap:10px;${isFixed?'opacity:.55':''}">
       <div style="flex:1;min-width:0">
-        <div class="mono" style="font-size:14px;font-weight:900;color:var(--vespa-shadow)">${loc?.code||'?'}</div>
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px;flex-wrap:wrap">
+          <span class="mono" style="font-size:14px;font-weight:900;color:var(--vespa-shadow)">${loc?.code||'?'}</span>
+          ${statusBadge}
+        </div>
         <div style="font-size:12px;color:var(--vespa-brown);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v.items?.code||''}${v.items?.description?' · '+v.items.description:''}</div>
-        <div style="font-size:10px;color:#94a3b8;margin-top:2px">โดย ${v.profiles?.name||'?'} · ${v.created_at?new Date(v.created_at).toLocaleDateString('th-TH'):''}</div>
+        <div style="font-size:10px;color:#94a3b8;margin-top:2px">
+          ${isPending 
+            ? `นับได้: ${v.final_qty} · OH: ${v.final_qty - varAmt} · โดย: ${v.profiles?.name||'?'}`
+            : `โดย ${v.profiles?.name||'?'} · ${v.created_at?new Date(v.created_at).toLocaleDateString('th-TH'):''}`
+          }
+        </div>
       </div>
       <div style="text-align:right;flex-shrink:0">
         <div style="font-size:19px;font-weight:900;font-family:'Fredoka';color:${varAmt>0?'var(--vespa-green)':'var(--vespa-red)'}">${varAmt>0?'+':''}${varAmt}</div>
-        <div style="font-size:9px;color:#94a3b8;margin-bottom:4px">ยืนยัน ${v.final_qty}</div>
-        <button class="btn btn-sm ${isFixed?'btn-green':'btn-ghost'}" onclick="toggleWmsFixed('${v.id}',${!isFixed})">${isFixed?'✅ แก้แล้ว':'⬜ แก้แล้ว?'}</button>
+        <div style="font-size:9px;color:#94a3b8;margin-bottom:4px">${isPending ? 'ยอดนับ' : 'ยืนยัน ' + v.final_qty}</div>
+        ${wmsButton}
       </div>
     </div>`;
   }).join('');
 }
 
-// ── Quick Variance Check panel (inline บนหน้า ภาพรวมงาน) ──
 async function toggleVarianceDetail(aid, idx) {
   const prevIdx = _svDashOpenVarianceIdx;
   if (prevIdx !== null && prevIdx !== idx) {
