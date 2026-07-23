@@ -745,6 +745,12 @@ function paintLogin() {
     </div>`;
 }
 
+function togglePasswordVisibility() {
+  const inp = Q('lp');
+  if (!inp) return;
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
 async function doForgotPassword() {
   const email = Q('le')?.value.trim();
   const al = Q('la');
@@ -1598,7 +1604,7 @@ async function loadSvDash() {
   }
 
   const summaryTabHtml = `
-    <!-- 1. Top Counting Progress Bar with Vespa Icon (Enlarged Vespa Scooter) -->
+    <!-- 1. Top Counting Progress Bar with Vespa Icon -->
     <div style="margin-bottom: 24px; background: var(--neu-surface); padding: 18px 22px; border-radius: var(--border-radius-lg); box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light);">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
         <span style="font-size:14px;font-weight:800;color:var(--text-main);">ความคืบหน้าการนับ (Counting Progress)</span>
@@ -1606,7 +1612,7 @@ async function loadSvDash() {
       </div>
       <div class="prog" style="position: relative; height: 16px; background: var(--neu-surface); box-shadow: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light);">
         <div class="prog-fill" style="width:${pct}%; background: linear-gradient(90deg, #4ea8de 0%, #3a86ff 100%); position: relative;">
-          <div style="position: absolute; right: -18px; top: -16px; font-size: 32px; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.25)); z-index: 5;">🛵</div>
+          <div style="position: absolute; right: -12px; top: -8px; font-size: 18px; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.2));">🛵</div>
         </div>
       </div>
     </div>
@@ -1614,7 +1620,7 @@ async function loadSvDash() {
     <!-- 2. Two-Column Layout: Left KPIs & Right Stacked Card -->
     <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: center; justify-content: space-between;">
       
-      <!-- Left Column: KPI Cards in Order: 1. Locations, 2. SKUs, 3. Tasks Pcs -->
+      <!-- Left Column: KPI Cards (1. Locations, 2. SKUs, 3. Tasks with % Completed & % Diff) -->
       <div style="flex: 1; min-width: 280px; display: flex; flex-direction: column; gap: 14px;">
         
         <!-- 1. Locations -->
@@ -1635,10 +1641,10 @@ async function loadSvDash() {
           <div class="stat-n" style="font-size: 26px; color: var(--text-main);">${totalSKUs}</div>
         </div>
 
-        <!-- 3. Tasks Pcs with % Completed & % Diff -->
+        <!-- 3. Tasks with % Completed & % Diff -->
         <div class="stat" style="padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; text-align: left; border-radius: var(--border-radius-lg); box-shadow: 6px 6px 16px var(--neu-shadow-dark), -6px -6px 16px var(--neu-shadow-light);">
           <div>
-            <div class="stat-l" style="margin-top:0; font-size:12px;">จำนวนงาน (Pcs)</div>
+            <div class="stat-l" style="margin-top:0; font-size:12px;">จำนวนงาน (TOTAL TASKS)</div>
             <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">งานที่มอบหมายทั้งหมด</div>
             <div style="display: flex; gap: 10px; margin-top: 6px;">
               <span class="tag tag-green" style="font-size:10px; padding: 2px 8px;">เสร็จ ${pct}%</span>
@@ -1650,42 +1656,42 @@ async function loadSvDash() {
 
       </div>
 
-      <!-- Right Column: 3-Layer Pastel Stacked Card (Enlarged & 3 Distinct Soft Pastel Layers) -->
-      <div style="flex-shrink: 0; width: 270px; margin: 15px auto;">
+      <!-- Right Column: Compact 3-Layer Pastel Stacked Card with Enhanced Gain/Lost Boxes -->
+      <div style="flex-shrink: 0; width: 230px; margin: 10px auto;">
          <div style="position: relative; width: 100%; height: 100%;">
-            <!-- Layer 1 (Bottom): Soft Pastel Pink/Lavender Layer -->
-            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #fbcfe8; border-radius: 24px; transform: rotate(7deg) translate(12px, 12px); z-index: 1; box-shadow: 6px 6px 16px rgba(236, 72, 153, 0.15);"></div>
+            <!-- Layer 1 (Bottom): Soft Pastel Purple -->
+            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #e9d5ff; border-radius: 20px; transform: rotate(5deg) translate(8px, 8px); z-index: 1; box-shadow: 4px 4px 12px rgba(168, 85, 247, 0.15);"></div>
             
-            <!-- Layer 2 (Middle): Soft Pastel Peach/Yellow Layer -->
-            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #fef08a; border-radius: 24px; transform: rotate(13deg) translate(20px, -4px); z-index: 2; box-shadow: 6px 6px 16px rgba(234, 179, 8, 0.15);"></div>
+            <!-- Layer 2 (Middle): Soft Pastel Peach/Yellow -->
+            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #fef08a; border-radius: 20px; transform: rotate(10deg) translate(14px, -2px); z-index: 2; box-shadow: 4px 4px 12px rgba(234, 179, 8, 0.15);"></div>
             
             <!-- Layer 3 (Top): Soft Mint/Teal Pastel Card -->
-            <div style="position: relative; background: linear-gradient(135deg, #2dd4bf 0%, #0d9488 100%); border-radius: 24px; padding: 24px 16px; color: white; display: flex; flex-direction: column; align-items: center; z-index: 3; box-shadow: -4px -4px 14px rgba(255,255,255,0.35), 8px 8px 24px rgba(13, 148, 136, 0.35); overflow: hidden;">
+            <div style="position: relative; background: linear-gradient(135deg, #2dd4bf 0%, #0d9488 100%); border-radius: 20px; padding: 20px 14px; color: white; display: flex; flex-direction: column; align-items: center; z-index: 3; box-shadow: -4px -4px 12px rgba(255,255,255,0.3), 6px 6px 18px rgba(13, 148, 136, 0.3); overflow: hidden;">
               
-              <div style="position:absolute; top:-35px; right:-35px; width:100px; height:100px; background:rgba(255,255,255,0.08); border-radius:50%;"></div>
+              <div style="position:absolute; top:-30px; right:-30px; width:90px; height:90px; background:rgba(255,255,255,0.08); border-radius:50%;"></div>
               
               <!-- Circular Accuracy Gauge -->
-              <div style="position: relative; width: 100px; height: 100px; z-index: 1;">
+              <div style="position: relative; width: 90px; height: 90px; z-index: 1;">
                 <svg viewBox="0 0 36 36" style="width: 100%; height: 100%; transform: rotate(-90deg); filter: drop-shadow(0px 3px 5px rgba(0,0,0,0.2));">
                   <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="4" />
                   <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#fef08a" stroke-width="4" stroke-dasharray="${stockAccuracy}, 100" stroke-linecap="round" />
                 </svg>
                 <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; width:100%;">
-                  <div style="font-size: 24px; font-weight: 800; font-family: 'Fredoka', sans-serif; line-height: 1; text-shadow: 2px 2px 4px rgba(0,0,0,0.15);">${stockAccuracy}%</div>
+                  <div style="font-size: 22px; font-weight: 800; font-family: 'Fredoka', sans-serif; line-height: 1; text-shadow: 2px 2px 4px rgba(0,0,0,0.15);">${stockAccuracy}%</div>
                 </div>
               </div>
 
-              <div style="font-size: 12px; font-weight: 700; opacity: 0.95; margin-top: 8px; z-index: 1; letter-spacing: 0.3px;">ความแม่นยำสต็อก</div>
+              <div style="font-size: 11px; font-weight: 700; opacity: 0.95; margin-top: 6px; z-index: 1; letter-spacing: 0.3px;">ความแม่นยำสต็อก</div>
 
               <!-- Gain & Lost in Clean Soft White Pills for Maximum Contrast -->
-              <div style="display: flex; width: 100%; justify-content: space-between; gap: 10px; margin-top: 14px; z-index: 1;">
-                <div style="text-align: center; flex: 1; background: rgba(255, 255, 255, 0.95); padding: 10px 6px; border-radius: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.12);">
-                  <div style="font-size: 10px; color: #0f766e; font-weight: 800; margin-bottom: 2px;">GAIN</div>
-                  <div style="font-size: 14px; font-weight: 800; font-family: 'Fredoka'; color: #16a34a;">▲ +${diffPlus}</div>
+              <div style="display: flex; width: 100%; justify-content: space-between; gap: 8px; margin-top: 12px; z-index: 1;">
+                <div style="text-align: center; flex: 1; background: rgba(255, 255, 255, 0.95); padding: 8px 4px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                  <div style="font-size: 9px; color: #0f766e; font-weight: 800; margin-bottom: 2px;">GAIN</div>
+                  <div style="font-size: 13px; font-weight: 800; font-family: 'Fredoka'; color: #16a34a;">▲ +${diffPlus}</div>
                 </div>
-                <div style="text-align: center; flex: 1; background: rgba(255, 255, 255, 0.95); padding: 10px 6px; border-radius: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.12);">
-                  <div style="font-size: 10px; color: #0f766e; font-weight: 800; margin-bottom: 2px;">LOST</div>
-                  <div style="font-size: 14px; font-weight: 800; font-family: 'Fredoka'; color: #e11d48;">▼ -${diffMinus}</div>
+                <div style="text-align: center; flex: 1; background: rgba(255, 255, 255, 0.95); padding: 8px 4px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                  <div style="font-size: 9px; color: #0f766e; font-weight: 800; margin-bottom: 2px;">LOST</div>
+                  <div style="font-size: 13px; font-weight: 800; font-family: 'Fredoka'; color: #e11d48;">▼ -${diffMinus}</div>
                 </div>
               </div>
             </div>
@@ -2883,7 +2889,7 @@ async function deleteStuckAssignments() {
 const PF_LOGO_B64 = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAeAB4AAD/2wBDAAoHBwkHBgoJCAkLCwoMDxkQDw4ODx4WFxIZJCAmJSMgIyIoLTkwKCo2KyIjMkQyNjs9QEBAJjBGS0U+Sjk/QD3/wAALCAB2AQUBAREA/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/9oACAEBAAA/APZqKKQkKMkgAdzQrBhlSCD3FLRRRSdKj+0w/DPaP876FH2mD/ntH/30K+0wf8APaP/AL6FPWRH+4yt9DmnUjMFGWIA9TUf2mD/AJ7R/wDfQo+0wf8APaP/AL6FH2mD/ntH/30K+0wf8APaP/AL6FN/4Tjwf3k/8fH9aP+E38G+sn/fxa474m+M4dY/s3/hG524zuxz3HpXvPhEufCekmRtzm0jyfcqK/8Q=';
 
 function pfEscapeHtml(s) {
-  return (s==null?'':String(s)).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;}[c]));
+  return (s==null?'':String(s)).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
 async function printCountForm(locationIds, sessionId) {
