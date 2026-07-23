@@ -1877,7 +1877,13 @@ const { data: vaData, error: vaErr } = await sb.from('variance_approvals')
   .select('id,assignment_id,item_id,final_qty,variance,resolution,approved_by,wms_fixed,wms_fixed_at,wms_fixed_by')
   .in('assignment_id', allAsgnIds);
 
-// แก้ map ให้ใช้ค่าจริงจาก DB แทน hardcode
+
+    if (vaErr) {
+      vaError = vaErr;
+      console.error('variance_approvals query error:', vaErr);
+      wmsRows = [];
+    } else {
+      // แก้ map ให้ใช้ค่าจริงจาก DB แทน hardcode
 wmsRows = (vaData || []).map(v => ({
   ...v,
   wms_fixed: v.wms_fixed ?? false,     // ← ใช้ค่าจาก DB
@@ -1885,18 +1891,6 @@ wmsRows = (vaData || []).map(v => ({
   wms_fixed_by: v.wms_fixed_by ?? null,
   created_at: v.created_at ?? null,
   _fromVA: true
-}));
-
-    if (vaErr) {
-      vaError = vaErr;
-      console.error('variance_approvals query error:', vaErr);
-      wmsRows = [];
-    } else {
-      wmsRows = (vaData || []).map(v => ({
-  ...v,
-  wms_fixed: false,      // ← hardcode false เสมอ!
-  wms_fixed_at: null,
-  ...
 }));
     }
   } catch (e) {
