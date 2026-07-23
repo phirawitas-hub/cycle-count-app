@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Cycle Count - Vintage Vespa Edition</title>
+<title>Cycle Count - Soft UI Edition</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
@@ -12,24 +12,28 @@
 <!-- html5-qrcode สำหรับสแกน Location -->
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
-/* ── Vespa Vintage Poster Theme Variables ── */
+/* ── Soft Neumorphic Theme Variables ── */
 :root {
-  --vespa-yellow: #FEF3C7; /* ปรับให้เป็นเหลืองพาสเทลอ่อน (Lighter Yellow) */
-  --vespa-yellow-light: #FFFBEB;
-  --vespa-green: #009246; 
-  --vespa-red: #CE2B37; 
-  --vespa-white: #FFFDF9; 
-  --vespa-brown: #4A3325; 
-  --vespa-shadow: #2D2018;
-  --vespa-mint-dark: #1E4F41;
-  --vespa-gray: #EAE3D9;
-  --app-max-width: 640px; /* ความกว้างแอปฯ — ขยายอัตโนมัติบนจอคอมพิวเตอร์ผ่าน media query ด้านล่าง */
+  --neu-bg: #E6EEF8;
+  --neu-surface: #E6EEF8;
+  --neu-shadow-dark: #C2CDDC;
+  --neu-shadow-light: #FFFFFF;
+  --primary-blue: #2A6BF2;
+  --primary-grad: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
+  --accent-green: #10B981;
+  --accent-red: #EF4444;
+  --accent-amber: #F59E0B;
+  --text-main: #2D3748;
+  --text-muted: #718096;
+  --border-radius-lg: 24px;
+  --border-radius-md: 16px;
+  --border-radius-sm: 12px;
+  --app-max-width: 640px;
 }
-/* จอแท็บเล็ต/คอมจอเล็ก — กว้างขึ้นพอประมาณ ไม่อึดอัด แต่ยังอ่านง่าย */
+
 @media (min-width: 860px) {
   :root { --app-max-width: 860px; }
 }
-/* จอคอมทั่วไป/จอกว้าง — ใช้พื้นที่หน้าจอให้เต็มขึ้นชัดเจน แต่ยังจำกัดไว้ไม่ให้บรรทัดยาวเกินอ่านยาก */
 @media (min-width: 1300px) {
   :root { --app-max-width: 1100px; }
 }
@@ -39,8 +43,8 @@
 html,body{height:100%}
 body{
   font-family:'Mitr', 'Fredoka', 'Sarabun', -apple-system, sans-serif;
-  background: #ffffff; /* ปรับพื้นหลังรอบนอกเป็นสีขาว */
-  color: var(--vespa-shadow);
+  background: var(--neu-bg);
+  color: var(--text-main);
   min-height:100vh;
   overscroll-behavior:none;
   font-size:15px;
@@ -50,31 +54,16 @@ body{
   max-width:var(--app-max-width);
   margin:0 auto;
   min-height:100vh;
-  background: var(--vespa-yellow); /* เก็บสีเหลืองไว้แค่ในส่วนแอปฯ */
+  background: var(--neu-surface);
   position:relative;
-  box-shadow: 0 0 30px rgba(74, 51, 37, 0.2);
-  border-left: 4px solid var(--vespa-brown);
-  border-right: 4px solid var(--vespa-brown);
+  box-shadow: 12px 12px 24px var(--neu-shadow-dark), -12px -12px 24px var(--neu-shadow-light);
+  border-radius: 28px;
   transition: max-width .15s;
 }
 
-/* ── Background Pattern (Vespa & Italy Flag) ── */
-#app::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 1000'%3E%3Cdefs%3E%3Cg id='vb'%3E%3Crect x='75' y='0' width='8' height='12' fill='%23009246'/%3E%3Crect x='83' y='0' width='8' height='12' fill='%23ffffff'/%3E%3Crect x='91' y='0' width='8' height='12' fill='%23ce2b37'/%3E%3Cpath d='M 75 12 L 68 40' stroke='%232D2018' stroke-width='2'/%3E%3Ccircle cx='25' cy='70' r='14' fill='%232D2018'/%3E%3Ccircle cx='25' cy='70' r='6' fill='%23FAF6F0'/%3E%3Ccircle cx='85' cy='70' r='14' fill='%232D2018'/%3E%3Ccircle cx='85' cy='70' r='6' fill='%23FAF6F0'/%3E%3Cpath d='M 55 35 C 55 25 65 25 70 25 L 90 25 C 100 25 100 35 90 35 Z' fill='%234A3325'/%3E%3Cpath d='M 30 15 L 25 5' stroke='%232D2018' stroke-width='3' stroke-linecap='round'/%3E%3Ccircle cx='20' cy='3' r='5' fill='%23F0C43A'/%3E%3C/g%3E%3Cg id='vg'%3E%3Cpath d='M 20 60 C 10 50 15 25 25 15 C 30 10 40 5 45 20 C 48 30 40 50 35 60 Z M 35 55 L 50 55 L 60 35 L 90 35 C 105 35 110 50 105 65 C 100 75 90 75 80 70 L 25 70 Z' fill='%23009246' stroke='%232D2018' stroke-width='3' stroke-linejoin='round'/%3E%3Cuse href='%23vb'/%3E%3C/g%3E%3Cg id='vw'%3E%3Cpath d='M 20 60 C 10 50 15 25 25 15 C 30 10 40 5 45 20 C 48 30 40 50 35 60 Z M 35 55 L 50 55 L 60 35 L 90 35 C 105 35 110 50 105 65 C 100 75 90 75 80 70 L 25 70 Z' fill='%23ffffff' stroke='%232D2018' stroke-width='3' stroke-linejoin='round'/%3E%3Cuse href='%23vb'/%3E%3C/g%3E%3Cg id='vr'%3E%3Cpath d='M 20 60 C 10 50 15 25 25 15 C 30 10 40 5 45 20 C 48 30 40 50 35 60 Z M 35 55 L 50 55 L 60 35 L 90 35 C 105 35 110 50 105 65 C 100 75 90 75 80 70 L 25 70 Z' fill='%23ce2b37' stroke='%232D2018' stroke-width='3' stroke-linejoin='round'/%3E%3Cuse href='%23vb'/%3E%3C/g%3E%3C/defs%3E%3Cg transform='translate(100,100) scale(1.4) rotate(-15)'%3E%3Cuse href='%23vg'/%3E%3C/g%3E%3Cg transform='translate(450,50) scale(0.8) rotate(12)'%3E%3Cuse href='%23vw'/%3E%3C/g%3E%3Cg transform='translate(800,150) scale(1.6) rotate(-5)'%3E%3Cuse href='%23vr'/%3E%3C/g%3E%3Cg transform='translate(150,400) scale(0.9) rotate(22)'%3E%3Cuse href='%23vr'/%3E%3C/g%3E%3Cg transform='translate(500,450) scale(1.8) rotate(-10)'%3E%3Cuse href='%23vg'/%3E%3C/g%3E%3Cg transform='translate(850,350) scale(1.1) rotate(18)'%3E%3Cuse href='%23vw'/%3E%3C/g%3E%3Cg transform='translate(250,750) scale(1.5) rotate(-8)'%3E%3Cuse href='%23vw'/%3E%3C/g%3E%3Cg transform='translate(600,800) scale(1.2) rotate(25)'%3E%3Cuse href='%23vr'/%3E%3C/g%3E%3Cg transform='translate(900,700) scale(1.7) rotate(-15)'%3E%3Cuse href='%23vg'/%3E%3C/g%3E%3Cg transform='translate(50,850) scale(1.0) rotate(5)'%3E%3Cuse href='%23vg'/%3E%3C/g%3E%3Cg transform='translate(350,250) scale(1.3) rotate(-20)'%3E%3Cuse href='%23vr'/%3E%3C/g%3E%3Cg transform='translate(700,600) scale(0.9) rotate(15)'%3E%3Cuse href='%23vg'/%3E%3C/g%3E%3C/svg%3E");
-  background-size: 800px;
-  background-repeat: repeat;
-  background-position: center top;
-  opacity: 0.12; /* ปรับความชัดขึ้นเล็กน้อยให้เห็นรูปรถ */
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* ── Topbar (Styled like a Vespa Retro Speedometer Instrument Panel) ── */
+/* ── Topbar (Soft Neumorphic Floating Header) ── */
 .top{
-  background: var(--vespa-white);
+  background: var(--neu-surface);
   padding: 16px 20px;
   display: flex;
   align-items: center;
@@ -82,39 +71,35 @@ body{
   position: sticky;
   top: 0;
   z-index: 300;
-  border-bottom: 4px solid var(--vespa-brown);
   border-radius: 0 0 24px 24px;
-  box-shadow: 0 4px 15px rgba(74, 51, 37, 0.15);
+  box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light);
 }
 .top-back{
-  background: var(--vespa-yellow);
-  border: 3px solid var(--vespa-brown);
-  color: var(--vespa-brown);
-  font-size: 24px;
+  background: var(--neu-surface);
+  border: none;
+  color: var(--primary-blue);
+  font-size: 20px;
   font-weight: bold;
   cursor: pointer;
-  padding: 0;
-  line-height: 1;
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 3px 0 var(--vespa-brown);
-  transition: transform 0.1s, box-shadow 0.1s;
+  box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light);
+  transition: all 0.15s ease;
 }
 .top-back:active {
-  transform: translateY(2px);
-  box-shadow: 0 1px 0 var(--vespa-brown);
+  box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);
 }
 .top-info{flex:1;min-width:0; position: relative; z-index: 2;}
 
 .top-title{
-  font-size:18px;
-  font-weight:900;
-  color: var(--vespa-brown);
+  font-size:17px;
+  font-weight:700;
+  color: var(--text-main);
   letter-spacing:-.01em;
   display: flex;
   align-items: center;
@@ -122,76 +107,76 @@ body{
 }
 .top-sub{
   font-size:12px;
-  color: var(--vespa-mint-dark);
+  color: var(--text-muted);
   margin-top: 2px;
-  font-weight: 700;
+  font-weight: 500;
 }
 .top-out{
-  background: var(--vespa-red);
-  border: 3px solid var(--vespa-brown);
-  color: var(--vespa-white);
-  border-radius: 12px;
-  padding: 6px 12px;
+  background: var(--neu-surface);
+  border: none;
+  color: var(--accent-red);
+  border-radius: 20px;
+  padding: 8px 16px;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
   cursor: pointer;
   flex-shrink: 0;
-  box-shadow: 0 3px 0 var(--vespa-brown);
-  transition: all .1s;
-  position: relative;
-  z-index: 2;
+  box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light);
+  transition: all .15s;
 }
 .top-out:active{
-  transform: translateY(2px);
-  box-shadow: 0 1px 0 var(--vespa-brown);
+  box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);
 }
 
-/* ── Bottom tabs (3D Vespa Icons) ── */
+/* ── Bottom tabs (Neumorphic Segmented Control) ── */
 .tabs{
   position:fixed;bottom:0;left:50%;transform:translateX(-50%);
   width:100%;max-width:var(--app-max-width);
-  background: var(--vespa-white);
-  border-top: 4px solid var(--vespa-brown);
+  background: var(--neu-surface);
   display:flex;z-index:300;
-  padding-bottom:env(safe-area-inset-bottom,0px);
-  border-radius: 24px 24px 0 0;
-  box-shadow: 0 -5px 15px rgba(74, 51, 37, 0.1);
+  padding: 8px 12px calc(8px + env(safe-area-inset-bottom,0px));
+  border-radius: 28px 28px 0 0;
+  box-shadow: -6px -6px 14px var(--neu-shadow-light), 6px 6px 14px var(--neu-shadow-dark);
   transition: max-width .15s;
+  gap: 6px;
 }
 .tab{
   flex:1;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;padding:10px 4px 12px;
+  justify-content:center;padding:8px 4px;
   border:none;background:none;cursor:pointer;
-  gap:4px;font-size:11px;font-weight:800;
-  color: var(--vespa-brown);
-  transition:color .15s, transform 0.1s;
+  gap:3px;font-size:11px;font-weight:600;
+  color: var(--text-muted);
+  border-radius: 20px;
+  transition: all .2s ease;
   font-family:inherit;
 }
 .tab.on{
-  color: var(--vespa-red);
-  transform: translateY(-4px);
+  color: var(--primary-blue);
+  background: var(--neu-surface);
+  box-shadow: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light);
+  font-weight: 700;
 }
 .tab-ico{
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 0.2s ease;
 }
 .tab.on .tab-ico {
-  transform: scale(1.15);
+  transform: scale(1.1);
 }
 
 /* ── Page wrapper ── */
 .page{padding-bottom:100px; padding-top: 10px; position: relative; z-index: 2;}
 
-/* ── Bubble Cards (Neo-brutalism Cartoon Vibe) ── */
+/* ── Neumorphic Soft Cards ── */
 .card{
-  background: var(--vespa-white);
-  border: 3px solid var(--vespa-brown);
-  border-radius:24px;
-  margin:14px 16px;
+  background: var(--neu-surface);
+  border: none;
+  border-radius: var(--border-radius-lg);
+  margin:16px;
   padding:20px;
-  box-shadow: 4px 4px 0px var(--vespa-shadow);
+  box-shadow: 8px 8px 16px var(--neu-shadow-dark), -8px -8px 16px var(--neu-shadow-light);
   position: relative;
   overflow: hidden;
 }
@@ -199,16 +184,15 @@ body{
 
 /* ── Section label ── */
 .sec{
-  font-size:13px;
-  font-weight:900;
-  color: var(--vespa-brown);
-  padding:16px 20px 6px;
+  font-size:12px;
+  font-weight:700;
+  color: var(--text-muted);
+  padding:16px 20px 8px;
   text-transform:uppercase;
-  letter-spacing:.02em;
+  letter-spacing:.05em;
   display: flex;
   align-items: center;
   gap: 6px;
-  background: var(--vespa-yellow); /* Ensure readability */
 }
 
 /* ── List rows ── */
@@ -216,35 +200,35 @@ body{
   display:flex;
   align-items:center;
   padding:16px 20px;
-  border-bottom:3px solid var(--vespa-gray);
+  border-bottom: 1px solid rgba(194, 205, 220, 0.4);
   gap:12px;
   transition: background 0.15s;
 }
 .row:last-child{border-bottom:none}
 .row.click{cursor:pointer}
-.row.click:hover{background: #F4F1EB}
-.row.click:active{background: var(--vespa-gray)}
-.tab-row{cursor:pointer;transition:background .12s;border-radius:10px}
-.tab-row:active{background: var(--vespa-gray)}
+.row.click:hover{background: rgba(255, 255, 255, 0.3)}
+.row.click:active{background: rgba(194, 205, 220, 0.3)}
+.tab-row{cursor:pointer;transition:background .12s;border-radius:16px}
+.tab-row:active{background: rgba(194, 205, 220, 0.3)}
 .row-body{flex:1;min-width:0}
 .row-title{
-  font-size:16px;
-  font-weight:900;
-  color: var(--vespa-shadow);
+  font-size:15px;
+  font-weight:700;
+  color: var(--text-main);
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
 }
 .row-sub{
   font-size:12px;
-  color: var(--vespa-brown);
-  margin-top:4px;
+  color: var(--text-muted);
+  margin-top:3px;
   line-height:1.4;
-  font-weight: 600;
+  font-weight: 500;
 }
 .caret{
-  font-size:24px;
-  color: var(--vespa-brown);
+  font-size:18px;
+  color: var(--text-muted);
   flex-shrink:0;
   font-weight: bold;
 }
@@ -252,102 +236,107 @@ body{
 /* ── Status badges ── */
 .tag{
   display:inline-block;
-  padding:4px 12px;
-  border-radius:12px;
+  padding:5px 12px;
+  border-radius:20px;
   font-size:11px;
-  font-weight:900;
+  font-weight:700;
   white-space:nowrap;
-  border: 2px solid var(--vespa-brown);
-  box-shadow: 2px 2px 0px var(--vespa-shadow);
+  box-shadow: 3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light);
+  border: none;
   text-transform: uppercase;
 }
-.tag-gray  {background: var(--vespa-white); color: var(--vespa-brown)}
-.tag-blue  {background: #A0C4E2; color: var(--vespa-shadow)}
-.tag-amber {background: var(--vespa-yellow); color: var(--vespa-brown)}
-.tag-red   {background: var(--vespa-red); color: var(--vespa-white)}
-.tag-green {background: var(--vespa-green); color: var(--vespa-white)}
+.tag-gray  {background: var(--neu-surface); color: var(--text-muted)}
+.tag-blue  {background: var(--primary-blue); color: #FFFFFF}
+.tag-amber {background: var(--accent-amber); color: #FFFFFF}
+.tag-red   {background: var(--accent-red); color: #FFFFFF}
+.tag-green {background: var(--accent-green); color: #FFFFFF}
 
-/* ── Bubbly Buttons ── */
+/* ── Neumorphic Soft Buttons ── */
 .btn{
   display:flex;
   align-items:center;
   justify-content:center;
   gap:8px;
-  padding:14px 20px;
-  border-radius:18px;
-  font-size:15px;
-  font-weight:900;
+  padding:14px 24px;
+  border-radius:50px;
+  font-size:14px;
+  font-weight:700;
   font-family:inherit;
   cursor:pointer;
-  border: 3px solid var(--vespa-brown);
+  border: none;
   width:100%;
-  box-shadow: 0 4px 0px var(--vespa-shadow);
-  transition: transform 0.1s, box-shadow 0.1s;
-  letter-spacing:.02em;
+  background: var(--primary-grad);
+  color: #FFFFFF;
+  box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light);
+  transition: all 0.2s ease;
+  letter-spacing:.01em;
 }
 .btn:active:not(:disabled){
-  transform: translateY(4px);
-  box-shadow: 0 0px 0px var(--vespa-shadow);
+  box-shadow: inset 3px 3px 6px rgba(0,0,0,0.25);
+  transform: translateY(1px);
 }
 .btn:disabled{
-  opacity:.7;
-  filter: grayscale(0.5);
+  opacity:.6;
   cursor:not-allowed;
-  box-shadow: 0 2px 0px var(--vespa-shadow);
-  transform: translateY(2px);
+  box-shadow: none;
 }
-.btn-blue  {background: #457B9D; color: var(--vespa-white)}
-.btn-green {background: var(--vespa-green); color: var(--vespa-white)}
-.btn-red   {background: var(--vespa-red); color: var(--vespa-white)}
-.btn-amber {background: #E9C46A; color: var(--vespa-brown)}
-.btn-ghost {background: var(--vespa-white); color: var(--vespa-brown)}
-.btn-dark  {background: var(--vespa-shadow); color: var(--vespa-white)}
+.btn-blue  {background: var(--primary-grad); color: #FFFFFF}
+.btn-green {background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: #FFFFFF}
+.btn-red   {background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%); color: #FFFFFF}
+.btn-amber {background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); color: #FFFFFF}
+.btn-ghost {
+  background: var(--neu-surface); 
+  color: var(--text-main);
+  box-shadow: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light);
+}
+.btn-ghost:active:not(:disabled){
+  box-shadow: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light);
+}
+.btn-dark  {background: linear-gradient(135deg, #374151, #1F2937); color: #FFFFFF}
 .btn-sm{
-  padding:8px 14px;
+  padding:8px 16px;
   font-size:12px;
-  border-radius:12px;
+  border-radius:20px;
   width:auto;
-  box-shadow: 0 3px 0px var(--vespa-shadow);
+  box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light);
 }
 .btn-sm:active:not(:disabled){
-  transform: translateY(3px);
-  box-shadow: 0 0px 0px var(--vespa-shadow);
+  box-shadow: inset 2px 2px 4px rgba(0,0,0,0.2);
 }
 .btn-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 
-/* ── Forms with Retro Outlines ── */
+/* ── Inset Forms & Inputs ── */
 .fg{margin-bottom:16px}
 label{
   display:block;
-  font-size:13px;
-  font-weight:900;
-  color: var(--vespa-brown);
-  margin-bottom:6px;
+  font-size:12px;
+  font-weight:700;
+  color: var(--text-muted);
+  margin-bottom:8px;
 }
 input,select,textarea{
   width:100%;
-  padding:12px 14px;
-  border: 3px solid var(--vespa-brown);
-  border-radius:16px;
+  padding:12px 16px;
+  border: none;
+  border-radius: var(--border-radius-md);
   font-size:14px;
   font-family:inherit;
   font-weight: 600;
-  color: var(--vespa-shadow);
-  background: var(--vespa-white);
+  color: var(--text-main);
+  background: var(--neu-surface);
   outline:none;
-  box-shadow: inset 0 2px 4px rgba(74, 51, 37, 0.05);
-  transition: border-color .15s, box-shadow .15s;
+  box-shadow: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light);
+  transition: box-shadow .2s ease;
 }
 input:focus,select:focus,textarea:focus{
-  border-color: var(--vespa-red);
-  box-shadow: 0 0 0 3px rgba(206, 43, 55, 0.2);
+  box-shadow: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light), 0 0 0 2px var(--primary-blue);
 }
 input[type=number]{-moz-appearance:textfield}
 input[type=number]::-webkit-outer-spin-button,
 input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
 select{
   appearance:none;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M0 0l6 8 6-8z' fill='%234A3325'/%3E%3C/svg%3E");
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M0 0l6 8 6-8z' fill='%23718096'/%3E%3C/svg%3E");
   background-repeat:no-repeat;
   background-position:right 16px center;
   padding-right:42px;
@@ -356,181 +345,175 @@ select{
 /* ── Alerts ── */
 .alert{
   padding:12px 16px;
-  border-radius:18px;
+  border-radius: var(--border-radius-md);
   font-size:13px;
   margin-bottom:12px;
   line-height:1.6;
-  border: 3px solid var(--vespa-brown);
-  font-weight: 700;
+  border: none;
+  font-weight: 600;
+  box-shadow: inset 2px 2px 4px rgba(0,0,0,0.05);
 }
-.alert-red   {background: #FFD0D0; color: #991b1b}
-.alert-green {background: #D4E2D4; color: #14532d}
-.alert-blue  {background: #DDF2FD; color: #1e40af}
-.alert-amber {background: var(--vespa-yellow-light); color: var(--vespa-brown)}
+.alert-red   {background: #FEE2E2; color: #991B1B}
+.alert-green {background: #D1FAE5; color: #065F46}
+.alert-blue  {background: #E0F2FE; color: #075985}
+.alert-amber {background: #FEF3C7; color: #92400E}
 
 /* ── Stats Dials ── */
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 16px; position:relative; z-index:2;}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px; position:relative; z-index:2;}
 .stat{
-  background: var(--vespa-white);
-  border: 3px solid var(--vespa-brown);
-  border-radius:20px;
-  padding:14px 8px;
+  background: var(--neu-surface);
+  border: none;
+  border-radius: var(--border-radius-md);
+  padding:16px 8px;
   text-align:center;
-  box-shadow: 3px 3px 0px var(--vespa-shadow);
+  box-shadow: 6px 6px 12px var(--neu-shadow-dark), -6px -6px 12px var(--neu-shadow-light);
 }
 .stat-n{
-  font-size:30px;
-  font-weight:900;
+  font-size:28px;
+  font-weight:800;
   line-height:1;
-  color: var(--vespa-red);
+  color: var(--primary-blue);
   font-family: 'Fredoka', sans-serif;
-  text-shadow: 1px 1px 0px var(--vespa-brown);
 }
 .stat-l{
   font-size:11px;
-  color: var(--vespa-brown);
+  color: var(--text-muted);
   margin-top:6px;
-  font-weight:900;
+  font-weight:700;
 }
 
-/* ── Fuel Gauge (Progress Bar redesign) ── */
+/* ── Inset Fuel Gauge / Progress ── */
 .gauge-container {
-  background: #F4F1EB;
-  border: 3px solid var(--vespa-brown);
-  border-radius: 16px;
+  background: var(--neu-surface);
+  border-radius: var(--border-radius-md);
   padding: 12px;
   margin-top: 10px;
+  box-shadow: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light);
 }
 .prog{
-  height:14px;
-  background: var(--vespa-gray);
-  border-radius:8px;
-  border: 2px solid var(--vespa-brown);
+  height:12px;
+  background: var(--neu-surface);
+  border-radius:10px;
+  box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);
   overflow:hidden;
 }
 .prog-fill{
   height:100%;
-  background: var(--vespa-red);
-  border-radius:4px;
+  background: var(--primary-grad);
+  border-radius:10px;
   transition:width .45s cubic-bezier(.4,0,.2,1);
 }
 
 /* ── Count-entry ── */
 .citem-wrap{
-  border-bottom:3px solid var(--vespa-gray);
-  background: var(--vespa-white);
+  border-bottom: 1px solid rgba(194, 205, 220, 0.4);
+  background: var(--neu-surface);
 }
 .citem-wrap:last-child{border-bottom:none}
 .citem{
   display:flex;
   align-items:center;
-  padding:14px 18px;
+  padding:16px 18px;
   gap:12px;
 }
 .citem-info{flex:1;min-width:0}
 .citem-code{
   font-size:16px;
-  font-weight:900;
+  font-weight:800;
   font-family:'Fredoka', monospace;
-  color: var(--vespa-shadow);
+  color: var(--text-main);
 }
 .citem-desc{
   font-size:12px;
-  color: var(--vespa-brown);
+  color: var(--text-muted);
   margin-top:4px;
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
-  font-weight: 600;
+  font-weight: 500;
 }
 .cqty{
-  width:96px;
+  width:90px;
   padding:10px 6px;
-  border: 3px solid var(--vespa-brown);
-  border-radius:14px;
-  font-size:24px;
-  font-weight:900;
+  border: none;
+  border-radius: var(--border-radius-md);
+  font-size:22px;
+  font-weight:800;
   text-align:center;
   font-family:'Fredoka', monospace;
-  color: var(--vespa-shadow);
+  color: var(--text-main);
   outline:none;
-  background: #F4F1EB;
-  box-shadow: inset 0 3px 5px rgba(0,0,0,0.1);
+  background: var(--neu-surface);
+  box-shadow: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light);
   transition: all 0.15s;
 }
 .cqty:focus{
-  border-color: var(--vespa-red);
-  background: var(--vespa-white);
+  box-shadow: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light), 0 0 0 2px var(--primary-blue);
 }
 .cqty.ok{
-  border-color: var(--vespa-green);
-  background: #E8F5E9;
-  color: var(--vespa-mint-dark);
+  color: var(--accent-green);
 }
 
-/* ── OH Badge (ใหญ่ ชัด เห็นง่าย ตอนนับของ) ── */
+/* ── OH Badge ── */
 .oh-badge{
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:center;
-  min-width:64px;
-  padding:5px 10px;
-  border: 3px solid #1e40af;
-  border-radius:14px;
-  background:#DDF2FD;
-  box-shadow: 2px 2px 0px var(--vespa-shadow);
+  min-width:60px;
+  padding:4px 8px;
+  border-radius:12px;
+  background: var(--neu-surface);
+  box-shadow: 3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light);
 }
 .oh-badge-label{
-  font-size:10px;
-  font-weight:900;
-  color:#1e40af;
+  font-size:9px;
+  font-weight:800;
+  color: var(--primary-blue);
   letter-spacing:.04em;
   line-height:1;
 }
 .oh-badge-val{
-  font-size:22px;
-  font-weight:900;
-  color:#1e40af;
+  font-size:20px;
+  font-weight:800;
+  color: var(--primary-blue);
   font-family:'Fredoka', monospace;
   line-height:1.2;
 }
 .oh-badge-al{
-  font-size:10px;
-  font-weight:800;
-  color:#d97706;
+  font-size:9px;
+  font-weight:700;
+  color: var(--accent-amber);
   margin-top:1px;
   line-height:1;
 }
-.oh-badge.oh-badge-al-only{background:#FEF3C7;border-color:#d97706}
-.oh-badge.oh-badge-al-only .oh-badge-label,
-.oh-badge.oh-badge-al-only .oh-badge-val{color:#d97706}
 
-/* ── OH Chip (กะทัดรัดสำหรับหน้า admin/supervisor ตรวจ Variance) ── */
+/* ── OH Chip ── */
 .oh-chip{
   display:inline-flex;
   align-items:center;
   gap:4px;
   margin-top:4px;
   padding:4px 10px;
-  border:2px solid #1e40af;
   border-radius:10px;
-  background:#DDF2FD;
-  font-size:13px;
-  font-weight:900;
-  color:#1e40af;
+  background: var(--neu-surface);
+  box-shadow: inset 2px 2px 4px var(--neu-shadow-dark), inset -2px -2px 4px var(--neu-shadow-light);
+  font-size:12px;
+  font-weight:800;
+  color: var(--primary-blue);
 }
 .oh-chip input{
-  width:50px;
+  width:45px;
   border:none;
   background:transparent;
+  box-shadow:none;
   padding:0;
-  font-size:14px;
-  font-weight:900;
-  color:#1e40af;
+  font-size:13px;
+  font-weight:800;
+  color: var(--primary-blue);
   text-align:center;
 }
-.oh-chip .al-part{color:#d97706;margin-left:2px;font-weight:800}
+.oh-chip .al-part{color: var(--accent-amber);margin-left:2px;font-weight:700}
 
 /* ── Counter-name multi-select pills ── */
 .cname-pill-wrap{
@@ -543,90 +526,56 @@ select{
 .cname-pill{
   display:inline-flex;
   align-items:center;
-  padding:8px 14px;
-  border-radius:14px;
+  padding:8px 16px;
+  border-radius:20px;
   font-size:13px;
-  font-weight:800;
+  font-weight:700;
   font-family:inherit;
   cursor:pointer;
-  border: 3px solid var(--vespa-brown);
-  background: var(--vespa-white);
-  color: var(--vespa-brown);
-  box-shadow: 0 3px 0px var(--vespa-shadow);
-  transition: transform 0.1s, box-shadow 0.1s, background 0.15s, color 0.15s;
+  border: none;
+  background: var(--neu-surface);
+  color: var(--text-muted);
+  box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light);
+  transition: all 0.15s;
 }
 .cname-pill:active{
-  transform: translateY(3px);
-  box-shadow: 0 0px 0px var(--vespa-shadow);
+  box-shadow: inset 2px 2px 4px var(--neu-shadow-dark), inset -2px -2px 4px var(--neu-shadow-light);
 }
 .cname-pill.sel{
-  background: var(--vespa-green);
-  color: var(--vespa-white);
+  background: var(--primary-grad);
+  color: #FFFFFF;
+  box-shadow: inset 2px 2px 4px rgba(0,0,0,0.2);
 }
 
 /* ── Variance rows ── */
-.vrow{display:flex;align-items:center;padding:12px 16px;border-bottom:2px solid var(--vespa-gray);gap:10px}
+.vrow{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid rgba(194,205,220,0.4);gap:10px}
 .vrow:last-child{border-bottom:none}
-.vrow.diff{background: #FFEBEB}
-.vrow.exact{background: #E8F5E9}
-.vqty{min-width:48px;text-align:right;font-weight:900;font-size:16px;font-family:'Fredoka', monospace}
-.vdiff-p{color: var(--vespa-green)}
-.vdiff-n{color: var(--vespa-red)}
+.vrow.diff{background: rgba(239,68,68,0.06)}
+.vrow.exact{background: rgba(16,185,129,0.06)}
 
-/* ── FAB ── */
-.fab{
-  position:fixed;bottom:94px;
-  right:calc(50% - (var(--app-max-width) / 2) + 12px);
-  background: var(--vespa-red);
-  color: var(--vespa-white);
-  width:58px;
-  height:58px;
-  border-radius:50%;
-  border: 3px solid var(--vespa-brown);
-  font-size:32px;
-  font-weight:bold;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  cursor:pointer;
-  box-shadow: 0 4px 0px var(--vespa-shadow);
-  z-index:200;
-  transition: transform 0.1s, box-shadow 0.1s, right .15s;
-}
-.fab:active{
-  transform: scale(.9) translateY(4px);
-  box-shadow: 0 0px 0px var(--vespa-shadow);
-}
-@media(max-width:640px){.fab{right:20px}}
-
-/* ── Login Vespa Retro Garage ── */
+/* ── Login Neumorphic Card ── */
 .lbox{
   min-height:100vh;
   display:flex;
   align-items:center;
   justify-content:center;
-  background: var(--vespa-yellow); /* Yellow Vintage Background */
+  background: var(--neu-bg);
   padding:20px;
   position: relative;
   z-index: 2;
 }
 .lcard{
-  background: var(--vespa-white);
-  border: 4px solid var(--vespa-brown);
-  border-radius:28px;
-  padding:40px 24px;
-  width:100%;
-  max-width:380px;
-  box-shadow: 6px 6px 0px var(--vespa-shadow);
+  background: var(--neu-surface);
+  border: none;
+  border-radius: 32px;
+  padding: 40px 28px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 12px 12px 24px var(--neu-shadow-dark), -12px -12px 24px var(--neu-shadow-light);
   text-align: center;
 }
-.lcard input{
-  background: #F4F1EB;
-  border-color: var(--vespa-brown);
-  color: var(--vespa-shadow);
-}
 
-/* ── Icon-in-field inputs (login) ── */
+/* ── Icon-in-field inputs ── */
 .input-icon-wrap{position:relative}
 .input-icon-wrap input{padding-left:44px}
 .input-icon{
@@ -651,9 +600,9 @@ select{
   align-items:center;
   justify-content:center;
   padding:52px;
-  color: var(--vespa-brown);
-  font-size:16px;
-  font-weight: 800;
+  color: var(--text-muted);
+  font-size:15px;
+  font-weight: 600;
   gap:10px;
 }
 
@@ -662,81 +611,67 @@ select{
 
 /* ── Bulk assign box ── */
 .bulk-box{
-  background: #F4F1EB;
-  border: 3px solid var(--vespa-brown);
-  border-radius:20px;
-  padding:16px;
+  background: var(--neu-surface);
+  border-radius: var(--border-radius-lg);
+  padding:18px;
   margin-bottom:16px;
-  box-shadow: 3px 3px 0px var(--vespa-shadow);
-}
-.bulk-box-title{
-  font-size:14px;
-  font-weight:900;
-  color: var(--vespa-brown);
-  margin-bottom:12px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  box-shadow: 6px 6px 12px var(--neu-shadow-dark), -6px -6px 12px var(--neu-shadow-light);
 }
 .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 
-/* ── Item extra (remark/photo) ── */
+/* ── Item extra ── */
 .item-toggle{
-  background: var(--vespa-white);
-  border: 3px solid var(--vespa-brown);
+  background: var(--neu-surface);
+  border: none;
   border-radius: 12px;
-  color: var(--vespa-brown);
+  color: var(--text-main);
   font-size:16px;
   cursor:pointer;
-  padding:6px;
+  padding:8px;
   flex-shrink:0;
   line-height:1;
-  box-shadow: 0 3px 0px var(--vespa-shadow);
-  transition: all 0.1s;
+  box-shadow: 3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light);
+  transition: all 0.15s;
 }
 .item-toggle:active {
-  transform: translateY(3px);
-  box-shadow: 0 0px 0px var(--vespa-shadow);
-}
-.item-toggle.has{
-  background: var(--vespa-yellow);
+  box-shadow: inset 2px 2px 4px var(--neu-shadow-dark), inset -2px -2px 4px var(--neu-shadow-light);
 }
 .item-extra{
   display:none;
-  padding:14px 18px;
-  background: #F4F1EB;
-  border-top: 3px dashed var(--vespa-brown);
+  padding:16px 18px;
+  background: rgba(255,255,255,0.2);
+  border-top: 1px dashed var(--neu-shadow-dark);
 }
 .item-extra.open{display:block}
 .item-extra textarea{min-height:64px;font-size:13px;font-family:inherit;margin-top:6px}
 .photo-thumb{
   width:80px;
   height:80px;
-  border-radius:12px;
+  border-radius:16px;
   object-fit:cover;
   margin-top:10px;
   display:block;
-  border: 3px solid var(--vespa-brown);
-  box-shadow: 2px 2px 0px var(--vespa-shadow);
+  box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light);
 }
 .lpn-chip{
   display:inline-block;
   font-size:10px;
-  background: var(--vespa-white);
-  color: var(--vespa-brown);
-  border: 2px solid var(--vespa-brown);
+  background: var(--neu-surface);
+  color: var(--text-muted);
+  box-shadow: inset 2px 2px 4px var(--neu-shadow-dark), inset -2px -2px 4px var(--neu-shadow-light);
   padding:4px 8px;
   border-radius:8px;
   margin:4px 4px 0 0;
   font-family:'Fredoka', monospace;
-  font-weight: 700;
+  font-weight: 600;
 }
 
-/* ── Popup Modal (generic) ── */
+/* ── Popup Modal ── */
 .modal-overlay{
   position:fixed;
   inset:0;
-  background: rgba(45, 32, 24, 0.65);
+  background: rgba(45, 55, 72, 0.4);
+  backdrop-filter: blur(4px);
   z-index:998;
   display:flex;
   align-items:center;
@@ -744,29 +679,28 @@ select{
   padding:20px;
 }
 .modal-card{
-  background: var(--vespa-white);
-  border: 4px solid var(--vespa-brown);
-  border-radius:24px;
-  padding:24px;
+  background: var(--neu-surface);
+  border-radius: 28px;
+  padding:28px;
   width:100%;
-  max-width:400px;
+  max-width:420px;
   max-height:85vh;
   overflow-y:auto;
-  box-shadow: 6px 6px 0px var(--vespa-shadow);
+  box-shadow: 12px 12px 24px rgba(0,0,0,0.15), -12px -12px 24px var(--neu-shadow-light);
 }
 .modal-header{
   display:flex;
   justify-content:space-between;
   align-items:center;
-  margin-bottom:16px;
+  margin-bottom:18px;
   font-size:16px;
-  font-weight:900;
-  color:var(--vespa-brown);
+  font-weight:800;
+  color:var(--text-main);
 }
 .modal-header button{
-  background: var(--vespa-red);
-  border: 3px solid var(--vespa-brown);
-  color: var(--vespa-white);
+  background: var(--neu-surface);
+  border: none;
+  color: var(--accent-red);
   width:32px;
   height:32px;
   border-radius:50%;
@@ -775,7 +709,7 @@ select{
   display:flex;
   align-items:center;
   justify-content:center;
-  box-shadow: 0 2px 0px var(--vespa-shadow);
+  box-shadow: 3px 3px 6px var(--neu-shadow-dark), -3px -3px 6px var(--neu-shadow-light);
   flex-shrink:0;
 }
 
@@ -783,7 +717,7 @@ select{
 .scan-overlay{
   position:fixed;
   inset:0;
-  background: rgba(45, 32, 24, 0.95);
+  background: rgba(20, 25, 35, 0.95);
   z-index:999;
   display:flex;
   flex-direction:column;
@@ -793,23 +727,23 @@ select{
   justify-content:space-between;
   align-items:center;
   padding:16px 20px;
-  background: var(--vespa-brown);
-  border-bottom: 4px solid var(--vespa-yellow);
+  background: var(--text-main);
+  color: #fff;
   flex-shrink:0;
 }
 .scan-header span{
-  color: var(--vespa-white);
-  font-weight:900;
+  color: #fff;
+  font-weight:700;
   font-size:16px;
 }
 .scan-header button{
-  background: var(--vespa-red);
-  border: 3px solid var(--vespa-white);
-  color: var(--vespa-white);
-  width: 40px;
-  height: 40px;
+  background: var(--accent-red);
+  border: none;
+  color: #fff;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  font-size:20px;
+  font-size:18px;
   font-weight: bold;
   cursor:pointer;
   display: flex;
@@ -823,47 +757,45 @@ select{
   justify-content:center;
 }
 
-/* ── WMS Summary Card (Neumorphism) ── */
+/* ── WMS Summary Card (Soft Neumorphic) ── */
 .wms-summary-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(145deg, #f0f0f0, #ffffff);
-  border-radius: 24px;
+  background: var(--neu-surface);
+  border-radius: var(--border-radius-lg);
   padding: 20px 24px;
-  border: 3px solid var(--vespa-brown);
-  box-shadow: 6px 6px 0px var(--vespa-shadow);
-  margin-bottom: 14px;
+  box-shadow: 8px 8px 16px var(--neu-shadow-dark), -8px -8px 16px var(--neu-shadow-light);
+  margin-bottom: 16px;
 }
 .wms-summary-left {
   flex: 1;
 }
 .wms-summary-label {
-  font-size: 13px;
-  font-weight: 800;
-  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.05em;
   margin-bottom: 4px;
 }
 .wms-summary-number {
-  font-size: 42px;
-  font-weight: 900;
+  font-size: 40px;
+  font-weight: 800;
   font-family: 'Fredoka', sans-serif;
-  color: var(--vespa-brown);
+  color: var(--text-main);
   line-height: 1;
-  text-shadow: 2px 2px 0px rgba(74, 51, 37, 0.15);
 }
 .wms-summary-percent {
   font-size: 13px;
   font-weight: 700;
-  color: var(--vespa-green);
+  color: var(--accent-green);
   margin-top: 6px;
 }
 .wms-summary-ring {
   position: relative;
-  width: 90px;
-  height: 90px;
+  width: 86px;
+  height: 86px;
   flex-shrink: 0;
 }
 .wms-ring-svg {
@@ -873,13 +805,14 @@ select{
 }
 .wms-ring-bg {
   fill: none;
-  stroke: #e2e8f0;
+  stroke: var(--neu-shadow-dark);
   stroke-width: 8;
   stroke-linecap: round;
+  opacity: 0.5;
 }
 .wms-ring-progress {
   fill: none;
-  stroke: var(--vespa-green);
+  stroke: var(--primary-blue);
   stroke-width: 8;
   stroke-linecap: round;
   transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1);
@@ -889,18 +822,18 @@ select{
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 18px;
-  font-weight: 900;
+  font-size: 17px;
+  font-weight: 800;
   font-family: 'Fredoka', sans-serif;
-  color: var(--vespa-brown);
+  color: var(--text-main);
 }
 
-/* ── Status Badge Cards (Large) ── */
+/* ── Status Badge Cards ── */
 .status-badge-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  margin-bottom: 14px;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 .status-badge-card {
   display: flex;
@@ -908,110 +841,60 @@ select{
   align-items: center;
   justify-content: center;
   padding: 16px 8px;
-  border-radius: 20px;
-  border: 3px solid var(--vespa-brown);
-  box-shadow: 3px 3px 0px var(--vespa-shadow);
+  border-radius: var(--border-radius-lg);
+  background: var(--neu-surface);
+  box-shadow: 6px 6px 12px var(--neu-shadow-dark), -6px -6px 12px var(--neu-shadow-light);
   text-align: center;
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition: all 0.15s ease;
 }
 .status-badge-card:active {
-  transform: translateY(3px);
-  box-shadow: 1px 1px 0px var(--vespa-shadow);
-}
-.status-badge-card.pending {
-  background: #FEF3C7;
-}
-.status-badge-card.confirmed {
-  background: #DDF2FD;
-}
-.status-badge-card.unfixed {
-  background: #FFD0D0;
-}
-.status-badge-card.fixed {
-  background: #D4E2D4;
+  box-shadow: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light);
 }
 .status-badge-icon {
-  font-size: 28px;
-  margin-bottom: 6px;
+  font-size: 26px;
+  margin-bottom: 4px;
 }
 .status-badge-number {
-  font-size: 36px;
-  font-weight: 900;
+  font-size: 32px;
+  font-weight: 800;
   font-family: 'Fredoka', sans-serif;
   line-height: 1;
-  text-shadow: 1px 1px 0px var(--vespa-brown);
 }
-.status-badge-card.pending .status-badge-number {
-  color: #d97706;
-}
-.status-badge-card.confirmed .status-badge-number {
-  color: #1e40af;
-}
-.status-badge-card.unfixed .status-badge-number {
-  color: var(--vespa-red);
-}
-.status-badge-card.fixed .status-badge-number {
-  color: var(--vespa-green);
-}
+.status-badge-card.pending .status-badge-number { color: var(--accent-amber); }
+.status-badge-card.confirmed .status-badge-number { color: var(--primary-blue); }
+.status-badge-card.unfixed .status-badge-number { color: var(--accent-red); }
+.status-badge-card.fixed .status-badge-number { color: var(--accent-green); }
+
 .status-badge-label {
   font-size: 11px;
-  font-weight: 900;
+  font-weight: 700;
   margin-top: 6px;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  color: var(--text-muted);
 }
-.status-badge-card.pending .status-badge-label {
-  color: #92400e;
-}
-.status-badge-card.confirmed .status-badge-label {
-  color: #1e40af;
-}
-.status-badge-card.unfixed .status-badge-label {
-  color: #991b1b;
-}
-.status-badge-card.fixed .status-badge-label {
-  color: #14532d;
-}
-
-/* Decor stripe (Italian Vespa Tricolore) */
-.tricolore-stripe {
-  height: 8px;
-  display: flex;
-  width: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 301;
-  border-bottom: 2px solid var(--vespa-brown);
-}
-.stripe-g { background: #009246; flex: 1; }
-.stripe-w { background: #FFFFFF; flex: 1; }
-.stripe-r { background: #CE2B37; flex: 1; }
 </style>
-<base target="_blank">
-<base target="_blank">
-<base target="_blank">
 </head>
 <body>
 <div id="app"></div>
-<script>// ══════════════════════════════════════════════════════════
-//  ⚙️  CONFIG
+<script>
+// ══════════════════════════════════════════════════════════
+//   ⚙️ CONFIG
 // ══════════════════════════════════════════════════════════
 const SUPA_URL = 'https://uiuaboxsfepyftqjlwil.supabase.co';
 const SUPA_KEY = 'sb_publishable_EuJ-IUiXWBLSNvQsG0CJ5w_C2LHJXAL';
 
 // ══════════════════════════════════════════════════════════
-//  GLOBALS
+//   GLOBALS
 // ══════════════════════════════════════════════════════════
 let sb, me, prof;
 let S = {};
 
-// ══ VESPA UI FUNCTIONS ══
+// ══ SOFT UI FUNCTIONS ══
 
 async function boot() {
   if (SUPA_URL === 'YOUR_SUPABASE_URL') {
     Q('app').innerHTML = `<div class="lbox"><div class="lcard">
-      <div style="font-size:48px;text-align:center;margin-bottom:16px">🛵💨</div>
+      <div style="font-size:48px;text-align:center;margin-bottom:16px">📦</div>
       <div class="alert alert-amber">
         <strong>ยังไม่ได้ตั้งค่าระบบจ้า!</strong><br>กรุณาแก้ไฟล์เพื่อกำหนดค่า SUPA_URL และ SUPA_KEY ก่อนน้า
       </div>
@@ -1052,40 +935,19 @@ function home() {
   return 'login';
 }
 
-function vBadge(accentColor, highlight) {
-  const cream = '#FFFDF9';
-  const ink   = '#2D2018';
-  const hl    = (part) => highlight === part ? accentColor : cream;
-  const ringColor = highlight === 'ring' ? accentColor : ink;
-  const ringWidth = highlight === 'ring' ? 6 : 3.5;
+function vBadge(accentColor, iconType) {
+  const icons = {
+    handlebar: `<path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`,
+    headlight: `<path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`,
+    ring: `<path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`,
+    mirror: `<path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`,
+    wheel: `<path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke="currentColor" stroke-width="2" fill="none"/>`,
+    emblem: `<path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`
+  };
 
-  return `<div style="width:36px;height:36px;flex-shrink:0" class="tab-ico">
-    <svg viewBox="0 0 100 100" style="width:100%;height:100%;filter:drop-shadow(1px 2px 0px rgba(74,51,37,0.35))">
-      <circle cx="50" cy="50" r="46" fill="${cream}" stroke="${ringColor}" stroke-width="${ringWidth}"/>
-      <circle cx="50" cy="50" r="39" fill="none" stroke="${ink}" stroke-width="1.2" opacity="0.25"/>
-
-      <!-- ล้อหน้า (แอบโผล่ด้านล่าง) -->
-      <circle cx="50" cy="80" r="9" fill="${hl('wheel')}" stroke="${ink}" stroke-width="3"/>
-      <circle cx="50" cy="80" r="3" fill="${ink}"/>
-
-      <!-- บังลม/ตัวถังหน้า -->
-      <path d="M 34 55 Q 32 70 50 76 Q 68 70 66 55 Q 66 45 50 43 Q 34 45 34 55 Z"
-            fill="${hl('body')}" stroke="${ink}" stroke-width="3" stroke-linejoin="round"/>
-
-      <!-- ตราสัญลักษณ์กลางบังลม -->
-      <circle cx="50" cy="58" r="5" fill="${hl('emblem')}" stroke="${ink}" stroke-width="2"/>
-
-      <!-- ไฟหน้า -->
-      <circle cx="50" cy="34" r="13" fill="${hl('headlight')}" stroke="${ink}" stroke-width="3"/>
-      <circle cx="50" cy="34" r="4.5" fill="${ink}" opacity="0.18"/>
-
-      <!-- แฮนด์ซ้าย/ขวา -->
-      <rect x="20" y="26" width="22" height="5" rx="2.5" fill="${hl('handlebar')}" stroke="${ink}" stroke-width="2.2" transform="rotate(-15 31 28.5)"/>
-      <rect x="58" y="26" width="22" height="5" rx="2.5" fill="${hl('handlebar')}" stroke="${ink}" stroke-width="2.2" transform="rotate(15 69 28.5)"/>
-
-      <!-- กระจกมองข้าง -->
-      <circle cx="22" cy="24" r="5" fill="${hl('mirror')}" stroke="${ink}" stroke-width="2.2"/>
-      <circle cx="78" cy="24" r="5" fill="${hl('mirror')}" stroke="${ink}" stroke-width="2.2"/>
+  return `<div style="width:22px;height:22px;" class="tab-ico">
+    <svg viewBox="0 0 24 24" style="width:100%;height:100%;">
+      ${icons[iconType] || icons.handlebar}
     </svg>
   </div>`;
 }
@@ -1102,14 +964,14 @@ function render() {
   if (page === 'reset-password') { paintResetPassword(); return; }
 
   const TOPS = {
-    'c-tasks':    { t:'งานของฉัน 📋',          back:null },
+    'c-tasks':    { t:'งานของฉัน 📋',         back:null },
     'c-count':    { t:'บันทึกการนับ ✍️',         back:'c-tasks' },
     'sv-dash':    { t:'ภาพรวมงาน 📊',           back:null },
     'sv-list':    { t:'รายการผันผวน ⚠️',         back:'sv-dash' },
     'sv-detail':  { t:'ตรวจสอบยอดผันผวน 🧭',    back:'sv-list' },
     'ad-manage':  { t:'จัดการงาน 📂',            back:null },
     'ad-sessions':{ t:'จัดการงาน 📂',            back:null },
-    'ad-new':     { t:'สร้างรายการนับ 🆕',        back:'ad-manage' },
+    'ad-new':      { t:'สร้างรายการนับ 🆕',        back:'ad-manage' },
     'ad-assign':  { t:'จัดการงาน 📂',            back:null },
     'ad-import':  { t:'จัดการงาน 📂',            back:null },
     'ad-history': { t:'ประวัติการนับ 📦',         back:null },
@@ -1123,39 +985,35 @@ function render() {
   const managePgs = ['ad-manage','ad-sessions','ad-new','ad-assign','ad-import'];
   const TABS = {
     counter: `<nav class="tabs">
-      <button class="tab ${page==='c-tasks'?'on':''}" onclick="go('c-tasks')">${vBadge('#009246','handlebar')}<span style="margin-top:4px">งานของฉัน</span></button>
+      <button class="tab ${page==='c-tasks'?'on':''}" onclick="go('c-tasks')">${vBadge('#2A6BF2','handlebar')}<span style="margin-top:2px">งานของฉัน</span></button>
     </nav>`,
     supervisor: `<nav class="tabs">
-      <button class="tab ${page==='sv-dash'?'on':''}" onclick="go('sv-dash')">${vBadge('#3B82F6','headlight')}<span style="margin-top:4px">สรุป</span></button>
-      <button class="tab ${page==='c-tasks'?'on':''}" onclick="go('c-tasks')">${vBadge('#009246','handlebar')}<span style="margin-top:4px">งานของฉัน</span></button>
-      <button class="tab ${['sv-list','sv-detail'].includes(page)?'on':''}" onclick="go('sv-list')">${vBadge('#CE2B37','ring')}<span style="margin-top:4px">Variance</span></button>
-      <button class="tab ${page==='ad-history'?'on':''}" onclick="go('ad-history')">${vBadge('#457B9D','mirror')}<span style="margin-top:4px">ประวัติ</span></button>
+      <button class="tab ${page==='sv-dash'?'on':''}" onclick="go('sv-dash')">${vBadge('#2A6BF2','headlight')}<span style="margin-top:2px">สรุป</span></button>
+      <button class="tab ${page==='c-tasks'?'on':''}" onclick="go('c-tasks')">${vBadge('#2A6BF2','handlebar')}<span style="margin-top:2px">งานของฉัน</span></button>
+      <button class="tab ${['sv-list','sv-detail'].includes(page)?'on':''}" onclick="go('sv-list')">${vBadge('#2A6BF2','ring')}<span style="margin-top:2px">Variance</span></button>
+      <button class="tab ${page==='ad-history'?'on':''}" onclick="go('ad-history')">${vBadge('#2A6BF2','mirror')}<span style="margin-top:2px">ประวัติ</span></button>
     </nav>`,
     admin: `<nav class="tabs">
-      <button class="tab ${page==='sv-dash'?'on':''}" onclick="go('sv-dash')">${vBadge('#3B82F6','headlight')}<span style="margin-top:4px">สรุป</span></button>
-      <button class="tab ${page==='c-tasks'?'on':''}" onclick="go('c-tasks')">${vBadge('#009246','handlebar')}<span style="margin-top:4px">งานของฉัน</span></button>
-      <button class="tab ${managePgs.includes(page)?'on':''}" onclick="go('ad-manage')">${vBadge('#CE2B37','wheel')}<span style="margin-top:4px">จัดการ</span></button>
-      <button class="tab ${page==='ad-history'?'on':''}" onclick="go('ad-history')">${vBadge('#457B9D','mirror')}<span style="margin-top:4px">ประวัติ</span></button>
-      <button class="tab ${page==='ad-users'?'on':''}" onclick="go('ad-users')">${vBadge('#E76F51','emblem')}<span style="margin-top:4px">ทีมงาน</span></button>
+      <button class="tab ${page==='sv-dash'?'on':''}" onclick="go('sv-dash')">${vBadge('#2A6BF2','headlight')}<span style="margin-top:2px">สรุป</span></button>
+      <button class="tab ${page==='c-tasks'?'on':''}" onclick="go('c-tasks')">${vBadge('#2A6BF2','handlebar')}<span style="margin-top:2px">งานของฉัน</span></button>
+      <button class="tab ${managePgs.includes(page)?'on':''}" onclick="go('ad-manage')">${vBadge('#2A6BF2','wheel')}<span style="margin-top:2px">จัดการ</span></button>
+      <button class="tab ${page==='ad-history'?'on':''}" onclick="go('ad-history')">${vBadge('#2A6BF2','mirror')}<span style="margin-top:2px">ประวัติ</span></button>
+      <button class="tab ${page==='ad-users'?'on':''}" onclick="go('ad-users')">${vBadge('#2A6BF2','emblem')}<span style="margin-top:2px">ทีมงาน</span></button>
     </nav>`,
   };
 
   Q('app').innerHTML = `
-    <div class="tricolore-stripe">
-      <div class="stripe-g"></div><div class="stripe-w"></div><div class="stripe-r"></div>
-    </div>
     <header class="top">
       ${bk}
       <div class="top-info">
         <div class="top-title">
-          <span style="background:var(--vespa-brown); color:var(--vespa-white); padding:2px 8px; border-radius:8px; font-size:12px; border:2px solid var(--vespa-white); box-shadow:2px 2px 0px var(--vespa-shadow); margin-right:4px;">🇮🇹</span>
           ${tp.t}
         </div>
-        <div class="top-sub">🌟 ${prof?.name || ''} · <span style="text-decoration:underline">${rLabel(prof?.role)}</span></div>
+        <div class="top-sub">👤 ${prof?.name || ''} · <span style="font-weight:600;color:var(--primary-blue)">${rLabel(prof?.role)}</span></div>
       </div>
-      <button class="top-out" onclick="doLogout()">Ciao! 👋</button>
+      <button class="top-out" onclick="doLogout()">ออกจากระบบ</button>
     </header>
-    <main class="page" id="cnt"><div class="load">⏳ กำลังสตาร์ท...</div></main>
+    <main class="page" id="cnt"><div class="load">⏳ กำลังโหลด...</div></main>
     ${TABS[prof?.role] || ''}`;
 
   const L = {
@@ -1168,7 +1026,7 @@ function render() {
     'ad-sessions':loadAdManage,
     'ad-assign':  loadAdManage,
     'ad-import':  loadAdManage,
-    'ad-new':     paintAdNew,
+    'ad-new':      paintAdNew,
     'ad-history': loadAdHistory,
     'ad-txlog':   loadAdTxLog,
     'ad-users':   loadAdUsers,
@@ -1178,41 +1036,41 @@ function render() {
 
 function Q(id) { return document.getElementById(id); }
 function cnt() { return Q('cnt'); }
-function rLabel(r) { return {admin:'ผู้ดูแลระบบ (Admin)',counter:'นักบิดนับสต็อก (Counter)',supervisor:'หัวหน้าทีม (Supervisor)'}[r] || (r||''); }
+function rLabel(r) { return {admin:'Admin',counter:'Counter',supervisor:'Supervisor'}[r] || (r||''); }
 function errBox(msg) { return `<div class="card"><div class="alert alert-red">❌ ${msg}</div></div>`; }
 
 function paintLogin() {
   Q('app').innerHTML = `
     <div class="lbox">
       <div class="lcard">
-        <div style="text-align:center;margin-bottom:24px">
-          <div style="font-size:60px; filter: drop-shadow(4px 4px 0px var(--vespa-shadow));">🛵</div>
-          <div style="font-size:26px;font-weight:900;color:var(--vespa-shadow);margin-top:12px;letter-spacing:-.02em; font-family:'Fredoka'">เข้าสู่ระบบ</div>
-          <div style="font-weight:800; font-size:12px;color:var(--vespa-red);margin-top:4px;text-transform:uppercase;letter-spacing:1px">Cycle Count · Vespa Vintage Warehouse</div>
+        <div style="text-align:center;margin-bottom:28px">
+          <div style="font-size:52px; margin-bottom:8px">📦</div>
+          <div style="font-size:24px;font-weight:800;color:var(--text-main);letter-spacing:-.02em; font-family:'Fredoka'">เข้าสู่ระบบ</div>
+          <div style="font-weight:600; font-size:12px;color:var(--text-muted);margin-top:4px;letter-spacing:0.5px">Cycle Count Warehouse System</div>
         </div>
         <div id="la"></div>
         <div class="fg input-icon-wrap" style="text-align:left">
           <span class="input-icon">✉️</span>
-          <input type="email" id="le" placeholder="อีเมลทีมงาน">
+          <input type="email" id="le" placeholder="อีเมลผู้ใช้งาน">
         </div>
-        <div class="fg input-icon-wrap" style="text-align:left;margin-bottom:6px">
+        <div class="fg input-icon-wrap" style="text-align:left;margin-bottom:8px">
           <span class="input-icon">🔒</span>
           <input type="password" id="lp" placeholder="รหัสผ่าน" style="padding-right:44px"
             onkeydown="if(event.key==='Enter')doLogin()">
           <span class="input-icon input-icon-right" id="lp-eye" onclick="togglePasswordVisibility()">👁️</span>
         </div>
-        <div style="text-align:right;margin-bottom:16px">
-          <a href="javascript:void(0)" onclick="doForgotPassword()" style="font-size:12px;color:var(--vespa-red);font-weight:800;text-decoration:underline">ลืมรหัสผ่าน?</a>
+        <div style="text-align:right;margin-bottom:20px">
+          <a href="javascript:void(0)" onclick="doForgotPassword()" style="font-size:12px;color:var(--primary-blue);font-weight:700;text-decoration:none">ลืมรหัสผ่าน?</a>
         </div>
-        <button class="btn btn-red" id="lb" onclick="doLogin()">บิดกุญแจเข้าสู่ระบบ 💨</button>
+        <button class="btn btn-blue" id="lb" onclick="doLogin()">เข้าสู่ระบบ</button>
 
-        <div style="display:flex;align-items:center;gap:10px;margin:20px 0">
-          <div style="flex:1;height:2px;background:var(--vespa-gray)"></div>
-          <span style="font-size:12px;font-weight:800;color:var(--vespa-brown)">หรือ</span>
-          <div style="flex:1;height:2px;background:var(--vespa-gray)"></div>
+        <div style="display:flex;align-items:center;gap:10px;margin:24px 0">
+          <div style="flex:1;height:1px;background:var(--neu-shadow-dark)"></div>
+          <span style="font-size:12px;font-weight:600;color:var(--text-muted)">หรือ</span>
+          <div style="flex:1;height:1px;background:var(--neu-shadow-dark)"></div>
         </div>
 
-        <button class="btn btn-ghost" onclick="doOAuth('google')" style="margin-bottom:10px">
+        <button class="btn btn-ghost" onclick="doOAuth('google')" style="margin-bottom:12px">
           <svg width="18" height="18" viewBox="0 0 48 48" style="flex-shrink:0">
             <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
             <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.9-2.26 5.36-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
@@ -1229,8 +1087,8 @@ function paintLogin() {
           ดำเนินการต่อด้วย Apple
         </button>
 
-        <div style="text-align:center;margin-top:20px;font-size:13px;color:var(--vespa-brown);font-weight:600">
-          ยังไม่มีบัญชี? <a href="javascript:void(0)" onclick="showSignupInfo()" style="color:var(--vespa-red);font-weight:800;text-decoration:underline">สมัครสมาชิก</a>
+        <div style="text-align:center;margin-top:24px;font-size:13px;color:var(--text-muted);font-weight:500">
+          ยังไม่มีบัญชี? <a href="javascript:void(0)" onclick="showSignupInfo()" style="color:var(--primary-blue);font-weight:700;text-decoration:none">สมัครสมาชิก</a>
         </div>
       </div>
     </div>`;
@@ -1271,7 +1129,7 @@ function paintResetPassword() {
       <div class="lcard">
         <div style="text-align:center;margin-bottom:24px">
           <div style="font-size:52px">🔑</div>
-          <div style="font-size:22px;font-weight:900;color:var(--vespa-shadow);margin-top:10px;font-family:'Fredoka'">ตั้งรหัสผ่านใหม่</div>
+          <div style="font-size:22px;font-weight:800;color:var(--text-main);margin-top:10px;font-family:'Fredoka'">ตั้งรหัสผ่านใหม่</div>
         </div>
         <div id="rpa"></div>
         <div class="fg input-icon-wrap" style="text-align:left">
@@ -1283,7 +1141,7 @@ function paintResetPassword() {
           <input type="password" id="rp2" placeholder="ยืนยันรหัสผ่านใหม่"
             onkeydown="if(event.key==='Enter')doResetPassword()">
         </div>
-        <button class="btn btn-red" onclick="doResetPassword()">✓ บันทึกรหัสผ่านใหม่</button>
+        <button class="btn btn-blue" onclick="doResetPassword()">✓ บันทึกรหัสผ่านใหม่</button>
       </div>
     </div>`;
 }
@@ -1304,11 +1162,11 @@ async function doLogin() {
   const email = Q('le').value.trim(), pwd = Q('lp').value;
   if (!email || !pwd) { Q('la').innerHTML = '<div class="alert alert-amber">ใส่รหัสและอีเมลให้ครบถ้วนก่อนน้า 🌸</div>'; return; }
   const btn = Q('lb');
-  btn.disabled = true; btn.textContent = 'สตาร์ทเครื่องยนต์...';
+  btn.disabled = true; btn.textContent = 'กำลังเข้าสู่ระบบ...';
   const { error } = await sb.auth.signInWithPassword({ email, password: pwd });
   if (error) {
     Q('la').innerHTML = '<div class="alert alert-red font-size:13px">อีเมลหรือรหัสผ่านผิดพลาด ลองใหม่อีกทีนะจ๊ะ</div>';
-    btn.disabled = false; btn.textContent = 'บิดกุญแจเข้าสู่ระบบ 💨';
+    btn.disabled = false; btn.textContent = 'เข้าสู่ระบบ';
   } else {
     me = (await sb.auth.getUser()).data.user;
     await loadProf();
@@ -1359,8 +1217,6 @@ function computeZone(locCode, desc) {
 function computeItemStatus(oh, r1, r2, r3, rules) {
   const cfg = Object.assign({ maxRounds: 3, repeatMatchAction: 'recount' }, rules || {});
   const has = v => v !== null && v !== undefined && v !== '';
-  // Supabase ส่งคอลัมน์ numeric/decimal กลับมาเป็น string บางที (กัน precision loss)
-  // แปลงเป็นตัวเลขให้ตรงกันทุกตัวตรงนี้ที่เดียว กันปัญหา "22" !== 22 ที่ทำให้จับคู่ไม่เจอ
   const num = v => has(v) ? +v : v;
   oh = num(oh); r1 = num(r1); r2 = num(r2); r3 = num(r3);
 
@@ -1368,10 +1224,8 @@ function computeItemStatus(oh, r1, r2, r3, rules) {
 
   const rounds = [r1, r2, r3].filter(has).slice(0, cfg.maxRounds);
 
-  // ตรงกับ OH ไม่ว่ารอบไหน (แม้ไม่ใช่รอบล่าสุด) → ผ่านทันทีเสมอ
   if (has(oh) && rounds.some(r => r === oh)) return 'OK';
 
-  // ไม่ตรง OH เลย — เช็คว่ามีคู่ไหนในรอบที่นับมาแล้วตรงกันเองไหม (ไม่ต้องติดกัน เช่น รอบ 1 กับ 3 ก็นับ)
   let repeatFound = false;
   for (let i = 0; i < rounds.length && !repeatFound; i++) {
     for (let j = i + 1; j < rounds.length; j++) {
@@ -1382,14 +1236,12 @@ function computeItemStatus(oh, r1, r2, r3, rules) {
   if (repeatFound) {
     if (cfg.repeatMatchAction === 'auto_pass') return 'OK';
     if (cfg.repeatMatchAction === 'send_variance') return 'Diff';
-    // 'recount' (ค่าเริ่มต้น) → ยังไม่ตัดสิน ตกไปเช็คว่านับต่อได้อีกไหมด้านล่าง
   }
 
-  if (rounds.length < cfg.maxRounds) return 'PENDING'; // ยังนับรอบถัดไปได้
-  return 'Diff'; // ครบโควตารอบแล้ว ไม่มีคู่ไหนตรงกันเลย (หรือมีแต่กติกาบอกให้นับต่อ)
+  if (rounds.length < cfg.maxRounds) return 'PENDING';
+  return 'Diff';
 }
 
-// ── ดึงกติกาการนับของ Session (จำนวนรอบสูงสุด / การจัดการเมื่อนับซ้ำได้ค่าเดิม) ──
 async function getSessionRules(sessionId) {
   const { data } = await sb.from('count_sessions')
     .select('max_rounds,repeat_match_action').eq('id', sessionId).single();
@@ -1399,7 +1251,6 @@ async function getSessionRules(sessionId) {
   };
 }
 
-// ── บันทึก Audit Log แบบ fire-and-forget ไม่ให้บล็อกงานหลัก ถ้ายังไม่ได้รัน migration จะแค่เตือนใน console ──
 function logAudit(sessionId, locationId, itemId, action, oldValue, newValue, assignmentId) {
   sb.from('audit_log').insert({
     session_id: sessionId || null,
@@ -1410,12 +1261,12 @@ function logAudit(sessionId, locationId, itemId, action, oldValue, newValue, ass
     old_value: (oldValue===undefined||oldValue===null) ? null : String(oldValue),
     new_value: (newValue===undefined||newValue===null) ? null : String(newValue),
     performed_by: me?.id || null,
-  }).then(({error}) => { if (error) console.warn('audit_log insert failed (migration อาจยังไม่ได้รัน):', error.message); });
+  }).then(({error}) => { if (error) console.warn('audit_log insert failed:', error.message); });
 }
 
 function tagInfo(s) {
   return ({
-    pending:     { cls:'tag-gray',   lbl:'รอสแกนนับ'         },
+    pending:      { cls:'tag-gray',   lbl:'รอสแกนนับ'         },
     in_progress: { cls:'tag-blue',   lbl:'กำลังนับยอด'      },
     round1_done: { cls:'tag-amber',  lbl:'รอแก้นับรอบ 2'       },
     round2_done: { cls:'tag-amber',  lbl:'รอแก้นับรอบ 3'       },
@@ -1425,11 +1276,11 @@ function tagInfo(s) {
   }[s]) || { cls:'tag-gray', lbl: s };
 }
 
-let _html5Qr = null;   // QR scanner instance
-let _xlsxRawRows = null;   // raw rows from xlsx file
-let _xlsxParsed  = null;   // filtered + aggregated rows ready to import
-let _svDashOpenVarianceIdx = null;   // which variance row is expanded in sv-dash quick-check panel
-let _dashTab = 'summary';   // active tab on the ภาพรวมงาน page (summary / variance / wms), persists like _manageTab
+let _html5Qr = null;   
+let _xlsxRawRows = null;   
+let _xlsxParsed  = null;   
+let _svDashOpenVarianceIdx = null;   
+let _dashTab = 'summary';   
 
 // ══ WORKING LOGIC FUNCTIONS ══
 
@@ -1440,7 +1291,7 @@ async function loadCTasks() {
   if (!sids.length) {
     cnt().innerHTML = `<div class="card" style="text-align:center;padding:44px">
       <div style="font-size:42px">📭</div>
-      <div style="margin-top:14px;color:#64748b;font-weight:500">ยังไม่มี Session ที่เปิดอยู่</div>
+      <div style="margin-top:14px;color:var(--text-muted);font-weight:500">ยังไม่มี Session ที่เปิดอยู่</div>
     </div>`; return;
   }
 
@@ -1455,13 +1306,12 @@ async function loadCTasks() {
   if (!asgns?.length) {
     cnt().innerHTML = `<div class="card" style="text-align:center;padding:44px">
       <div style="font-size:42px">📋</div>
-      <div style="margin-top:14px;color:#64748b;font-weight:500">ยังไม่มีงานที่ได้รับมอบหมาย</div>
+      <div style="margin-top:14px;color:var(--text-muted);font-weight:500">ยังไม่มีงานที่ได้รับมอบหมาย</div>
     </div>`; return;
   }
 
   window._myTasks = asgns;
 
-  // เตรียมตัวเลือก filter จาก Location code ของงานที่ได้รับ — เช่น EA / 001 / A
   const rows = new Set(), poss = new Set(), lvls = new Set();
   asgns.forEach(a => {
     const parts = (a.locations?.code || '').split('-');
@@ -1481,14 +1331,14 @@ async function loadCTasks() {
   cnt().innerHTML = `
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <span style="font-size:13px;font-weight:600;color:#64748b">ความคืบหน้า</span>
-        <span style="font-size:14px;font-weight:800;color:#3b82f6">${done} / ${asgns.length}</span>
+        <span style="font-size:13px;font-weight:600;color:var(--text-muted)">ความคืบหน้า</span>
+        <span style="font-size:14px;font-weight:800;color:var(--primary-blue)">${done} / ${asgns.length}</span>
       </div>
       <div class="prog"><div class="prog-fill" style="width:${pct}%"></div></div>
-      <button class="btn btn-ghost" style="margin-top:10px" onclick="openScanner()">📷 สแกน Location</button>
+      <button class="btn btn-ghost" style="margin-top:14px" onclick="openScanner()">📷 สแกน Location</button>
     </div>
     <div class="card">
-      <div style="font-size:11px;font-weight:700;color:#94a3b8;margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">กรองงานของฉัน</div>
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">กรองงานของฉัน</div>
       <div class="grid-3">
         <div class="fg" style="margin:0">
           <label style="font-size:10px">ROW</label>
@@ -1530,7 +1380,7 @@ function renderMyTasks() {
   });
 
   if (!filtered.length) {
-    list.innerHTML = `<div class="load" style="padding:30px;font-size:13px;color:#94a3b8">ไม่มีงานที่ตรงกับตัวกรอง</div>`;
+    list.innerHTML = `<div class="load" style="padding:30px;font-size:13px;color:var(--text-muted)">ไม่มีงานที่ตรงกับตัวกรอง</div>`;
     return;
   }
 
@@ -1626,7 +1476,6 @@ async function loadCCount() {
   ]);
 
   window._counterNames = counterNames || [];
-
   const showOH = sessInfo?.show_oh === true;
 
   if (!snaps?.length) {
@@ -1645,11 +1494,10 @@ async function loadCCount() {
     .select('item_id,count_qty,remark,photo_url').eq('assignment_id', aid).eq('round', round);
   const prevMap = Object.fromEntries(prev?.map(r => [r.item_id, r]) || []);
 
-  // ── ดึงรูปจากทุกรอบก่อนหน้าของ assignment นี้ เพื่อให้รูปติดไปด้วยทุกรอบ ──
   const { data: allPhotoRecs } = await sb.from('count_records')
     .select('item_id,round,photo_url').eq('assignment_id', aid).not('photo_url', 'is', null).order('round');
   window._prevPhotoMap = {};
-  allPhotoRecs?.forEach(r => { window._prevPhotoMap[r.item_id] = r.photo_url; }); // round มากสุดทับไว้ล่าสุด
+  allPhotoRecs?.forEach(r => { window._prevPhotoMap[r.item_id] = r.photo_url; });
 
   window._photoMap = {};
 
@@ -1660,36 +1508,33 @@ async function loadCCount() {
     const v    = pr?.count_qty;
     const dets = detailByItem[it.id] || [];
 
-    // ── LPN/Lot/Status detail — แสดงเป็น table ย่อยให้อ่านง่าย ──
-    //    ⚠️ ถ้า showOH=false (Blind Count) ต้องซ่อนคอลัมน์ QTY ด้วย
-    //    เพราะผลรวม QTY ของทุก LPN = ยอด OH ทำให้เห็นยอดจริงทางอ้อมได้ ขัดกับ Blind Count
     let detHtml = '';
     const alQty = s.al_qty ?? null;
     const ohDisplay = showOH
       ? `<div class="oh-badge"><span class="oh-badge-label">OH</span><span class="oh-badge-val">${s.onhand_qty}</span>${alQty!==null?`<span class="oh-badge-al">AL ${alQty}</span>`:''}</div>`
-      : (alQty !== null ? `<div class="oh-badge oh-badge-al-only"><span class="oh-badge-label">AL</span><span class="oh-badge-val">${alQty}</span></div>` : '');
+      : (alQty !== null ? `<div class="oh-badge"><span class="oh-badge-label">AL</span><span class="oh-badge-val">${alQty}</span></div>` : '');
+    
     if (dets.length) {
       const rows = dets.map(d => `
         <tr>
-          <td style="padding:3px 8px 3px 0;font-size:11px;color:#4b5563;font-family:ui-monospace,monospace">${d.license_plate||'—'}</td>
-          <td style="padding:3px 8px 3px 0;font-size:11px;color:#64748b">${d.lot||'—'}</td>
+          <td style="padding:3px 8px 3px 0;font-size:11px;color:var(--text-muted);font-family:ui-monospace,monospace">${d.license_plate||'—'}</td>
+          <td style="padding:3px 8px 3px 0;font-size:11px;color:var(--text-muted)">${d.lot||'—'}</td>
           <td style="padding:3px 0;font-size:11px"><span class="lpn-chip">${d.inventory_status||'—'}</span></td>
           ${showOH ? `<td style="padding:3px 0 3px 8px;font-size:11px;font-weight:700;text-align:right">${d.qty}</td>` : ''}
         </tr>`).join('');
-      detHtml = `<div style="margin-top:5px;overflow-x:auto">
+      detHtml = `<div style="margin-top:6px;overflow-x:auto">
         <table style="border-collapse:collapse;min-width:100%">
           <thead><tr>
-            <th style="font-size:9px;color:#94a3b8;font-weight:600;text-align:left;padding:0 8px 2px 0;letter-spacing:.04em">LICENSE PLATE</th>
-            <th style="font-size:9px;color:#94a3b8;font-weight:600;text-align:left;padding:0 8px 2px 0;letter-spacing:.04em">LOT</th>
-            <th style="font-size:9px;color:#94a3b8;font-weight:600;text-align:left;padding:0 0 2px 0;letter-spacing:.04em">STATUS</th>
-            ${showOH ? `<th style="font-size:9px;color:#94a3b8;font-weight:600;text-align:right;padding:0 0 2px 8px;letter-spacing:.04em">QTY</th>` : ''}
+            <th style="font-size:9px;color:var(--text-muted);font-weight:600;text-align:left;padding:0 8px 2px 0;letter-spacing:.04em">LICENSE PLATE</th>
+            <th style="font-size:9px;color:var(--text-muted);font-weight:600;text-align:left;padding:0 8px 2px 0;letter-spacing:.04em">LOT</th>
+            <th style="font-size:9px;color:var(--text-muted);font-weight:600;text-align:left;padding:0 0 2px 0;letter-spacing:.04em">STATUS</th>
+            ${showOH ? `<th style="font-size:9px;color:var(--text-muted);font-weight:600;text-align:right;padding:0 0 2px 8px;letter-spacing:.04em">QTY</th>` : ''}
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>`;
     }
 
-    // โหลดรูปจากรอบก่อนหน้าถ้ารอบนี้ยังไม่มี (persist across rounds)
     const photoUrl = pr?.photo_url || window._prevPhotoMap?.[it.id] || null;
     if (photoUrl && !window._photoMap) window._photoMap = {};
     if (photoUrl) window._photoMap[it.id] = photoUrl;
@@ -1704,7 +1549,7 @@ async function loadCCount() {
           ${detHtml}
         </div>
         <button class="item-toggle ${hasExtra?'has':''}" id="tg_${it.id}" onclick="toggleExtra('${it.id}')" title="หมายเหตุ/รูป">📝</button>
-        <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
           <input type="number" class="cqty ${v !== undefined ? 'ok' : ''}"
             id="q_${it.id}" min="0" step="1"
             value="${v !== undefined ? v : ''}" placeholder="0"
@@ -1715,9 +1560,9 @@ async function loadCCount() {
       <div class="item-extra ${hasExtra?'open':''}" id="extra_${it.id}">
         <label style="font-size:11px">หมายเหตุ (ไม่บังคับ)</label>
         <textarea id="rmk_${it.id}" placeholder="เช่น สินค้าเสียหาย, นับยาก ฯลฯ">${pr?.remark || ''}</textarea>
-        <div style="margin-top:8px">
+        <div style="margin-top:10px">
           <label style="font-size:11px">รูปถ่าย (ไม่บังคับ)</label><br>
-          <div style="display:flex;gap:8px;margin-top:5px;flex-wrap:wrap">
+          <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
             <button type="button" class="btn btn-ghost btn-sm" onclick="openCameraFor('${it.id}')">📷 กล้อง</button>
             <button type="button" class="btn btn-ghost btn-sm" onclick="openGalleryFor('${it.id}')">🖼 เลือกรูป</button>
           </div>
@@ -1735,16 +1580,16 @@ async function loadCCount() {
 
   cnt().innerHTML = `
     <div class="card">
-      <div class="mono" style="font-size:17px;font-weight:800">${l.code}</div>
-      <div style="font-size:12px;color:#64748b;margin-top:3px">${sub}</div>
-      <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+      <div class="mono" style="font-size:18px;font-weight:800;color:var(--text-main)">${l.code}</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:3px">${sub}</div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
         <span class="tag tag-blue">รอบที่ ${round}</span>
         <span class="tag tag-gray">${asgn.count_sessions.name}</span>
       </div>
       ${round > 1 ? `<div class="alert alert-amber" style="margin-top:12px">
         🔄 ยอดไม่ตรงจากรอบที่ ${round-1} — กรุณานับใหม่อย่างระมัดระวัง
       </div>` : ''}
-      <div class="fg" style="margin-top:12px;margin-bottom:0">
+      <div class="fg" style="margin-top:16px;margin-bottom:0">
         <label>ผู้นับจริง (ทีมนับ) — แตะชื่อเพื่อเลือกได้หลายคน</label>
         <div id="counterNamePills" class="cname-pill-wrap"></div>
         <div style="display:flex;gap:8px;margin-top:10px">
@@ -1756,7 +1601,7 @@ async function loadCCount() {
     </div>
     <div class="sec">📦 ${snaps.length} รายการ — กรอกจำนวนที่นับได้จริง (อย่าดูยอดระบบ)</div>
     <div class="card card-flush">${items}</div>
-    <div style="padding:12px">
+    <div style="padding:12px 16px">
       <div id="ca"></div>
       <button class="btn btn-green" id="cb"
         onclick="submitCount('${aid}',${round},'${ids}')">
@@ -1778,7 +1623,7 @@ function renderCounterPills() {
   const names = window._counterNames || [];
   window._selectedCounters = window._selectedCounters || new Set();
   if (!names.length) {
-    wrap.innerHTML = `<div style="font-size:12px;color:#94a3b8;padding:4px 0">ยังไม่มีชื่อในระบบ — เพิ่มชื่อใหม่ด้านล่างได้เลย</div>`;
+    wrap.innerHTML = `<div style="font-size:12px;color:var(--text-muted);padding:4px 0">ยังไม่มีชื่อในระบบ — เพิ่มชื่อใหม่ด้านล่างได้เลย</div>`;
     return;
   }
   wrap.innerHTML = names.map(c => {
@@ -1825,7 +1670,6 @@ function toggleExtra(itemId) {
 }
 
 function openCameraFor(itemId)  { Q('cam_'+itemId)?.click(); }
-
 function openGalleryFor(itemId) { Q('gal_'+itemId)?.click(); }
 
 async function handlePhoto(itemId, input) {
@@ -1888,7 +1732,6 @@ async function submitCount(aid, round, idsStr) {
     btn.disabled = false; btn.textContent = `✅ ยืนยันรอบที่ ${round}`; return;
   }
 
-  // ── เทียบกับระบบ (OH) และรอบก่อนหน้า เพื่อตัดสิน OK/PENDING/Diff ตามกติกาที่ตั้งไว้ ──
   const { data: asgn } = await sb.from('assignments')
     .select('location_id,session_id').eq('id', aid).single();
 
@@ -1945,8 +1788,8 @@ async function loadSvDash() {
 
   if (!sessions?.length) {
     cnt().innerHTML = `<div class="card" style="text-align:center;padding:44px">
-      <div style="font-size:54px">🛵🌴</div>
-      <div style="margin-top:14px;color:var(--vespa-brown);font-weight:800">ยังไม่มี Session ที่เปิดอยู่</div>
+      <div style="font-size:54px">🌴</div>
+      <div style="margin-top:14px;color:var(--text-main);font-weight:700">ยังไม่มี Session ที่เปิดอยู่</div>
       ${ ['admin','supervisor'].includes(prof?.role) ? `<button class="btn btn-blue" style="margin-top:16px" onclick="go('ad-manage')">📂 ไปสร้าง Session</button>` : ''}
     </div>`; return;
   }
@@ -2003,8 +1846,6 @@ async function loadSvDash() {
 
   const diffAssignments = [];
   for (const a of asgns) {
-    // กรองเฉพาะงานที่ต้องตรวจสอบ (round1_done, round2_done, round3_done)
-    // ให้ตรงกับ needsFollowUp ที่ใช้แสดงใน Variance tab
     if (!['round1_done','round2_done','round3_done'].includes(a.status)) continue;
     const itemCounts = countByAsgn[a.id] || {};
     const locId = a.location_id;
@@ -2019,40 +1860,33 @@ async function loadSvDash() {
     if (hasDiff || hasPending) diffAssignments.push({ ...a, _hasDiff: hasDiff, _hasPending: hasPending });
   }
 
-  // ══════════════════════════════════════════════════════════
-  //  ดึง variance_approvals แบบปลอดภัย (ไม่ใช้คอลัมน์ที่อาจไม่มี)
-  // ══════════════════════════════════════════════════════════
   let wmsRows = [];
   let vaError = null;
 
   try {
-    // แก้ select query ให้ดึง wms_fixed ด้วย
-const { data: vaData, error: vaErr } = await sb.from('variance_approvals')
-  .select('id,assignment_id,item_id,final_qty,variance,resolution,approved_by,wms_fixed,wms_fixed_at,wms_fixed_by')
-  .in('assignment_id', allAsgnIds);
-
+    const { data: vaData, error: vaErr } = await sb.from('variance_approvals')
+      .select('id,assignment_id,item_id,final_qty,variance,resolution,approved_by,wms_fixed,wms_fixed_at,wms_fixed_by')
+      .in('assignment_id', allAsgnIds);
 
     if (vaErr) {
       vaError = vaErr;
       console.error('variance_approvals query error:', vaErr);
       wmsRows = [];
     } else {
-      // แก้ map ให้ใช้ค่าจริงจาก DB แทน hardcode
-wmsRows = (vaData || []).map(v => ({
-  ...v,
-  wms_fixed: v.wms_fixed ?? false,     // ← ใช้ค่าจาก DB
-  wms_fixed_at: v.wms_fixed_at ?? null,
-  wms_fixed_by: v.wms_fixed_by ?? null,
-  created_at: v.created_at ?? null,
-  _fromVA: true
-}));
+      wmsRows = (vaData || []).map(v => ({
+        ...v,
+        wms_fixed: v.wms_fixed ?? false,
+        wms_fixed_at: v.wms_fixed_at ?? null,
+        wms_fixed_by: v.wms_fixed_by ?? null,
+        created_at: v.created_at ?? null,
+        _fromVA: true
+      }));
     }
   } catch (e) {
     console.error('variance_approvals exception:', e);
     vaError = e;
   }
 
-  // ดึง items + approvers แยก
   const allItemIds = [...new Set(wmsRows.map(v => v.item_id).filter(Boolean))];
   const allApproverIds = [...new Set(wmsRows.map(v => v.approved_by).filter(Boolean))];
   const [{ data: itemsData }, { data: approversData }] = await Promise.all([
@@ -2066,9 +1900,6 @@ wmsRows = (vaData || []).map(v => ({
     v.profiles = approverMap[v.approved_by] || { name: '?' };
   });
 
-  // ══════════════════════════════════════════════════════════
-  //  รายการ "รอคอนเฟิร์ม" - คำนวณจาก count_records + snapshot
-  // ══════════════════════════════════════════════════════════
   const approvedAsgnIds = new Set(wmsRows.filter(v => v.wms_fixed).map(v => v.assignment_id));
   const pendingWmsRows = [];
   for (const a of diffAssignments) {
@@ -2112,7 +1943,6 @@ wmsRows = (vaData || []).map(v => ({
   window._wmsRows = allWmsRows;
   window._wmsAsgnInfoMap = asgnInfoMap;
 
-  // คำนวณ Gain/Lost
   let diffPlus = 0, diffMinus = 0, diffPlusCount = 0, diffMinusCount = 0;
   allWmsRows.forEach(v => {
     const d = +v.variance;
@@ -2120,7 +1950,6 @@ wmsRows = (vaData || []).map(v => ({
     else if (d < 0) { diffMinus += Math.abs(d); diffMinusCount++; }
   });
 
-  // ── สรุปรายบุคคล ──
   const byUser = {};
   for (const a of asgns) {
     const uid = a.assigned_to;
@@ -2134,32 +1963,32 @@ wmsRows = (vaData || []).map(v => ({
   let peopleRows = '';
   Object.entries(byUser).forEach(([uid, u], idx) => {
     const p = Math.round(u.done / u.total * 100);
-    peopleRows += `<div class="tab-row" style="border-bottom:2px solid var(--vespa-gray);padding:12px 0" onclick="toggleUserDetail('${idx}')">
+    peopleRows += `<div class="tab-row" style="border-bottom:1px solid rgba(194,205,220,0.4);padding:12px 0" onclick="toggleUserDetail('${idx}')">
       <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
         <div style="flex:1;min-width:0">
-          <div style="font-size:15px;font-weight:900;color:var(--vespa-shadow)">👤 ${u.name}</div>
-          <div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap">
+          <div style="font-size:15px;font-weight:700;color:var(--text-main)">👤 ${u.name}</div>
+          <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
             <span class="tag tag-green">${u.done} เสร็จ</span>
             ${u.var ? `<span class="tag tag-amber">${u.var} variance</span>` : ''}
             <span class="tag tag-gray">${u.total - u.done - u.var} รอ</span>
           </div>
         </div>
         <div style="text-align:right;flex-shrink:0">
-          <div style="font-size:24px;font-weight:900;color:var(--vespa-red);font-family:'Fredoka'">${p}%</div>
-          <div style="font-size:11px;color:var(--vespa-brown);font-weight:800">${u.done}/${u.total}</div>
+          <div style="font-size:22px;font-weight:800;color:var(--primary-blue);font-family:'Fredoka'">${p}%</div>
+          <div style="font-size:11px;color:var(--text-muted);font-weight:600">${u.done}/${u.total}</div>
         </div>
       </div>
-      <div style="text-align:center;font-size:11px;color:var(--vespa-brown);font-weight:700;margin-top:6px">▾ ดูรายการ</div>
+      <div style="text-align:center;font-size:11px;color:var(--text-muted);font-weight:600;margin-top:6px">▾ ดูรายการ</div>
     </div>
-    <div id="udetail_${idx}" style="display:none;background:#faf8f3;padding:8px 14px;border-radius:10px;margin:6px 0 10px">
+    <div id="udetail_${idx}" style="display:none;background:rgba(255,255,255,0.4);padding:10px 14px;border-radius:16px;margin:6px 0 10px">
       ${u.items.map(a => {
         const si = tagInfo(a.status);
         const l = a.locations;
         const loc = [l?.zone,l?.row_no,l?.level].filter(Boolean).join(' · ');
-        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--vespa-gray);gap:8px">
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(194,205,220,0.3);gap:8px">
           <div style="min-width:0">
-            <div class="mono" style="font-size:12px;font-weight:800">${l?.code||'?'}</div>
-            <div style="font-size:10px;color:#94a3b8">${loc}</div>
+            <div class="mono" style="font-size:12px;font-weight:700">${l?.code||'?'}</div>
+            <div style="font-size:10px;color:var(--text-muted)">${loc}</div>
           </div>
           <span class="tag ${si.cls}" style="font-size:10px;flex-shrink:0">${si.lbl}</span>
         </div>`;
@@ -2172,64 +2001,64 @@ wmsRows = (vaData || []).map(v => ({
   const varianceRowsHtml = needsFollowUp.length ? needsFollowUp.map((a, i) => {
     const si = tagInfo(a.status);
     const l = a.locations;
-    return `<div style="border-bottom:2px solid var(--vespa-gray);padding:10px 0">
+    return `<div style="border-bottom:1px solid rgba(194,205,220,0.4);padding:12px 0">
       <div class="tab-row" style="display:flex;align-items:center;gap:10px" onclick="toggleVarianceDetail('${a.id}',${i})">
         <div style="flex:1;min-width:0">
-          <div class="mono" style="font-size:15px;font-weight:900;color:var(--vespa-shadow)">${l?.code||'?'}</div>
-          <div style="font-size:12px;color:var(--vespa-brown);margin-top:2px;font-weight:600">👤 ${a.profiles?.name||'?'} · ${[l?.zone,l?.row_no,l?.level].filter(Boolean).join(' · ')}</div>
+          <div class="mono" style="font-size:15px;font-weight:800;color:var(--text-main)">${l?.code||'?'}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px;font-weight:500">👤 ${a.profiles?.name||'?'} · ${[l?.zone,l?.row_no,l?.level].filter(Boolean).join(' · ')}</div>
         </div>
         <span class="tag ${si.cls}">${si.lbl}</span>
         <span class="caret" style="font-size:16px">▾</span>
       </div>
-      <div id="vdetail_${i}" style="display:none;background:#faf8f3;margin-top:8px;border-radius:12px;overflow:hidden"></div>
+      <div id="vdetail_${i}" style="display:none;background:rgba(255,255,255,0.4);margin-top:10px;border-radius:16px;overflow:hidden"></div>
     </div>`;
-  }).join('') : `<div style="padding:28px 0;text-align:center;color:#94a3b8;font-size:13px">🎉 ไม่มี Variance ที่ต้องตรวจสอบตอนนี้</div>`;
+  }).join('') : `<div style="padding:28px 0;text-align:center;color:var(--text-muted);font-size:13px">🎉 ไม่มี Variance ที่ต้องตรวจสอบตอนนี้</div>`;
 
   const tab = S._dashTab || _dashTab;
   _dashTab = tab;
   const tabBtn = (id, label, icon, badge) => `
     <button onclick="S._dashTab='${id}';_dashTab='${id}';loadSvDash()"
-      style="flex:1;padding:10px 6px;border:none;background:none;font-family:inherit;font-size:12px;font-weight:900;cursor:pointer;border-bottom:3px solid ${tab===id?'var(--vespa-red)':'transparent'};color:${tab===id?'var(--vespa-red)':'var(--vespa-brown)'};transition:all .15s">
-      ${icon} ${label}${badge ? ` <span style="background:var(--vespa-red);color:#fff;border-radius:8px;padding:1px 6px;font-size:10px;margin-left:2px">${badge}</span>` : ''}
+      style="flex:1;padding:10px 6px;border:none;background:none;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;border-bottom:3px solid ${tab===id?'var(--primary-blue)':'transparent'};color:${tab===id?'var(--primary-blue)':'var(--text-muted)'};transition:all .15s">
+      ${icon} ${label}${badge ? ` <span style="background:var(--accent-red);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:2px">${badge}</span>` : ''}
     </button>`;
 
   const summaryTabHtml = `
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
-      <div style="text-align:center;background:#faf8f3;border:2px solid var(--vespa-gray);border-radius:14px;padding:12px 6px">
-        <div style="font-size:26px;font-weight:900;color:var(--vespa-red);font-family:'Fredoka'">${total}</div>
-        <div style="font-size:10px;color:var(--vespa-brown);font-weight:900;margin-top:4px">ทั้งหมด</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+      <div style="text-align:center;background:var(--neu-surface);border-radius:16px;padding:12px 6px;box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light)">
+        <div style="font-size:24px;font-weight:800;color:var(--text-main);font-family:'Fredoka'">${total}</div>
+        <div style="font-size:10px;color:var(--text-muted);font-weight:700;margin-top:4px">ทั้งหมด</div>
       </div>
-      <div style="text-align:center;background:#faf8f3;border:2px solid var(--vespa-gray);border-radius:14px;padding:12px 6px">
-        <div style="font-size:26px;font-weight:900;color:var(--vespa-green);font-family:'Fredoka'">${done}</div>
-        <div style="font-size:10px;color:var(--vespa-brown);font-weight:900;margin-top:4px">เสร็จแล้ว</div>
+      <div style="text-align:center;background:var(--neu-surface);border-radius:16px;padding:12px 6px;box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light)">
+        <div style="font-size:24px;font-weight:800;color:var(--accent-green);font-family:'Fredoka'">${done}</div>
+        <div style="font-size:10px;color:var(--text-muted);font-weight:700;margin-top:4px">เสร็จแล้ว</div>
       </div>
-      <div style="text-align:center;background:#faf8f3;border:2px solid var(--vespa-gray);border-radius:14px;padding:12px 6px">
-        <div style="font-size:26px;font-weight:900;color:var(--vespa-red);font-family:'Fredoka'">${varCount}</div>
-        <div style="font-size:10px;color:var(--vespa-brown);font-weight:900;margin-top:4px">Variance รอตรวจ</div>
-      </div>
-    </div>
-    <div style="display:flex;justify-content:space-around;align-items:center;padding:12px;background:#faf8f3;border:2px solid var(--vespa-gray);border-radius:14px;margin-bottom:6px">
-      <div style="text-align:center">
-        <div style="font-size:22px;font-weight:900;color:var(--vespa-green);font-family:'Fredoka'">🔺 +${diffPlus}</div>
-        <div style="font-size:10px;color:var(--vespa-brown);font-weight:800;margin-top:2px">Gain (${diffPlusCount} รายการ)</div>
-      </div>
-      <div style="width:2px;height:32px;background:var(--vespa-gray)"></div>
-      <div style="text-align:center">
-        <div style="font-size:22px;font-weight:900;color:var(--vespa-red);font-family:'Fredoka'">🔻 −${diffMinus}</div>
-        <div style="font-size:10px;color:var(--vespa-brown);font-weight:800;margin-top:2px">Lost (${diffMinusCount} รายการ)</div>
+      <div style="text-align:center;background:var(--neu-surface);border-radius:16px;padding:12px 6px;box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light)">
+        <div style="font-size:24px;font-weight:800;color:var(--accent-amber);font-family:'Fredoka'">${varCount}</div>
+        <div style="font-size:10px;color:var(--text-muted);font-weight:700;margin-top:4px">Variance รอตรวจ</div>
       </div>
     </div>
-    <div style="text-align:center;font-size:10px;color:#94a3b8;margin-bottom:14px">* ผลรวมจำนวนจริง (ไม่ใช่จำนวนรายการ) รวมทั้งที่ Supervisor อนุมัติแล้วและที่ยังรอตรวจสอบ</div>
-    <div style="margin-bottom:16px">
+    <div style="display:flex;justify-content:space-around;align-items:center;padding:14px;background:var(--neu-surface);border-radius:16px;margin-bottom:8px;box-shadow: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light)">
+      <div style="text-align:center">
+        <div style="font-size:20px;font-weight:800;color:var(--accent-green);font-family:'Fredoka'">🔺 +${diffPlus}</div>
+        <div style="font-size:10px;color:var(--text-muted);font-weight:700;margin-top:2px">Gain (${diffPlusCount} รายการ)</div>
+      </div>
+      <div style="width:1px;height:28px;background:var(--neu-shadow-dark)"></div>
+      <div style="text-align:center">
+        <div style="font-size:20px;font-weight:800;color:var(--accent-red);font-family:'Fredoka'">🔻 −${diffMinus}</div>
+        <div style="font-size:10px;color:var(--text-muted);font-weight:700;margin-top:2px">Lost (${diffMinusCount} รายการ)</div>
+      </div>
+    </div>
+    <div style="text-align:center;font-size:10px;color:var(--text-muted);margin-bottom:16px">* ผลรวมจำนวนจริง (ไม่ใช่จำนวนรายการ)</div>
+    <div style="margin-bottom:20px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <span style="font-size:13px;font-weight:900;color:var(--vespa-brown)">ความคืบหน้ารวม</span>
-        <span style="font-size:17px;font-weight:900;color:var(--vespa-red);font-family:'Fredoka'">${pct}%</span>
+        <span style="font-size:13px;font-weight:700;color:var(--text-main)">ความคืบหน้ารวม</span>
+        <span style="font-size:16px;font-weight:800;color:var(--primary-blue);font-family:'Fredoka'">${pct}%</span>
       </div>
       <div class="prog"><div class="prog-fill" style="width:${pct}%"></div></div>
     </div>
     <div>
-      <div style="font-size:13px;font-weight:900;color:var(--vespa-brown);margin-bottom:8px">👥 ความคืบหน้าแต่ละคน</div>
-      ${peopleRows || `<div style="padding:16px 0;text-align:center;color:#94a3b8;font-size:12px">ยังไม่มีใครถูก Assign งาน</div>`}
+      <div style="font-size:13px;font-weight:700;color:var(--text-main);margin-bottom:10px">👥 ความคืบหน้าแต่ละคน</div>
+      ${peopleRows || `<div style="padding:16px 0;text-align:center;color:var(--text-muted);font-size:12px">ยังไม่มีใครถูก Assign งาน</div>`}
     </div>`;
 
   const varianceTabHtml = `<div>${varianceRowsHtml}</div>`;
@@ -2256,7 +2085,7 @@ wmsRows = (vaData || []).map(v => ({
   const wmsFixedPercent = wmsTotalCount > 0 ? Math.round((wmsFixedCount / wmsTotalCount) * 100) : 0;
 
   const errorBanner = vaError 
-    ? `<div class="alert alert-red" style="margin-bottom:10px;font-size:12px">⚠️ ไม่สามารถดึงข้อมูลคอนเฟิร์มแล้วได้ (Error: ${vaError.message || vaError})<br>แสดงเฉพาะรายการ "รอคอนเฟิร์ม" ที่คำนวณได้</div>`
+    ? `<div class="alert alert-red" style="margin-bottom:10px;font-size:12px">⚠️ ไม่สามารถดึงข้อมูลคอนเฟิร์มแล้วได้<br>แสดงเฉพาะรายการ "รอคอนเฟิร์ม" ที่คำนวณได้</div>`
     : '';
 
   const wmsTabHtml = `
@@ -2277,7 +2106,7 @@ wmsRows = (vaData || []).map(v => ({
         <div class="wms-ring-text">${wmsFixedPercent}%</div>
       </div>
     </div>
-    <div class="status-badge-grid" style="grid-template-columns: repeat(2, 1fr); margin-top: 12px;">
+    <div class="status-badge-grid">
       <div class="status-badge-card unfixed">
         <div class="status-badge-icon">🔧</div>
         <div class="status-badge-number">${wmsUnfixedCount}</div>
@@ -2289,7 +2118,7 @@ wmsRows = (vaData || []).map(v => ({
         <div class="status-badge-label">แก้ไขแล้ว</div>
       </div>
     </div>
-    <div class="grid-3" style="margin-bottom:8px">
+    <div class="grid-3" style="margin-bottom:10px">
       <div><label style="font-size:10px">ZONE</label>
         <select id="wms-zone" onchange="updateWmsFilter('Zone',this.value)">
           <option value="">ทั้งหมด</option>
@@ -2307,11 +2136,11 @@ wmsRows = (vaData || []).map(v => ({
           ${Object.entries(wmsUsersMap).filter(([k]) => k !== '_pending').sort((a,b)=>a[1].localeCompare(b[1])).map(([id,name])=>`<option value="${id}" ${wmsUser===id?'selected':''}>${name}</option>`).join('')}
         </select></div>
     </div>
-    <div class="fg" style="margin-bottom:8px">
+    <div class="fg" style="margin-bottom:10px">
       <label style="font-size:10px">ค้นหา Location</label>
       <input id="wms-loc-search" value="${wmsLocSearch}" placeholder="เช่น B-29-001-A" oninput="updateWmsFilter('LocSearch',this.value)">
     </div>
-    <div class="fg" style="margin-bottom:10px">
+    <div class="fg" style="margin-bottom:12px">
       <select id="wms-status" onchange="updateWmsFilter('Filter',this.value)">
         <option value="unfixed" ${wmsFilter==='unfixed'?'selected':''}>ยังไม่แก้ WMS</option>
         <option value="fixed" ${wmsFilter==='fixed'?'selected':''}>แก้แล้ว</option>
@@ -2330,8 +2159,8 @@ wmsRows = (vaData || []).map(v => ({
         <select onchange="S._dashSid=this.value;loadSvDash()">${sessOpts}</select>
       </div>
     </div>
-    <div class="card" style="padding:0;overflow:hidden">
-      <div style="display:flex;border-bottom:3px solid var(--vespa-gray)">
+    <div class="card card-flush">
+      <div style="display:flex;border-bottom:1px solid rgba(194,205,220,0.4)">
         ${tabBtn('summary','สรุป','📊')}
         ${tabBtn('variance','Variance','🧭', needsFollowUp.length || null)}
         ${tabBtn('wms','ปรับยอด WMS','🔧', wmsUnfixedCount || null)}
@@ -2347,7 +2176,6 @@ function toggleUserDetail(idx) {
 }
 
 async function toggleWmsFixed(vaId, checked) {
-  console.log('toggleWmsFixed called', vaId, checked);
   try {
     if (!vaId || vaId === 'undefined') {
       alert('ไม่พบ ID รายการ');
@@ -2365,13 +2193,12 @@ async function toggleWmsFixed(vaId, checked) {
       .update(updates)
       .eq('id', vaId)
       .select('id,wms_fixed');
-    console.log('update result', { data, error });
     if (error) {
       alert('Error: ' + error.message);
       return;
     }
     if (!data || data.length === 0) {
-      alert('Update ไม่สำเร็จ - ไม่พบรายการหรือ RLS บล็อก');
+      alert('Update ไม่สำเร็จ');
       return;
     }
     loadSvDash();
@@ -2401,8 +2228,7 @@ function renderWmsList() {
     if (filterStatus === 'unfixed' && v.wms_fixed) return false;
     if (filterStatus === 'fixed' && !v.wms_fixed) return false;
     if (filterStatus === 'pending' && !v._isPending) return false;
-    if (filterStatus === 'all') { /* ไม่กรอง */ }
-    else if (filterStatus !== 'pending' && v._isPending) return false;
+    if (filterStatus !== 'all' && filterStatus !== 'pending' && v._isPending) return false;
 
     const loc = asgnInfoMap[v.assignment_id]?.locations;
     if (filterZone && loc?.zone !== filterZone) return false;
@@ -2414,11 +2240,11 @@ function renderWmsList() {
   });
 
   if (!filtered.length) {
-    const msg = filterStatus==='unfixed' ? '🎉 ไม่มีรายการค้างแก้ WMS (ตามตัวกรองที่เลือก)' 
-      : filterStatus==='fixed' ? 'ยังไม่มีรายการที่แก้แล้ว (ตามตัวกรองที่เลือก)' 
-      : filterStatus==='pending' ? '⏳ ไม่มีรายการที่รอคอนเฟิร์ม (ตามตัวกรองที่เลือก)'
+    const msg = filterStatus==='unfixed' ? '🎉 ไม่มีรายการค้างแก้ WMS' 
+      : filterStatus==='fixed' ? 'ยังไม่มีรายการที่แก้แล้ว' 
+      : filterStatus==='pending' ? '⏳ ไม่มีรายการที่รอคอนเฟิร์ม'
       : 'ไม่พบรายการตามตัวกรองที่เลือก';
-    container.innerHTML = `<div style="padding:28px 0;text-align:center;color:#94a3b8;font-size:13px">${msg}</div>`;
+    container.innerHTML = `<div style="padding:28px 0;text-align:center;color:var(--text-muted);font-size:13px">${msg}</div>`;
     return;
   }
 
@@ -2436,14 +2262,14 @@ function renderWmsList() {
       ? `<button class="btn btn-sm btn-amber" onclick="go('sv-detail',{aid:'${v.assignment_id}'})">🔍 ไปคอนเฟิร์ม</button>`
       : `<button class="btn btn-sm ${isFixed?'btn-green':'btn-ghost'}" onclick="toggleWmsFixed('${v.id}',${!isFixed})">${isFixed?'✅ แก้แล้ว':'⬜ แก้แล้ว?'}</button>`;
 
-    return `<div style="border-bottom:2px solid var(--vespa-gray);padding:12px 0;display:flex;align-items:center;gap:10px;${isFixed?'opacity:.55':''}">
+    return `<div style="border-bottom:1px solid rgba(194,205,220,0.4);padding:12px 0;display:flex;align-items:center;gap:10px;${isFixed?'opacity:.55':''}">
       <div style="flex:1;min-width:0">
         <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px;flex-wrap:wrap">
-          <span class="mono" style="font-size:14px;font-weight:900;color:var(--vespa-shadow)">${loc?.code||'?'}</span>
+          <span class="mono" style="font-size:14px;font-weight:800;color:var(--text-main)">${loc?.code||'?'}</span>
           ${statusBadge}
         </div>
-        <div style="font-size:12px;color:var(--vespa-brown);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v.items?.code||''}${v.items?.description?' · '+v.items.description:''}</div>
-        <div style="font-size:10px;color:#94a3b8;margin-top:2px">
+        <div style="font-size:12px;color:var(--text-muted);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v.items?.code||''}${v.items?.description?' · '+v.items.description:''}</div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:2px">
           ${isPending 
             ? `นับได้: ${v.final_qty} · OH: ${v.final_qty - varAmt} · โดย: ${v.profiles?.name||'?'}`
             : `โดย ${v.profiles?.name||'?'}`
@@ -2451,8 +2277,8 @@ function renderWmsList() {
         </div>
       </div>
       <div style="text-align:right;flex-shrink:0">
-        <div style="font-size:19px;font-weight:900;font-family:'Fredoka';color:${varAmt>0?'var(--vespa-green)':'var(--vespa-red)'}">${varAmt>0?'+':''}${varAmt}</div>
-        <div style="font-size:9px;color:#94a3b8;margin-bottom:4px">${isPending ? 'ยอดนับ' : 'ยืนยัน ' + v.final_qty}</div>
+        <div style="font-size:18px;font-weight:800;font-family:'Fredoka';color:${varAmt>0?'var(--accent-green)':'var(--accent-red)'}">${varAmt>0?'+':''}${varAmt}</div>
+        <div style="font-size:9px;color:var(--text-muted);margin-bottom:4px">${isPending ? 'ยอดนับ' : 'ยืนยัน ' + v.final_qty}</div>
         ${wmsButton}
       </div>
     </div>`;
@@ -2521,49 +2347,46 @@ async function renderVarianceItemDetail(aid, container, idx) {
     const suggested = r3 ?? r2 ?? r1 ?? +s.onhand_qty;
     const alQty = s.al_qty ?? null;
 
-    varRows += `<div class="vrow ${st.row}" style="flex-direction:column;align-items:stretch;padding:10px 14px;gap:6px">
+    varRows += `<div class="vrow ${st.row}" style="flex-direction:column;align-items:stretch;padding:12px 14px;gap:6px">
       <div style="display:flex;align-items:flex-start;gap:10px">
         <div style="flex:1;min-width:0">
-          <div class="mono" style="font-size:12px;font-weight:900">${it.code}</div>
-          <div style="font-size:10px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${it.description||''}</div>
-          <div style="font-size:10px;color:#94a3b8;margin-top:2px">R1: ${fmt(v[1])} · R2: ${fmt(v[2])} · R3: ${fmt(v[3])}</div>
+          <div class="mono" style="font-size:13px;font-weight:800">${it.code}</div>
+          <div style="font-size:11px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${it.description||''}</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:2px">R1: ${fmt(v[1])} · R2: ${fmt(v[2])} · R3: ${fmt(v[3])}</div>
           <div class="oh-chip">OH: <input type="number" id="oh_${it.id}" value="${s.onhand_qty}"
             onchange="updateOH('${asgn.session_id}','${asgn.location_id}','${it.id}',this.value)">
             ${alQty !== null ? `<span class="al-part">AL ${alQty}</span>` : ''}</div>
         </div>
         <div style="text-align:right;flex-shrink:0">
           <span class="tag ${st.cls}">${st.lbl}</span>
-          <div style="font-size:9px;color:#94a3b8;margin-top:6px">ยอดยืนยัน</div>
+          <div style="font-size:9px;color:var(--text-muted);margin-top:6px">ยอดยืนยัน</div>
           <input type="number" id="confirm_${it.id}" value="${suggested}"
-            style="width:64px;padding:5px 3px;font-size:14px;font-weight:900;text-align:center;border:2px solid var(--vespa-brown);border-radius:10px;margin-top:2px;font-family:inherit">
+            style="width:68px;padding:5px 3px;font-size:14px;font-weight:800;text-align:center;margin-top:2px;font-family:inherit">
         </div>
       </div>
     </div>`;
   }
 
-  // รอบถัดไปที่จะส่งนับ อิงจากรอบที่นับจริงแล้ว ไม่ใช่จาก status เพียวๆ
-  // (เพราะกติกา "1 รอบ" อาจทำให้ status กระโดดไป round3_done ทั้งที่นับจริงแค่รอบเดียว)
   let maxRoundCounted = 0;
   counts?.forEach(c => { if (c.round > maxRoundCounted) maxRoundCounted = c.round; });
   const nextPhysicalRound = maxRoundCounted + 1;
 
-  // ตัดคนที่นับรอบก่อนหน้าออกจากตัวเลือก กันนับซ้ำคนเดิม
   const otherCounters = (counters||[]).filter(u => u.id !== asgn.assigned_to);
   const cOpts = otherCounters.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
 
   container.innerHTML = `
     <div>${varRows}</div>
-    <div style="padding:12px 14px;border-top:2px solid var(--vespa-gray)">
-      <div class="alert alert-blue" style="font-size:11px;margin-bottom:8px">✏️ แก้ "ยอดยืนยัน" หรือ OH ก่อนกดคอนเฟิร์ม</div>
+    <div style="padding:12px 14px;border-top:1px solid rgba(194,205,220,0.4)">
+      <div class="alert alert-blue" style="font-size:11px;margin-bottom:10px">✏️ แก้ "ยอดยืนยัน" หรือ OH ก่อนกดคอนเฟิร์ม</div>
       <div id="vda_${idx}"></div>
       <button class="btn btn-green" onclick="doApproveInline('${aid}','${idx}')" style="margin-bottom:8px">✅ คอนเฟิร์มยอดนับ</button>
       ${nextPhysicalRound <= 3 ? `
-      <div style="background:#f0fdf4;border:2px solid var(--vespa-green);border-radius:12px;padding:10px">
-        <div style="font-size:12px;font-weight:900;color:var(--vespa-mint-dark);margin-bottom:6px">🔄 ส่งนับรอบที่ ${nextPhysicalRound} ต่อ — คนละคนกับรอบก่อนหน้า</div>
+      <div style="background:rgba(255,255,255,0.4);border-radius:16px;padding:12px;margin-top:8px">
+        <div style="font-size:12px;font-weight:700;color:var(--primary-blue);margin-bottom:6px">🔄 ส่งนับรอบที่ ${nextPhysicalRound} ต่อ</div>
         ${otherCounters.length ? `<div style="display:flex;gap:6px">
           <select id="vreassign_${idx}" style="flex:1">${cOpts}</select>
           <button class="btn btn-green btn-sm" onclick="doReassignCounter('${aid}','${idx}',${nextPhysicalRound})" style="flex-shrink:0">ส่ง</button>
-        </div>` : `<div style="font-size:12px;color:#94a3b8">ไม่มีผู้นับคนอื่นในระบบให้เลือก</div>`}
+        </div>` : `<div style="font-size:12px;color:var(--text-muted)">ไม่มีผู้นับคนอื่นในระบบให้เลือก</div>`}
       </div>` : ''}
     </div>`;
 }
@@ -2593,7 +2416,7 @@ async function doApproveInline(aid, idx) {
   }
   await sb.from('assignments').update({ status:'approved' }).eq('id', aid);
 
-  if (al) al.innerHTML = `<div class="alert alert-green" style="font-size:11px">✅ คอนเฟิร์มยอดเรียบร้อย — กำลังรีเฟรช...</div>`;
+  if (al) al.innerHTML = `<div class="alert alert-green" style="font-size:11px">✅ คอนเฟิร์มยอดเรียบร้อย</div>`;
   setTimeout(() => loadSvDash(), 1000);
 }
 
@@ -2630,7 +2453,7 @@ async function loadSvList() {
   if (!asgns?.length) {
     cnt().innerHTML = `<div class="card" style="text-align:center;padding:44px">
       <div style="font-size:42px">✅</div>
-      <div style="margin-top:14px;color:#64748b;font-weight:500">ไม่มี Variance ที่ต้องตรวจสอบ</div>
+      <div style="margin-top:14px;color:var(--text-muted);font-weight:500">ไม่มี Variance ที่ต้องตรวจสอบ</div>
     </div>`; return;
   }
 
@@ -2679,7 +2502,6 @@ async function loadSvDetail() {
     byItem[c.item_id][c.round] = c;
   });
 
-  // รอบที่นับจริงแล้ว (ไม่ใช้ status เพียวๆ เพราะกติกา "1 รอบ" อาจทำให้ status กระโดดไป round3_done)
   let maxRoundCounted = 0;
   counts?.forEach(c => { if (c.round > maxRoundCounted) maxRoundCounted = c.round; });
   const roundNum = maxRoundCounted || 1;
@@ -2707,16 +2529,15 @@ async function loadSvDetail() {
 
     const notes = [v[1],v[2],v[3]].map((rec,idx) => {
       if (!rec || (!rec.remark && !rec.photo_url)) return '';
-      return `<div style="font-size:10px;color:#7c3aed;margin-top:2px">
+      return `<div style="font-size:10px;color:var(--primary-blue);margin-top:2px">
         ${rec.remark ? `📝R${idx+1}: ${rec.remark}` : ''}
-        ${rec.photo_url ? ` <a href="${rec.photo_url}" target="_blank" style="color:#7c3aed">📷 รูป R${idx+1}</a>` : ''}
+        ${rec.photo_url ? ` <a href="${rec.photo_url}" target="_blank" style="color:var(--primary-blue)">📷 รูป R${idx+1}</a>` : ''}
       </div>`;
     }).join('');
 
     const suggested = r3 ?? r2 ?? r1 ?? +s.onhand_qty;
     const alQty = s.al_qty ?? null;
 
-    // OH editable (admin/supervisor) — per item, ตอนนี้ทำเป็นกรอบชัดเจน ตัวใหญ่ขึ้น
     const ohCell = isAdminOrSup
       ? `<div class="oh-chip">OH: <input type="number" id="oh_${it.id}" value="${s.onhand_qty}"
            onchange="updateOH('${asgn.session_id}','${asgn.location_id}','${it.id}',this.value)">
@@ -2726,17 +2547,17 @@ async function loadSvDetail() {
     varRows += `<div class="vrow ${st.row}" style="flex-direction:column;align-items:stretch;padding:12px 16px;gap:8px">
       <div style="display:flex;align-items:flex-start;gap:10px">
         <div style="flex:1;min-width:0">
-          <div class="mono" style="font-size:13px;font-weight:900;color:var(--vespa-shadow)">${it.code}</div>
-          <div style="font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${it.description||''}</div>
-          <div style="font-size:10px;color:#94a3b8;margin-top:2px">R1: ${fmt(v[1])} · R2: ${fmt(v[2])} · R3: ${fmt(v[3])}</div>
+          <div class="mono" style="font-size:13px;font-weight:800;color:var(--text-main)">${it.code}</div>
+          <div style="font-size:11px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${it.description||''}</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:2px">R1: ${fmt(v[1])} · R2: ${fmt(v[2])} · R3: ${fmt(v[3])}</div>
           ${ohCell}
           ${notes}
         </div>
         <div style="text-align:right;flex-shrink:0">
           <span class="tag ${st.cls}">${st.lbl}</span>
-          <div style="font-size:9px;color:#94a3b8;margin-top:6px">ยอดยืนยัน</div>
+          <div style="font-size:9px;color:var(--text-muted);margin-top:6px">ยอดยืนยัน</div>
           <input type="number" id="confirm_${it.id}" value="${suggested}"
-            style="width:72px;padding:6px 4px;font-size:15px;font-weight:900;text-align:center;border:2px solid var(--vespa-brown);border-radius:10px;margin-top:2px;font-family:inherit">
+            style="width:72px;padding:6px 4px;font-size:15px;font-weight:800;text-align:center;margin-top:2px;font-family:inherit">
         </div>
       </div>
     </div>`;
@@ -2744,8 +2565,8 @@ async function loadSvDetail() {
 
   cnt().innerHTML = `
     <div class="card">
-      <div class="mono" style="font-size:19px;font-weight:900;color:var(--vespa-shadow)">${l.code}</div>
-      <div style="font-size:12px;color:var(--vespa-brown);margin-top:4px">
+      <div class="mono" style="font-size:18px;font-weight:800;color:var(--text-main)">${l.code}</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:4px">
         ${[l.zone,l.area].filter(Boolean).join(' · ')} · Counter: ${asgn.profiles?.name || '?'}
       </div>
       <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
@@ -2755,17 +2576,17 @@ async function loadSvDetail() {
     </div>
     <div class="sec">รายละเอียด — แก้ยอด/OH แล้วกดคอนเฟิร์มด้านล่าง</div>
     <div class="card card-flush">${varRows}</div>
-    <div style="padding:12px">
-      <div class="alert alert-blue" style="font-size:12px;margin-bottom:10px">✏️ แก้ "ยอดยืนยัน" หรือ OH ก่อนกดคอนเฟิร์ม</div>
+    <div style="padding:12px 16px">
+      <div class="alert alert-blue" style="font-size:12px;margin-bottom:12px">✏️ แก้ "ยอดยืนยัน" หรือ OH ก่อนกดคอนเฟิร์ม</div>
       <div id="sva"></div>
-      <button class="btn btn-green" onclick="doApprove('${aid}')" style="margin-bottom:8px">✅ คอนเฟิร์มยอดนับ</button>
+      <button class="btn btn-green" onclick="doApprove('${aid}')" style="margin-bottom:12px">✅ คอนเฟิร์มยอดนับ</button>
       ${nextPhysicalRound <= 3 ? `
-      <div style="background:#f0fdf4;border:2px solid var(--vespa-green);border-radius:14px;padding:12px">
-        <div style="font-size:13px;font-weight:900;color:var(--vespa-mint-dark);margin-bottom:8px">🔄 ส่งนับรอบที่ ${nextPhysicalRound} ต่อ — คนละคนกับรอบก่อนหน้า</div>
+      <div style="background:var(--neu-surface);border-radius:16px;padding:14px;box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light)">
+        <div style="font-size:13px;font-weight:700;color:var(--primary-blue);margin-bottom:8px">🔄 ส่งนับรอบที่ ${nextPhysicalRound} ต่อ</div>
         ${otherCounters.length ? `<div style="display:flex;gap:8px">
           <select id="recount-user" style="flex:1">${otherCounters.map(u=>`<option value="${u.id}">${u.name}</option>`).join('')}</select>
           <button class="btn btn-green btn-sm" onclick="reqRecount('${aid}',${nextPhysicalRound})" style="flex-shrink:0">ส่ง</button>
-        </div>` : `<div style="font-size:12px;color:#94a3b8">ไม่มีผู้นับคนอื่นในระบบให้เลือก</div>`}
+        </div>` : `<div style="font-size:12px;color:var(--text-muted)">ไม่มีผู้นับคนอื่นในระบบให้เลือก</div>`}
       </div>` : ''}
     </div>`;
 }
@@ -2830,12 +2651,12 @@ async function reqRecount(aid, targetRound) {
   await sb.from('assignments').update(updates).eq('id', aid);
   const label = sel.options[sel.selectedIndex]?.textContent || '';
   logAudit(before?.session_id, before?.location_id, null, 'reassign', before?.profiles?.name, label, aid);
-  Q('sva').innerHTML = `<div class="alert alert-green">✅ ส่งงานนี้ให้ผู้นับที่เลือกแล้ว — Counter จะเห็นงานนี้ในรายการของเขา</div>`;
+  Q('sva').innerHTML = `<div class="alert alert-green">✅ ส่งงานนี้ให้ผู้นับที่เลือกแล้ว</div>`;
   setTimeout(() => go('sv-list'), 1500);
 }
 
 // ══════════════════════════════════════════════════════════
-//  ADMIN — UNIFIED MANAGEMENT PAGE (Sessions + Assign + Import)
+//   ADMIN — UNIFIED MANAGEMENT PAGE
 // ══════════════════════════════════════════════════════════
 const MANAGE_TABS = ['sessions','assign','import'];
 let _manageTab = 'sessions';
@@ -2846,13 +2667,13 @@ async function loadAdManage() {
 
   const tabBtn = (id, label, icon) => `
     <button onclick="S._manageTab='${id}';_manageTab='${id}';loadAdManage()"
-      style="flex:1;padding:10px 6px;border:none;background:none;font-family:inherit;font-size:12px;font-weight:900;cursor:pointer;border-bottom:3px solid ${tab===id?'var(--vespa-red)':'transparent'};color:${tab===id?'var(--vespa-red)':'var(--vespa-brown)'};transition:all .15s">
+      style="flex:1;padding:10px 6px;border:none;background:none;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;border-bottom:3px solid ${tab===id?'var(--primary-blue)':'transparent'};color:${tab===id?'var(--primary-blue)':'var(--text-muted)'};transition:all .15s">
       ${icon} ${label}
     </button>`;
 
   cnt().innerHTML = `
-    <div class="card" style="padding:0;overflow:hidden">
-      <div style="display:flex;border-bottom:3px solid var(--vespa-gray)">
+    <div class="card card-flush">
+      <div style="display:flex;border-bottom:1px solid rgba(194,205,220,0.4)">
         ${tabBtn('sessions','Session','📋')}
         ${tabBtn('assign','จ่ายงาน','👥')}
         ${tabBtn('import','Import','📥')}
@@ -2879,21 +2700,21 @@ async function renderManageSessions(container) {
 
   let html = sessions?.length ? '' : `<div style="text-align:center;padding:32px">
     <div style="font-size:48px">📁</div>
-    <div style="color:var(--vespa-brown);font-weight:800;margin-top:12px">ยังไม่มี Session</div>
+    <div style="color:var(--text-muted);font-weight:600;margin-top:12px">ยังไม่มี Session</div>
   </div>`;
 
   for (const s of sessions || []) {
     const ohBadge = s.show_oh
       ? `<span class="tag tag-green" style="font-size:9px">🔓 เห็น OH</span>`
       : `<span class="tag tag-gray"  style="font-size:9px">🔒 Blind</span>`;
-    html += `<div style="display:flex;align-items:center;padding:12px 0;border-bottom:2px solid var(--vespa-gray);gap:8px;flex-wrap:wrap">
+    html += `<div style="display:flex;align-items:center;padding:12px 0;border-bottom:1px solid rgba(194,205,220,0.4);gap:8px;flex-wrap:wrap">
       <div style="flex:1;min-width:0">
-        <div style="font-size:15px;font-weight:900;color:var(--vespa-shadow)">${s.name}</div>
-        <div style="font-size:11px;color:var(--vespa-brown);margin-top:2px;display:flex;gap:4px;flex-wrap:wrap">
+        <div style="font-size:15px;font-weight:700;color:var(--text-main)">${s.name}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:3px;display:flex;gap:6px;flex-wrap:wrap">
           ${new Date(s.created_at).toLocaleDateString('th-TH')} ${ohBadge}
         </div>
       </div>
-      <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
         <span class="tag ${SBG[s.status]}">${SLB[s.status]}</span>
         ${isAdminOrSup && s.status==='draft'  ? `<button class="btn btn-green btn-sm" onclick="activateSess('${s.id}')">เปิด</button>` : ''}
         ${isAdminOrSup && s.status==='active' ? `<button class="btn btn-ghost btn-sm" onclick="closeSess('${s.id}')">ปิด</button>` : ''}
@@ -2904,7 +2725,7 @@ async function renderManageSessions(container) {
   }
 
   container.innerHTML = html + `
-    <button class="btn btn-blue" style="margin-top:14px" onclick="go('ad-new')">＋ สร้าง Session ใหม่</button>`;
+    <button class="btn btn-blue" style="margin-top:16px" onclick="go('ad-new')">＋ สร้าง Session ใหม่</button>`;
 }
 
 async function renderManageAssign(container) {
@@ -2923,33 +2744,32 @@ async function renderManageAssign(container) {
   const firstSess = sessions[0];
 
   container.innerHTML = `
-    <details id="zoneDashDetails" style="background:#eef6ff;border:3px solid #457B9D;border-radius:20px;padding:0;margin-bottom:14px;overflow:hidden;box-shadow:3px 3px 0px var(--vespa-shadow)"
+    <details id="zoneDashDetails" style="background:var(--neu-surface);border-radius:20px;padding:0;margin-bottom:16px;overflow:hidden;box-shadow: 6px 6px 12px var(--neu-shadow-dark), -6px -6px 12px var(--neu-shadow-light)"
       ontoggle="if(this.open) refreshZoneDashboard()">
-      <summary style="cursor:pointer;padding:14px 16px;font-size:14px;font-weight:900;color:#1d4ed8;list-style:none;display:flex;align-items:center;gap:6px">
+      <summary style="cursor:pointer;padding:14px 16px;font-size:14px;font-weight:700;color:var(--primary-blue);list-style:none;display:flex;align-items:center;gap:6px">
         <span style="font-size:16px">📊</span> สรุปงานแยกตาม Zone
-        <span style="margin-left:auto;font-size:11px;color:#94a3b8;font-weight:600">แตะเพื่อเปิด</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--text-muted);font-weight:500">แตะเพื่อเปิด</span>
       </summary>
-      <div id="zone-dash-body" style="border-top:3px solid var(--vespa-gray)"><div class="load" style="padding:16px;font-size:12px">⏳ กำลังคำนวณ...</div></div>
+      <div id="zone-dash-body" style="border-top:1px solid rgba(194,205,220,0.4)"><div class="load" style="padding:16px;font-size:12px">⏳ กำลังคำนวณ...</div></div>
     </details>
     <div id="aa"></div>
     <div class="fg"><label>SESSION</label>
       <select id="as-sess" onchange="refreshLocs();refreshBulkFilters();syncOHToggle();if(Q('zoneDashDetails')?.open)refreshZoneDashboard();">${sOpts}</select>
     </div>
 
-    ${isAdminOrSup ? `<div style="background:#fffbeb;border:2px solid #d97706;border-radius:14px;padding:12px;margin-bottom:12px">
-      <div style="font-size:13px;font-weight:900;color:#92400e;margin-bottom:8px">👁️ ควบคุมการแสดง OH ให้ Counter</div>
+    ${isAdminOrSup ? `<div style="background:var(--neu-surface);border-radius:16px;padding:14px;margin-bottom:14px;box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light)">
+      <div style="font-size:13px;font-weight:700;color:var(--text-main);margin-bottom:8px">👁️ ควบคุมการแสดง OH ให้ Counter</div>
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-        <input type="checkbox" id="oh-toggle" ${firstSess?.show_oh?'checked':''} onchange="toggleOH()" style="width:20px;height:20px;accent-color:var(--vespa-red)">
-        <span style="font-size:13px;font-weight:700">เปิดให้ Counter เห็นยอด OH ขณะนับ</span>
+        <input type="checkbox" id="oh-toggle" ${firstSess?.show_oh?'checked':''} onchange="toggleOH()" style="width:18px;height:18px;accent-color:var(--primary-blue)">
+        <span style="font-size:13px;font-weight:600">เปิดให้ Counter เห็นยอด OH ขณะนับ</span>
         <span id="oh-status" class="tag ${firstSess?.show_oh?'tag-green':'tag-gray'}">${firstSess?.show_oh?'🔓 เห็น OH':'🔒 Blind'}</span>
       </label>
     </div>` : ''}
 
-    <!-- ══ SINGLE ASSIGN — ใช้บ่อยสุด อยู่บนสุด แต่พับเก็บได้เหมือนกัน ══ -->
-    <details style="background:#f0fdf4;border:2px solid var(--vespa-green);border-radius:14px;padding:0;margin-bottom:12px;overflow:hidden">
-      <summary style="cursor:pointer;padding:12px 14px;font-size:14px;font-weight:900;color:var(--vespa-mint-dark);list-style:none;display:flex;align-items:center;gap:6px">
+    <details style="background:var(--neu-surface);border-radius:16px;padding:0;margin-bottom:12px;overflow:hidden;box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light)">
+      <summary style="cursor:pointer;padding:12px 14px;font-size:13px;font-weight:700;color:var(--text-main);list-style:none;display:flex;align-items:center;gap:6px">
         <span style="font-size:15px">📍</span> Assign ทีละ Location
-        <span style="margin-left:auto;font-size:11px;color:#94a3b8;font-weight:600">แตะเพื่อเปิด</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--text-muted);font-weight:500">แตะเพื่อเปิด</span>
       </summary>
       <div style="padding:0 14px 14px">
         <div class="fg"><label>COUNTER</label><select id="as-user">${cOpts}</select></div>
@@ -2958,11 +2778,10 @@ async function renderManageAssign(container) {
       </div>
     </details>
 
-    <!-- ══ BULK ASSIGN — ใช้ไม่บ่อย ซ่อนไว้ก่อน ══ -->
-    <details style="background:#f0f7ff;border:2px solid #bfdbfe;border-radius:14px;padding:0;margin-bottom:12px;overflow:hidden">
-      <summary style="cursor:pointer;padding:12px 14px;font-size:13px;font-weight:900;color:#1d4ed8;list-style:none;display:flex;align-items:center;gap:6px">
+    <details style="background:var(--neu-surface);border-radius:16px;padding:0;margin-bottom:12px;overflow:hidden;box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light)">
+      <summary style="cursor:pointer;padding:12px 14px;font-size:13px;font-weight:700;color:var(--text-main);list-style:none;display:flex;align-items:center;gap:6px">
         <span style="font-size:15px">⚡</span> Bulk Assign — มอบหมายหลาย Location พร้อมกัน
-        <span style="margin-left:auto;font-size:11px;color:#94a3b8;font-weight:600">แตะเพื่อเปิด</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--text-muted);font-weight:500">แตะเพื่อเปิด</span>
       </summary>
       <div style="padding:0 14px 14px">
         <div class="grid-3" style="margin-bottom:8px">
@@ -2975,15 +2794,15 @@ async function renderManageAssign(container) {
         </div>
         <div class="fg" style="margin-bottom:8px"><label style="font-size:10px">COUNTER รอบ 1</label>
           <select id="bulk-user">${cOpts}</select></div>
-        <div id="bulk-preview" style="font-size:12px;color:#1e40af;margin-bottom:8px;font-weight:700"></div>
+        <div id="bulk-preview" style="font-size:12px;color:var(--primary-blue);margin-bottom:8px;font-weight:700"></div>
         <button class="btn btn-blue" id="bulk-btn" onclick="doBulkAssign()" disabled>⚡ Assign ทั้งหมด</button>
       </div>
     </details>
 
-    ${isAdminOrSup ? `<details style="background:#fef9f0;border:2px solid #E9C46A;border-radius:14px;padding:0;margin-bottom:12px;overflow:hidden">
-      <summary style="cursor:pointer;padding:12px 14px;font-size:13px;font-weight:900;color:#92400e;list-style:none;display:flex;align-items:center;gap:6px">
+    ${isAdminOrSup ? `<details style="background:var(--neu-surface);border-radius:16px;padding:0;margin-bottom:12px;overflow:hidden;box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light)">
+      <summary style="cursor:pointer;padding:12px 14px;font-size:13px;font-weight:700;color:var(--text-main);list-style:none;display:flex;align-items:center;gap:6px">
         <span style="font-size:15px">🔄</span> เปลี่ยน Counter รอบ 2/3
-        <span style="margin-left:auto;font-size:11px;color:#94a3b8;font-weight:600">แตะเพื่อเปิด</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--text-muted);font-weight:500">แตะเพื่อเปิด</span>
       </summary>
       <div style="padding:0 14px 14px">
         <div class="grid-3" style="margin-bottom:8px">
@@ -3000,15 +2819,15 @@ async function renderManageAssign(container) {
         </div>
         <div class="fg" style="margin-bottom:8px"><label style="font-size:10px">COUNTER ที่จะนับต่อ</label>
           <select id="r23-user">${cOpts}</select></div>
-        <div id="r23-preview" style="font-size:12px;color:var(--vespa-mint-dark);margin-bottom:8px;font-weight:700"></div>
+        <div id="r23-preview" style="font-size:12px;color:var(--primary-blue);margin-bottom:8px;font-weight:700"></div>
         <button class="btn btn-green" id="r23-btn" onclick="doR23Assign()" disabled>🔄 เปลี่ยน Counter</button>
       </div>
     </details>` : ''}
 
-    <details style="background:#faf8f3;border:2px solid var(--vespa-brown);border-radius:14px;padding:0;margin-top:14px;overflow:hidden">
-      <summary style="cursor:pointer;padding:12px 14px;font-size:13px;font-weight:900;color:var(--vespa-brown);list-style:none;display:flex;align-items:center;gap:6px">
+    <details style="background:var(--neu-surface);border-radius:16px;padding:0;margin-top:14px;overflow:hidden;box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light)">
+      <summary style="cursor:pointer;padding:12px 14px;font-size:13px;font-weight:700;color:var(--text-main);list-style:none;display:flex;align-items:center;gap:6px">
         <span style="font-size:15px">📋</span> งานที่ Assign แล้ว
-        <span style="margin-left:auto;font-size:11px;color:#94a3b8;font-weight:600">แตะเพื่อเปิด</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--text-muted);font-weight:500">แตะเพื่อเปิด</span>
       </summary>
       <div id="al" style="padding:0 0 4px"><div class="load" style="padding:16px">⏳</div></div>
     </details>`;
@@ -3051,7 +2870,7 @@ async function refreshZoneDashboard() {
   const allZones = [...new Set([...Object.keys(zoneTotals), ...Object.keys(zoneAssigned)])].sort();
 
   if (!allZones.length) {
-    box.innerHTML = `<div style="padding:16px;text-align:center;color:#94a3b8;font-size:13px">ยังไม่มีข้อมูลใน Session นี้</div>`;
+    box.innerHTML = `<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:13px">ยังไม่มีข้อมูลใน Session นี้</div>`;
     return;
   }
 
@@ -3062,13 +2881,13 @@ async function refreshZoneDashboard() {
     const counterList = Object.entries(zoneCounters[z] || {})
       .sort((a,b) => b[1]-a[1])
       .map(([name,c]) => `<span class="tag tag-gray" style="font-size:10px">${name} · ${c}</span>`).join(' ');
-    return `<div style="padding:10px 14px;border-bottom:2px solid var(--vespa-gray)">
+    return `<div style="padding:10px 14px;border-bottom:1px solid rgba(194,205,220,0.4)">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-        <span style="font-size:13px;font-weight:900;color:var(--vespa-brown)">${z}</span>
-        <span style="font-size:12px;font-weight:800;color:var(--vespa-red)">${assigned}/${total} จ่ายแล้ว</span>
+        <span style="font-size:13px;font-weight:700;color:var(--text-main)">${z}</span>
+        <span style="font-size:12px;font-weight:700;color:var(--primary-blue)">${assigned}/${total} จ่ายแล้ว</span>
       </div>
       <div class="gauge-container" style="padding:6px;margin-top:6px">
-        <div class="prog" style="height:10px"><div class="prog-fill" style="width:${pct}%"></div></div>
+        <div class="prog" style="height:8px"><div class="prog-fill" style="width:${pct}%"></div></div>
       </div>
       ${counterList ? `<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">${counterList}</div>` : ''}
     </div>`;
@@ -3087,9 +2906,8 @@ async function renderManageImport(container) {
     <div id="ia"></div>
     <div class="alert alert-blue" style="font-size:12px;margin-bottom:12px">
       📁 Upload Excel (.xlsx) — ดึงข้อมูลจากระบบ WMS ได้เลย ไม่ต้องเรียงคอลัมน์ใหม่<br>
-      ✅ ระบบอ่านหัวตารางอัตโนมัติ รองรับทุกรูปแบบ Export<br>
-      🏷️ ดึง LPN / Lot / OH / AL มาแสดงตอนนับ<br>
-      🔄 Import ซ้ำได้ — ระบบ update ยอดให้
+      ✅ ระบบอ่านหัวตารางอัตโนมัติ<br>
+      🏷️ ดึง LPN / Lot / OH / AL มาแสดงตอนนับ
     </div>
     <div class="fg"><label>SESSION</label><select id="is">${sessOpts}</select></div>
     <div class="fg">
@@ -3098,17 +2916,17 @@ async function renderManageImport(container) {
     </div>
     <div class="fg"><label>เลือกไฟล์ XLSX</label>
       <input type="file" id="ixlsx" accept=".xlsx,.xls"
-        style="padding:14px;border:3px dashed var(--vespa-brown);border-radius:16px;cursor:pointer;background:#F4F1EB;width:100%;font-size:13px">
+        style="padding:14px;border:none;border-radius:16px;cursor:pointer;background:var(--neu-surface);box-shadow: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light);width:100%;font-size:13px">
     </div>
     <div id="ipreview" style="display:none;margin-bottom:12px"></div>
     <button class="btn btn-blue" id="ibtn" onclick="doImportXlsx()" disabled>📥 Import</button>
 
-    <div style="border-top:3px dashed var(--vespa-gray);margin:20px 0 16px"></div>
+    <div style="border-top:1px dashed var(--neu-shadow-dark);margin:24px 0 16px"></div>
 
-    <div style="font-size:14px;font-weight:900;color:var(--vespa-red);margin-bottom:10px">🗑️ ลบ Location ตาม Zone / Row / Session</div>
+    <div style="font-size:14px;font-weight:700;color:var(--accent-red);margin-bottom:10px">🗑️ ลบ Location ตาม Zone / Row / Session</div>
     <div class="alert alert-amber" style="font-size:12px">
-      ⚠️ เลือก Session = ลบเฉพาะข้อมูลใน Session นั้น (Location ยังอยู่ใช้กับ Session อื่นได้)<br>
-      เว้น Session ว่าง = ลบ Location ออกจากระบบจริงทุก Session — กู้คืนไม่ได้
+      ⚠️ เลือก Session = ลบเฉพาะข้อมูลใน Session นั้น<br>
+      เว้น Session ว่าง = ลบ Location ออกจากระบบจริงทุก Session
     </div>
     <div class="fg">
       <label>SESSION (ไม่บังคับ)</label>
@@ -3122,7 +2940,7 @@ async function renderManageImport(container) {
       <div class="fg" style="margin:0"><label>LOCATION</label>
         <input id="del-code" placeholder="เช่น B-EA-001-A" oninput="refreshDeleteZonePreview()"></div>
     </div>
-    <div id="del-preview" style="font-size:12px;color:#b91c1c;margin-bottom:10px;font-weight:700"></div>
+    <div id="del-preview" style="font-size:12px;color:var(--accent-red);margin-bottom:10px;font-weight:700"></div>
     <div id="del-alert"></div>
     <button class="btn btn-red" id="del-btn" onclick="doDeleteByZoneRow()" disabled>🗑️ ลบทั้งหมดที่เลือก</button>`;
 
@@ -3151,8 +2969,8 @@ async function toggleOH() {
   const { error } = await sb.from('count_sessions').update({ show_oh: val }).eq('id', sid);
 
   if (error) {
-    alert('❌ บันทึกไม่สำเร็จ: ' + error.message + '\n\nลองตรวจสอบว่ารัน schema_v3/v4_update.sql แล้วหรือยัง');
-    if (tog) tog.checked = !val; // revert checkbox visually since save failed
+    alert('❌ บันทึกไม่สำเร็จ: ' + error.message);
+    if (tog) tog.checked = !val;
     return;
   }
   if (st) { st.textContent = val ? '🔓 เห็น OH' : '🔒 Blind Count'; st.className = `tag ${val?'tag-green':'tag-gray'}`; }
@@ -3184,30 +3002,30 @@ async function openRulesModal() {
       <div class="fg" style="margin-bottom:10px">
         <label style="font-size:11px">จำนวนรอบสูงสุด</label>
         <select id="rule-maxrounds" onchange="onMaxRoundsChange()">
-          <option value="1" ${first?.max_rounds===1?'selected':''}>1 รอบ (นับครั้งเดียว ไม่ตรงส่งหัวหน้าทันที)</option>
-          <option value="2" ${first?.max_rounds===2?'selected':''}>2 รอบ (ไม่ต้องนับรอบ 3)</option>
-          <option value="3" ${(!first?.max_rounds || first?.max_rounds===3)?'selected':''}>3 รอบ (ค่ามาตรฐาน)</option>
+          <option value="1" ${first?.max_rounds===1?'selected':''}>1 รอบ (นับครั้งเดียว)</option>
+          <option value="2" ${first?.max_rounds===2?'selected':''}>2 รอบ</option>
+          <option value="3" ${(!first?.max_rounds || first?.max_rounds===3)?'selected':''}>3 รอบ (มาตรฐาน)</option>
         </select>
       </div>
       <div class="fg" style="margin-bottom:0" id="rule-repeataction-wrap">
-        <label style="font-size:11px">ถ้านับซ้ำได้ค่าเดิม (คู่ไหนก็ได้) แต่ไม่ตรงกับ OH ระบบควร</label>
+        <label style="font-size:11px">ถ้านับซ้ำได้ค่าเดิมแต่ไม่ตรงกับ OH</label>
         <select id="rule-repeataction" onchange="saveCountingRules();testRule();">
-          <option value="recount" ${(first?.repeat_match_action||'recount')==='recount'?'selected':''}>ให้นับรอบถัดไปต่อ (ค่ามาตรฐาน — ปลอดภัยสุด)</option>
-          <option value="auto_pass" ${first?.repeat_match_action==='auto_pass'?'selected':''}>ถือว่าผ่านทันที (เชื่อยอดนับมากกว่าระบบ)</option>
-          <option value="send_variance" ${first?.repeat_match_action==='send_variance'?'selected':''}>ส่งเคลียร์กับหัวหน้าทันที (ไม่ต้องนับรอบถัดไป)</option>
+          <option value="recount" ${(first?.repeat_match_action||'recount')==='recount'?'selected':''}>ให้นับรอบถัดไปต่อ (มาตรฐาน)</option>
+          <option value="auto_pass" ${first?.repeat_match_action==='auto_pass'?'selected':''}>ถือว่าผ่านทันที</option>
+          <option value="send_variance" ${first?.repeat_match_action==='send_variance'?'selected':''}>ส่งเคลียร์กับหัวหน้าทันที</option>
         </select>
       </div>
       <div id="rule-alert" style="margin-top:10px"></div>
 
-      <div style="background:#eef6ff;border:2px solid #457B9D;border-radius:14px;padding:12px;margin-top:14px">
-        <div style="font-size:12px;font-weight:900;color:#1d4ed8;margin-bottom:8px">🧪 ทดสอบกติกา — ใส่ตัวเลขดูผลลัพธ์ทันที</div>
+      <div style="background:var(--neu-surface);border-radius:16px;padding:14px;margin-top:16px;box-shadow: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light)">
+        <div style="font-size:12px;font-weight:700;color:var(--primary-blue);margin-bottom:8px">🧪 ทดสอบกติกา</div>
         <div class="grid-3" style="margin-bottom:8px">
           <div><label style="font-size:10px">OH</label><input type="number" id="test-oh" value="22" oninput="testRule()"></div>
           <div><label style="font-size:10px">Count 1</label><input type="number" id="test-r1" placeholder="-" oninput="testRule()"></div>
           <div><label style="font-size:10px">Count 2</label><input type="number" id="test-r2" placeholder="-" oninput="testRule()"></div>
         </div>
         <div class="fg" style="margin-bottom:8px"><label style="font-size:10px">Count 3</label><input type="number" id="test-r3" placeholder="-" oninput="testRule()"></div>
-        <div id="test-result" style="text-align:center;padding:10px;border-radius:10px;font-weight:900;font-size:14px;background:#f1f5f9;color:#64748b">กรอกตัวเลขด้านบนเพื่อดูผล</div>
+        <div id="test-result" style="text-align:center;padding:10px;border-radius:12px;font-weight:700;font-size:13px;background:var(--neu-surface);color:var(--text-muted)">กรอกตัวเลขด้านบนเพื่อดูผล</div>
       </div>
     </div>`;
   document.body.appendChild(overlay);
@@ -3234,10 +3052,10 @@ function testRule() {
   const st = r1 === null ? '' : computeItemStatus(oh, r1, r2, r3, { maxRounds, repeatMatchAction: action });
 
   const MAP = {
-    OK:      ['✅ ผ่าน (ปิดงานได้เลย)',        '#14532d', '#D4E2D4'],
-    PENDING: ['🔄 นับใหม่ (รอนับรอบถัดไป)',      '#92400e', '#FEF3C7'],
-    Diff:    ['❌ ไม่ผ่าน — ส่งเคลียร์กับหัวหน้า', '#991b1b', '#FFD0D0'],
-    '':      ['— กรอก Count 1 อย่างน้อยก่อน',    '#64748b', '#f1f5f9'],
+    OK:      ['✅ ผ่าน (ปิดงานได้เลย)',         '#065F46', '#D1FAE5'],
+    PENDING: ['🔄 นับใหม่ (รอนับรอบถัดไป)',      '#92400E', '#FEF3C7'],
+    Diff:    ['❌ ไม่ผ่าน — ส่งเคลียร์กับหัวหน้า', '#991B1B', '#FEE2E2'],
+    '':      ['— กรอก Count 1 อย่างน้อยก่อน',    '#718096', '#E6EEF8'],
   };
   const [txt, color, bg] = MAP[st] || [st, '#000', '#fff'];
   res.textContent = txt;
@@ -3270,11 +3088,11 @@ async function saveCountingRules() {
     .update({ max_rounds: maxRounds, repeat_match_action: action }).eq('id', sid);
 
   if (error) {
-    if (al) al.innerHTML = `<div class="alert alert-red" style="font-size:12px;margin-bottom:0">❌ บันทึกกติกาไม่สำเร็จ: ${error.message}<br>ลองตรวจสอบว่ารัน migration เพิ่มคอลัมน์ max_rounds/repeat_match_action ในตาราง count_sessions แล้วหรือยัง</div>`;
+    if (al) al.innerHTML = `<div class="alert alert-red" style="font-size:12px;margin-bottom:0">❌ บันทึกกติกาไม่สำเร็จ: ${error.message}</div>`;
     return;
   }
   if (al) {
-    al.innerHTML = `<div class="alert alert-green" style="font-size:12px;margin-bottom:0">✅ บันทึกกติกาแล้ว — มีผลกับการนับครั้งถัดไป</div>`;
+    al.innerHTML = `<div class="alert alert-green" style="font-size:12px;margin-bottom:0">✅ บันทึกกติกาแล้ว</div>`;
     setTimeout(() => { al.innerHTML = ''; }, 2500);
   }
 }
@@ -3292,7 +3110,6 @@ async function refreshR23Preview() {
     .eq('session_id', sid).eq('status', status);
   const { data: asgns, error } = await q;
 
-  // Populate zone/row dropdowns from results
   const zones = new Set(), rows = new Set();
   asgns?.forEach(a => { if (a.locations?.zone) zones.add(a.locations.zone); if (a.locations?.row_no) rows.add(a.locations.row_no); });
   const fillSel = (id, vals) => {
@@ -3311,7 +3128,7 @@ async function refreshR23Preview() {
   window._r23Asgns = filtered;
 
   if (!filtered.length) {
-    prev.innerHTML = `<span style="color:#94a3b8">ไม่มี Location ในสถานะที่เลือก</span>`;
+    prev.innerHTML = `<span style="color:var(--text-muted)">ไม่มี Location ในสถานะที่เลือก</span>`;
     btn.disabled = true;
   } else {
     const label = { round1_done:'รอบ 2', round2_done:'รอบ 3', round3_done:'รอบ Sup' }[status]||status;
@@ -3337,12 +3154,11 @@ async function doR23Assign() {
       logAudit(a.session_id, a.location_id, null, 'reassign', a.assigned_to, newLabel, a.id);
     }
   }
-  Q('r23-preview').innerHTML = `<span style="color:var(--vespa-green);font-weight:900">✅ เปลี่ยน Counter เรียบร้อย ${asgns.length} locations</span>`;
+  Q('r23-preview').innerHTML = `<span style="color:var(--accent-green);font-weight:700">✅ เปลี่ยน Counter เรียบร้อย ${asgns.length} locations</span>`;
   Q('r23-btn').disabled = false;
   window._r23Asgns = [];
   refreshLocs();
 }
-
 
 async function refreshBulkFilters() {
   const sid = Q('as-sess')?.value;
@@ -3410,7 +3226,7 @@ function refreshBulkPreview() {
     prev.innerHTML = `📍 จะ Assign <strong>${count} locations</strong> ให้ Counter ที่เลือก`;
     btn.disabled = false;
   } else {
-    prev.innerHTML = `<span style="color:#94a3b8">ไม่มี Location ที่ตรงเงื่อนไข (หรือถูก Assign แล้วทั้งหมด)</span>`;
+    prev.innerHTML = `<span style="color:var(--text-muted)">ไม่มี Location ที่ตรงเงื่อนไข</span>`;
     btn.disabled = true;
   }
 }
@@ -3483,7 +3299,6 @@ async function refreshLocs() {
       : '<option value="">ทุก Location ถูก Assign แล้ว</option>';
   }
 
-  // แสดงรายการที่ Assign แล้ว
   const { data: asgns } = await sb.from('assignments')
     .select('id,status,locations(code),profiles!assigned_to(name)')
     .eq('session_id', sid).order('created_at');
@@ -3492,15 +3307,15 @@ async function refreshLocs() {
   if (!al) return;
 
   if (!asgns?.length) {
-    al.innerHTML = `<div class="load" style="padding:16px;font-size:13px;color:#94a3b8">ยังไม่มีการ Assign</div>`;
+    al.innerHTML = `<div class="load" style="padding:16px;font-size:13px;color:var(--text-muted)">ยังไม่มีการ Assign</div>`;
     return;
   }
 
   const stuckCount = asgns.filter(a => !['completed','approved'].includes(a.status)).length;
   let html = '';
   if (stuckCount > 0) {
-    html += `<div style="padding:10px 14px;background:#fff7ed;border-bottom:1px solid #fed7aa">
-      <button class="btn btn-ghost btn-sm" style="color:#c2410c;border-color:#fed7aa"
+    html += `<div style="padding:10px 14px;background:rgba(239,68,68,0.08);border-bottom:1px solid rgba(194,205,220,0.4)">
+      <button class="btn btn-ghost btn-sm" style="color:var(--accent-red)"
         onclick="deleteStuckAssignments()">🗑 ลบที่ยังไม่เสร็จทั้งหมด (${stuckCount})</button>
     </div>`;
   }
@@ -3514,14 +3329,14 @@ async function refreshLocs() {
       </div>
       <span class="tag ${si.cls}">${si.lbl}</span>
       <button onclick="deleteAssignment('${a.id}','${code}')" title="ลบ Assignment นี้"
-        style="background:none;border:none;color:#cbd5e1;font-size:16px;cursor:pointer;padding:4px;line-height:1;flex-shrink:0">🗑</button>
+        style="background:none;border:none;color:var(--text-muted);font-size:16px;cursor:pointer;padding:4px;line-height:1;flex-shrink:0">🗑</button>
     </div>`;
   }).join('');
   al.innerHTML = html;
 }
 
 async function deleteAssignment(id, code) {
-  if (!confirm(`ลบ Assignment ของ "${code}"?\n\nข้อมูลการนับ (ถ้ามี) จะถูกลบไปด้วย — ยอด Stock เดิม (Snapshot) ไม่ถูกลบ\nLocation นี้จะกลับมา "ว่าง" พร้อม Assign ใหม่ได้ทันที`)) return;
+  if (!confirm(`ลบ Assignment ของ "${code}"?`)) return;
   const { error } = await sb.from('assignments').delete().eq('id', id);
   if (error) { alert(error.message); return; }
   refreshLocs();
@@ -3531,7 +3346,7 @@ async function deleteAssignment(id, code) {
 async function deleteStuckAssignments() {
   const sid = Q('as-sess')?.value;
   if (!sid) return;
-  if (!confirm('ลบ Assignment ที่ "ยังไม่เสร็จ" ทั้งหมดใน Session นี้?\n\n(เฉพาะที่สถานะไม่ใช่ เสร็จ/อนุมัติแล้ว)\nLocation เหล่านี้จะกลับมาว่าง พร้อม Assign ใหม่ได้ทันที')) return;
+  if (!confirm('ลบ Assignment ที่ "ยังไม่เสร็จ" ทั้งหมดใน Session นี้?')) return;
   const { error } = await sb.from('assignments')
     .delete()
     .eq('session_id', sid)
@@ -3541,10 +3356,7 @@ async function deleteStuckAssignments() {
   refreshBulkFilters();
 }
 
-// ══════════════════════════════════════════════════════════
-//  PRINTABLE COUNT FORM (สำหรับพิมพ์แจกทีมนับกระดาษ)
-// ══════════════════════════════════════════════════════════
-const PF_LOGO_B64 = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAeAB4AAD/2wBDAAoHBwkHBgoJCAkLCwoMDxkQDw4ODx4WFxIZJCAmJSMgIyIoLTkwKCo2KyIjMkQyNjs9QEBAJjBGS0U+Sjk/QD3/wAALCAB2AQUBAREA/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/9oACAEBAAA/APZqKKQkKMkgAdzQrBhlSCD3FLRRRSdKj+0w/wDPaP8A76FH2mD/AJ7R/wDfQo+0wf8APaP/AL6FPWRH+4yt9DmnUjMFGWIA9TUf2mD/AJ7R/wDfQo+0wf8APaP/AL6FH2mD/ntH/wB9Cj7RCek0f/fQqQHPIpaKKKKKKKbvXdt3Dd6Z5p1FFFFFcV8WNRutM8EzzWcpjkLqu4ehrM+DGr3uqeH5xezNL5b4Ut1Ar0iiiivPPin47HhzTPsVk4+3T8cfwD1ryXTrDxhq9t9qtDcvG5+9uIzVr/hHfHHpcf8AfZo/4R3xwe1x/wB9mhNV8b+F3DM1yqjrkFhXdeDPjHHf3KWWtoIZG4Evqfeum+I9trGpeG1/4R6TLEgtsPVa8fHh3xx6XH/fZo/4R3xx6XH/AH2aP+Ed8celx/32aQ6F44g/eYufl5+8atWHxJ8VeG5lTURJJEp+7IuP1r2Hwb480/xbaAxMI7oD54iefwrqaKKKKKQnAJ9K8Eu/FGrD4riIXTiMThAmeNte9joKWiiiiuB+M3/IhTf9dVrJ+BP/ACL93/10r1SiisjxN4gt/DWjTX1wR8g+VT/Ea8A0ewv/AIleNWmnDNCX3OT0Vc9K+jbCwg06yitbeNVjjUKABVjaPQUbR6Cop7SC5jKTRI6kYIYV478T/hlFawSaxoqFAvMkS/zFXvg542N7CdEv5CZ4xmIt3Fes7R6CjaPQUbR6CjaPQflWRrnhfTPEFm8F7bIdwwGA5B9a+f8AXtHv/hr4sjkt3cxBt0bjow9K+gPC+vweJNCgv7ds7hhx6N3rYoqKa6gtyommjjLdAzAZqQEEAg5BpaRvun6V83Xn/JXP+3kV9IjoKWiiiiuB+M3/ACIU3/XVayfgT/yL93/10r1SimSyJDE0kjBUUZJPYV88/ETxVdeM/Ea6Zp25reN9iIv8TetevfD/AMJR+FdBjjZR9qkAaRu/0rq6KKKiuIEubeSGQApIpUg+9fOMEJ8L/FXybc4VJ8DHoa+kY23xq3qAadRRRXCfFzRI9U8ISzlR5tt86nvXN/AjUHazu7In5FO4CvX6ZJIsMbSOcKoySa+a/iN4xm13xQ72szrbW7bYwDjkd69h+GHi2PxH4djikkzeW42yA/pXbUjfdP0r5uvP+Suf9vIr6RHQUtFFFFcD8Zv+RCm/66rWT8Cf+Rfu/wDrpXqlFeV/F/xwdNtP7HsJB58w/elT0HpVL4PeBmjUa7qCfO3+pVh+terapqUOk6dNe3JIiiXc2KxvCfjfTvF6ymw3hoj8ysK6SiikZgqljwAMmvnDVpV1T4ts1udy/aAAR7V7P4k8d6b4Qa0t7/eZJQMBR0FdDY3kWoWcV1AcxyruU1YoorkviZfRWXgq98xgDIu1Qe5rz/4Df8fl7/u17bXCfFbxXHoHhxraNv8ASroFUA7V5/8ADDwLD4i06+vdSh3q4IiY/wB6sfwtqk3gLx41vc5WHzNjr7E8V9HwzJPCksbBkcZBFPb7p+lfN15/yVz/ALeRX0iOgpaKKKK4H4zf8iFN/wBdVrJ+BP8AyL93/wBdK9UrnvGnieDwvoM11I4EzDbEvcmvD/Bnh688f+K2vb0s0CvvlZv5V9GW1vHaW0cEKhY41CqBXP8AxB58Fah/uV5v8Bv+Py/+le20UVwvxK8c2/hzR5ba3lVr6YFQgPKj3rgfg74Wn1PW2126B8mInG7+JjUnx0/5D9h/u16v4L/5FLT/APrkK3aKjmmjt4mlmdUjUZLMcAV8+fFjxwviHURYWMm6ztz1HRjW18Bv+Pu9/wB2vapZFhjaSRgqqMkmvm/xbqcvjrx6La2JaLzPLQfQ819A+H9Ig0PRreyt0CpGgyB6968w+NXhNWiTXLSPDrxMQOvoa2fg74qXVtC/s+4lBuLbgBjywr0dvun6V83Xn/JXP+3kV9IjoKWiiiiuB+M3/IhTf9dVrJ+BP/Iv3f8A10r066uorK2kuLhwkcY3MTXzn4u1u7+IPjFbSyLNAH2RKOmPWvc/B/he38LaJFaQqPMIBkb1Nb9c38Qf+RL1D/crwXwL45fwZLcMkAl83jmuy/4XxP8A8+KUf8L4n/58UrK1H4za9qgMFlbpEW4Gwc1B4Z+HmteMdV+2az5scBO53k+830r3rR9IttE06Kys0CxRjH1rxj47HbrlkfRKZpHxpm0vSrezFmrCFduauf8AC+J/+fFKjm+PF35Z8mxj3e9c5qnjLxT42zbQxyeU/BSEHBretfhcNG8GXuqauAbvy8pH/dqx8Bv+Py+/3a6z4u+JxovhtrWGTFxdfKMHkCuZ+CnhQO0muXiZOcQk+vc17PVTVNOh1XTprO4UNHKpBBr5yjFx8OviEASRHHJjPYqTX0fZ3kWoafHcwMGjlTcCK+drz/krn/byK+kR0FLRRRRXA/Gb/kQpv+uq1k/An/kX7v8A66Vm/GLxwG/4kWnSZP8Ay2ZT+lavwh8DpplgNXvo/wDSZh+7DD7q16jRXN/EH/kS9Q/3K8j+D/h3TtfubxdRgWUIOMivVf8AhWvhz/nwT8qP+Fa+HP8AnwT8q0bLwfoen4NvpsCsP4tvNbCqqKFUAKOgFOrwv46DOvWIPQrXZ+F/AGgXvhyynmskaR4wWJHetb/hWvhz/nwT8qfF8OfDkThv7PibHYituy0bT9OAFnZww4/uLisj4gf8iXqP/XOvM/gZKsEuoyyEBETJJrmvEN1dfED4g/Z4SSjSeWg7KB3r6F0LSIdD0iCxgACxqAcdz3rQorzD4x+DxqmljVrVf9Ith8wA+8KpfBXxS11Zy6LdSfPEP3QJ7VxN5/yVz/t6FfSI6CloooorgfjN/wAiFN/11WvP/BXi+Dwn4Avn3g3cz7Y0HUZ71X+GnhSbxd4hfVdRUvbRvuZj0ZvSvoSONYo1SNQqKMADoKdRXN/EH/kS9Q/3K82+A3/H3f8A0r22iiiivC/jp/yH7D/dr1jwZ/yKen/9chW5RRXN/ED/AJEvUf8ArnXzzofihtE0O/s4ARLdrt3DsK9I+CnhN0EuuXi/f4hB657mvYqKKiureO7tpIJRlJFKkV83+INOuvh746EtuzJD5m5GHdc8iq9tqcesfEm3vYRhJZlODX04OgpaKKKK4H4zf8iFN/11WvBfD2iXfiHVoLC1R33sN2Oij1r6k8O6Hb+HtHhsbZFARfmIH3j61qUUVzfxB/5EvUP9yvNvgN/x93/0r22iiiivC/jp/wAh+w/3a9Y8F/8AIp6f/wBchW5RRXN/ED/kS9R/65181eHdGm17XLaxhUkyOAT6CvqzSNOj0nS4LOIALEgHHrV2iiiuC+K/hI+IfD5uLZQbu2+Ye6968L8JKU8W2CsMETAEfjX1gOgpaKKKK53xz4afxV4ck06OQRuzBgx9qy/h54ATwfbyPOyy3cn8Y7Cu2ooorL8R6Sdb0K5sA20zLgGuW+HPgCbwc1zJcTCR5eBj0rvaKKKK8++Ifw7n8X39rc286xmLhgfSuy0TTv7J0i2s927ykC5q/RRWZ4i0o63odzYBtpmXANch8O/hsfCV1NdXbpLM3CEDoK9CooooproJEZGGVYYIry3/AIVE0fjQapDOq2ok8wIOua9THApaKKKKyvEGuJoFilzJE0qtIEwvbPeoNe8U22hafa3UiNILmRY0VTySawZviPILyeG10e4nW3/1rKfu1Y1D4hwW1jaTWlnLcyXDBREp5U+lKnxBRIJftenzW9zFy0LHnHrW7b+ILG4lgh80LcTx+YsZ64pmg+IYteW5aGNkEEhjO7uRVKfxU/8Aat3Z2Vo1ybZAzbD1PpWPp3xHutR1ibTo9CuBNBzLk/dFdFpniSHUri8hSJla0XL5qLQPFlvr1pdzwxNGtsWDbu+Kr+FfG9n4qN8LaN0a0YqwbvRN43tIrC4ujC5WGYQkZ6k10cUyy26zdFZd3Nczovjyz1rxLdaPFE6S2+fnPRvpVi08ZWV14ol0PBS5jGQSeGqsPHtq0WpstvJmwYqwz94j0qpYfEGS6lt1utKntEuv9TI54Y1u+H9e/tf7RHJH5U0DlSp7j1qr4i8XDRbuK0trSS8upOfLTsKhk8aG10T7bfafLBOW2pbk/MxqHSfHf2rVIrHUtPlsZZxmEueHrr6ydV16HSr60tpEZmuThSO1Z3ibxZc+HsMmlTXMPeRTxVJviA9toD6rfaVPBEGCoCeWJpdO+IBnurePUNMmso7j/VyOeD6V2VLRRRRWP4rsTf8Ahy8iUZcRll+orz7SpIvF97ommSSktp6ebMP9oVVsrvXF8V63b6HaiVJZSruei07xJp994c/sqO3AuL95hIVXj5q2JtF1S60/Vtc1qMRXLW2xIQOgFcbpt7eTiDxe4ZYrFPIZPXHFej/Df954anvQMfapWlA+tZ3woYzHV55SWlNyyknrjNO8Kt/xc/xFz/yzWs/TrbWJ/EGvnS7uOCMKdwYZzWPoutNofgLVJAwN40+3A/iyeaseEruHT/EsCwW724u4S0uRgMcVLegDw1qWcf8AH+n869D1G/isPCUkzSqpW2+U5744ry7RNYgg1PSb77I8NzK/lySEYDZNaF/pQk8W3urW5Iu7J/M+U/eX0rO0S8XUtC16+UYM8hZh6Gup1d0/4RXw6Nyl964weaf4Zd1+I2oQ5Oz7MGx71dBVfihKXKjNuuC39Kb48ZTfaO2VKifk54qh45ZW8X+F9hUkOfumvQ1dSAAwP0Ncb4zx/wAJBo2SB8x61o+NWH/CLS7WBwV6GuZ8bnPwutc/89Y+v1NP8WsjeH/D4DKX82PgHJ7V6IhBUYIOB2p1FFFFIQGBBGQeCK53QfBlnoOs3uoW5y902cY+7VnSPDVvo+pXl5Cx33TbmFLqvhu31XUrW8lYiS2YMuK0ry1S9s5beT7ki7TWHH4LsIvDFxosYxBOSSfetHQ9Gh0PSIrCA5jjGKw9B0K50HxTfeRD/wAS+4G8N6N3rT07wzbadr19qkZJluwAw9Kfp/h230+7vZ4yd12MPWJH8NdNR0yzNGsnmFT3Oc1t6n4ctNQaBgixvD91lGOKo33gm1vNKu7IOUFwwfd6EVhwfDK4eEW+oavJcW4YME57V0+oeFrK+0yCzEaoISCjBeQRRpvhm20+eWbJkaVdr57is22+H9haWGo2sDFUvWLcfw5qhofw2/sy7invr57xLbmGM9FNaXhbR7qLVL/U9Rh8q4mcog/2O1TeKPCEfiApPDO1teR/dlWoIvA0T+Hjp19cvPKTkTE8g1W0X4eJY3DXOoXj3lwqlYHb/lmKLDwrqen65ZSC+eS1hZmcE/ez2rT8WeFR4lt4glwbeeI5SQdqq6R4NmtdHuLDUr9rxZSCGP8ADV3WPClrrHhr+x5WIiGCrDsR0rE0L4cDT7tJ9QvnvBEMRKei102kaS+mPcs9w0vnPuAP8PtWnRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRX/9k=';
+const PF_LOGO_B64 = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAeAB4AAD/2wBDAAoHBwkHBgoJCAkLCwoMDxkQDw4ODx4WFxIZJCAmJSMgIyIoLTkwKCo2KyIjMkQyNjs9QEBAJjBGS0U+Sjk/QD3/wAALCAB2AQUBAREA/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/9oACAEBAAA/APZqKKQkKMkgAdzQrBhlSCD3FLRRRSdKj+0w/DPaP876FH2mD/ntH/30K+0wf8APaP/AL6FPWRH+4yt9DmnUjMFGWIA9TUf2mD/AJ7R/wDfQo+0wf8APaP/AL6FH2mD/ntH/wB9Cj7RCek0f/fQqQHPIpaKKKKKKKbvXdt3Dd6Z5p1FFFFFcV8WNRutM8EzzWcpjkLqu4ehrM+DGr3uqeH5xezNL5b4Ut1Ar0iiiivPPin47HhzTPsVk4+3T8cfwD1ryXTrDxhq9t9qtDcvG5+9uIzVr/hHfHHpcf8AfZo/4R3xwe1x/B9mhNV8b+F3DM1yqjrkFhXdeDPjHHf3KWWtoIZG4Evqfeum+I9trGpeG1/4R6TLEgtsPVa8fHh3xx6XH/fZo/4R3xx6XH/fZo/4R3xx6XH/fZo/4R3xx6XH/fZo013A9f3f4VbI8A/u4rY/ce4/76FN/4Tjwf3k/8fH9aP+E38G+sn/fxa474m+M4dY/s3/hG524zuxz3HpXvPhEufCekmRtzm0jyfcqK/8Q=';
 
 function pfEscapeHtml(s) {
   return (s==null?'':String(s)).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -3649,14 +3461,14 @@ function openPrintFormWindow(rows, title) {
 </head>
 <body>
   <div class="pf-noprint" style="padding:10px;background:#fffbe6;border-bottom:1px solid #ccc;font-family:sans-serif;font-size:13px">
-    กำลังเปิดหน้าต่างพิมพ์... ถ้าไม่เด้งอัตโนมัติ กด Ctrl+P (หรือ Cmd+P บน Mac) เพื่อพิมพ์
+    กำลังเปิดหน้าต่างพิมพ์... กด Ctrl+P (หรือ Cmd+P บน Mac) เพื่อพิมพ์
   </div>
   ${pagesHtml}
   <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 300); };<\/script>
 </body></html>`;
 
   const win = window.open('', '_blank');
-  if (!win) { alert('เบราว์เซอร์บล็อกป๊อปอัพ กรุณาอนุญาต popup สำหรับเว็บนี้แล้วลองใหม่'); return; }
+  if (!win) { alert('เบราว์เซอร์บล็อกป๊อปอัพ'); return; }
   win.document.write(html);
   win.document.close();
 }
@@ -3690,18 +3502,17 @@ async function loadAdHistory() {
   const st  = S._histSt  || '';
   const searchQ = S._histSearch || '';
 
-  // Counter list
   const { data: counters } = await sb.from('profiles').select('id,name').order('name');
   const cOpts = '<option value="">ทุกคน</option>' +
     (counters||[]).map(u=>`<option value="${u.id}" ${u.id===cid?'selected':''}>${u.name}</option>`).join('');
 
   cnt().innerHTML = `
     <div class="card">
-      <div style="font-size:13px;font-weight:900;color:var(--vespa-brown);margin-bottom:10px">🔍 กรองประวัติการนับ</div>
+      <div style="font-size:13px;font-weight:700;color:var(--text-main);margin-bottom:10px">🔍 กรองประวัติการนับ</div>
       <div class="fg" style="margin-bottom:10px">
         <label style="font-size:10px">ค้นหา Location / Item / LPN</label>
         <div style="display:flex;gap:8px">
-          <input id="hist-search" value="${searchQ}" placeholder="เช่น B-EA-001-A, 2H002981, LPN..."
+          <input id="hist-search" value="${searchQ}" placeholder="เช่น B-EA-001-A, 2H002981..."
             onkeydown="if(event.key==='Enter'){S._histSearch=this.value;loadAdHistory();}">
           <button class="btn btn-blue btn-sm" onclick="S._histSearch=Q('hist-search').value;loadAdHistory()" style="flex-shrink:0">ค้นหา</button>
         </div>
@@ -3724,7 +3535,6 @@ async function loadAdHistory() {
     </div>
     <div id="hist-list"><div class="load">⏳ กำลังโหลด...</div></div>`;
 
-  // Set initial select values
   if (Q('hist-sess') && sid) Q('hist-sess').value = sid;
   if (Q('hist-cnt')  && cid) Q('hist-cnt').value  = cid;
   if (Q('hist-st')   && st)  Q('hist-st').value   = st;
@@ -3742,7 +3552,6 @@ async function loadAdHistory() {
   if (!histList) return;
   if (error) { histList.innerHTML = errBox(error.message); return; }
 
-  // ── กรองเพิ่มด้วยคำค้นหา (Location code / Item code / LPN) ──
   const term = searchQ.trim();
   if (term && asgns?.length) {
     const termLower = term.toLowerCase();
@@ -3770,7 +3579,7 @@ async function loadAdHistory() {
     asgns = asgns.filter(a => matchSet.has(a.location_id));
   }
 
-  if (!asgns?.length) { histList.innerHTML = `<div class="card" style="text-align:center;padding:32px;color:var(--vespa-brown)">ไม่พบข้อมูลตามเงื่อนไข</div>`; return; }
+  if (!asgns?.length) { histList.innerHTML = `<div class="card" style="text-align:center;padding:32px;color:var(--text-muted)">ไม่พบข้อมูลตามเงื่อนไข</div>`; return; }
 
   histList.innerHTML = '<div class="card card-flush">' +
     asgns.map(a => {
@@ -3821,7 +3630,6 @@ async function loadAdTxLog() {
   const ohMap = {};
   (snaps||[]).forEach(s => { ohMap[s.item_id] = { oh: +s.onhand_qty, al: s.al_qty }; });
 
-  // ── เทียบยอดที่บันทึกไว้กับ OH ปัจจุบัน — เผื่อ OH ถูกแก้ทีหลัง หรือเคยปิดงานให้ทั้งที่ยอดไม่ตรง ──
   const byItemRounds = {};
   (recs||[]).forEach(r => {
     byItemRounds[r.item_id] = byItemRounds[r.item_id] || {};
@@ -3836,8 +3644,6 @@ async function loadAdTxLog() {
   });
   const showMismatchWarning = asgn.status === 'completed' && mismatchItems.length > 0;
 
-  // ── รวม count_records + variance_approvals + audit_log เป็นไทม์ไลน์เดียว เรียงตามเวลา ──
-  //    (apprErr/auditErr อาจเกิดถ้าตาราง/คอลัมน์ยังไม่มี (ยังไม่ได้รัน migration) — ข้ามส่วนนั้นแบบเงียบๆ ไม่ทำให้หน้าพัง)
   const events = [];
   (recs||[]).forEach(r => events.push({ type:'count', at: r.counted_at, data: r }));
   if (!apprErr) (approvals||[]).forEach(a => events.push({ type:'approval', at: a.created_at, data: a }));
@@ -3860,11 +3666,11 @@ async function loadAdTxLog() {
           <div class="row-sub">${r.items?.description||''}</div>
           <div class="row-sub">รอบ ${r.round} · นับโดย: ${r.actual_counter_name || r.actual_counter?.name || r.profiles?.name || '?'}</div>
           <div class="row-sub">${r.counted_at ? new Date(r.counted_at).toLocaleString('th-TH') : ''}</div>
-          ${r.remark ? `<div class="row-sub" style="color:#7c3aed">📝 ${r.remark}</div>` : ''}
-          ${r.photo_url ? `<a href="${r.photo_url}" target="_blank" style="font-size:11px;color:var(--vespa-red)">📷 ดูรูป</a>` : ''}
+          ${r.remark ? `<div class="row-sub" style="color:var(--primary-blue)">📝 ${r.remark}</div>` : ''}
+          ${r.photo_url ? `<a href="${r.photo_url}" target="_blank" style="font-size:11px;color:var(--accent-red)">📷 ดูรูป</a>` : ''}
         </div>
         <div style="text-align:right;flex-shrink:0">
-          <div style="font-size:28px;font-weight:900;font-family:'Fredoka';color:var(--vespa-shadow)">${r.count_qty}</div>
+          <div style="font-size:26px;font-weight:800;font-family:'Fredoka';color:var(--text-main)">${r.count_qty}</div>
           <span class="tag tag-blue" style="font-size:10px">R${r.round}</span>
           ${ohInfo ? `<div class="oh-chip" style="margin-top:6px;font-size:11px;padding:3px 8px">OH: ${ohInfo.oh}${ohInfo.al!=null?` <span class="al-part">· AL ${ohInfo.al}</span>`:''}</div>` : ''}
         </div>
@@ -3872,22 +3678,22 @@ async function loadAdTxLog() {
     } else if (ev.type === 'approval') {
       const a = ev.data;
       const isOk = a.resolution === 'ok';
-      rows += `<div class="row" style="cursor:default;flex-wrap:wrap;background:${isOk?'#f0fdf4':'#fff1f0'}">
+      rows += `<div class="row" style="cursor:default;flex-wrap:wrap;background:${isOk?'rgba(16,185,129,0.06)':'rgba(239,68,68,0.06)'}">
         <div class="row-body">
           <div class="row-title mono" style="font-size:13px">${a.items?.code||'?'}</div>
           <div class="row-sub">${a.items?.description||''}</div>
-          <div class="row-sub">${isOk?'✅':'❌'} คอนเฟิร์มยอดโดย Supervisor: ${a.profiles?.name||'?'}</div>
+          <div class="row-sub">${isOk?'✅':'❌'} คอนเฟิร์มยอดโดย: ${a.profiles?.name||'?'}</div>
           <div class="row-sub">${a.created_at ? new Date(a.created_at).toLocaleString('th-TH') : ''}</div>
         </div>
         <div style="text-align:right;flex-shrink:0">
-          <div style="font-size:28px;font-weight:900;font-family:'Fredoka';color:var(--vespa-shadow)">${a.final_qty}</div>
+          <div style="font-size:26px;font-weight:800;font-family:'Fredoka';color:var(--text-main)">${a.final_qty}</div>
           <span class="tag ${isOk?'tag-green':'tag-red'}" style="font-size:10px">${a.variance>0?'+':''}${a.variance}</span>
         </div>
       </div>`;
     } else {
       const a = ev.data;
       const meta = ACTION_META[a.action] || { icon:'📝', label: a.action };
-      rows += `<div class="row" style="cursor:default;flex-wrap:wrap;background:#eef6ff">
+      rows += `<div class="row" style="cursor:default;flex-wrap:wrap;background:rgba(42,107,242,0.06)">
         <div class="row-body">
           <div class="row-title mono" style="font-size:13px">${a.items?.code || meta.label}</div>
           ${a.items?.code ? `<div class="row-sub">${meta.icon} ${meta.label}</div>` : ''}
@@ -3895,7 +3701,7 @@ async function loadAdTxLog() {
           <div class="row-sub">${a.created_at ? new Date(a.created_at).toLocaleString('th-TH') : ''}</div>
         </div>
         <div style="text-align:right;flex-shrink:0">
-          <div style="font-size:14px;font-weight:900;color:var(--vespa-shadow)">${a.old_value ?? '—'} → ${a.new_value ?? '—'}</div>
+          <div style="font-size:14px;font-weight:700;color:var(--text-main)">${a.old_value ?? '—'} → ${a.new_value ?? '—'}</div>
           <span class="tag tag-blue" style="font-size:10px">${meta.icon} ${meta.label}</span>
         </div>
       </div>`;
@@ -3904,13 +3710,12 @@ async function loadAdTxLog() {
 
   cnt().innerHTML = `
     <div class="card">
-      <div class="mono" style="font-size:18px;font-weight:900">${asgn.locations?.code}</div>
-      <div style="font-size:12px;color:var(--vespa-brown);margin-top:4px">${asgn.count_sessions?.name||''} · ${asgn.profiles?.name||'?'}</div>
+      <div class="mono" style="font-size:18px;font-weight:800">${asgn.locations?.code}</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:4px">${asgn.count_sessions?.name||''} · ${asgn.profiles?.name||'?'}</div>
       <div style="margin-top:8px"><span class="tag ${si.cls}">${si.lbl}</span></div>
       ${showMismatchWarning ? `
       <div class="alert alert-red" style="margin-top:12px">
-        ⚠️ พบ ${mismatchItems.length} รายการที่ยอดนับไม่ตรงกับ OH ปัจจุบัน แต่สถานะถูกปิดเป็น "${si.lbl}" ไปแล้ว<br>
-        (มักเกิดจาก OH ถูกแก้ไขภายหลัง หรือนับซ้ำ 2 รอบตรงกันเองแต่ไม่ตรงกับ OH)
+        ⚠️ พบ ${mismatchItems.length} รายการที่ยอดนับไม่ตรงกับ OH ปัจจุบัน
       </div>
       <button class="btn btn-red btn-sm" onclick="sendBackToVariance('${aid}')">📤 ส่งกลับไปตรวจสอบใน Variance</button>` : ''}
     </div>
@@ -3919,7 +3724,7 @@ async function loadAdTxLog() {
 }
 
 async function sendBackToVariance(aid) {
-  if (!confirm('ส่งงานนี้กลับไปให้ Supervisor ตรวจสอบใน Variance?\n\nสถานะจะเปลี่ยนเป็น "ส่งเคลียร์กับหัวหน้า"')) return;
+  if (!confirm('ส่งงานนี้กลับไปให้ Supervisor ตรวจสอบใน Variance?')) return;
   const { error } = await sb.from('assignments').update({ status: 'round3_done' }).eq('id', aid);
   if (error) { alert(error.message); return; }
   alert('✅ ส่งกลับไปตรวจสอบใน Variance เรียบร้อยแล้ว');
@@ -3964,7 +3769,7 @@ async function reopenSess(id) {
 }
 
 async function deleteSess(id, name) {
-  if (!confirm(`ลบ Session "${name}" ?\n\nจะลบข้อมูลทั้งหมดที่ผูกกับ Session นี้ (Assignment, ผลนับ, Variance, Snapshot) อย่างถาวร`)) return;
+  if (!confirm(`ลบ Session "${name}" ?`)) return;
   const { data: asgns } = await sb.from('assignments').select('id').eq('session_id', id);
   const aIds = (asgns||[]).map(a=>a.id);
   if (aIds.length) {
@@ -4020,20 +3825,20 @@ async function refreshDeleteZonePreview() {
   if (!prev || !btn) return;
 
   if (!zone && !row && !code) {
-    prev.innerHTML = `<span style="color:#94a3b8;font-weight:500">เลือก Zone, Row หรือพิมพ์ Location Code อย่างน้อย 1 อย่าง เพื่อป้องกันการลบทั้งหมดโดยไม่ตั้งใจ</span>`;
+    prev.innerHTML = `<span style="color:var(--text-muted);font-weight:500">เลือกอย่างน้อย 1 เงื่อนไข</span>`;
     btn.disabled = true;
     return;
   }
 
   const { count, error } = await buildDelLocQuery(zone, row, code, 'id', { count:'exact', head:true });
 
-  if (error) { prev.innerHTML = `<span style="color:#dc2626">${error.message}</span>`; btn.disabled = true; return; }
+  if (error) { prev.innerHTML = `<span style="color:var(--accent-red)">${error.message}</span>`; btn.disabled = true; return; }
   if (!count) {
-    prev.innerHTML = `<span style="color:#94a3b8;font-weight:500">ไม่พบ Location ที่ตรงเงื่อนไข</span>`;
+    prev.innerHTML = `<span style="color:var(--text-muted);font-weight:500">ไม่พบ Location ที่ตรงเงื่อนไข</span>`;
     btn.disabled = true;
   } else {
-    const scope = sid ? 'เฉพาะ Session ที่เลือก (Location ยังอยู่ ใช้กับ Session อื่นได้)' : 'ทุก Session (ลบ Location ออกจากระบบจริง)';
-    prev.innerHTML = `⚠️ จะลบ <strong>${count.toLocaleString()} locations</strong> — ขอบเขต: ${scope}`;
+    const scope = sid ? 'เฉพาะ Session ที่เลือก' : 'ทุก Session (ลบออกจากระบบจริง)';
+    prev.innerHTML = `⚠️ จะลบ <strong>${count.toLocaleString()} locations</strong> — ${scope}`;
     btn.disabled = false;
   }
 }
@@ -4046,8 +3851,7 @@ async function doDeleteByZoneRow() {
   if (!zone && !row && !code) return;
 
   const label = [zone, row, code].filter(Boolean).join(' / ');
-  const scopeLabel = sid ? 'เฉพาะ Session ที่เลือก (Location จะยังอยู่ในระบบ)' : 'ทุก Session (ลบ Location ออกจากระบบจริง)';
-  if (!confirm(`ยืนยันลบ: "${label}"\nขอบเขต: ${scopeLabel}\n\nการลบนี้กู้คืนไม่ได้`)) return;
+  if (!confirm(`ยืนยันลบ: "${label}"`)) return;
 
   const btn = Q('del-btn'), al = Q('del-alert');
   btn.disabled = true;
@@ -4061,7 +3865,7 @@ async function doDeleteByZoneRow() {
   const BATCH = 200;
 
   try {
-    al.innerHTML = `<div class="alert alert-blue">⏳ [1/6] ค้นหา Assignment ที่เกี่ยวข้อง...</div>`;
+    al.innerHTML = `<div class="alert alert-blue">⏳ [1/6] ค้นหา Assignment...</div>`;
     let asgnIds = [];
     for (let i = 0; i < locIds.length; i += BATCH) {
       let aq = sb.from('assignments').select('id').in('location_id', locIds.slice(i, i+BATCH));
@@ -4074,608 +3878,272 @@ async function doDeleteByZoneRow() {
     if (asgnIds.length) {
       al.innerHTML = `<div class="alert alert-blue">⏳ [2/6] ลบ Variance Approvals...</div>`;
       for (let i = 0; i < asgnIds.length; i += BATCH) {
-        const { error } = await sb.from('variance_approvals').delete().in('assignment_id', asgnIds.slice(i, i+BATCH));
-        if (error) throw error;
+        const chunk = asgnIds.slice(i, i + BATCH);
+        await sb.from('variance_approvals').delete().in('assignment_id', chunk);
       }
-      al.innerHTML = `<div class="alert alert-blue">⏳ [3/6] ลบผลการนับ (Count Records)...</div>`;
+
+      al.innerHTML = `<div class="alert alert-blue">⏳ [3/6] ลบ Count Records...</div>`;
       for (let i = 0; i < asgnIds.length; i += BATCH) {
-        const { error } = await sb.from('count_records').delete().in('assignment_id', asgnIds.slice(i, i+BATCH));
-        if (error) throw error;
+        const chunk = asgnIds.slice(i, i + BATCH);
+        await sb.from('count_records').delete().in('assignment_id', chunk);
       }
-      al.innerHTML = `<div class="alert alert-blue">⏳ [4/6] ลบ Assignment...</div>`;
+
+      al.innerHTML = `<div class="alert alert-blue">⏳ [4/6] ลบ Assignments...</div>`;
       for (let i = 0; i < asgnIds.length; i += BATCH) {
-        const { error } = await sb.from('assignments').delete().in('id', asgnIds.slice(i, i+BATCH));
-        if (error) throw error;
+        const chunk = asgnIds.slice(i, i + BATCH);
+        await sb.from('assignments').delete().in('id', chunk);
       }
     }
 
-    al.innerHTML = `<div class="alert alert-blue">⏳ [5/6] ลบ Stock Snapshot / Detail (LPN)...</div>`;
+    al.innerHTML = `<div class="alert alert-blue">⏳ [5/6] ลบ Stock Snapshot...</div>`;
     for (let i = 0; i < locIds.length; i += BATCH) {
-      let dq = sb.from('stock_snapshot_detail').delete().in('location_id', locIds.slice(i, i+BATCH));
-      if (sid) dq = dq.eq('session_id', sid);
-      const { error } = await dq;
-      if (error) throw error;
-    }
-    for (let i = 0; i < locIds.length; i += BATCH) {
-      let sq = sb.from('stock_snapshot').delete().in('location_id', locIds.slice(i, i+BATCH));
-      if (sid) sq = sq.eq('session_id', sid);
-      const { error } = await sq;
-      if (error) throw error;
+      const chunk = locIds.slice(i, i + BATCH);
+      let qDet = sb.from('stock_snapshot_detail').delete().in('location_id', chunk);
+      let qSnap = sb.from('stock_snapshot').delete().in('location_id', chunk);
+      if (sid) {
+        qDet = qDet.eq('session_id', sid);
+        qSnap = qSnap.eq('session_id', sid);
+      }
+      await qDet;
+      await qSnap;
     }
 
     if (!sid) {
-      al.innerHTML = `<div class="alert alert-blue">⏳ [6/6] ลบ Location (ทุก Session)...</div>`;
+      al.innerHTML = `<div class="alert alert-blue">⏳ [6/6] ลบ Locations ออกจากระบบ...</div>`;
       for (let i = 0; i < locIds.length; i += BATCH) {
-        const { error } = await sb.from('locations').delete().in('id', locIds.slice(i, i+BATCH));
-        if (error) throw error;
+        const chunk = locIds.slice(i, i + BATCH);
+        await sb.from('locations').delete().in('id', chunk);
       }
     }
 
-    al.innerHTML = `<div class="alert alert-green">✅ ลบ ${locs.length.toLocaleString()} locations (${label}) เรียบร้อย${sid?' — เฉพาะ Session ที่เลือก':''}</div>`;
-    Q('del-zone').value = ''; Q('del-row').value = ''; Q('del-code').value = '';
-    loadDeleteZoneFilters();
-  } catch(e) {
-    al.innerHTML = errBox(e?.message || String(e));
-  }
-  btn.disabled = false;
-}
-
-function likeToRegex(pattern) {
-  const esc = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const re  = esc.replace(/%/g, '.*').replace(/_/g, '.');
-  return new RegExp('^' + re + '$', 'i');
-}
-
-async function readXlsxFile() {
-  const file = Q('ixlsx').files[0];
-  if (!file) return;
-  const al = Q('ia'), prev = Q('ipreview'), btn = Q('ibtn');
-  if (!al || !prev || !btn) return;
-  al.innerHTML = `<div class="alert alert-blue">⏳ กำลังอ่านไฟล์ ${file.name} (${(file.size/1024/1024).toFixed(1)} MB)...</div>`;
-  prev.style.display = 'none';
-  btn.disabled = true;
-  _xlsxRawRows = null;
-  _xlsxParsed  = null;
-
-  try {
-    const buf = await file.arrayBuffer();
-    if (typeof XLSX === 'undefined') throw new Error('SheetJS ยังโหลดไม่เสร็จ รอสักครู่แล้วลองใหม่');
-
-    al.innerHTML = `<div class="alert alert-blue">⏳ กำลัง parse Excel...</div>`;
-    await new Promise(r => setTimeout(r, 50));
-
-    const wb  = XLSX.read(buf, { type:'array', dense:true });
-    const ws  = wb.Sheets[wb.SheetNames[0]];
-    const raw = XLSX.utils.sheet_to_json(ws, { header:1, defval:null });
-
-    // ── หา header row แบบ flexible: รองรับหลายรูปแบบไฟล์ Export ──
-    //    กลยุทธ์: เช็ค "ตรงเป๊ะ" ก่อนเสมอ แล้วค่อย fallback เป็น "มีคำนี้อยู่ในนั้น"
-    //    ป้องกันปัญหาเช่น "Locating Zone" ถูกจับผิดเป็น Location (เพราะมีคำว่า "loc" ปนอยู่)
-    let headerRow = -1, col = {};
-
-    // exact = ต้องตรงกับข้อความในเซลล์แบบเป๊ะ (หลัง trim+lowercase+ยุบช่องว่าง/ขึ้นบรรทัดใหม่เป็นช่องว่างเดียว)
-    // contains = ใช้ตอนหาแบบเป๊ะไม่เจอเลย ค่อย fallback มาเช็คว่ามีคำนี้ปนอยู่ไหม
-    // exclude = ถ้าเซลล์มีคำนี้ปนอยู่ ห้ามนับเป็น match ของ field นี้เด็ดขาด (กันจับผิด)
-    const FIELDS = {
-      loc:  { exact:['location','loc','พิกัด','ตำแหน่ง','location code'],
-              contains:['location'], exclude:['zone','type','group'] },
-      item: { exact:['item code','item','sku','barcode','รหัสสินค้า','รหัส'],
-              contains:['item','sku','barcode'], exclude:[] },
-      oh:   { exact:['on hand qty','on hand','onhand','oh','ยอดคงเหลือ','qty oh','qtyoh'],
-              contains:['on hand','onhand'], exclude:[] },
-      al:   { exact:['al qty','al','allocated','จอง'],
-              contains:['allocated'], exclude:[] },
-      lp:   { exact:['license plate','lpn no.','lpn no','lpn number','lpn','license plate no'],
-              contains:['license plate','lpn'], exclude:['parent'] },
-      lot:  { exact:['lot','lot no','lot number','batch'],
-              contains:['lot','batch'], exclude:[] },
-      stat: { exact:['inventory status','status','สถานะ'],
-              contains:['status'], exclude:[] },
-      desc: { exact:['description','desc','ชื่อสินค้า','ชื่อ'],
-              contains:['description'], exclude:[] },
-    };
-
-    // normalize: trim + lowercase + ยุบ whitespace ทุกชนิด (รวมขึ้นบรรทัดใหม่ \n) ให้เหลือช่องว่างเดียว
-    const normalizeCell = c => (c==null ? '' : c.toString().trim().toLowerCase().replace(/\s+/g, ' '));
-
-    function findColumn(norm, def) {
-      // รอบแรก: หาแบบตรงเป๊ะก่อนเสมอ (ไล่ตามลำดับความสำคัญใน exact[])
-      for (const name of def.exact) {
-        const idx = norm.indexOf(name);
-        if (idx !== -1) return idx;
-      }
-      // รอบสอง: ถ้าตรงเป๊ะไม่เจอเลย ค่อย fallback เป็นแบบ "มีคำนี้ปนอยู่"
-      for (let i = 0; i < norm.length; i++) {
-        if (!norm[i]) continue;
-        if (def.exclude.some(ex => norm[i].includes(ex))) continue;
-        if (def.contains.some(c => norm[i].includes(c))) return i;
-      }
-      return -1;
-    }
-
-    for (let r = 0; r < Math.min(30, raw.length); r++) {
-      const row = raw[r];
-      if (!row) continue;
-      const norm = row.map(normalizeCell);
-      const locIdx  = findColumn(norm, FIELDS.loc);
-      const itemIdx = findColumn(norm, FIELDS.item);
-      // ต้องมีอย่างน้อย loc + item ถือว่านี่คือ header row (คอลัมน์อื่น optional)
-      if (locIdx !== -1 && itemIdx !== -1) {
-        headerRow = r;
-        col.loc  = locIdx;
-        col.item = itemIdx;
-        col.oh   = findColumn(norm, FIELDS.oh);
-        col.al   = findColumn(norm, FIELDS.al);
-        col.desc = findColumn(norm, FIELDS.desc);
-        col.stat = findColumn(norm, FIELDS.stat);
-        col.lot  = findColumn(norm, FIELDS.lot);
-        col.lp   = findColumn(norm, FIELDS.lp);
-        break;
-      }
-    }
-
-    if (headerRow === -1 || col.loc===-1 || col.item===-1) {
-      throw new Error('ไม่พบคอลัมน์ Location และ Item ในไฟล์\n\nตรวจสอบว่าหัวตารางมีคำว่า "Location" และ "Item" (หรือ SKU/Barcode)\nรองรับทุกรูปแบบ Export ขอแค่มีสองคอลัมน์นี้');
-    }
-
-    const rows = [];
-    for (let i = headerRow + 1; i < raw.length; i++) {
-      const row = raw[i];
-      if (!row) continue;
-      const loc  = row[col.loc]  ? row[col.loc].toString().trim()  : null;
-      const item = row[col.item] ? row[col.item].toString().trim() : null;
-      if (!loc || !item) continue;
-      const desc  = col.desc!==-1 ? (row[col.desc]||'').toString().trim() : '';
-      const oh    = col.oh!==-1  ? (parseFloat(row[col.oh]) || 0) : 0;
-      const alQty = col.al!==-1  ? (parseFloat(row[col.al]) || null) : null;
-      const stat  = col.stat!==-1 ? (row[col.stat]||'').toString().trim() : '';
-      const lot   = col.lot!==-1 ? (row[col.lot]||'').toString().trim() : '';
-      const lp    = col.lp!==-1  ? (row[col.lp]||'').toString().trim()  : '';
-      rows.push({ loc, item, desc, oh, alQty, stat, lot, lp });
-    }
-
-    if (!rows.length) throw new Error('พบ Header แล้ว แต่ไม่มีข้อมูลใต้ header');
-
-    _xlsxRawRows = rows;
-    al.innerHTML = `<div class="alert alert-green" style="font-size:12px">
-      ✅ อ่านไฟล์สำเร็จ — พบ ${rows.length.toLocaleString()} แถว<br>
-      คอลัมน์ที่ตรวจพบ: ${[
-        col.loc!==-1?'Location':null, col.item!==-1?'Item':null,
-        col.oh!==-1?'OH':null, col.al!==-1?'AL':null,
-        col.desc!==-1?'Description':null, col.stat!==-1?'Status':null,
-        col.lot!==-1?'Lot':null, col.lp!==-1?'License Plate':null
-      ].filter(Boolean).join(', ')}
-    </div>`;
-    refreshXlsxPreview();
-
-  } catch(e) {
-    al.innerHTML = `<div class="alert alert-red">❌ อ่านไฟล์ไม่ได้: ${e.message}</div>`;
-  }
-}
-
-let _xlsxConflictLocs = new Set();  // locations user chose to SKIP (already exist in session)
-let _xlsxAllLocsInScope = [];       // all location codes currently in scope (for conflict UI)
-
-function refreshXlsxPreview() {
-  const prev = Q('ipreview'), btn = Q('ibtn');
-  if (!_xlsxRawRows) return;
-
-  const patternStr = Q('ilocfilter')?.value.trim() || '';
-  const re = patternStr ? likeToRegex(patternStr) : null;
-
-  let inScope = 0;
-  const map = {};
-
-  for (const r of _xlsxRawRows) {
-    if (re && !re.test(r.loc)) continue;
-    inScope++;
-    const key = r.loc + '|||' + r.item;
-    if (map[key]) {
-      map[key].qty += r.oh;
-      if (r.alQty !== null) map[key].alQty = (map[key].alQty||0) + r.alQty;
-    } else {
-      map[key] = { loc:r.loc, item:r.item, desc:r.desc, qty:r.oh, alQty:r.alQty };
-    }
-  }
-
-  _xlsxParsed = Object.values(map);
-  const uLocsArr = [...new Set(_xlsxParsed.map(r => r.loc))];
-  const uLocs  = uLocsArr.length;
-  const uItems = new Set(_xlsxParsed.map(r => r.item)).size;
-  _xlsxAllLocsInScope = uLocsArr;
-
-  prev.style.display = 'block';
-
-  if (!inScope) {
-    prev.innerHTML = `<div class="alert alert-amber">
-      ⚠️ ไม่พบแถวที่ตรงกับ Location filter "${patternStr}" ในไฟล์นี้ (ทั้งไฟล์มี ${_xlsxRawRows.length.toLocaleString()} แถว)
-    </div>`;
-    btn.disabled = true;
-    return;
-  }
-
-  prev.innerHTML = `<div class="alert alert-green">
-    ✅ พร้อม Import<br>
-    📊 ทั้งไฟล์ <strong>${_xlsxRawRows.length.toLocaleString()}</strong> rows
-      ${patternStr ? `→ ตรง filter: <strong>${inScope.toLocaleString()}</strong>` : ''}<br>
-    📍 <strong>${uLocs.toLocaleString()}</strong> locations
-      · 📦 <strong>${uItems.toLocaleString()}</strong> unique items<br>
-    🔢 <strong>${_xlsxParsed.length.toLocaleString()}</strong> loc+item pairs (หลัง aggregate OH)
-  </div>
-  <div id="conflict-check-area"></div>`;
-  btn.disabled = false;
-
-  // ── ตรวจสอบ conflict กับ location ที่มีอยู่แล้วใน session นี้ ──
-  checkLocationConflicts(uLocsArr);
-}
-
-async function checkLocationConflicts(locCodes) {
-  const sid = Q('is')?.value;
-  const area = Q('conflict-check-area');
-  if (!sid || !area || !locCodes.length) return;
-
-  area.innerHTML = `<div style="font-size:11px;color:#94a3b8;margin-top:8px">⏳ เช็คว่าโลเคชั่นซ้ำกับข้อมูลเดิมใน Session นี้ไหม...</div>`;
-
-  // หา location ids ที่ตรงกับ code ในไฟล์
-  const { data: locs } = await sb.from('locations').select('id,code').in('code', locCodes);
-  if (!locs?.length) { area.innerHTML = ''; return; }
-
-  const locIdMap = Object.fromEntries(locs.map(l => [l.id, l.code]));
-  const { data: existing } = await sb.from('stock_snapshot')
-    .select('location_id').eq('session_id', sid).in('location_id', Object.keys(locIdMap));
-
-  const dupSet = new Set((existing||[]).map(e => locIdMap[e.location_id]));
-  _xlsxConflictLocs = new Set();
-
-  if (!dupSet.size) {
-    area.innerHTML = `<div style="font-size:11px;color:var(--vespa-green);margin-top:8px;font-weight:700">✅ ไม่มี Location ซ้ำกับข้อมูลเดิมใน Session นี้</div>`;
-    return;
-  }
-
-  const dupList = [...dupSet].sort();
-  area.innerHTML = `
-    <div style="background:#fff7ed;border:2px solid #f59e0b;border-radius:12px;padding:12px;margin-top:8px">
-      <div style="font-size:12px;font-weight:900;color:#92400e;margin-bottom:8px">
-        ⚠️ พบ ${dupList.length} Location ที่มีข้อมูลอยู่แล้วใน Session นี้ — เลือกว่าจะ Import ทับหรือข้าม
-      </div>
-      <div style="max-height:180px;overflow-y:auto;background:#fff;border-radius:8px;padding:8px">
-        ${dupList.map(code => `
-          <label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;cursor:pointer;font-family:ui-monospace,monospace">
-            <input type="checkbox" class="dup-loc-check" data-code="${code}" checked onchange="toggleDupLoc('${code}',this.checked)">
-            <span>${code}</span>
-            <span style="color:#94a3b8;font-size:10px">(ติ๊ก = import ทับยอดเดิม, ไม่ติ๊ก = ข้าม)</span>
-          </label>`).join('')}
-      </div>
-    </div>`;
-}
-
-function toggleDupLoc(code, checked) {
-  if (checked) _xlsxConflictLocs.delete(code);
-  else _xlsxConflictLocs.add(code);
-}
-
-async function doImportXlsx() {
-  const sid = Q('is').value, al = Q('ia'), btn = Q('ibtn');
-  if (!sid)         { al.innerHTML = `<div class="alert alert-red">เลือก Session ก่อน</div>`; return; }
-  if (!_xlsxParsed || !_xlsxParsed.length) { al.innerHTML = `<div class="alert alert-red">ไม่มีข้อมูลที่จะ Import</div>`; return; }
-
-  btn.disabled = true;
-
-  // ── ตัด Location ที่ผู้ใช้เลือก "ข้าม" ออก (จากช่อง conflict checkbox) ──
-  const skipSet = _xlsxConflictLocs || new Set();
-  const importRows = _xlsxParsed.filter(p => !skipSet.has(p.loc));
-
-  if (!importRows.length) {
-    al.innerHTML = `<div class="alert alert-amber">ไม่มีข้อมูลให้ Import (ทุก Location ถูกเลือกให้ข้ามหมด)</div>`;
-    btn.disabled = false;
-    return;
-  }
-
-  async function batchUp(table, rows, conflict, selectCols) {
-    const BATCH = 500, map = {};
-    for (let i = 0; i < rows.length; i += BATCH) {
-      const { data, error } = await sb.from(table)
-        .upsert(rows.slice(i, i+BATCH), { onConflict: conflict })
-        .select(selectCols);
-      if (error) throw error;
-      data?.forEach(r => { map[r.code] = r.id; });
-    }
-    return map;
-  }
-
-  try {
-    // 1) Locations — zone คำนวณจาก computeZone(), row_no/level แยกจาก code
-    al.innerHTML = `<div class="alert alert-blue">⏳ [1/4] สร้าง/อัพเดท Locations...</div>`;
-    const seenLocs = {}, locRows = [];
-    for (const p of importRows) {
-      if (seenLocs[p.loc]) continue;
-      seenLocs[p.loc] = true;
-      const parts = p.loc.split('-');
-      locRows.push({
-        code:   p.loc,
-        zone:   computeZone(p.loc, p.desc),
-        row_no: parts[1] || null,
-        level:  parts[3] || null,
-      });
-    }
-    const locMap = await batchUp('locations', locRows, 'code', 'id,code');
-
-    // 2) Items
-    al.innerHTML = `<div class="alert alert-blue">⏳ [2/4] สร้าง/อัพเดท Items (${new Set(importRows.map(r=>r.item)).size.toLocaleString()} รายการ)...</div>`;
-    const seenItems = {}, itemRows = [];
-    for (const p of importRows) {
-      if (seenItems[p.item]) continue;
-      seenItems[p.item] = true;
-      itemRows.push({ code: p.item, description: p.desc });
-    }
-    const itemMap = await batchUp('items', itemRows, 'code', 'id,code');
-
-    // 3) Stock snapshot (รวม al_qty)
-    const BATCH = 500;
-    let ok = 0;
-    const snapRows = importRows
-      .filter(p => locMap[p.loc] && itemMap[p.item])
-      .map(p => ({
-        session_id:  sid,
-        location_id: locMap[p.loc],
-        item_id:     itemMap[p.item],
-        onhand_qty:  p.qty,
-        al_qty:      p.alQty !== null && p.alQty !== undefined ? p.alQty : null,
-      }));
-
-    for (let i = 0; i < snapRows.length; i += BATCH) {
-      const { error } = await sb.from('stock_snapshot')
-        .upsert(snapRows.slice(i, i+BATCH), { onConflict:'session_id,location_id,item_id' });
-      if (error) throw error;
-      ok += Math.min(BATCH, snapRows.length - i);
-      al.innerHTML = `<div class="alert alert-blue">⏳ [3/4] Stock Snapshot: ${ok.toLocaleString()} / ${snapRows.length.toLocaleString()} rows...</div>`;
-    }
-
-    // 4) Stock Snapshot Detail (LPN/Lot/Status)
-    al.innerHTML = `<div class="alert alert-blue">⏳ [4/4] Stock Snapshot Detail (LPN/Lot)...</div>`;
-    const patternStr = Q('ilocfilter')?.value.trim() || '';
-    const re = patternStr ? likeToRegex(patternStr) : null;
-    const detailRows = [];
-    for (const r of _xlsxRawRows) {
-      if (re && !re.test(r.loc)) continue;
-      if (skipSet.has(r.loc)) continue;
-      if (!locMap[r.loc] || !itemMap[r.item]) continue;
-      detailRows.push({
-        session_id:       sid,
-        location_id:      locMap[r.loc],
-        item_id:          itemMap[r.item],
-        license_plate:    r.lp  || null,
-        lot:              r.lot || null,
-        inventory_status: r.stat || null,
-        qty:              r.oh,
-      });
-    }
-
-    const importedLocIds = [...new Set(Object.values(locMap))];
-    for (let i = 0; i < importedLocIds.length; i += BATCH) {
-      const { error } = await sb.from('stock_snapshot_detail')
-        .delete().eq('session_id', sid).in('location_id', importedLocIds.slice(i, i+BATCH));
-      if (error) throw error;
-    }
-    let okD = 0;
-    for (let i = 0; i < detailRows.length; i += BATCH) {
-      const { error } = await sb.from('stock_snapshot_detail').insert(detailRows.slice(i, i+BATCH));
-      if (error) throw error;
-      okD += Math.min(BATCH, detailRows.length - i);
-      al.innerHTML = `<div class="alert alert-blue">⏳ [4/4] Stock Snapshot Detail: ${okD.toLocaleString()} / ${detailRows.length.toLocaleString()} rows...</div>`;
-    }
-
-    const skippedMsg = skipSet.size ? `<br>⏭️ ข้าม ${skipSet.size} locations ตามที่เลือก` : '';
-    al.innerHTML = `<div class="alert alert-green">
-      ✅ Import สำเร็จ!<br>
-      📍 ${locRows.length.toLocaleString()} locations
-      · 📦 ${itemRows.length.toLocaleString()} items
-      · 🔢 ${ok.toLocaleString()} snapshot rows
-      · 🏷️ ${okD.toLocaleString()} LPN/Lot detail rows${skippedMsg}
-    </div>`;
-    _xlsxRawRows = null;
-    _xlsxParsed = null;
-    _xlsxConflictLocs = new Set();
-    Q('ixlsx').value = '';
-    Q('ilocfilter').value = '';
-    Q('ipreview').style.display = 'none';
-    btn.disabled = false;
-
-  } catch(e) {
-    al.innerHTML = `<div class="alert alert-red">❌ ${e?.message || String(e)}</div>`;
+    al.innerHTML = `<div class="alert alert-green">✅ ลบข้อมูลเรียบร้อยแล้ว (${locs.length} locations)</div>`;
+    setTimeout(() => { loadDeleteZoneFilters(); }, 1500);
+  } catch (err) {
+    al.innerHTML = errBox(err.message || 'เกิดข้อผิดพลาดในการลบ');
+  } finally {
     btn.disabled = false;
   }
-}
-
-async function loadAdUsers() {
-  const { data: users } = await sb.from('profiles')
-    .select('id,name,role,created_at').order('created_at');
-
-  const isAdmin = prof?.role === 'admin';
-  const rOpts = cur => ['counter','supervisor','admin']
-    .map(r => `<option value="${r}" ${r===cur?'selected':''}>${rLabel(r)}</option>`).join('');
-
-  let userRows = '';
-  for (const u of users || []) {
-    const isSelf = u.id === me.id;
-    userRows += `<div class="row" style="cursor:default">
-      <div class="row-body" style="min-width:0">
-        <div style="display:flex;align-items:center;gap:6px">
-          <span id="uname_${u.id}" style="font-size:15px;font-weight:900;color:var(--vespa-shadow)">${u.name}</span>
-          ${isAdmin ? `<button onclick="editUserName('${u.id}')" title="แก้ชื่อ"
-            style="background:none;border:none;color:var(--vespa-brown);font-size:14px;cursor:pointer;padding:2px;">✏️</button>` : ''}
-        </div>
-        <div class="row-sub mono" style="font-size:11px">${u.id.slice(0,16)}...</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-        <select style="width:auto;padding:5px 28px 5px 8px;font-size:12px;border-radius:10px;border:2px solid var(--vespa-brown);font-family:inherit;font-weight:700;"
-          onchange="chRole('${u.id}',this.value)" ${!isAdmin?'disabled':''}>${rOpts(u.role)}</select>
-        ${isAdmin && !isSelf ? `<button onclick="deleteUser('${u.id}','${u.name.replace(/'/g,"\\'")}','${u.role}')"
-          title="ลบ User" style="background:none;border:none;color:var(--vespa-red);font-size:18px;cursor:pointer;padding:2px;">🗑️</button>` : ''}
-      </div>
-    </div>`;
-  }
-
-  let html = isAdmin ? `
-  <div style="margin:14px 16px">
-    <button class="btn btn-amber" onclick="openRulesModal()">🎛️ กติกาการนับ (Counting Rules)</button>
-  </div>` : '';
-
-  html += `
-  <details style="background:var(--vespa-white);border:3px solid var(--vespa-brown);border-radius:20px;padding:0;margin:14px 16px;overflow:hidden;box-shadow:4px 4px 0px var(--vespa-shadow)">
-    <summary style="cursor:pointer;padding:16px 20px;font-size:15px;font-weight:900;color:var(--vespa-brown);list-style:none;display:flex;align-items:center;gap:6px">
-      <span style="font-size:17px">👥</span> รายชื่อผู้ใช้งานระบบ (${users?.length||0})
-      <span style="margin-left:auto;font-size:11px;color:#94a3b8;font-weight:600">แตะเพื่อเปิด</span>
-    </summary>
-    <div style="border-top:3px solid var(--vespa-gray)">${userRows}</div>
-  </details>`;
-
-  if (isAdmin) {
-    html += `
-    <details style="background:var(--vespa-white);border:3px solid var(--vespa-brown);border-radius:20px;padding:0;margin:14px 16px;overflow:hidden;box-shadow:4px 4px 0px var(--vespa-shadow)">
-      <summary style="cursor:pointer;padding:16px 20px;font-size:15px;font-weight:900;color:var(--vespa-brown);list-style:none;display:flex;align-items:center;gap:6px">
-        <span style="font-size:17px">🏍️</span> เพิ่ม User ใหม่
-        <span style="margin-left:auto;font-size:11px;color:#94a3b8;font-weight:600">แตะเพื่อเปิด</span>
-      </summary>
-      <div style="padding:16px 20px;border-top:3px solid var(--vespa-gray)">
-        <div id="ua"></div>
-        <div class="alert alert-blue" style="margin-bottom:12px;font-size:12px">💡 สร้างแล้วแจ้ง Login ด้วย email/password ที่กำหนด</div>
-        <div class="fg"><label>ชื่อ</label><input id="un" placeholder="ชื่อ-นามสกุล"></div>
-        <div class="fg"><label>EMAIL</label><input id="ue" type="email" placeholder="email@company.com"></div>
-        <div class="fg"><label>PASSWORD</label><input id="up" type="password" placeholder="อย่างน้อย 6 ตัวอักษร"></div>
-        <div class="fg"><label>ROLE</label>
-          <select id="ur">
-            <option value="counter">Counter</option>
-            <option value="supervisor">Supervisor</option>
-            <option value="admin">Admin</option>
-          </select>
-        </div>
-        <button class="btn btn-blue" onclick="addUser()">+ เพิ่ม User</button>
-      </div>
-    </details>`;
-  }
-
-  html += `
-  <details style="background:var(--vespa-white);border:3px solid var(--vespa-brown);border-radius:20px;padding:0;margin:14px 16px;overflow:hidden;box-shadow:4px 4px 0px var(--vespa-shadow)">
-    <summary style="cursor:pointer;padding:16px 20px;font-size:15px;font-weight:900;color:var(--vespa-brown);list-style:none;display:flex;align-items:center;gap:6px">
-      <span style="font-size:17px">👤</span> รายชื่อ "ผู้นับจริง" ที่ทุกคนเห็นในหน้านับงาน
-      <span style="margin-left:auto;font-size:11px;color:#94a3b8;font-weight:600">แตะเพื่อเปิด</span>
-    </summary>
-    <div style="padding:12px 20px 20px;border-top:3px solid var(--vespa-gray)">
-      <div id="cn-list"><div class="load" style="padding:16px">⏳</div></div>
-    </div>
-  </details>`;
-
-  cnt().innerHTML = html;
-  loadCounterNamesList();
-}
-
-async function loadCounterNamesList() {
-  const listEl = Q('cn-list');
-  if (!listEl) return;
-  const isAdmin = prof?.role === 'admin';
-
-  const { data: names, error } = await sb.from('counter_names').select('id,name').order('name');
-  if (error) { listEl.innerHTML = errBox(error.message); return; }
-
-  let html = '';
-  if (!names?.length) {
-    html += `<div style="padding:16px 0;color:#94a3b8;font-size:13px">ยังไม่มีชื่อในระบบ — จะถูกเพิ่มอัตโนมัติเมื่อ Counter พิมพ์ชื่อใหม่ตอนนับงาน</div>`;
-  } else {
-    html += names.map(n => `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--vespa-gray)">
-        <span style="font-size:14px;font-weight:700">👤 ${n.name}</span>
-        <div style="display:flex;gap:4px;flex-shrink:0">
-          ${isAdmin ? `<button onclick="editCounterName('${n.id}','${n.name.replace(/'/g,"\\'")}')"
-            style="background:none;border:none;color:var(--vespa-brown);font-size:15px;cursor:pointer;padding:2px">✏️</button>` : ''}
-          ${isAdmin ? `<button onclick="deleteCounterName('${n.id}','${n.name.replace(/'/g,"\\'")}')"
-            style="background:none;border:none;color:var(--vespa-red);font-size:17px;cursor:pointer;padding:2px">🗑️</button>` : ''}
-        </div>
-      </div>`).join('');
-  }
-
-  if (isAdmin) {
-    html += `<div style="display:flex;gap:8px;margin-top:12px">
-      <input type="text" id="cn-new-input" placeholder="พิมพ์ชื่อผู้นับใหม่..."
-        onkeydown="if(event.key==='Enter'){event.preventDefault();addCounterNameFromAdmin();}">
-      <button class="btn btn-green btn-sm" onclick="addCounterNameFromAdmin()" style="flex-shrink:0">+ เพิ่ม</button>
-    </div>`;
-  }
-
-  listEl.innerHTML = html;
-}
-
-function editCounterName(id, curName) {
-  const newName = prompt('แก้ไขชื่อผู้นับ:', curName);
-  if (!newName || !newName.trim() || newName.trim() === curName) return;
-  saveCounterNameEdit(id, newName.trim());
-}
-
-async function saveCounterNameEdit(id, newName) {
-  const { error } = await sb.from('counter_names').update({ name: newName }).eq('id', id);
-  if (error) { alert('แก้ไขไม่สำเร็จ: ' + error.message); return; }
-  loadCounterNamesList();
-}
-
-async function addCounterNameFromAdmin() {
-  const input = Q('cn-new-input');
-  const name = input?.value.trim();
-  if (!name) { alert('กรุณาพิมพ์ชื่อก่อน'); return; }
-  const { error } = await sb.from('counter_names')
-    .upsert({ name, created_by: me.id }, { onConflict: 'name', ignoreDuplicates: true });
-  if (error) { alert('เพิ่มชื่อไม่สำเร็จ: ' + error.message); return; }
-  loadCounterNamesList();
-}
-
-async function deleteCounterName(id, name) {
-  if (!confirm(`ลบชื่อ "${name}" ออกจากรายการ?\n\n(ข้อมูลการนับที่เคยใช้ชื่อนี้ไปแล้วจะยังอยู่ ไม่ถูกลบ)`)) return;
-  const { error } = await sb.from('counter_names').delete().eq('id', id);
-  if (error) { alert(error.message); return; }
-  loadCounterNamesList();
-}
-
-async function editUserName(uid) {
-  const span = Q('uname_'+uid);
-  const cur = span?.textContent || '';
-  const newName = prompt('แก้ชื่อ User:', cur);
-  if (!newName || newName === cur) return;
-  const { error } = await sb.from('profiles').update({ name: newName.trim() }).eq('id', uid);
-  if (error) { alert(error.message); return; }
-  if (span) span.textContent = newName.trim();
-}
-
-async function deleteUser(uid, name, role) {
-  if (role === 'admin') { alert('ไม่สามารถลบ Admin ผ่านหน้านี้ได้ครับ (ป้องกันไม่ให้ไม่มี Admin เหลือ)'); return; }
-  if (!confirm(`ลบ User "${name}" ออกจากระบบ?\n\nการลบนี้จะลบ Profile แต่ไม่ลบ Auth account — ลบ Auth ได้ใน Supabase Dashboard`)) return;
-  const { error } = await sb.from('profiles').delete().eq('id', uid);
-  if (error) { alert(error.message); return; }
-  loadAdUsers();
-}
-
-async function chRole(uid, role) {
-  await sb.from('profiles').update({ role }).eq('id', uid);
-}
-
-async function addUser() {
-  const name = Q('un').value.trim(), email = Q('ue').value.trim();
-  const pwd  = Q('up').value,        role  = Q('ur').value;
-  const al   = Q('ua');
-  if (!name||!email||!pwd) { al.innerHTML=`<div class="alert alert-red">กรอกข้อมูลให้ครบ</div>`; return; }
-  if (pwd.length < 6)       { al.innerHTML=`<div class="alert alert-red">Password ต้องมีอย่างน้อย 6 ตัว</div>`; return; }
-
-  const { error } = await sb.auth.signUp({
-    email, password: pwd,
-    options: { data: { name, role } }
-  });
-  if (error) { al.innerHTML=`<div class="alert alert-red">${error.message}</div>`; return; }
-
-  al.innerHTML = `<div class="alert alert-green">✅ สร้าง User สำเร็จ — แจ้ง ${name} Login ด้วย ${email}</div>`;
-  Q('un').value=''; Q('ue').value=''; Q('up').value='';
-  setTimeout(() => loadAdUsers(), 1800);
 }
 
 // ══════════════════════════════════════════════════════════
-boot();
+//   EXCEL IMPORT LOGIC
+// ══════════════════════════════════════════════════════════
+function readXlsxFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    const data = new Uint8Array(evt.target.result);
+    const workbook = XLSX.read(data, { type: 'array' });
+    const firstSheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[firstSheetName];
+    _xlsxRawRows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+    refreshXlsxPreview();
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function refreshXlsxPreview() {
+  const btn = Q('ibtn');
+  const prev = Q('ipreview');
+  if (!_xlsxRawRows || !_xlsxRawRows.length) {
+    if (prev) prev.style.display = 'none';
+    if (btn) btn.disabled = true;
+    return;
+  }
+
+  const locFilter = (Q('ilocfilter')?.value || '').trim().toUpperCase();
+  const parsed = [];
+
+  for (const row of _xlsxRawRows) {
+    const keys = Object.keys(row);
+    const findVal = (terms) => {
+      const k = keys.find(key => terms.some(t => key.toUpperCase().includes(t)));
+      return k ? String(row[k]).trim() : '';
+    };
+
+    const locCode = findVal(['LOCATION', 'LOC_CODE', 'LOC']);
+    const itemCode = findVal(['ITEM_CODE', 'ITEM', 'SKU', 'ARTICLE', 'MATERIAL']);
+    const itemDesc = findVal(['ITEM_DESC', 'DESCRIPTION', 'DESC', 'NAME']);
+    const onhand = parseFloat(findVal(['ONHAND', 'OH', 'QTY', 'QUANTITY', 'STOCK'])) || 0;
+    const alQty = findVal(['AL', 'ALLOCATED']) ? parseFloat(findVal(['AL', 'ALLOCATED'])) : null;
+    const lpn = findVal(['LPN', 'LICENSE_PLATE', 'PALLET']);
+    const lot = findVal(['LOT', 'BATCH']);
+    const invStatus = findVal(['STATUS', 'INV_STATUS', 'INVENTORY_STATUS']);
+
+    if (!locCode || !itemCode) continue;
+
+    if (locFilter) {
+      const pattern = locFilter.replace(/%/g, '.*');
+      const regex = new RegExp('^' + pattern, 'i');
+      if (!regex.test(locCode)) continue;
+    }
+
+    parsed.push({ locCode, itemCode, itemDesc, onhand, alQty, lpn, lot, invStatus });
+  }
+
+  _xlsxParsed = parsed;
+
+  if (prev) {
+    prev.style.display = 'block';
+    prev.innerHTML = `<div class="alert alert-blue" style="font-size:12px;margin-bottom:0">
+      📊 พบ <strong>${parsed.length}</strong> รายการที่พร้อม Import (จากทั้งหมด ${_xlsxRawRows.length} แถว)
+    </div>`;
+  }
+  if (btn) btn.disabled = parsed.length === 0;
+}
+
+async function doImportXlsx() {
+  const sid = Q('is')?.value;
+  const al = Q('ia');
+  const btn = Q('ibtn');
+
+  if (!sid) { alert('กรุณาเลือก Session ก่อน'); return; }
+  if (!_xlsxParsed || !_xlsxParsed.length) { alert('ไม่มีข้อมูลที่พร้อม Import'); return; }
+
+  btn.disabled = true;
+  al.innerHTML = `<div class="alert alert-blue">⏳ กำลังประมวลผล ${_xlsxParsed.length} รายการ...</div>`;
+
+  try {
+    const uniqueLocsMap = new Map();
+    const uniqueItemsMap = new Map();
+
+    _xlsxParsed.forEach(r => {
+      if (!uniqueLocsMap.has(r.locCode)) {
+        uniqueLocsMap.set(r.locCode, {
+          code: r.locCode,
+          zone: computeZone(r.locCode, r.itemDesc)
+        });
+      }
+      if (!uniqueItemsMap.has(r.itemCode)) {
+        uniqueItemsMap.set(r.itemCode, {
+          code: r.itemCode,
+          description: r.itemDesc
+        });
+      }
+    });
+
+    // 1. Upsert Locations
+    const locList = Array.from(uniqueLocsMap.values());
+    const { data: dbLocs, error: eLoc } = await sb.from('locations')
+      .upsert(locList, { onConflict: 'code' })
+      .select('id,code');
+    if (eLoc) throw eLoc;
+
+    const locIdMap = new Map(dbLocs.map(l => [l.code, l.id]));
+
+    // 2. Upsert Items
+    const itemList = Array.from(uniqueItemsMap.values());
+    const { data: dbItems, error: eItem } = await sb.from('items')
+      .upsert(itemList, { onConflict: 'code' })
+      .select('id,code');
+    if (eItem) throw eItem;
+
+    const itemIdMap = new Map(dbItems.map(i => [i.code, i.id]));
+
+    // 3. Group Snapshots
+    const snapMap = new Map();
+    const detailsList = [];
+
+    _xlsxParsed.forEach(r => {
+      const locId = locIdMap.get(r.locCode);
+      const itemId = itemIdMap.get(r.itemCode);
+      if (!locId || !itemId) return;
+
+      const key = `${sid}|${locId}|${itemId}`;
+      if (!snapMap.has(key)) {
+        snapMap.set(key, {
+          session_id: sid,
+          location_id: locId,
+          item_id: itemId,
+          onhand_qty: 0,
+          al_qty: r.alQty
+        });
+      }
+      const item = snapMap.get(key);
+      item.onhand_qty += r.onhand;
+
+      if (r.lpn || r.lot || r.invStatus) {
+        detailsList.push({
+          session_id: sid,
+          location_id: locId,
+          item_id: itemId,
+          license_plate: r.lpn || null,
+          lot: r.lot || null,
+          inventory_status: r.invStatus || null,
+          qty: r.onhand
+        });
+      }
+    });
+
+    const snapList = Array.from(snapMap.values());
+    const BATCH = 200;
+
+    al.innerHTML = `<div class="alert alert-blue">⏳ กำลังบันทึก Stock Snapshot (${snapList.length} รายการ)...</div>`;
+    for (let i = 0; i < snapList.length; i += BATCH) {
+      const { error } = await sb.from('stock_snapshot')
+        .upsert(snapList.slice(i, i + BATCH), { onConflict: 'session_id,location_id,item_id' });
+      if (error) throw error;
+    }
+
+    if (detailsList.length) {
+      al.innerHTML = `<div class="alert alert-blue">⏳ กำลังบันทึก LPN/Lot Details (${detailsList.length} รายการ)...</div>`;
+      for (let i = 0; i < detailsList.length; i += BATCH) {
+        const { error } = await sb.from('stock_snapshot_detail')
+          .insert(detailsList.slice(i, i + BATCH));
+        if (error) console.warn('Detail insert warning:', error);
+      }
+    }
+
+    al.innerHTML = `<div class="alert alert-green">✅ Import ข้อมูลสำเร็จเรียบร้อย (${snapList.length} Unique Snapshots)</div>`;
+    _xlsxRawRows = null;
+    _xlsxParsed = null;
+    if (Q('ixlsx')) Q('ixlsx').value = '';
+    if (Q('ipreview')) Q('ipreview').style.display = 'none';
+  } catch (err) {
+    al.innerHTML = errBox(err.message || 'เกิดข้อผิดพลาดระหว่าง Import');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//   USER MANAGEMENT
+// ══════════════════════════════════════════════════════════
+async function loadAdUsers() {
+  if (prof?.role !== 'admin') { go(home()); return; }
+
+  const { data: users, error } = await sb.from('profiles').select('*').order('name');
+  if (error) { cnt().innerHTML = errBox(error.message); return; }
+
+  let rows = (users || []).map(u => `
+    <div class="row" style="cursor:default">
+      <div class="row-body">
+        <div class="row-title">${u.name || 'ไม่มีชื่อ'}</div>
+        <div class="row-sub">${u.email || ''}</div>
+      </div>
+      <select style="width:auto;font-size:12px;padding:6px 12px" onchange="updateUserRole('${u.id}', this.value)">
+        <option value="counter" ${u.role==='counter'?'selected':''}>Counter</option>
+        <option value="supervisor" ${u.role==='supervisor'?'selected':''}>Supervisor</option>
+        <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
+      </select>
+    </div>`).join('');
+
+  cnt().innerHTML = `
+    <div class="card card-flush">
+      <div class="sec">🔑 จัดการทีมงานและสิทธิ์ผู้ใช้งาน (${users?.length || 0} คน)</div>
+      ${rows}
+    </div>`;
+}
+
+async function updateUserRole(uid, role) {
+  const { error } = await sb.from('profiles').update({ role }).eq('id', uid);
+  if (error) alert('อัปเดตสิทธิ์ไม่สำเร็จ: ' + error.message);
+  else alert('✅ อัปเดตสิทธิ์เรียบร้อยแล้ว');
+}
+
+// Start Application
+window.addEventListener('DOMContentLoaded', boot);
 </script>
 </body>
 </html>
