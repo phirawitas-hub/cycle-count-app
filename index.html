@@ -823,6 +823,75 @@ select{
   justify-content:center;
 }
 
+/* ── Status Badge Cards (Large) ── */
+.status-badge-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.status-badge-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 8px;
+  border-radius: 20px;
+  border: 3px solid var(--vespa-brown);
+  box-shadow: 3px 3px 0px var(--vespa-shadow);
+  text-align: center;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.status-badge-card:active {
+  transform: translateY(3px);
+  box-shadow: 1px 1px 0px var(--vespa-shadow);
+}
+.status-badge-card.pending {
+  background: #FEF3C7;
+}
+.status-badge-card.confirmed {
+  background: #DDF2FD;
+}
+.status-badge-card.unfixed {
+  background: #FFD0D0;
+}
+.status-badge-icon {
+  font-size: 28px;
+  margin-bottom: 6px;
+}
+.status-badge-number {
+  font-size: 36px;
+  font-weight: 900;
+  font-family: 'Fredoka', sans-serif;
+  line-height: 1;
+  text-shadow: 1px 1px 0px var(--vespa-brown);
+}
+.status-badge-card.pending .status-badge-number {
+  color: #d97706;
+}
+.status-badge-card.confirmed .status-badge-number {
+  color: #1e40af;
+}
+.status-badge-card.unfixed .status-badge-number {
+  color: var(--vespa-red);
+}
+.status-badge-label {
+  font-size: 11px;
+  font-weight: 900;
+  margin-top: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.status-badge-card.pending .status-badge-label {
+  color: #92400e;
+}
+.status-badge-card.confirmed .status-badge-label {
+  color: #1e40af;
+}
+.status-badge-card.unfixed .status-badge-label {
+  color: #991b1b;
+}
+
 /* Decor stripe (Italian Vespa Tricolore) */
 .tricolore-stripe {
   height: 8px;
@@ -838,6 +907,7 @@ select{
 .stripe-w { background: #FFFFFF; flex: 1; }
 .stripe-r { background: #CE2B37; flex: 1; }
 </style>
+<base target="_blank">
 <base target="_blank">
 <base target="_blank">
 </head>
@@ -1852,6 +1922,9 @@ async function loadSvDash() {
 
   const diffAssignments = [];
   for (const a of asgns) {
+    // กรองเฉพาะงานที่ต้องตรวจสอบ (round1_done, round2_done, round3_done)
+    // ให้ตรงกับ needsFollowUp ที่ใช้แสดงใน Variance tab
+    if (!['round1_done','round2_done','round3_done'].includes(a.status)) continue;
     const itemCounts = countByAsgn[a.id] || {};
     const locId = a.location_id;
     let hasDiff = false, hasPending = false;
@@ -2106,10 +2179,22 @@ wmsRows = (vaData || []).map(v => ({
 
   const wmsTabHtml = `
     ${errorBanner}
-    <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
-      <span class="tag tag-amber">⏳ รอคอนเฟิร์ม: ${wmsPendingCount}</span>
-      <span class="tag tag-blue">✅ คอนเฟิร์มแล้ว: ${wmsApprovedCount}</span>
-      <span class="tag tag-red">🔧 ยังไม่แก้ WMS: ${wmsUnfixedCount}</span>
+    <div class="status-badge-grid">
+      <div class="status-badge-card pending">
+        <div class="status-badge-icon">⏳</div>
+        <div class="status-badge-number">${wmsPendingCount}</div>
+        <div class="status-badge-label">รอคอนเฟิร์ม</div>
+      </div>
+      <div class="status-badge-card confirmed">
+        <div class="status-badge-icon">✅</div>
+        <div class="status-badge-number">${wmsApprovedCount}</div>
+        <div class="status-badge-label">คอนเฟิร์มแล้ว</div>
+      </div>
+      <div class="status-badge-card unfixed">
+        <div class="status-badge-icon">🔧</div>
+        <div class="status-badge-number">${wmsUnfixedCount}</div>
+        <div class="status-badge-label">ยังไม่แก้ WMS</div>
+      </div>
     </div>
     <div class="grid-3" style="margin-bottom:8px">
       <div><label style="font-size:10px">ZONE</label>
