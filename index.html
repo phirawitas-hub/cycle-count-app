@@ -839,6 +839,7 @@ select{
 .stripe-r { background: #CE2B37; flex: 1; }
 </style>
 <base target="_blank">
+<base target="_blank">
 </head>
 <body>
 <div id="app"></div>
@@ -2166,6 +2167,7 @@ function toggleUserDetail(idx) {
 }
 
 async function toggleWmsFixed(vaId, checked) {
+  console.log('🔧 toggleWmsFixed called:', { vaId, checked, meId: me?.id });
   try {
     const updates = { wms_fixed: checked };
     if (checked) {
@@ -2175,17 +2177,46 @@ async function toggleWmsFixed(vaId, checked) {
       updates.wms_fixed_at = null;
       updates.wms_fixed_by = null;
     }
-    const { error } = await sb.from('variance_approvals').update(updates).eq('id', vaId);
+    console.log('📝 Updates payload:', updates);
+
+    const { data, error, status, statusText } = await sb.from('variance_approvals')
+      .update(updates)
+      .eq('id', vaId)
+      .select('id,wms_fixed');
+
+    console.log('📡 Supabase response:', { data, error, status, statusText });
+
     if (error) {
+      console.error('❌ Supabase error:', error);
       if (error.message?.includes('column') || error.message?.includes('wms_fixed')) {
-        alert('⚠️ ตาราง variance_approvals ยังไม่มีคอลัมน์ wms_fixed\n\nกรุณารัน SQL นี้ใน Supabase SQL Editor:\n\nALTER TABLE variance_approvals ADD COLUMN IF NOT EXISTS wms_fixed boolean DEFAULT false;\nALTER TABLE variance_approvals ADD COLUMN IF NOT EXISTS wms_fixed_at timestamptz;\nALTER TABLE variance_approvals ADD COLUMN IF NOT EXISTS wms_fixed_by uuid REFERENCES profiles(id);');
+        alert('⚠️ ตาราง variance_approvals ยังไม่มีคอลัมน์ wms_fixed
+
+กรุณารัน SQL นี้ใน Supabase SQL Editor:
+
+ALTER TABLE variance_approvals ADD COLUMN IF NOT EXISTS wms_fixed boolean DEFAULT false;
+ALTER TABLE variance_approvals ADD COLUMN IF NOT EXISTS wms_fixed_at timestamptz;
+ALTER TABLE variance_approvals ADD COLUMN IF NOT EXISTS wms_fixed_by uuid REFERENCES profiles(id);');
       } else {
         alert('บันทึกไม่สำเร็จ: ' + error.message);
       }
       return;
     }
+
+    if (!data || data.length === 0) {
+      console.warn('⚠️ No rows updated — likely RLS blocking or row not found');
+      alert('⚠️ Update ไม่มีผล — อาจเป็นเพราะ:
+1. RLS Policy ไม่ให้ update (เช็คใน Supabase Dashboard)
+2. ไม่มี row ที่ตรงกับ id นี้
+3. คอลัมน์ wms_fixed ยังไม่มีในตาราง
+
+ลองรีเฟรชหน้าแล้วลองใหม่ หรือเช็ค RLS Policy');
+      return;
+    }
+
+    console.log('✅ Update successful:', data);
     loadSvDash();
   } catch (e) {
+    console.error('💥 toggleWmsFixed exception:', e);
     alert('เกิดข้อผิดพลาด: ' + e.message);
   }
 }
