@@ -140,6 +140,16 @@ body{
   font-weight: 700;
 }
 .nav-icon { font-size: 20px; flex-shrink: 0; }
+.nav-group { display:flex; flex-direction:column; gap:6px; }
+.nav-parent { justify-content:flex-start; }
+.nav-parent .nav-chevron { margin-left:auto; transition:transform .2s ease; font-size:13px; }
+.nav-group.open .nav-chevron { transform:rotate(180deg); }
+.nav-submenu { display:none; flex-direction:column; gap:5px; padding-left:18px; }
+.nav-group.open .nav-submenu { display:flex; }
+.nav-subitem { padding:11px 14px; border-radius:16px; font-size:13px; }
+.nav-subitem .nav-icon { font-size:16px; }
+.mobile-sidebar-backdrop { display:none; position:fixed; inset:0; background:rgba(20,35,50,.35); backdrop-filter:blur(2px); z-index:999; }
+.mobile-sidebar-backdrop.show { display:block; }
 .sidebar-footer { padding: 20px; text-align: center; font-size: 11px; color: rgba(255,255,255,0.7); border-top: 1px solid rgba(255,255,255,0.15); margin: 0 16px 10px; }
 
 /* ── Main Content Area ── */
@@ -198,9 +208,23 @@ body{
     position: fixed; left: -300px; top: 0; bottom: 0; margin: 0;
     border-radius: 0 30px 30px 0; z-index: 1000;
   }
-  .sidebar.mobile-open { left: 0; }
-  .main-wrapper { height: 100vh; }
+  .sidebar.mobile-open { left: 0; box-shadow:18px 0 40px rgba(0,0,0,.25); }
+  .sidebar.collapsed { width:var(--sidebar-width); }
+  .sidebar.collapsed .sidebar-title,
+  .sidebar.collapsed .sidebar-sub,
+  .sidebar.collapsed .sidebar-footer,
+  .sidebar.collapsed .nav-item span:not(.nav-icon) { display:initial; }
+  .sidebar.collapsed .nav-item { justify-content:flex-start; padding:14px 20px; }
+  .main-wrapper { height: 100vh; width:100%; }
+  .topbar { padding:0 12px; }
+  .topbar-title { font-size:18px; max-width:48vw; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .topbar-right { gap:8px; }
+  .top-out-btn { padding:9px 12px; }
   .user-name { display: none; }
+  .page-content { padding:14px 12px 28px; }
+  .card { padding:18px; border-radius:22px; }
+  .row { padding:15px 14px; }
+  button, .nav-item, .tab-row, .btn { touch-action:manipulation; }
 }
 
 /* ── Neumorphic Cards ── */
@@ -405,6 +429,13 @@ select { appearance: none; background-image: url('data:image/svg+xml;charset=US-
 .status-badge-card.fixed .status-badge-number { color: var(--primary-blue); }
 
 details summary { box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border-radius: 16px; }
+
+.nav-icon svg { width:20px; height:20px; display:block; }
+.progress-vespa { pointer-events:none; }
+@media (max-width:768px) {
+  .prog { min-width:0; }
+  #dash-content { padding:18px 14px; }
+}
 </style>
 </head>
 <body>
@@ -469,6 +500,7 @@ function home() {
 }
 
 function go(page, extra = {}) {
+  if (page !== 'sv-dash') delete extra._dashAnchor;
   S = { page, ...extra };
   try {
     render();
@@ -477,6 +509,29 @@ function go(page, extra = {}) {
     console.error("Render Error:", err);
     alert(`เกิดข้อผิดพลาดในการแสดงหน้าจอ: ${err.message}`);
   }
+}
+
+function compassIconSvg(size=20) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" style="display:block;flex:none">
+    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/>
+    <path d="M15.7 8.3l-2.2 5.2-5.2 2.2 2.2-5.2 5.2-2.2z" fill="currentColor"/>
+    <circle cx="12" cy="12" r="1.25" fill="var(--neu-surface)"/>
+  </svg>`;
+}
+
+function vespaProgressSvg(size=54) {
+  return `<svg width="${size}" height="${Math.round(size*0.62)}" viewBox="0 0 120 74" aria-label="รถเวสป้าหันไปทางขวา" role="img" style="display:block;overflow:visible;filter:drop-shadow(0 4px 5px rgba(0,0,0,.25))">
+    <circle cx="31" cy="57" r="13" fill="#263238"/><circle cx="31" cy="57" r="7" fill="#dfe8ec"/>
+    <circle cx="91" cy="57" r="13" fill="#263238"/><circle cx="91" cy="57" r="7" fill="#dfe8ec"/>
+    <path d="M28 49c5-18 17-28 35-28h12c8 0 14 5 15 13l2 15H28z" fill="#4ea8de"/>
+    <path d="M63 21c-1 11-2 21-1 30H46c-3-12-1-22 5-30h12z" fill="#f4fbff" opacity=".95"/>
+    <path d="M73 20h19l6 5" fill="none" stroke="#263238" stroke-width="4" stroke-linecap="round"/>
+    <path d="M94 24l-4 27" fill="none" stroke="#263238" stroke-width="4" stroke-linecap="round"/>
+    <path d="M97 25h12" fill="none" stroke="#263238" stroke-width="4" stroke-linecap="round"/>
+    <path d="M45 20h27" fill="none" stroke="#263238" stroke-width="6" stroke-linecap="round"/>
+    <ellipse cx="107" cy="31" rx="5" ry="4" fill="#ffd166"/>
+    <path d="M42 50h44" stroke="#2f80c9" stroke-width="4" stroke-linecap="round"/>
+  </svg>`;
 }
 
 function render() {
@@ -508,31 +563,58 @@ function render() {
       { id: 'c-tasks', name: 'งานของฉัน', icon: '📋' }
     ],
     supervisor: [
-      { id: 'sv-dash', name: 'สรุปภาพรวม', icon: '📊' },
+      { group: 'dashboard', name: 'สรุปภาพรวม', icon: '📊', children: [
+        { id:'dash-summary', name:'สรุป', icon:'📊', action:"openDashboardMenu('summary')" },
+        { id:'dash-variance', name:'Variance', icon:compassIconSvg(20), action:"openDashboardMenu('variance')" },
+        { id:'dash-wms', name:'ปรับยอด WMS', icon:'🔧', action:"openDashboardMenu('wms')" },
+        { id:'dash-log', name:'รายงานผลต่างล่าสุด (Variance Log)', icon:'📋', action:"openDashboardMenu('log')" },
+        { id:'dash-team', name:'ความคืบหน้าการทำงาน (Team Progress)', icon:'👥', action:"openDashboardMenu('team')" }
+      ]},
       { id: 'c-tasks', name: 'งานของฉัน', icon: '📋' },
-      { id: 'sv-list', name: 'รายการผันผวน', icon: '⚠️' },
       { id: 'ad-history', name: 'ประวัติการนับ', icon: '📦' }
     ],
     admin: [
-      { id: 'sv-dash', name: 'สรุปภาพรวม', icon: '📊' },
+      { group: 'dashboard', name: 'สรุปภาพรวม', icon: '📊', children: [
+        { id:'dash-summary', name:'สรุป', icon:'📊', action:"openDashboardMenu('summary')" },
+        { id:'dash-variance', name:'Variance', icon:compassIconSvg(20), action:"openDashboardMenu('variance')" },
+        { id:'dash-wms', name:'ปรับยอด WMS', icon:'🔧', action:"openDashboardMenu('wms')" },
+        { id:'dash-log', name:'รายงานผลต่างล่าสุด (Variance Log)', icon:'📋', action:"openDashboardMenu('log')" },
+        { id:'dash-team', name:'ความคืบหน้าการทำงาน (Team Progress)', icon:'👥', action:"openDashboardMenu('team')" }
+      ]},
       { id: 'c-tasks', name: 'งานของฉัน', icon: '📋' },
-      { id: 'ad-manage', name: 'จัดการงาน/Session', icon: '⚙️' },
+      { group: 'manage', name: 'จัดการงาน / Sessions', icon: '⚙️', children: [
+        { id:'manage-sessions', name:'Session', icon:'📋', action:"openManageMenu('sessions')" },
+        { id:'manage-assign', name:'จ่ายงาน', icon:'👥', action:"openManageMenu('assign')" },
+        { id:'manage-import', name:'Import', icon:'📥', action:"openManageMenu('import')" }
+      ]},
       { id: 'ad-history', name: 'ประวัติการนับ', icon: '📦' },
       { id: 'ad-users', name: 'จัดการทีมงาน', icon: '🔑' }
     ]
   };
 
   const userNavs = navMenus[currentRole] || navMenus.counter;
+  const dashboardActive = page === 'sv-dash' || page === 'sv-list' || page === 'sv-detail';
+  const manageActive = ['ad-manage','ad-new','ad-sessions','ad-assign','ad-import'].includes(page);
 
   const sidebarNavHtml = userNavs.map(item => {
-    const isActive = page === item.id || 
-      (item.id === 'sv-list' && page === 'sv-detail') ||
-      (item.id === 'ad-manage' && ['ad-new','ad-sessions','ad-assign','ad-import'].includes(page));
-    return `
-      <button class="nav-item ${isActive ? 'active' : ''}" onclick="go('${item.id}')" title="${item.name}">
-        <span class="nav-icon">${item.icon}</span>
-        <span>${item.name}</span>
-      </button>`;
+    if (item.children) {
+      const groupActive = item.group === 'dashboard' ? dashboardActive : manageActive;
+      const isOpen = groupActive || window._openNavGroup === item.group;
+      const children = item.children.map(child => {
+        let childActive = false;
+        if (item.group === 'dashboard' && page === 'sv-dash') {
+          childActive = (child.id === 'dash-' + (S._dashTab || _dashTab || 'summary'));
+        }
+        if (item.group === 'manage') childActive = child.id === 'manage-' + (_manageTab || 'sessions');
+        return `<button class="nav-item nav-subitem ${childActive?'active':''}" onclick="${child.action};closeMobileSidebar()" title="${child.name}"><span class="nav-icon">${child.icon}</span><span>${child.name}</span></button>`;
+      }).join('');
+      return `<div class="nav-group ${isOpen?'open':''}" data-group="${item.group}">
+        <button class="nav-item nav-parent ${groupActive?'active':''}" onclick="toggleNavGroup('${item.group}')" title="${item.name}">
+          <span class="nav-icon">${item.icon}</span><span>${item.name}</span><span class="nav-chevron">⌄</span>
+        </button><div class="nav-submenu">${children}</div></div>`;
+    }
+    const isActive = page === item.id;
+    return `<button class="nav-item ${isActive?'active':''}" onclick="go('${item.id}');closeMobileSidebar()" title="${item.name}"><span class="nav-icon">${item.icon}</span><span>${item.name}</span></button>`;
   }).join('');
 
   const isCollapsed = window._sidebarCollapsed || false;
@@ -554,11 +636,12 @@ function render() {
           <div style="font-weight:600">Soft UI Pro</div>
         </div>
       </aside>
+      <div class="mobile-sidebar-backdrop" id="sidebarBackdrop" onclick="closeMobileSidebar()"></div>
 
       <div class="main-wrapper">
         <header class="topbar">
           <div class="topbar-left">
-            <button class="toggle-sidebar-btn" onclick="toggleSidebarCollapse()" title="ย่อ/ขยายเมนู">☰</button>
+            <button class="toggle-sidebar-btn" onclick="handleSidebarToggle()" title="เปิด/ปิดเมนู">☰</button>
             <h1 class="topbar-title">${pageTitle}</h1>
           </div>
           <div class="topbar-right">
@@ -602,14 +685,39 @@ function render() {
   }
 }
 
+function handleSidebarToggle() {
+  if (window.matchMedia('(max-width: 768px)').matches) toggleMobileSidebar();
+  else toggleSidebarCollapse();
+}
 function toggleSidebarCollapse() {
   window._sidebarCollapsed = !window._sidebarCollapsed;
   const sbEl = Q('mainSidebar');
   if (sbEl) sbEl.classList.toggle('collapsed', window._sidebarCollapsed);
 }
-
 function toggleMobileSidebar() {
-  Q('mainSidebar')?.classList.toggle('mobile-open');
+  const sidebar = Q('mainSidebar');
+  const backdrop = Q('sidebarBackdrop');
+  const willOpen = !sidebar?.classList.contains('mobile-open');
+  sidebar?.classList.toggle('mobile-open', willOpen);
+  backdrop?.classList.toggle('show', willOpen);
+  document.body.style.overflow = willOpen ? 'hidden' : '';
+}
+function closeMobileSidebar() {
+  Q('mainSidebar')?.classList.remove('mobile-open');
+  Q('sidebarBackdrop')?.classList.remove('show');
+  document.body.style.overflow = '';
+}
+function toggleNavGroup(group) {
+  window._openNavGroup = window._openNavGroup === group ? null : group;
+  document.querySelectorAll('.nav-group').forEach(el => el.classList.toggle('open', el.dataset.group === window._openNavGroup));
+}
+function openDashboardMenu(tab) {
+  _dashTab = tab; S = { page:'sv-dash', _dashTab:tab, _dashSid:S._dashSid };
+  render();
+}
+function openManageMenu(tab) {
+  _manageTab = tab; S = { page:'ad-manage', _manageTab:tab };
+  render();
 }
 
 function Q(id) { return document.getElementById(id); }
@@ -1579,15 +1687,6 @@ async function loadSvDash() {
 
   const tab = S._dashTab || _dashTab;
   _dashTab = tab;
-  const tabBtn = (id, label, icon, badge) => `
-    <button onclick="S._dashTab='${id}';_dashTab='${id}';loadSvDash()"
-      style="flex:1;padding:14px 10px;border:none;background:none;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;
-      border-bottom:3px solid ${tab===id?'var(--primary-blue)':'transparent'};
-      color:${tab===id?'var(--primary-blue)':'var(--text-muted)'};
-      transition:all .2s ease;">
-      ${icon} ${label}${badge ? ` <span style="background:var(--accent-red);color:#fff;border-radius:10px;padding:2px 8px;font-size:11px;margin-left:4px; box-shadow: 2px 2px 5px rgba(0,0,0,0.1)">${badge}</span>` : ''}
-    </button>`;
-
   let varianceReportRows = '';
   const recentVars = allWmsRows.filter(v => +v.variance !== 0).slice(0, 5);
   if (recentVars.length > 0) {
@@ -1622,7 +1721,7 @@ async function loadSvDash() {
       </div>
       <div class="prog" style="position: relative; height: 18px; background: var(--neu-surface); box-shadow: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light); overflow: visible;">
         <div class="prog-fill" style="width:${pct}%; background: linear-gradient(90deg, #4ea8de 0%, #3a86ff 100%); position: relative; border-radius: 20px;">
-          <div style="position: absolute; right: -20px; top: -14px; font-size: 32px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3)); z-index: 10;">🛵</div>
+          <div style="position:absolute;right:-27px;top:-25px;z-index:10;pointer-events:none;">${vespaProgressSvg(58)}</div>
         </div>
       </div>
     </div>
@@ -1651,17 +1750,13 @@ async function loadSvDash() {
           <div class="stat-n" style="font-size: 32px; color: var(--text-main);">${totalSKUs}</div>
         </div>
 
-        <!-- 3. Tasks (Pcs) -->
+        <!-- 3. Total OH (Pcs) -->
         <div class="stat" style="padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; text-align: left; border-radius: var(--border-radius-lg); box-shadow: 6px 6px 16px var(--neu-shadow-dark), -6px -6px 16px var(--neu-shadow-light);">
           <div>
-            <div class="stat-l" style="margin-top:0; font-size:13px; color:var(--text-main);">จำนวนงาน (Pcs)</div>
-            <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">งานที่มอบหมายทั้งหมด</div>
-            <div style="display: flex; gap: 10px; margin-top: 8px;">
-              <span class="tag tag-green" style="font-size:10px; padding: 4px 10px;">เสร็จ ${pct}%</span>
-              <span class="tag tag-amber" style="font-size:10px; padding: 4px 10px;">Diff ${total ? Math.round(varCount / total * 100) : 0}%</span>
-            </div>
+            <div class="stat-l" style="margin-top:0; font-size:13px; color:var(--text-main);">จำนวน OH (Pcs)</div>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">ยอด On Hand รวมทั้งหมดใน Session นี้</div>
           </div>
-          <div class="stat-n" style="font-size: 32px; color: var(--text-main);">${total}</div>
+          <div class="stat-n" style="font-size: 32px; color: var(--text-main);">${totalOHQty.toLocaleString('th-TH')}</div>
         </div>
 
       </div>
@@ -1709,20 +1804,23 @@ async function loadSvDash() {
       </div>
     </div>
 
-    <!-- 4. Variance Log & Team Progress -->
-    <div style="margin-top: 30px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-        <div style="font-size:15px;font-weight:800;color:var(--text-main);">📋 รายงานผลต่างล่าสุด (Variance Log)</div>
-        <button class="btn btn-ghost btn-sm" onclick="S._dashTab='variance';_dashTab='variance';loadSvDash()">ดูทั้งหมด</button>
+    `;
+
+  const varianceLogTabHtml = `
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap">
+        <div style="font-size:18px;font-weight:800;color:var(--text-main)">📋 รายงานผลต่างล่าสุด (Variance Log)</div>
+        <button class="btn btn-blue btn-sm" onclick="openDashboardMenu('variance')">เปิดหน้าตรวจสอบ Variance</button>
       </div>
-      <div class="card card-flush" style="box-shadow: inset 4px 4px 8px var(--neu-shadow-dark), inset -4px -4px 8px var(--neu-shadow-light); border-radius: 20px;">
+      <div class="card card-flush" style="margin-bottom:0;box-shadow:inset 4px 4px 8px var(--neu-shadow-dark),inset -4px -4px 8px var(--neu-shadow-light);border-radius:20px">
         ${varianceReportRows}
       </div>
-    </div>
+    </div>`;
 
-    <div style="margin-top: 30px;">
-      <div style="font-size:15px;font-weight:800;color:var(--text-main);margin-bottom:14px">👥 ความคืบหน้าการทำงาน (Team Progress)</div>
-      ${peopleRows || `<div style="padding:20px 0;text-align:center;color:var(--text-muted);font-size:14px; font-weight:600;">ยังไม่มีใครถูก Assign งาน</div>`}
+  const teamProgressTabHtml = `
+    <div>
+      <div style="font-size:18px;font-weight:800;color:var(--text-main);margin-bottom:18px">👥 ความคืบหน้าการทำงาน (Team Progress)</div>
+      ${peopleRows || `<div style="padding:30px 0;text-align:center;color:var(--text-muted);font-size:14px;font-weight:600">ยังไม่มีใครถูก Assign งาน</div>`}
     </div>`;
 
   const varianceTabHtml = `<div>${varianceRowsHtml}</div>`;
@@ -1814,7 +1912,14 @@ async function loadSvDash() {
     </div>
     <div id="wms-list"></div>`;
 
-  const tabContent = tab === 'variance' ? varianceTabHtml : tab === 'wms' ? wmsTabHtml : summaryTabHtml;
+  const dashboardViews = {
+    summary: summaryTabHtml,
+    variance: varianceTabHtml,
+    wms: wmsTabHtml,
+    log: varianceLogTabHtml,
+    team: teamProgressTabHtml,
+  };
+  const tabContent = dashboardViews[tab] || summaryTabHtml;
 
   cnt().innerHTML = `
     <div class="card">
@@ -1823,14 +1928,7 @@ async function loadSvDash() {
         <select onchange="S._dashSid=this.value;loadSvDash()">${sessOpts}</select>
       </div>
     </div>
-    <div class="card card-flush">
-      <div style="display:flex;border-bottom:1px solid rgba(255,255,255,0.4)">
-        ${tabBtn('summary','สรุป','📊')}
-        ${tabBtn('variance','Variance','🧭', needsFollowUp.length || null)}
-        ${tabBtn('wms','ปรับยอด WMS','🔧', wmsUnfixedCount || null)}
-      </div>
-      <div id="dash-content" style="padding:24px 20px">${tabContent}</div>
-    </div>`;
+    <div class="card" id="dash-content">${tabContent}</div>`;
   if (tab === 'wms') renderWmsList();
 }
 
@@ -2225,23 +2323,7 @@ async function reqRecount(aid, targetRound) {
 let _manageTab = 'sessions';
 async function loadAdManage() {
   const tab = S._manageTab || _manageTab; _manageTab = tab;
-  const tabBtn = (id, label, icon) => `
-    <button onclick="S._manageTab='${id}';_manageTab='${id}';loadAdManage()"
-      style="flex:1;padding:14px 10px;border:none;background:none;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;
-      border-bottom:4px solid ${tab===id?'var(--primary-blue)':'transparent'};
-      color:${tab===id?'var(--primary-blue)':'var(--text-muted)'};
-      transition:all .2s ease;">
-      ${icon} ${label}
-    </button>`;
-
-  cnt().innerHTML = `
-    <div class="card card-flush">
-      <div style="display:flex;border-bottom:1px solid rgba(255,255,255,0.4)">
-        ${tabBtn('sessions','Session','📋')} ${tabBtn('assign','จ่ายงาน','👥')} ${tabBtn('import','Import','📥')}
-      </div>
-      <div id="manage-content" style="padding:24px 20px"><div class="load" style="text-align:center">⏳</div></div>
-    </div>`;
-
+  cnt().innerHTML = `<div class="card" id="manage-content"><div class="load" style="text-align:center">⏳ กำลังโหลด...</div></div>`;
   const mc = Q('manage-content'); if (!mc) return;
   if (tab === 'sessions') await renderManageSessions(mc);
   else if (tab === 'assign') await renderManageAssign(mc);
@@ -2653,7 +2735,14 @@ function openPrintFormWindow(rows, title) {
   if (!pages.length) pages.push([]);
   const totalPages = pages.length; const todayStr = new Date().toLocaleDateString('th-TH', { year:'numeric', month:'long', day:'numeric' });
   const pagesHtml = pages.map((pageRows, pIdx) => `<section class="pf-page"><header class="pf-header"><img class="pf-logo" src="${PF_LOGO_B64}" alt="logo"><div class="pf-title">${pfEscapeHtml(title)}</div><div class="pf-meta"><div>${todayStr}</div><div>Page ${pIdx+1} / ${totalPages}</div></div></header><table class="pf-table"><thead><tr><th style="width:11%">Location</th><th style="width:13%">Item</th><th style="width:23%">Description</th><th style="width:9%">Inventory status</th><th style="width:9%">Storage Template</th><th style="width:8%">Count 1</th><th style="width:8%">Count 2</th><th style="width:8%">Count 3</th><th style="width:11%">Remark</th></tr></thead><tbody>${pageRows.length ? pageRows.map(r => `<tr><td>${pfEscapeHtml(r.locCode)}</td><td>${pfEscapeHtml(r.itemCode)}</td><td>${pfEscapeHtml(r.desc)}</td><td>${pfEscapeHtml(r.status)}</td><td></td><td></td><td></td><td></td><td></td></tr>`).join('') : `<tr><td colspan="9" style="text-align:center;color:#888">ไม่มีรายการ</td></tr>`}</tbody></table><footer class="pf-footer"><div>ผู้ทำรายการ...........................</div><div>เวลาเริ่ม...........................</div><div>เวลาจบ...........................</div></footer></section>`).join('');
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${pfEscapeHtml(title)}</title><style>@page { size: A4 landscape; margin: 8mm 6mm; } * { box-sizing:border-box; } body { margin:0; font-family: Arial, 'Sarabun', 'Tahoma', sans-serif; color:#000; } .pf-page { page-break-after: always; } .pf-page:last-child { page-break-after: auto; } .pf-header { display:flex; align-items:center; gap:14px; border-bottom:2.5px solid #000; padding-bottom:6px; margin-bottom:8px; } .pf-logo { height:42px; } .pf-title { flex:1; text-align:center; font-size:24px; font-weight:bold; } .pf-meta { font-size:11px; text-align:right; line-height:1.5; white-space:nowrap; } .pf-table { width:100%; border-collapse:collapse; font-size:11px; table-layout:fixed; } .pf-table th, .pf-table td { border:1px solid #000; padding:5px 6px; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .pf-table th { background:#f0f0f0; font-weight:bold; font-size:10.5px; } .pf-table td { height:22px; } .pf-footer { display:flex; justify-content:space-between; margin-top:12px; font-size:12px; } @media print { .pf-noprint { display:none; } }</style></head><body><div class="pf-noprint" style="padding:10px;background:#fffbe6;border-bottom:1px solid #ccc;font-family:sans-serif;font-size:13px">กำลังเปิดหน้าต่างพิมพ์... กด Ctrl+P (หรือ Cmd+P บน Mac) เพื่อพิมพ์</div>${pagesHtml}<script>window.onload = function(){ setTimeout(function(){ window.print(); }, 300); };<\/script></body></html>`;
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${pfEscapeHtml(title)}</title><style>@page { size: A4 landscape; margin: 8mm 6mm; } * { box-sizing:border-box; } body { margin:0; font-family: Arial, 'Sarabun', 'Tahoma', sans-serif; color:#000; } .pf-page { page-break-after: always; } .pf-page:last-child { page-break-after: auto; } .pf-header { display:flex; align-items:center; gap:14px; border-bottom:2.5px solid #000; padding-bottom:6px; margin-bottom:8px; } .pf-logo { height:42px; } .pf-title { flex:1; text-align:center; font-size:24px; font-weight:bold; } .pf-meta { font-size:11px; text-align:right; line-height:1.5; white-space:nowrap; } .pf-table { width:100%; border-collapse:collapse; font-size:11px; table-layout:fixed; } .pf-table th, .pf-table td { border:1px solid #000; padding:5px 6px; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .pf-table th { background:#f0f0f0; font-weight:bold; font-size:10.5px; } .pf-table td { height:22px; } .pf-footer { display:flex; justify-content:space-between; margin-top:12px; font-size:12px; } @media print { .pf-noprint { display:none; } }
+.nav-icon svg { width:20px; height:20px; display:block; }
+.progress-vespa { pointer-events:none; }
+@media (max-width:768px) {
+  .prog { min-width:0; }
+  #dash-content { padding:18px 14px; }
+}
+</style></head><body><div class="pf-noprint" style="padding:10px;background:#fffbe6;border-bottom:1px solid #ccc;font-family:sans-serif;font-size:13px">กำลังเปิดหน้าต่างพิมพ์... กด Ctrl+P (หรือ Cmd+P บน Mac) เพื่อพิมพ์</div>${pagesHtml}<script>window.onload = function(){ setTimeout(function(){ window.print(); }, 300); };<\/script></body></html>`;
   const win = window.open('', '_blank'); if (!win) { alert('เบราว์เซอร์บล็อกป๊อปอัพ'); return; }
   win.document.write(html); win.document.close();
 }
