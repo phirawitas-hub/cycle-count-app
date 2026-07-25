@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cycle Count v59 - Backup and Restore</title>
+<title>Cycle Count v60 - Backup and Restore</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -5662,7 +5662,7 @@ function fmtDMY(value) {
   if (Number.isNaN(d.getTime())) return String(value);
   return d.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
-window.__CYCLE_COUNT_BUILD__ = 'v59';
+window.__CYCLE_COUNT_BUILD__ = 'v60';
 
 let _viewportSyncFrame = 0;
 function syncViewportSize() {
@@ -6017,7 +6017,7 @@ function renderResponsivePreviewContent() {
     <div class="summary-page-header">
       <div class="summary-greeting-wrap">
         <div class="summary-greeting">Hello, AuD</div>
-        <div class="summary-greeting-sub">Cycle Count Dashboard · Backup and Restore v59</div>
+        <div class="summary-greeting-sub">Cycle Count Dashboard · Backup and Restore v60</div>
       </div>
       <div class="summary-header-actions">
         <label class="summary-session-search" title="เลือก Session">
@@ -9636,10 +9636,10 @@ async function renderManageBackup(container) {
   container.innerHTML = `
     <div class="alert alert-blue" style="line-height:1.7">
       <strong>Backup ที่อ่านง่าย ใช้งานต่อได้ และกู้คืนได้</strong><br>
-      Excel จะเปิดที่ชีต Data ซึ่งรวม Location, Zone, LPN, Item, OH, Count 1–3, Physical Count,
-      คน/เวลานับ, ผลต่าง และสถานะ WMS พร้อมแยก Count History, Stock LPN, Variance WMS
-      และ Transaction History ให้ทีมอื่นนำไปกรอง วิเคราะห์ หรือทำรายงานต่อได้<br>
-      <span style="font-size:11px">ชีตข้อมูลระบบและ UUID ยังเก็บครบสำหรับ Restore · บัญชี User Login และรหัสผ่านไม่อยู่ในไฟล์</span>
+      Excel จะเปิดที่ชีต Data_Count ซึ่งรวมรายการ Gain / Lost, Location, Zone, LPN, Lot,
+      Inventory Status, Item, OH, AL Qty, Count 1–3, Physical Count, คนนับจริง,
+      หมายเหตุ, รูปถ่าย และสถานะ WMS ให้ทีมอื่นนำไปกรอง วิเคราะห์ หรือทำรายงานต่อได้<br>
+      <span style="font-size:11px">แสดงเฉพาะ Data_Count, Session_Summary และ README · ข้อมูลระบบที่จำเป็นถูกซ่อนไว้เพื่อให้ Restore ได้ · บัญชี User Login และรหัสผ่านไม่อยู่ในไฟล์</span>
     </div>
     <div class="backup-grid">
       <section class="backup-panel">
@@ -10053,12 +10053,17 @@ function backupTeamSheetColumns() {
       col('result','Result',14), col('sessionId','Session ID',38),
       col('locationId','Location ID',38), col('itemId','Item ID',38), col('stockDetailId','Stock Detail ID',38),
     ],
-    Variance_WMS: [
+    Data_Count: [
       col('session','Session',28), col('location','Location',18), col('zone','Zone',16),
       col('item','Item',24), col('description','Description',44),
+      col('lpn','LPN',30), col('lot','Lot',22),
+      col('inventoryStatus','Inventory Status',18), col('uom','UOM',10),
       col('stockOnhand','Stock Onhand',16,'number'), col('count1','Count 1',13,'number'),
       col('count2','Count 2',13,'number'), col('count3','Count 3',13,'number'),
+      col('alQty','AL Qty',14,'number'),
       col('physicalCount','Physical Count',16,'number'), col('variance','Variance',14,'number'),
+      col('actualCounter','Actual Counter',22), col('remark','Remark',34),
+      col('photoUrl','Photo URL',44,'url'),
       col('result','Gain / Lost',14), col('approvalResolution','Resolution',24),
       col('supervisorNote','Supervisor Note',34), col('approvedBy','Approved By',20),
       col('approvedAt','Approved At (Bangkok)',22), col('wmsStatus','WMS Status',18),
@@ -10232,6 +10237,7 @@ function buildTeamBackupData(dataBySheet) {
       approvedAt:backupDateForTeam(approval?.approved_at),
       wmsStatus:approval ? (approval.wms_fixed ? 'แก้ไขแล้ว' : 'ยังไม่แก้ WMS') : '',
       wmsFixedBy:profileName(approval?.wms_fixed_by), wmsFixedAt:backupDateForTeam(approval?.wms_fixed_at),
+      actualCounter:actualCounterName(finalCountRecord), remark:finalCountRecord?.remark || '',
       photoUrl:finalCountRecord?.photo_url || '', sessionId, assignmentId:assignment?.id || '',
       locationId, itemId, hasApproval:Boolean(approval),
     };
@@ -10331,11 +10337,7 @@ function buildTeamBackupData(dataBySheet) {
   });
 
   return {
-    Data:dataRows,
-    Count_History:countHistory,
-    Stock_LPN:stockLpn,
-    Variance_WMS:varianceWms,
-    Transaction_History:transactionHistory,
+    Data_Count:varianceWms,
     Session_Summary:sessionSummary,
   };
 }
@@ -10389,7 +10391,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'v59' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'v60' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -10412,22 +10414,18 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
   workbook.Workbook = { Views:[{ activeTab:0 }] };
   const teamData = buildTeamBackupData(dataBySheet);
   const teamColumns = backupTeamSheetColumns();
-  ['Data','Count_History','Stock_LPN','Variance_WMS','Transaction_History','Session_Summary']
+  ['Data_Count','Session_Summary']
     .forEach(sheetName => appendTeamBackupSheet(workbook,sheetName,teamData[sheetName],teamColumns[sheetName]));
 
   const readme = [
     ['CYCLE COUNT BACKUP','ไฟล์ข้อมูลการนับที่ทีมอื่นอ่าน ใช้งานต่อ และ Restore กลับเข้าระบบได้'],
-    ['Data','ตารางหลัก 1 แถวต่อ Location + Item: OH, Count 1–3, Physical Count, คน/เวลานับ, Zone, ผลต่าง และ WMS'],
-    ['Count_History','ประวัติการนับจริงทุกครั้ง ทุก Round พร้อมคนนับ เวลา หมายเหตุ และ URL รูป'],
-    ['Stock_LPN','รายละเอียด Stock ระดับ LPN / Lot / Inventory Status พร้อมผลนับของ Location + Item'],
-    ['Variance_WMS','รายการ Gain / Lost และสถานะการตรวจอนุมัติหรือแก้ไข WMS'],
-    ['Transaction_History','ประวัติการทำรายการจาก Audit Log โดยแปลง UUID เป็นชื่อ Session, Location และ Item ให้อ่านง่าย'],
+    ['Data_Count','รายการ Gain / Lost พร้อม LPN, Lot, Inventory Status, UOM, AL Qty, หมายเหตุ, URL รูป และคนนับจริงจากผลนับรอบสุดท้าย'],
     ['Session_Summary','สรุปจำนวนงาน ผลการนับ Stock Accuracy และสถานะ WMS แยก Session'],
-    ['การใช้งานต่อ','ทีมสามารถกรอง คัดลอก หรือแก้ไข 6 ชีตด้านบนได้ เพราะ Restore จะไม่อ่านชีตเหล่านี้'],
+    ['การใช้งานต่อ','ทีมสามารถกรอง คัดลอก หรือแก้ไข Data_Count และ Session_Summary ได้ เพราะ Restore จะไม่อ่าน 2 ชีตนี้'],
     ['ข้อความยาว','Backup Format v3 จะแบ่งข้อความที่ยาวเกินข้อจำกัด Excel เป็นคอลัมน์ __cc_part_2, 3... และประกอบกลับอัตโนมัติเมื่อ Restore'],
-    ['คำเตือน Restore','ห้ามแก้ชื่อชีตหรือข้อมูลตั้งแต่ Manifest เป็นต้นไป เพราะเป็นข้อมูลระบบที่ใช้ checksum'],
+    ['คำเตือน Restore','ชีตข้อมูลระบบที่จำเป็นต่อ Restore ถูกซ่อนไว้ ห้ามเปิด แก้ชื่อ หรือลบชีตเหล่านั้น'],
     ['รูปถ่าย','เก็บเป็น URL และระบบจะรักษาไฟล์รูปใน Storage เมื่อลบผ่านเมนู Backup'],
-    ['ข้อมูลระบบ','Session, Locations, Items, งานที่จ่าย, Stock, LPN/Lot, Counts, Approvals, Audit, คนนับ และหมายเหตุอยู่ครบ'],
+    ['ข้อมูลระบบ','ข้อมูล Restore ยังอยู่ครบ แต่ซ่อนชีต Manifest, Sessions, Locations, Items, Assignments, Stock, Stock_Detail, Counts, Approvals, Audit, Profiles, Counters และ Remarks'],
     ['User Login','ไฟล์นี้ไม่เก็บรหัสผ่านและไม่สร้างบัญชี Auth ใหม่; Profiles ใช้เป็นข้อมูลอ้างอิง'],
     ['วิธี Restore','เมนู จัดการงาน / Sessions → Backup / Restore → เลือกไฟล์นี้'],
     ['สร้างเมื่อ',createdAt],
@@ -10459,6 +10457,14 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     if (rows.length) sheet['!autofilter'] = { ref:sheet['!ref'] };
     XLSX.utils.book_append_sheet(workbook, sheet, spec.sheet);
   });
+
+  // Keep the workbook clean for team use while preserving every required Restore sheet.
+  // Hidden = 2 means "very hidden": normal Excel users see only the business sheets above.
+  const restoreSheetNames = new Set(['Manifest', ...BACKUP_SHEET_SPECS.map(spec => spec.sheet)]);
+  workbook.Workbook.Sheets = workbook.SheetNames.map(name => ({
+    name,
+    Hidden:restoreSheetNames.has(name) ? 2 : 0,
+  }));
 
   const businessCounts = Object.fromEntries(Object.entries(teamData).map(([key,rows]) => [key,rows.length]));
   return { workbook, manifestHash, rowCounts, sheetHashes, businessCounts, createdAt };
@@ -10502,8 +10508,8 @@ async function exportBackupExcel() {
     setBackupProgress(100,'Backup สำเร็จ','export');
     if (alertBox) alertBox.innerHTML = `<div class="alert alert-green" style="line-height:1.65">
       ✅ ดาวน์โหลด <strong>${escapeWmsText(fileName)}</strong> แล้ว<br>
-      ชีต Data พร้อมใช้งาน ${Number(built.businessCounts?.Data || 0).toLocaleString()} แถว ·
-      Count History ${Number(built.businessCounts?.Count_History || 0).toLocaleString()} รายการ<br>
+      ชีต Data_Count พร้อมใช้งาน ${Number(built.businessCounts?.Data_Count || 0).toLocaleString()} แถว ·
+      Session Summary ${Number(built.businessCounts?.Session_Summary || 0).toLocaleString()} รายการ<br>
       ข้อมูลระบบ ${Object.values(built.rowCounts).reduce((sum,value)=>sum+Number(value||0),0).toLocaleString()} แถว · checksum ${built.manifestHash}
     </div>`;
     if (Q('backup-after-mode')?.value === 'delete' && deleteArea) deleteArea.hidden = false;
