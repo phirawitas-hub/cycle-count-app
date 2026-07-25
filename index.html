@@ -5738,9 +5738,12 @@ function adminOnlyMessage() {
 }
 
 const BACKUP_FORMAT = 'CYCLE_COUNT_BACKUP';
-const BACKUP_FORMAT_VERSION = '2';
-const BACKUP_SUPPORTED_VERSIONS = new Set(['1','2']);
+const BACKUP_FORMAT_VERSION = '3';
+const BACKUP_SUPPORTED_VERSIONS = new Set(['1','2','3']);
 const BACKUP_BATCH_SIZE = 500;
+const BACKUP_EXCEL_CELL_LIMIT = 32767;
+const BACKUP_EXCEL_CHUNK_SIZE = 30000;
+const BACKUP_CHUNK_MARKER = '__cc_part_';
 const BACKUP_SHEET_SPECS = [
   { sheet:'Sessions', table:'count_sessions', scope:'session', columns:['id','name','status','created_by','created_at','closed_at','show_oh','max_rounds','repeat_match_action'], restore:true },
   { sheet:'Locations', table:'locations', scope:'master', columns:['id','code','zone','area','row_no','level','type','category'], restore:true },
@@ -9566,7 +9569,7 @@ async function doImportXlsx() {
 
 function backupCountCards(counts={}) {
   const labels = {
-    Sessions:'Session', Assignments:'งานที่จ่าย', Stock:'Stock',
+    Sessions:'Session', Assignments:'งานที่จ่าย', Items:'ITEM', Locations:'Location', Stock:'Stock',
     Stock_Detail:'LPN / Lot', Counts:'ผลการนับ', Approvals:'ผลอนุมัติ',
     Audit:'Audit Log', Photos:'รูปถ่าย',
   };
@@ -9729,9 +9732,10 @@ async function refreshBackupScopeSummary() {
   let ready = false;
   try {
     const result = await invokeAdminBackup('scope_summary', { session_ids: sessionIds });
-    window._backupScopeCounts = result.counts || {};
-    container.innerHTML = backupCountCards(result.counts);
-    ready = Number(result.counts?.Sessions || 0) === sessionIds.length;
+    const counts = await backupScopeCountsWithItemLocation(sessionIds,result.counts || {});
+    window._backupScopeCounts = counts;
+    container.innerHTML = backupCountCards(counts);
+    ready = Number(counts.Sessions || 0) === sessionIds.length;
     if (!ready) throw new Error('ตรวจพบ Session ไม่ครบ กรุณาโหลดหน้าใหม่ก่อน Backup');
   } catch (error) {
     container.innerHTML = errBox(error.message);
@@ -9762,6 +9766,22 @@ async function fetchBackupRowsByValues(table, columns, filterColumn, values) {
     const rows = await fetchAllBackupRows(table, columns, query => query.in(filterColumn, batch));
     output.push(...rows);
   }
+  return output;
+}
+
+async function backupScopeCountsWithItemLocation(sessionIds, counts={}) {
+  const output = { ...(counts || {}) };
+  const hasItems = Object.prototype.hasOwnProperty.call(output,'Items');
+  const hasLocations = Object.prototype.hasOwnProperty.call(output,'Locations');
+  if (hasItems && hasLocations) return output;
+  const [stockRows,assignmentRows] = await Promise.all([
+    hasItems ? Promise.resolve([]) :
+      fetchBackupRowsByValues('stock_snapshot',['id','item_id'],'session_id',sessionIds),
+    hasLocations ? Promise.resolve([]) :
+      fetchBackupRowsByValues('assignments',['id','location_id'],'session_id',sessionIds),
+  ]);
+  if (!hasItems) output.Items = new Set(stockRows.map(row => row.item_id).filter(Boolean)).size;
+  if (!hasLocations) output.Locations = new Set(assignmentRows.map(row => row.location_id).filter(Boolean)).size;
   return output;
 }
 
@@ -9802,6 +9822,110 @@ function backupRowsChecksum(rows, columns, formatVersion=BACKUP_FORMAT_VERSION) 
     update('\n');
   });
   return hash.toString(16).padStart(8,'0');
+}
+
+function backupSplitExcelText(value, chunkSize=BACKUP_EXCEL_CHUNK_SIZE) {
+  const text = String(value ?? '');
+  if (!text.length) return [''];
+  const chunks = [];
+  let offset = 0;
+  while (offset < text.length) {
+    let end = Math.min(text.length, offset + chunkSize);
+    if (end < text.length) {
+      const lastCode = text.charCodeAt(end - 1);
+      if (lastCode >= 0xD800 && lastCode <= 0xDBFF) end--;
+    }
+    chunks.push(text.slice(offset,end));
+    offset = end;
+  }
+  return chunks;
+}
+
+function backupTeamCellValue(value) {
+  if (value === null || value === undefined) return '';
+  let output = value;
+  if (typeof value === 'object' && !(value instanceof Date)) {
+    try { output = JSON.stringify(value); }
+    catch (_) { output = String(value); }
+  }
+  if (typeof output !== 'string' || output.length <= BACKUP_EXCEL_CELL_LIMIT) return output;
+  const suffix = '\n[ข้อความยาวเกินข้อจำกัด Excel — ข้อมูลเต็มอยู่ในชีตระบบแบบแบ่งส่วน]';
+  return output.slice(0,BACKUP_EXCEL_CELL_LIMIT - suffix.length) + suffix;
+}
+
+function backupRowsForExcel(rows, columns, formatVersion=BACKUP_FORMAT_VERSION) {
+  if (String(formatVersion) !== '3') return { rows:rows || [], columns:[...columns] };
+  const maxParts = Object.fromEntries(columns.map(column => [column,1]));
+  const preparedRows = (rows || []).map(row => {
+    const output = {};
+    columns.forEach(column => {
+      const value = row?.[column];
+      if (typeof value !== 'string' || value.length <= BACKUP_EXCEL_CHUNK_SIZE) {
+        output[column] = value;
+        return;
+      }
+      const parts = backupSplitExcelText(value);
+      maxParts[column] = Math.max(maxParts[column],parts.length);
+      output[column] = parts[0];
+      for (let part = 1; part < parts.length; part++) {
+        output[`${column}${BACKUP_CHUNK_MARKER}${part + 1}`] = parts[part];
+      }
+    });
+    return output;
+  });
+  const excelColumns = columns.flatMap(column => {
+    const output = [column];
+    for (let part = 2; part <= maxParts[column]; part++) {
+      output.push(`${column}${BACKUP_CHUNK_MARKER}${part}`);
+    }
+    return output;
+  });
+  return { rows:preparedRows, columns:excelColumns };
+}
+
+function backupRowsFromExcel(rows, columns, formatVersion) {
+  if (String(formatVersion) !== '3') {
+    return (rows || []).map(row => Object.fromEntries(columns.map(column => [column,row?.[column] ?? null])));
+  }
+  return (rows || []).map(row => Object.fromEntries(columns.map(column => {
+    const baseValue = row?.[column] ?? null;
+    const partPrefix = `${column}${BACKUP_CHUNK_MARKER}`;
+    const partKeys = Object.keys(row || {})
+      .filter(key => key.startsWith(partPrefix))
+      .sort((a,b) => Number(a.slice(partPrefix.length)) - Number(b.slice(partPrefix.length)));
+    const hasContinuation = partKeys.some(key =>
+      row[key] !== null && row[key] !== undefined && String(row[key]) !== '');
+    if (!hasContinuation) return [column,baseValue];
+    const restored = [baseValue ?? '',...partKeys.map(key => row[key] ?? '')].map(String).join('');
+    return [column,restored];
+  })));
+}
+
+function backupManifestRowsForExcel(entries, formatVersion) {
+  if (String(formatVersion) !== '3') return entries;
+  return (entries || []).flatMap(entry => {
+    const parts = backupSplitExcelText(entry.value);
+    return parts.map((value,index) => ({
+      key:index === 0 ? entry.key : `${entry.key}${BACKUP_CHUNK_MARKER}${index + 1}`,
+      value,
+    }));
+  });
+}
+
+function backupManifestRowsFromExcel(entries, formatVersion) {
+  if (String(formatVersion) !== '3') return entries;
+  const entryMap = new Map((entries || []).map(entry => [entry.key,entry.value]));
+  return (entries || [])
+    .filter(entry => !entry.key.includes(BACKUP_CHUNK_MARKER))
+    .map(entry => {
+      let value = String(entry.value ?? '');
+      for (let part = 2; ; part++) {
+        const key = `${entry.key}${BACKUP_CHUNK_MARKER}${part}`;
+        if (!entryMap.has(key)) break;
+        value += String(entryMap.get(key) ?? '');
+      }
+      return { key:entry.key, value };
+    });
 }
 
 async function collectBackupData(sessionIds) {
@@ -10222,7 +10346,7 @@ function appendTeamBackupSheet(workbook, sheetName, rows, columns) {
   }
   const headers = columns.map(column => column.header);
   const output = (rows || []).map(row => Object.fromEntries(columns.map(column =>
-    [column.header,row?.[column.key] ?? ''])));
+    [column.header,backupTeamCellValue(row?.[column.key])])));
   const sheet = XLSX.utils.json_to_sheet(output, { header:headers, skipHeader:false });
   sheet['!cols'] = columns.map(column => ({ wch:column.width }));
   sheet['!rows'] = [{ hpt:28 }];
@@ -10300,6 +10424,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     ['Transaction_History','ประวัติการทำรายการจาก Audit Log โดยแปลง UUID เป็นชื่อ Session, Location และ Item ให้อ่านง่าย'],
     ['Session_Summary','สรุปจำนวนงาน ผลการนับ Stock Accuracy และสถานะ WMS แยก Session'],
     ['การใช้งานต่อ','ทีมสามารถกรอง คัดลอก หรือแก้ไข 6 ชีตด้านบนได้ เพราะ Restore จะไม่อ่านชีตเหล่านี้'],
+    ['ข้อความยาว','Backup Format v3 จะแบ่งข้อความที่ยาวเกินข้อจำกัด Excel เป็นคอลัมน์ __cc_part_2, 3... และประกอบกลับอัตโนมัติเมื่อ Restore'],
     ['คำเตือน Restore','ห้ามแก้ชื่อชีตหรือข้อมูลตั้งแต่ Manifest เป็นต้นไป เพราะเป็นข้อมูลระบบที่ใช้ checksum'],
     ['รูปถ่าย','เก็บเป็น URL และระบบจะรักษาไฟล์รูปใน Storage เมื่อลบผ่านเมนู Backup'],
     ['ข้อมูลระบบ','Session, Locations, Items, งานที่จ่าย, Stock, LPN/Lot, Counts, Approvals, Audit, คนนับ และหมายเหตุอยู่ครบ'],
@@ -10313,19 +10438,24 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
   readmeSheet['!cols'] = [{wch:24},{wch:80}];
   XLSX.utils.book_append_sheet(workbook, readmeSheet, 'README');
 
-  const manifestSheet = XLSX.utils.json_to_sheet(manifestEntries, { header:['key','value'] });
+  const manifestExcelEntries = backupManifestRowsForExcel(manifestEntries,formatVersion);
+  const manifestSheet = XLSX.utils.json_to_sheet(manifestExcelEntries, { header:['key','value'] });
   manifestSheet['!cols'] = [{wch:28},{wch:90}];
   XLSX.utils.book_append_sheet(workbook, manifestSheet, 'Manifest');
 
   BACKUP_SHEET_SPECS.forEach(spec => {
     const rows = dataBySheet[spec.sheet] || [];
-    const sheet = XLSX.utils.json_to_sheet(rows, { header:spec.columns, skipHeader:false });
-    sheet['!cols'] = spec.columns.map(column => ({
-      wch: column === 'id' || column.endsWith('_id') ? 38
-        : column.includes('_at') ? 26
-        : ['description','remark','photo_url','old_value','new_value','supervisor_note'].includes(column) ? 46
+    const excelData = backupRowsForExcel(rows,spec.columns,formatVersion);
+    const sheet = XLSX.utils.json_to_sheet(excelData.rows, { header:excelData.columns, skipHeader:false });
+    sheet['!cols'] = excelData.columns.map(column => {
+      const sourceColumn = column.split(BACKUP_CHUNK_MARKER)[0];
+      return ({
+      wch: sourceColumn === 'id' || sourceColumn.endsWith('_id') ? 38
+        : sourceColumn.includes('_at') ? 26
+        : ['description','remark','photo_url','old_value','new_value','supervisor_note'].includes(sourceColumn) ? 46
         : 18,
-    }));
+      });
+    });
     if (rows.length) sheet['!autofilter'] = { ref:sheet['!ref'] };
     XLSX.utils.book_append_sheet(workbook, sheet, spec.sheet);
   });
@@ -10415,9 +10545,11 @@ function backupManifestFromSheet(workbook) {
   if (!values.length || values[0][0] !== 'key' || values[0][1] !== 'value') {
     throw new Error('รูปแบบ Manifest ไม่ถูกต้อง');
   }
-  const entries = values.slice(1)
+  const physicalEntries = values.slice(1)
     .filter(row => String(row[0] || '').trim())
     .map(row => ({ key:String(row[0]), value:String(row[1] ?? '') }));
+  const physicalMap = Object.fromEntries(physicalEntries.map(entry => [entry.key,entry.value]));
+  const entries = backupManifestRowsFromExcel(physicalEntries,physicalMap.format_version);
   const map = Object.fromEntries(entries.map(entry => [entry.key,entry.value]));
   if (map.backup_format !== BACKUP_FORMAT) throw new Error('ไฟล์นี้ไม่ใช่ Cycle Count Backup');
   if (!BACKUP_SUPPORTED_VERSIONS.has(map.format_version)) {
@@ -10482,8 +10614,9 @@ async function readBackupExcelFile(event) {
       }
       const missingColumns = spec.columns.filter(column => !headers.includes(column));
       if (missingColumns.length) throw new Error(`${spec.sheet} ขาดคอลัมน์: ${missingColumns.join(', ')}`);
-      const rows = XLSX.utils.sheet_to_json(sheet, { defval:null, raw:true })
+      const physicalRows = XLSX.utils.sheet_to_json(sheet, { defval:null, raw:true })
         .filter(row => row.id !== null && row.id !== undefined && String(row.id).trim() !== '');
+      const rows = backupRowsFromExcel(physicalRows,spec.columns,manifest.map.format_version);
       if (rows.length !== expectedRows) {
         throw new Error(`${spec.sheet} จำนวนแถวไม่ตรง: พบ ${rows.length}, Manifest ${expectedRows}`);
       }
