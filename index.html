@@ -9636,9 +9636,9 @@ async function renderManageBackup(container) {
   container.innerHTML = `
     <div class="alert alert-blue" style="line-height:1.7">
       <strong>Backup ที่อ่านง่าย ใช้งานต่อได้ และกู้คืนได้</strong><br>
-      Excel จะเปิดที่ชีต Data_Count ซึ่งรวมรายการ Gain / Lost, Location, Zone, LPN, Lot,
-      Inventory Status, Item, OH, AL Qty, Count 1–3, Physical Count, คนนับจริง,
-      หมายเหตุ, รูปถ่าย และสถานะ WMS ให้ทีมอื่นนำไปกรอง วิเคราะห์ หรือทำรายงานต่อได้<br>
+      Excel จะเปิดที่ชีต Data_Count ซึ่งรวมข้อมูล Stock / LPN ทั้งหมดของ Session โดยไม่กรองเฉพาะ Gain / Lost
+      พร้อม Location, Zone, LPN, Lot, Inventory Status, Item, OH, AL Qty, Count 1–3,
+      คนนับจริงและเวลานับแยกรอบ, หมายเหตุ, รูปถ่าย และสถานะ WMS ให้ทีมอื่นนำไปใช้ต่อได้<br>
       <span style="font-size:11px">แสดงเฉพาะ Data_Count, Session_Summary และ README · ข้อมูลระบบที่จำเป็นถูกซ่อนไว้เพื่อให้ Restore ได้ · บัญชี User Login และรหัสผ่านไม่อยู่ในไฟล์</span>
     </div>
     <div class="backup-grid">
@@ -10058,12 +10058,16 @@ function backupTeamSheetColumns() {
       col('item','Item',24), col('description','Description',44),
       col('lpn','LPN',30), col('lot','Lot',22),
       col('inventoryStatus','Inventory Status',18), col('uom','UOM',10),
-      col('stockOnhand','Stock Onhand',16,'number'), col('count1','Count 1',13,'number'),
-      col('count2','Count 2',13,'number'), col('count3','Count 3',13,'number'),
-      col('alQty','AL Qty',14,'number'),
+      col('detailQty','LPN / Lot Qty',16,'number'),
+      col('stockOnhand','Stock Onhand',16,'number'), col('alQty','AL Qty',14,'number'),
+      col('count1','Count 1',13,'number'), col('count1Counter','Actual Counter1',22),
+      col('count1Time','Count 1 Time',22),
+      col('count2','Count 2',13,'number'), col('count2Counter','Actual Counter2',22),
+      col('count2Time','Count 2 Time',22),
+      col('count3','Count 3',13,'number'), col('count3Counter','Actual Counter3',22),
+      col('count3Time','Count 3 Time',22),
       col('physicalCount','Physical Count',16,'number'), col('variance','Variance',14,'number'),
-      col('actualCounter','Actual Counter',22), col('remark','Remark',34),
-      col('photoUrl','Photo URL',44,'url'),
+      col('remark','Remark',34), col('photoUrl','Photo URL',58,'url'),
       col('result','Gain / Lost',14), col('approvalResolution','Resolution',24),
       col('supervisorNote','Supervisor Note',34), col('approvedBy','Approved By',20),
       col('approvedAt','Approved At (Bangkok)',22), col('wmsStatus','WMS Status',18),
@@ -10082,7 +10086,9 @@ function backupTeamSheetColumns() {
     Session_Summary: [
       col('session','Session',30), col('status','Status',16), col('createdAt','Created At (Bangkok)',22),
       col('closedAt','Closed At (Bangkok)',22), col('assignments','Assignments',14,'number'),
-      col('locations','Locations',12,'number'), col('items','Stock Lines',12,'number'),
+      col('locations','Locations',12,'number'), col('uniqueItems','Unique ITEM',14,'number'),
+      col('items','Stock Lines',12,'number'), col('lpnRows','LPN / Lot Rows',16,'number'),
+      col('dataCountRows','Data_Count Rows',17,'number'), col('photoUrls','Photo URLs',13,'number'),
       col('countedItems','Counted Items',14,'number'), col('countEvents','Count Events',14,'number'),
       col('countedLocations','Counted Locations',17,'number'), col('stockOnhand','Stock Onhand',16,'number'),
       col('physicalCount','Physical Count',16,'number'), col('variance','Net Variance',14,'number'),
@@ -10202,6 +10208,10 @@ function buildTeamBackupData(dataBySheet) {
     const finalCountRecord = [...workCounts].sort((a,b) =>
       (Number(b.round)||0) - (Number(a.round)||0)
       || ((Date.parse(b.counted_at || '')||0) - (Date.parse(a.counted_at || '')||0)))[0] || null;
+    const latestPhotoRecord = backupLatestRecord(
+      workCounts.filter(record => String(record?.photo_url || '').trim()));
+    const latestRemarkRecord = backupLatestRecord(
+      workCounts.filter(record => String(record?.remark || '').trim()));
     const stockOnhand = backupNumber(work.stock?.onhand_qty);
     const approvedFinal = backupNumber(approval?.final_qty);
     const physicalCount = approvedFinal !== null ? approvedFinal : backupNumber(finalCountRecord?.count_qty);
@@ -10237,8 +10247,9 @@ function buildTeamBackupData(dataBySheet) {
       approvedAt:backupDateForTeam(approval?.approved_at),
       wmsStatus:approval ? (approval.wms_fixed ? 'แก้ไขแล้ว' : 'ยังไม่แก้ WMS') : '',
       wmsFixedBy:profileName(approval?.wms_fixed_by), wmsFixedAt:backupDateForTeam(approval?.wms_fixed_at),
-      actualCounter:actualCounterName(finalCountRecord), remark:finalCountRecord?.remark || '',
-      photoUrl:finalCountRecord?.photo_url || '', sessionId, assignmentId:assignment?.id || '',
+      remark:finalCountRecord?.remark || latestRemarkRecord?.remark || '',
+      photoUrl:finalCountRecord?.photo_url || latestPhotoRecord?.photo_url || '',
+      sessionId, assignmentId:assignment?.id || '',
       locationId, itemId, hasApproval:Boolean(approval),
     };
   }).sort((a,b) =>
@@ -10248,6 +10259,41 @@ function buildTeamBackupData(dataBySheet) {
     || String(a.item).localeCompare(String(b.item),'en',{numeric:true}));
 
   const dataByComposite = new Map(dataRows.map(row => [stockKey(row.sessionId,row.locationId,row.itemId),row]));
+  const detailCompositeKeys = new Set();
+  const dataCountRows = stockDetails.map(detail => {
+    const key = stockKey(detail.session_id,detail.location_id,detail.item_id);
+    detailCompositeKeys.add(key);
+    const session = sessionById.get(String(detail.session_id)) || {};
+    const location = locationById.get(String(detail.location_id)) || {};
+    const item = itemById.get(String(detail.item_id)) || {};
+    const stock = stockByKey.get(key) || {};
+    const base = dataByComposite.get(key) || {
+      session:session.name || '', sessionStatus:session.status || '',
+      location:location.code || '', zone:location.zone || '',
+      item:item.code || '', description:item.description || '',
+      stockOnhand:backupNumber(stock.onhand_qty), alQty:backupNumber(stock.al_qty),
+      sessionId:detail.session_id || '', locationId:detail.location_id || '',
+      itemId:detail.item_id || '',
+    };
+    return {
+      ...base,
+      lpn:detail.license_plate || '', lot:detail.lot || '',
+      inventoryStatus:detail.inventory_status || '', uom:detail.uom || '',
+      detailQty:backupNumber(detail.qty), stockDetailId:detail.id || '',
+    };
+  });
+  dataRows.forEach(row => {
+    const key = stockKey(row.sessionId,row.locationId,row.itemId);
+    if (!detailCompositeKeys.has(key)) dataCountRows.push({ ...row, detailQty:null, stockDetailId:'' });
+  });
+  dataCountRows.sort((a,b) =>
+    String(a.session).localeCompare(String(b.session),'th')
+    || String(a.zone).localeCompare(String(b.zone),'th')
+    || String(a.location).localeCompare(String(b.location),'en',{numeric:true})
+    || String(a.item).localeCompare(String(b.item),'en',{numeric:true})
+    || String(a.lpn).localeCompare(String(b.lpn),'en',{numeric:true})
+    || String(a.lot).localeCompare(String(b.lot),'en',{numeric:true}));
+
   const countHistory = counts.map(count => {
     const assignment = assignmentById.get(String(count.assignment_id)) || {};
     const session = sessionById.get(String(assignment.session_id)) || {};
@@ -10313,6 +10359,8 @@ function buildTeamBackupData(dataBySheet) {
   const sessionSummary = sessions.map(session => {
     const sessionAssignments = assignments.filter(row => String(row.session_id) === String(session.id));
     const sessionData = dataRows.filter(row => String(row.sessionId) === String(session.id));
+    const sessionDetails = stockDetails.filter(row => String(row.session_id) === String(session.id));
+    const sessionExportRows = dataCountRows.filter(row => String(row.sessionId) === String(session.id));
     const sessionCounts = countHistory.filter(row => String(row.sessionId) === String(session.id));
     const countedData = sessionData.filter(row => row.physicalCount !== null);
     const absVariance = countedData.reduce((sum,row) => sum + Math.abs(Number(row.variance || 0)),0);
@@ -10322,7 +10370,10 @@ function buildTeamBackupData(dataBySheet) {
     return {
       session:session.name || '', status:session.status || '', createdAt:backupDateForTeam(session.created_at),
       closedAt:backupDateForTeam(session.closed_at), assignments:sessionAssignments.length,
-      locations:unique(sessionAssignments,'location_id'), items:sessionData.length, countedItems:countedData.length,
+      locations:unique(sessionAssignments,'location_id'), uniqueItems:unique(sessionData,'itemId'),
+      items:sessionData.length, lpnRows:sessionDetails.length, dataCountRows:sessionExportRows.length,
+      photoUrls:unique(sessionExportRows.filter(row => row.photoUrl),'photoUrl'),
+      countedItems:countedData.length,
       countEvents:sessionCounts.length, countedLocations:unique(countedData,'locationId'),
       stockOnhand:sessionData.reduce((sum,row) => sum + Number(row.stockOnhand || 0),0),
       physicalCount:countedData.reduce((sum,row) => sum + Number(row.physicalCount || 0),0),
@@ -10337,7 +10388,7 @@ function buildTeamBackupData(dataBySheet) {
   });
 
   return {
-    Data_Count:varianceWms,
+    Data_Count:dataCountRows,
     Session_Summary:sessionSummary,
   };
 }
@@ -10419,8 +10470,10 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
 
   const readme = [
     ['CYCLE COUNT BACKUP','ไฟล์ข้อมูลการนับที่ทีมอื่นอ่าน ใช้งานต่อ และ Restore กลับเข้าระบบได้'],
-    ['Data_Count','รายการ Gain / Lost พร้อม LPN, Lot, Inventory Status, UOM, AL Qty, หมายเหตุ, URL รูป และคนนับจริงจากผลนับรอบสุดท้าย'],
-    ['Session_Summary','สรุปจำนวนงาน ผลการนับ Stock Accuracy และสถานะ WMS แยก Session'],
+    ['Data_Count','ข้อมูล Stock / LPN ทั้งหมดของ Session: 1 แถวต่อ LPN/Lot และเก็บ Stock ที่ไม่มี LPN/Lot ไว้ด้วย โดยไม่กรองเฉพาะ Gain/Lost'],
+    ['Count 1–3','แสดง Actual Counter และเวลานับแยกครบทั้ง 3 รอบ'],
+    ['Photo URL','ใช้ URL รูปล่าสุดที่มีจริงของงาน แม้ผลนับรอบสุดท้ายจะไม่ได้แนบรูป'],
+    ['Session_Summary','สรุป Unique ITEM, Stock Lines, LPN/Lot Rows, จำนวนแถว Data_Count, รูปถ่าย, ผลการนับ, Stock Accuracy และสถานะ WMS แยก Session'],
     ['การใช้งานต่อ','ทีมสามารถกรอง คัดลอก หรือแก้ไข Data_Count และ Session_Summary ได้ เพราะ Restore จะไม่อ่าน 2 ชีตนี้'],
     ['ข้อความยาว','Backup Format v3 จะแบ่งข้อความที่ยาวเกินข้อจำกัด Excel เป็นคอลัมน์ __cc_part_2, 3... และประกอบกลับอัตโนมัติเมื่อ Restore'],
     ['คำเตือน Restore','ชีตข้อมูลระบบที่จำเป็นต่อ Restore ถูกซ่อนไว้ ห้ามเปิด แก้ชื่อ หรือลบชีตเหล่านั้น'],
