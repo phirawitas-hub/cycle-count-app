@@ -5631,6 +5631,38 @@ body {
   border-bottom: 0;
 }
 
+/* v60 — full-width hourly chart, clean plot background, highlighted SKU card */
+#dash-content .summary-hour-chart-line {
+  justify-content: stretch !important;
+}
+
+#dash-content .summary-hour-svg {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+#dash-content .summary-hour-gridline {
+  display: none !important;
+}
+
+#dash-content .summary-metric-wrap.sku-highlight .summary-metric-card {
+  background: linear-gradient(145deg, #006D77 0%, #83C5BE 100%) !important;
+  border-color: #83C5BE !important;
+  box-shadow:
+    0 14px 26px rgba(0,109,119,.24),
+    inset 0 1px 0 rgba(237,246,249,.42) !important;
+}
+
+#dash-content .summary-metric-wrap.sku-highlight .summary-metric-card strong {
+  color: #EDF6F9 !important;
+  text-shadow: 0 2px 5px rgba(0,109,119,.38);
+}
+
+#dash-content .summary-metric-wrap.sku-highlight .summary-metric-title {
+  color: #006D77 !important;
+  font-weight: 900 !important;
+}
+
 @media (max-width: 900px) {
   .backup-grid {
     grid-template-columns: 1fr;
@@ -5974,43 +6006,52 @@ function renderResponsivePreviewContent() {
       </div>
     </div>`;
 
+  const previewHours = Array.from({length:15},(_,index) => index + 6);
+  const previewValues = [0,1,2,0,3,1,0,4,6,1,1,0,2,1,0];
+  const previewSvgWidth = 1200;
+  const previewSvgHeight = 220;
+  const previewMargin = { top:28, right:28, bottom:34, left:28 };
+  const previewPlotW = previewSvgWidth - previewMargin.left - previewMargin.right;
+  const previewPlotH = previewSvgHeight - previewMargin.top - previewMargin.bottom;
+  const previewMax = Math.max(...previewValues,1);
+  const previewPoints = previewHours.map((hour,index) => ({
+    hour,
+    value:previewValues[index],
+    x:previewMargin.left + (index * previewPlotW / (previewHours.length - 1)),
+    y:previewMargin.top + previewPlotH - ((previewValues[index] / previewMax) * (previewPlotH - 8)),
+  }));
+  const previewSmoothPath = chartPoints => {
+    let path = `M ${chartPoints[0].x} ${chartPoints[0].y}`;
+    for (let index = 0; index < chartPoints.length - 1; index++) {
+      const p0 = chartPoints[index - 1] || chartPoints[index];
+      const p1 = chartPoints[index];
+      const p2 = chartPoints[index + 1];
+      const p3 = chartPoints[index + 2] || p2;
+      const c1x = p1.x + ((p2.x - p0.x) * .16);
+      const c1y = Math.max(previewMargin.top,Math.min(previewMargin.top + previewPlotH,p1.y + ((p2.y - p0.y) * .16)));
+      const c2x = p2.x - ((p3.x - p1.x) * .16);
+      const c2y = Math.max(previewMargin.top,Math.min(previewMargin.top + previewPlotH,p2.y - ((p3.y - p1.y) * .16)));
+      path += ` C ${c1x.toFixed(2)} ${c1y.toFixed(2)}, ${c2x.toFixed(2)} ${c2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+    }
+    return path;
+  };
+  const previewLinePath = previewSmoothPath(previewPoints);
+  const previewBaseY = previewMargin.top + previewPlotH;
+  const previewAreaPath = `${previewLinePath} L ${previewPoints[previewPoints.length - 1].x} ${previewBaseY} L ${previewPoints[0].x} ${previewBaseY} Z`;
+  const previewDots = previewPoints.map(point =>
+    `<circle cx="${point.x}" cy="${point.y}" r="${point.value ? 4.5 : 2.5}" class="summary-hour-dot ${point.value ? 'active' : ''}"/>`).join('');
+  const previewPointLabels = previewPoints.map(point => point.value
+    ? `<text x="${point.x}" y="${point.y - 12}" text-anchor="middle" class="summary-hour-svg-label">${point.value}</text>`
+    : '').join('');
+  const previewAxisLabels = previewPoints.map(point =>
+    `<text x="${point.x}" y="${previewSvgHeight - 8}" text-anchor="middle" class="summary-hour-axis-text">${String(point.hour).padStart(2,'0')}</text>`).join('');
   const hourlySvg = `
-    <svg viewBox="0 0 560 220" preserveAspectRatio="xMidYMid meet" class="summary-hour-svg" aria-label="กราฟตัวอย่างงานรายชั่วโมง">
-      <line x1="18" y1="186" x2="542" y2="186" class="summary-hour-gridline"/>
-      <line x1="18" y1="146" x2="542" y2="146" class="summary-hour-gridline"/>
-      <line x1="18" y1="106" x2="542" y2="106" class="summary-hour-gridline"/>
-      <line x1="18" y1="66" x2="542" y2="66" class="summary-hour-gridline"/>
-      <path d="M 18 186 C 23.9 182.8, 43.0 172.4, 55 166 C 67.0 159.6, 81.0 142.8, 93 146 C 105.0 149.2, 118.0 186.0, 130 186 C 142.0 182.8, 156.0 129.2, 168 126 C 180.0 122.8, 193.0 156.4, 205 166 C 217.0 175.6, 231.0 186.0, 243 186 C 255.0 176.4, 268.0 128.4, 280 106 C 292.0 83.6, 306.0 36.4, 318 46 C 330.0 55.6, 343.0 146.8, 355 166 C 367.0 185.2, 381.0 162.8, 393 166 C 405.0 169.2, 418.0 186.0, 430 186 C 442.0 182.8, 456.0 149.2, 468 146 C 480.0 142.8, 493.2 159.6, 505 166 C 516.8 172.4, 536.1 182.8, 542 186 L 542 186 L 18 186 Z" class="summary-hour-area"/>
-      <path d="M 18 186 C 23.9 182.8, 43.0 172.4, 55 166 C 67.0 159.6, 81.0 142.8, 93 146 C 105.0 149.2, 118.0 186.0, 130 186 C 142.0 182.8, 156.0 129.2, 168 126 C 180.0 122.8, 193.0 156.4, 205 166 C 217.0 175.6, 231.0 186.0, 243 186 C 255.0 176.4, 268.0 128.4, 280 106 C 292.0 83.6, 306.0 36.4, 318 46 C 330.0 55.6, 343.0 146.8, 355 166 C 367.0 185.2, 381.0 162.8, 393 166 C 405.0 169.2, 418.0 186.0, 430 186 C 442.0 182.8, 456.0 149.2, 468 146 C 480.0 142.8, 493.2 159.6, 505 166 C 516.8 172.4, 536.1 182.8, 542 186" class="summary-hour-line"/>
-      <g class="summary-hour-preview-points">
-        <circle cx="55" cy="166" r="4.5" class="summary-hour-dot active"/><text x="55" y="151" text-anchor="middle" class="summary-hour-svg-label">1</text>
-        <circle cx="93" cy="146" r="4.5" class="summary-hour-dot active"/><text x="93" y="131" text-anchor="middle" class="summary-hour-svg-label">2</text>
-        <circle cx="168" cy="126" r="4.5" class="summary-hour-dot active"/><text x="168" y="111" text-anchor="middle" class="summary-hour-svg-label">3</text>
-        <circle cx="205" cy="166" r="4.5" class="summary-hour-dot active"/><text x="205" y="151" text-anchor="middle" class="summary-hour-svg-label">1</text>
-        <circle cx="280" cy="106" r="4.5" class="summary-hour-dot active"/><text x="280" y="91" text-anchor="middle" class="summary-hour-svg-label">4</text>
-        <circle cx="318" cy="46" r="4.5" class="summary-hour-dot active"/><text x="318" y="31" text-anchor="middle" class="summary-hour-svg-label">6</text>
-        <circle cx="355" cy="166" r="4.5" class="summary-hour-dot active"/><text x="355" y="151" text-anchor="middle" class="summary-hour-svg-label">1</text>
-        <circle cx="393" cy="166" r="4.5" class="summary-hour-dot active"/><text x="393" y="151" text-anchor="middle" class="summary-hour-svg-label">1</text>
-        <circle cx="468" cy="146" r="4.5" class="summary-hour-dot active"/><text x="468" y="131" text-anchor="middle" class="summary-hour-svg-label">2</text>
-        <circle cx="505" cy="166" r="4.5" class="summary-hour-dot active"/><text x="505" y="151" text-anchor="middle" class="summary-hour-svg-label">1</text>
-      </g>
-      <g class="summary-hour-preview-axis">
-        <text x="18" y="212" text-anchor="middle" class="summary-hour-axis-text">06</text>
-        <text x="55" y="212" text-anchor="middle" class="summary-hour-axis-text">07</text>
-        <text x="93" y="212" text-anchor="middle" class="summary-hour-axis-text">08</text>
-        <text x="130" y="212" text-anchor="middle" class="summary-hour-axis-text">09</text>
-        <text x="168" y="212" text-anchor="middle" class="summary-hour-axis-text">10</text>
-        <text x="205" y="212" text-anchor="middle" class="summary-hour-axis-text">11</text>
-        <text x="243" y="212" text-anchor="middle" class="summary-hour-axis-text">12</text>
-        <text x="280" y="212" text-anchor="middle" class="summary-hour-axis-text">13</text>
-        <text x="318" y="212" text-anchor="middle" class="summary-hour-axis-text">14</text>
-        <text x="355" y="212" text-anchor="middle" class="summary-hour-axis-text">15</text>
-        <text x="393" y="212" text-anchor="middle" class="summary-hour-axis-text">16</text>
-        <text x="430" y="212" text-anchor="middle" class="summary-hour-axis-text">17</text>
-        <text x="468" y="212" text-anchor="middle" class="summary-hour-axis-text">18</text>
-        <text x="505" y="212" text-anchor="middle" class="summary-hour-axis-text">19</text>
-        <text x="542" y="212" text-anchor="middle" class="summary-hour-axis-text">20</text>
-      </g>
+    <svg viewBox="0 0 ${previewSvgWidth} ${previewSvgHeight}" preserveAspectRatio="xMidYMid meet" class="summary-hour-svg" aria-label="กราฟตัวอย่างงานรายชั่วโมง">
+      <path d="${previewAreaPath}" class="summary-hour-area"/>
+      <path d="${previewLinePath}" class="summary-hour-line"/>
+      ${previewDots}
+      ${previewPointLabels}
+      ${previewAxisLabels}
     </svg>`;
 
   cnt().innerHTML = `
@@ -6069,7 +6110,7 @@ function renderResponsivePreviewContent() {
 
         <section class="summary-metrics-grid summary-metrics-grid-clean summary-metrics-grid-square summary-metrics-grid-minimal">
           <article class="summary-metric-wrap"><div class="summary-metric-card no-icon-card square-card tone-mint"><strong class="metric-value">22</strong></div><div class="summary-metric-title">Locations</div></article>
-          <article class="summary-metric-wrap"><div class="summary-metric-card no-icon-card square-card tone-lilac"><strong class="metric-value">38</strong></div><div class="summary-metric-title">สินค้า (SKUs)</div></article>
+          <article class="summary-metric-wrap sku-highlight"><div class="summary-metric-card no-icon-card square-card tone-lilac"><strong class="metric-value">38</strong></div><div class="summary-metric-title">สินค้า (SKUs)</div></article>
           <article class="summary-metric-wrap"><div class="summary-metric-card no-icon-card square-card tone-sand"><strong class="metric-value">15</strong></div><div class="summary-metric-title">OH (Pcs)</div></article>
           <article class="summary-metric-wrap"><div class="summary-metric-card no-icon-card square-card tone-peach"><strong class="metric-value">3</strong></div><div class="summary-metric-title">จำนวนคนนับ</div></article>
         </section>
@@ -6212,7 +6253,7 @@ function render() {
           <div class="sidebar-logo-icon">${navIconSvg('warehouse', 32)}</div>
           <div>
             <div class="sidebar-title">Cycle Count</div>
-            <div class="sidebar-sub">Warehouse v3.0</div>
+            <div class="sidebar-sub">Warehouse v1.0</div>
           </div>
         </div>
         <nav class="sidebar-menu">
@@ -7681,7 +7722,7 @@ async function loadSvDash() {
   const otCount = hourlyRaw.slice(17).reduce((a,b) => a + b, 0);
   const activeHourSpan = nonZeroHours.length ? (Math.max(...nonZeroHours) - Math.min(...nonZeroHours) + 1) : 0;
   const avgLocationsPerHour = activeHourSpan > 0 ? Math.round(dayCountTotal / activeHourSpan) : 0;
-  const svgWidth = 560;
+  const svgWidth = 1200;
   const svgHeight = 220;
   const m = { top: 28, right: 18, bottom: 34, left: 18 };
   const plotW = svgWidth - m.left - m.right;
@@ -7719,15 +7760,10 @@ async function loadSvDash() {
   const areaPath = points.length
     ? `${linePath} L ${points[points.length - 1].x} ${chartBaseY} L ${points[0].x} ${chartBaseY} Z`
     : '';
-  const gridLines = [0, .25, .5, .75, 1].map(r => {
-    const y = m.top + plotH - (r * plotH);
-    return `<line x1="${m.left}" y1="${y}" x2="${svgWidth - m.right}" y2="${y}" class="summary-hour-gridline"/>`;
-  }).join('');
   const pointLabels = points.map(p => p.v ? `<text x="${p.x}" y="${p.y - 12}" text-anchor="middle" class="summary-hour-svg-label">${p.v}</text>` : '').join('');
   const pointDots = points.map(p => `<circle cx="${p.x}" cy="${p.y}" r="${p.v ? 4.5 : 2.5}" class="summary-hour-dot ${p.v ? 'active' : ''}"/>`).join('');
   const axisLabels = points.map(p => `<text x="${p.x}" y="${svgHeight - 8}" text-anchor="middle" class="summary-hour-axis-text">${String(p.h).padStart(2,'0')}</text>`).join('');
   const hourlyChartSvg = `<svg viewBox="0 0 ${svgWidth} ${svgHeight}" preserveAspectRatio="xMidYMid meet" class="summary-hour-svg" aria-label="Hourly counting chart">
-    ${gridLines}
     <path d="${areaPath}" class="summary-hour-area"/>
     <path d="${linePath}" class="summary-hour-line"/>
     ${pointDots}
@@ -7925,7 +7961,7 @@ async function loadSvDash() {
           </div>
           <div class="summary-metric-title">Locations</div>
         </article>
-        <article class="summary-metric-wrap">
+        <article class="summary-metric-wrap sku-highlight">
           <div class="summary-metric-card no-icon-card square-card tone-lilac">
             <strong class="${metricValueClass(totalSKUs.toLocaleString('th-TH'))}">${totalSKUs.toLocaleString('th-TH')}</strong>
           </div>
