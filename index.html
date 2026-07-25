@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cycle Count v54 - Smart Back Navigation</title>
+<title>Cycle Count v59 - Backup and Restore</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -369,22 +369,59 @@ select { appearance: none; background-image: url('data:image/svg+xml;charset=US-
 .prog-fill { height: 100%; background: var(--primary-blue); border-radius: 20px; transition: width .45s ease; }
 
 /* ── Count Entry & Widgets ── */
-.citem-wrap { border-bottom: 1px solid rgba(255,255,255,0.4); background: var(--neu-surface); }
-.citem { display: flex; align-items: center; padding: 20px 24px; gap: 16px; }
+.count-items-card {
+  display: grid;
+  gap: 16px;
+  overflow: visible;
+  background: transparent;
+  box-shadow: none;
+}
+.citem-wrap {
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid rgba(0, 109, 119, .10);
+  border-radius: 24px;
+  box-shadow: 0 12px 28px rgba(31, 78, 93, .10);
+}
+.citem { display: flex; align-items: center; padding: 22px 26px; gap: 18px; }
 .citem-info { flex: 1; min-width: 0; }
-.citem-code { font-size: 18px; font-weight: 800; font-family: 'Fredoka', monospace; color: var(--text-main); }
-.citem-desc { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+.citem-code { font-size: 19px; font-weight: 800; font-family: 'Fredoka', monospace; color: #12384a; }
+.citem-desc { font-size: 13px; color: #405f6d; margin-top: 4px; font-weight: 600; }
+.citem-detail-scroll { margin-top: 12px; overflow-x: auto; }
+.citem-detail-table { width: 100%; min-width: 590px; border-collapse: separate; border-spacing: 0; }
+.citem-detail-table th {
+  padding: 7px 10px;
+  background: #e9f7f7;
+  color: #006d77;
+  font-size: 10px;
+  font-weight: 800;
+  text-align: left;
+  white-space: nowrap;
+}
+.citem-detail-table th:first-child { border-radius: 10px 0 0 10px; }
+.citem-detail-table th:last-child { border-radius: 0 10px 10px 0; }
+.citem-detail-table td {
+  padding: 9px 10px 4px;
+  color: #244858;
+  font-size: 12px;
+  font-weight: 600;
+  vertical-align: middle;
+}
+.citem-detail-table .num { text-align: right; color: #12384a; font-size: 13px; font-weight: 800; }
+.citem-detail-table .uom { color: #006d77; font-weight: 800; white-space: nowrap; }
+.count-value-stack { display:flex; flex-direction:column; align-items:center; gap:12px; flex:0 0 auto; }
 .cqty {
-  width: 100px; padding: 12px 10px; border: none; border-radius: var(--border-radius-lg); 
+  width: 108px; height: 64px; box-sizing: border-box; padding: 10px; border: 1px solid rgba(0, 109, 119, .08); border-radius: 18px;
   font-size: 24px; font-weight: 800; text-align: center; color: var(--text-main);
-  font-family: 'Fredoka', monospace; background: var(--neu-surface); 
+  font-family: 'Fredoka', monospace; background: #fff;
   box-shadow: inset 4px 4px 8px var(--neu-shadow-dark), inset -4px -4px 8px var(--neu-shadow-light);
 }
 .cqty.ok { color: var(--primary-blue); }
 
 .oh-badge {
-  display: flex; flex-direction: column; align-items: center; justify-content: center; 
-  min-width: 60px; padding: 6px 12px; border-radius: 16px; background: var(--neu-surface); 
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  width: 108px; height: 64px; box-sizing: border-box; padding: 5px 10px; border-radius: 18px; background: #fff;
+  border: 1px solid rgba(0, 109, 119, .08);
   box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light);
 }
 .oh-badge-label { font-size: 10px; font-weight: 800; color: var(--text-muted); }
@@ -407,6 +444,177 @@ select { appearance: none; background-image: url('data:image/svg+xml;charset=US-
 }
 .cname-pill:active { box-shadow: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light); }
 .cname-pill.sel { background: var(--primary-blue); color: #FFFFFF; box-shadow: 3px 3px 10px rgba(114, 213, 246, 0.4); }
+
+.count-header-card { overflow: visible; z-index: 30; }
+.counter-picker { position: relative; z-index: 20; margin-top: 10px; }
+.counter-picker-trigger {
+  width: 100%;
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 16px;
+  border: 1px solid rgba(0, 109, 119, .10);
+  border-radius: 18px;
+  background: #fff;
+  color: #12384a;
+  box-shadow: inset 3px 3px 8px rgba(83, 122, 137, .12), inset -3px -3px 8px rgba(255,255,255,.92);
+  cursor: pointer;
+  text-align: left;
+}
+.counter-picker-trigger-copy { min-width:0; display:flex; flex-direction:column; gap:2px; }
+.counter-picker-trigger-copy small { color:#587784; font-size:10px; font-weight:700; }
+.counter-picker-trigger-copy strong { overflow:hidden; color:#12384a; font-size:14px; text-overflow:ellipsis; white-space:nowrap; }
+.counter-picker-chevron { flex:0 0 auto; color:#006d77; font-size:16px; transition:transform .2s ease; }
+.counter-picker-trigger[aria-expanded="true"] .counter-picker-chevron { transform:rotate(180deg); }
+.counter-picker-menu {
+  position:absolute;
+  z-index:90;
+  top:calc(100% + 10px);
+  left:0;
+  right:0;
+  padding:16px;
+  border:1px solid rgba(0,109,119,.12);
+  border-radius:20px;
+  background:#fff;
+  box-shadow:0 18px 40px rgba(31,78,93,.18);
+}
+.counter-picker-menu[hidden] { display:none; }
+.counter-picker-title { display:flex; justify-content:space-between; gap:12px; margin-bottom:10px; color:#12384a; font-size:12px; font-weight:800; }
+.counter-picker-title span { color:#587784; font-size:10px; font-weight:600; }
+.counter-option-list { max-height:210px; overflow-y:auto; display:grid; gap:7px; }
+.counter-option {
+  width:100%;
+  min-height:40px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:8px 11px;
+  border:0;
+  border-radius:12px;
+  background:#f2f8f8;
+  color:#244858;
+  font:inherit;
+  font-size:13px;
+  font-weight:700;
+  cursor:pointer;
+  text-align:left;
+}
+.counter-option-mark {
+  width:20px;
+  height:20px;
+  display:grid;
+  place-items:center;
+  flex:0 0 auto;
+  border:2px solid #83c5be;
+  border-radius:6px;
+  background:#fff;
+  color:#fff;
+  font-size:12px;
+}
+.counter-option.sel { background:#e2f3f1; color:#006d77; }
+.counter-option.sel .counter-option-mark { border-color:#006d77; background:#006d77; }
+.counter-add-row { display:grid; grid-template-columns:minmax(0,1fr) 44px; gap:8px; margin-top:12px; padding-top:12px; border-top:1px solid #e5eeee; }
+.counter-add-row input { min-width:0; min-height:44px; padding:9px 12px; background:#f7fbfb; }
+.counter-add-row button { width:44px; min-height:44px; padding:0; border-radius:13px; font-size:21px; }
+.counter-selected-chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+.counter-selected-chip { display:inline-flex; align-items:center; gap:5px; padding:6px 10px; border-radius:999px; background:#e2f3f1; color:#006d77; font-size:11px; font-weight:800; }
+
+.count-remark-picker { margin-top:8px; }
+.count-remark-trigger {
+  width:100%;
+  min-height:48px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:9px 14px;
+  border:1px solid rgba(0,109,119,.12);
+  border-radius:15px;
+  background:#fff;
+  color:#12384a;
+  box-shadow:inset 3px 3px 7px rgba(83,122,137,.10), inset -3px -3px 7px rgba(255,255,255,.92);
+  cursor:pointer;
+  text-align:left;
+}
+.count-remark-trigger strong {
+  min-width:0;
+  overflow:hidden;
+  font-size:13px;
+  font-weight:700;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.count-remark-trigger .counter-picker-chevron { font-size:15px; }
+.count-remark-trigger[aria-expanded="true"] .counter-picker-chevron { transform:rotate(180deg); }
+.count-remark-menu {
+  margin-top:8px;
+  padding:14px;
+  border:1px solid rgba(0,109,119,.12);
+  border-radius:17px;
+  background:#fff;
+  box-shadow:0 12px 26px rgba(31,78,93,.12);
+}
+.count-remark-menu[hidden] { display:none; }
+.count-remark-menu-head {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:9px;
+  color:#12384a;
+  font-size:12px;
+  font-weight:800;
+}
+.count-remark-menu-head button {
+  width:30px;
+  height:30px;
+  padding:0;
+  border:0;
+  border-radius:10px;
+  background:#eef7f7;
+  color:#006d77;
+  cursor:pointer;
+}
+.count-remark-options { max-height:190px; overflow-y:auto; display:grid; gap:7px; }
+.count-remark-option {
+  min-height:39px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:8px 10px;
+  border-radius:12px;
+  background:#f2f8f8;
+  color:#244858;
+  font-size:12px;
+  font-weight:700;
+  cursor:pointer;
+}
+.count-remark-option input {
+  width:18px;
+  height:18px;
+  margin:0;
+  flex:0 0 auto;
+  accent-color:#006d77;
+}
+.count-remark-add-row {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 42px;
+  gap:8px;
+  margin-top:11px;
+  padding-top:11px;
+  border-top:1px solid #e5eeee;
+}
+.count-remark-add-row input { min-width:0; min-height:42px; padding:8px 11px; background:#f7fbfb; }
+.count-remark-add-row button { width:42px; min-height:42px; padding:0; border-radius:12px; font-size:20px; }
+
+@media (max-width: 620px) {
+  .citem { align-items:flex-start; padding:18px 16px; gap:12px; }
+  .item-toggle { padding:8px; }
+  .cqty, .oh-badge { width:88px; height:58px; }
+  .count-value-stack { gap:10px; }
+}
 
 .vrow { display: flex; align-items: center; padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.4); gap: 12px; }
 .vrow.diff { background: rgba(251, 113, 133, 0.05); }
@@ -5241,6 +5449,204 @@ body {
   text-align: center !important;
 }
 
+/* v58 Admin master-data groups: collapsed by default to keep the page compact. */
+.admin-master-group {
+  margin-bottom: 16px;
+  overflow: hidden;
+  border-radius: 24px;
+  background: var(--neu-surface);
+  box-shadow: 8px 8px 16px var(--neu-shadow-dark), -8px -8px 16px var(--neu-shadow-light);
+}
+
+.admin-master-group > summary {
+  min-height: 72px;
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  list-style: none;
+  color: var(--text-main);
+  font-size: 15px;
+  font-weight: 800;
+  user-select: none;
+}
+
+.admin-master-group > summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-master-group-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-master-group-hint {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.admin-master-group-chevron {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(131, 197, 190, .16);
+  color: var(--primary-blue);
+  transition: transform .2s ease;
+}
+
+.admin-master-group[open] .admin-master-group-chevron {
+  transform: rotate(180deg);
+}
+
+.admin-master-group-body {
+  padding: 0 14px 16px;
+  border-top: 1px solid rgba(255,255,255,.55);
+}
+
+.admin-delete-icon {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.admin-delete-icon svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  stroke: currentColor;
+}
+
+@media (max-width: 560px) {
+  .admin-master-group > summary {
+    min-height: 64px;
+    padding: 15px 16px;
+  }
+
+  .admin-master-group-hint {
+    display: none;
+  }
+}
+
+.backup-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
+}
+
+.backup-panel {
+  min-width: 0;
+  padding: 22px;
+  border-radius: 24px;
+  background: var(--neu-surface);
+  box-shadow: 8px 8px 16px var(--neu-shadow-dark), -8px -8px 16px var(--neu-shadow-light);
+}
+
+.backup-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+  color: var(--text-main);
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.backup-panel-title svg {
+  width: 23px;
+  height: 23px;
+  color: var(--primary-blue);
+}
+
+.backup-count-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.backup-count-chip {
+  padding: 10px 8px;
+  border-radius: 14px;
+  background: rgba(131,197,190,.13);
+  text-align: center;
+}
+
+.backup-count-chip strong {
+  display: block;
+  color: var(--text-main);
+  font-family: 'Fredoka','Mitr',sans-serif;
+  font-size: 19px;
+}
+
+.backup-count-chip span {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.backup-progress {
+  height: 10px;
+  margin-top: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(131,197,190,.16);
+}
+
+.backup-progress > span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary-blue);
+  transition: width .2s ease;
+}
+
+.backup-file-input {
+  width: 100%;
+  padding: 14px;
+  border: 1px dashed rgba(0,109,119,.28) !important;
+  border-radius: 16px !important;
+  background: rgba(255,255,255,.48) !important;
+  cursor: pointer;
+  box-shadow: none !important;
+}
+
+.backup-history-row {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255,255,255,.55);
+}
+
+.backup-history-row:last-child {
+  border-bottom: 0;
+}
+
+@media (max-width: 900px) {
+  .backup-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .backup-panel {
+    padding: 16px;
+  }
+
+  .backup-count-grid {
+    grid-template-columns: repeat(2, minmax(0,1fr));
+  }
+}
+
 </style>
 </head>
 <body>
@@ -5256,7 +5662,7 @@ function fmtDMY(value) {
   if (Number.isNaN(d.getTime())) return String(value);
   return d.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
-window.__CYCLE_COUNT_BUILD__ = 'v54';
+window.__CYCLE_COUNT_BUILD__ = 'v59';
 
 let _viewportSyncFrame = 0;
 function syncViewportSize() {
@@ -5285,11 +5691,70 @@ let S = {};
 let _html5Qr = null;   
 let _xlsxRawRows = null;   
 let _xlsxParsed  = null;   
+let _backupParsed = null;
+let _lastBackupExport = null;
 let _svDashOpenVarianceIdx = null;   
 let _dashTab = 'summary';
 let _navStack = [];
 const NAV_DETAIL_PAGES = new Set(['c-count','sv-detail','ad-txlog','ad-new']);
 const BACK_BUTTON_PAGES = new Set(['c-count','sv-detail','sv-list','ad-txlog','ad-new']);
+
+async function invokeAdminMaster(action, payload = {}) {
+  if (prof?.role !== 'admin') throw new Error('คำสั่งนี้ทำได้เฉพาะ Admin เท่านั้น');
+  const { data, error } = await sb.functions.invoke('admin-master-data', {
+    body: { action, ...payload },
+  });
+  if (error) {
+    let message = error.message || 'เรียกใช้งานระบบ Admin ไม่สำเร็จ';
+    try {
+      const detail = await error.context?.json();
+      message = detail?.error || detail?.message || message;
+    } catch (_) {}
+    throw new Error(message);
+  }
+  if (!data?.ok) throw new Error(data?.error || 'ระบบ Admin ทำรายการไม่สำเร็จ');
+  return data;
+}
+
+async function invokeAdminBackup(action, payload = {}) {
+  if (prof?.role !== 'admin') throw new Error('ระบบ Backup/Restore ใช้ได้เฉพาะ Admin เท่านั้น');
+  const { data, error } = await sb.functions.invoke('admin-backup', {
+    body: { action, ...payload },
+  });
+  if (error) {
+    let message = error.message || 'เรียกใช้งานระบบ Backup/Restore ไม่สำเร็จ';
+    try {
+      const detail = await error.context?.json();
+      message = detail?.error || detail?.message || message;
+    } catch (_) {}
+    throw new Error(message);
+  }
+  if (!data?.ok) throw new Error(data?.error || 'ระบบ Backup/Restore ทำรายการไม่สำเร็จ');
+  return data;
+}
+
+function adminOnlyMessage() {
+  alert('คำสั่งนี้ทำได้เฉพาะ Admin เท่านั้น');
+}
+
+const BACKUP_FORMAT = 'CYCLE_COUNT_BACKUP';
+const BACKUP_FORMAT_VERSION = '1';
+const BACKUP_BATCH_SIZE = 500;
+const BACKUP_SHEET_SPECS = [
+  { sheet:'Sessions', table:'count_sessions', scope:'session', columns:['id','name','status','created_by','created_at','closed_at','show_oh','max_rounds','repeat_match_action'], restore:true },
+  { sheet:'Locations', table:'locations', scope:'master', columns:['id','code','zone','area','row_no','level','type','category'], restore:true },
+  { sheet:'Items', table:'items', scope:'master', columns:['id','code','description','inventory_type','category'], restore:true },
+  { sheet:'Assignments', table:'assignments', scope:'session', columns:['id','session_id','location_id','assigned_to','status','created_at','counter_r2_id','counter_r3_id'], restore:true },
+  { sheet:'Stock', table:'stock_snapshot', scope:'session', columns:['id','session_id','location_id','item_id','onhand_qty','created_at','al_qty'], restore:true },
+  { sheet:'Stock_Detail', table:'stock_snapshot_detail', scope:'session', columns:['id','session_id','location_id','item_id','license_plate','lot','inventory_status','qty','created_at','uom'], restore:true },
+  { sheet:'Counts', table:'count_records', scope:'assignment', columns:['id','assignment_id','item_id','round','count_qty','counted_by','counted_at','actual_counter_id','remark','photo_url','actual_counter_name'], restore:true },
+  { sheet:'Approvals', table:'variance_approvals', scope:'assignment', columns:['id','assignment_id','item_id','final_qty','variance','resolution','supervisor_note','approved_by','approved_at','wms_fixed','wms_fixed_at','wms_fixed_by'], restore:true },
+  { sheet:'Audit', table:'audit_log', scope:'session', columns:['id','created_at','session_id','location_id','assignment_id','item_id','action','old_value','new_value','performed_by'], restore:true },
+  { sheet:'Profiles', table:'profiles', scope:'reference', columns:['id','name','role','created_at'], restore:false },
+  { sheet:'Counters', table:'counter_names', scope:'reference', columns:['id','name','created_by','created_at'], restore:true },
+  { sheet:'Remarks', table:'remark_options', scope:'reference', columns:['id','context','label','created_by','created_at'], restore:true },
+];
+const BACKUP_RESTORE_ORDER = ['Locations','Items','Counters','Remarks','Sessions','Assignments','Stock','Stock_Detail','Counts','Approvals','Audit'];
 
 async function boot() {
   try {
@@ -5471,6 +5936,7 @@ function navIconSvg(type, size=20) {
     session: `<svg ${common}><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>`,
     assign: `<svg ${common}><circle cx="8" cy="8" r="3"/><path d="M2 20a6 6 0 0 1 12 0"/><path d="M16 8h6M19 5v6"/></svg>`,
     import: `<svg ${common}><path d="M12 3v12"/><path d="m7 10-7 7-7-7"/><path d="M4 21h16"/></svg>`,
+    backup: `<svg ${common}><ellipse cx="12" cy="5" rx="7" ry="3"/><path d="M5 5v6c0 1.7 3.1 3 7 3s7-1.3 7-3V5"/><path d="M5 11v6c0 1.7 3.1 3 7 3 1.2 0 2.4-.13 3.4-.37"/><path d="m17 15 2 2 3-4"/></svg>`,
     users: `<svg ${common}><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="3"/><path d="M19 8v6M16 11h6"/></svg>`,
     warehouse: `<svg ${common}><path d="M3 9.5 12 4l9 5.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5Z"/><path d="M9 21v-6h6v6"/></svg>`
   };
@@ -5547,7 +6013,7 @@ function renderResponsivePreviewContent() {
     <div class="summary-page-header">
       <div class="summary-greeting-wrap">
         <div class="summary-greeting">Hello, AuD</div>
-        <div class="summary-greeting-sub">Cycle Count Dashboard · Smart Back Navigation v54</div>
+        <div class="summary-greeting-sub">Cycle Count Dashboard · Backup and Restore v59</div>
       </div>
       <div class="summary-header-actions">
         <label class="summary-session-search" title="เลือก Session">
@@ -5660,7 +6126,7 @@ function render() {
     'ad-import':  'จัดการงาน / Sessions',
     'ad-history': 'ประวัติการนับ',
     'ad-txlog':   'Transaction Log',
-    'ad-users':   'จัดการทีมงาน',
+    'ad-users':   'จัดการข้อมูลระบบ',
   };
 
   const currentRole = prof?.role || 'counter';
@@ -5693,10 +6159,11 @@ function render() {
       { group: 'manage', name: 'จัดการงาน / Sessions', icon: navIconSvg('manage'), children: [
         { id:'manage-sessions', name:'Session', icon:navIconSvg('session'), action:"openManageMenu('sessions')" },
         { id:'manage-assign', name:'จ่ายงาน', icon:navIconSvg('assign'), action:"openManageMenu('assign')" },
-        { id:'manage-import', name:'Import', icon:navIconSvg('import'), action:"openManageMenu('import')" }
+        { id:'manage-import', name:'Import WMS', icon:navIconSvg('import'), action:"openManageMenu('import')" },
+        { id:'manage-backup', name:'Backup / Restore', icon:navIconSvg('backup'), action:"openManageMenu('backup')" }
       ]},
       { id: 'ad-history', name: 'ประวัติการนับ', icon: navIconSvg('history') },
-      { id: 'ad-users', name: 'จัดการทีมงาน', icon: navIconSvg('users') }
+      { id: 'ad-users', name: 'จัดการข้อมูลระบบ', icon: navIconSvg('users') }
     ]
   };
 
@@ -5851,6 +6318,53 @@ function escapeWmsText(value='') {
   }[ch]));
 }
 
+function adminTrashIconSvg(size=16) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none"
+    aria-hidden="true" focusable="false">
+    <path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5m4-5v5"
+      stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+function inlineJson(value) {
+  return JSON.stringify(value)
+    .replace(/'/g, '\\u0027')
+    .replace(/</g, '\\u003c');
+}
+
+function splitActualCounterNames(value='') {
+  return [...new Set(
+    String(value || '')
+      .split(',')
+      .map(name => name.trim())
+      .filter(Boolean)
+  )];
+}
+
+function actualCounterNamesFromRecords(records=[]) {
+  return [...new Set(
+    (records || []).flatMap(record => splitActualCounterNames(record?.actual_counter_name))
+  )];
+}
+
+function actualCounterLabel(records=[]) {
+  const names = actualCounterNamesFromRecords(records);
+  return names.length ? names.join(', ') : 'ไม่ระบุคนนับ';
+}
+
+function buildActualCounterMap(records=[]) {
+  const map = {};
+  (records || []).forEach(record => {
+    if (!record?.assignment_id) return;
+    map[record.assignment_id] = map[record.assignment_id] || new Set();
+    splitActualCounterNames(record.actual_counter_name)
+      .forEach(name => map[record.assignment_id].add(name));
+  });
+  return Object.fromEntries(
+    Object.entries(map).map(([assignmentId, names]) => [assignmentId, [...names]])
+  );
+}
+
 function wmsDomKey(assignmentId, itemId) {
   return `${assignmentId}_${itemId}`.replace(/[^a-zA-Z0-9_-]/g, '_');
 }
@@ -5893,7 +6407,7 @@ function fillDependentSelect(id, values, allLabel='ทั้งหมด', prefe
 }
 
 function cnt() { return Q('cnt'); }
-function rLabel(r) { return {admin:'Admin',counter:'Counter',supervisor:'Supervisor'}[r] || (r||''); }
+function rLabel(r) { return {admin:'Admin',counter:'User',supervisor:'Supervisor'}[r] || (r||''); }
 function errBox(msg) { return `<div class="card"><div class="alert alert-red">❌ ${msg}</div></div>`; }
 
 function computeZone(locCode, desc) {
@@ -6274,6 +6788,24 @@ function onScanSuccess(text) {
   go('c-count', { aid: match.id });
 }
 
+const COUNT_REMARK_PRESETS = [
+  'สินค้าเสียหาย',
+  'ไม่พบสินค้า',
+  'สินค้าอยู่ผิด Location',
+  'LPN / Lot ไม่ตรง',
+  'จำนวนไม่ตรง',
+  'นับยาก / ต้องตรวจซ้ำ',
+];
+
+function parseCountRemarks(value='') {
+  return [...new Set(
+    String(value || '')
+      .split(/\r?\n/)
+      .map(text => text.trim())
+      .filter(Boolean)
+  )];
+}
+
 async function loadCCount() {
   const { aid } = S;
 
@@ -6289,20 +6821,24 @@ async function loadCCount() {
   const l   = asgn.locations;
   const sub = [l.zone, l.area, l.row_no && 'Row '+l.row_no, l.level && 'Lv.'+l.level].filter(Boolean).join(' · ');
 
-  const [{ data: snaps }, { data: details }, { data: sessInfo }, { data: counterNames }] = await Promise.all([
+  const [{ data: snaps }, { data: details }, { data: sessInfo }, { data: counterNames }, { data: countRemarkRows }] = await Promise.all([
     sb.from('stock_snapshot')
       .select('item_id,onhand_qty,al_qty,items(id,code,description)')
       .eq('session_id', asgn.session_id)
       .eq('location_id', asgn.location_id),
     sb.from('stock_snapshot_detail')
-      .select('item_id,license_plate,lot,inventory_status,qty')
+      .select('item_id,license_plate,lot,inventory_status,qty,uom')
       .eq('session_id', asgn.session_id)
       .eq('location_id', asgn.location_id),
     sb.from('count_sessions').select('show_oh').eq('id', asgn.session_id).single(),
     sb.from('counter_names').select('id,name').order('name'),
+    sb.from('remark_options').select('id,label').eq('context','count').order('label'),
   ]);
 
   window._counterNames = counterNames || [];
+  window._countRemarkOptions = countRemarkRows?.length
+    ? countRemarkRows
+    : COUNT_REMARK_PRESETS.map(label => ({ id:null, label }));
   const showOH = sessInfo?.show_oh === true;
 
   if (!snaps?.length) {
@@ -6344,18 +6880,18 @@ async function loadCCount() {
     if (dets.length) {
       const rows = dets.map(d => `
         <tr>
-          <td style="padding:4px 8px 4px 0;font-size:12px;color:var(--text-muted);font-family:ui-monospace,monospace">${d.license_plate||'—'}</td>
-          <td style="padding:4px 8px 4px 0;font-size:12px;color:var(--text-muted)">${d.lot||'—'}</td>
-          <td style="padding:4px 0;font-size:12px"><span class="tag tag-gray" style="font-size:10px">${d.inventory_status||'—'}</span></td>
-          ${showOH ? `<td style="padding:4px 0 4px 8px;font-size:13px;font-weight:800;text-align:right;color:var(--text-main)">${d.qty}</td>` : ''}
+          <td style="font-family:ui-monospace,monospace">${escapeWmsText(d.license_plate||'—')}</td>
+          <td>${escapeWmsText(d.lot||'—')}</td>
+          <td><span class="tag tag-gray" style="font-size:10px">${escapeWmsText(d.inventory_status||'—')}</span></td>
+          ${showOH ? `<td class="num">${d.qty ?? '—'}</td><td class="uom">${escapeWmsText(d.uom||'—')}</td>` : ''}
         </tr>`).join('');
-      detHtml = `<div style="margin-top:10px;overflow-x:auto">
-        <table style="border-collapse:collapse;min-width:100%">
+      detHtml = `<div class="citem-detail-scroll">
+        <table class="citem-detail-table">
           <thead><tr>
-            <th style="font-size:10px;color:var(--primary-blue);font-weight:800;text-align:left;padding:0 8px 4px 0;">LICENSE PLATE</th>
-            <th style="font-size:10px;color:var(--primary-blue);font-weight:800;text-align:left;padding:0 8px 4px 0;">LOT</th>
-            <th style="font-size:10px;color:var(--primary-blue);font-weight:800;text-align:left;padding:0 0 4px 0;">STATUS</th>
-            ${showOH ? `<th style="font-size:10px;color:var(--primary-blue);font-weight:800;text-align:right;padding:0 0 4px 8px;">QTY</th>` : ''}
+            <th>LICENSE PLATE</th>
+            <th>LOT</th>
+            <th>STATUS</th>
+            ${showOH ? `<th style="text-align:right">QTY</th><th>UNIT</th>` : ''}
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
@@ -6367,6 +6903,18 @@ async function loadCCount() {
     if (photoUrl) window._photoMap[it.id] = photoUrl;
 
     const hasExtra = !!(pr?.remark || photoUrl);
+    const selectedRemarks = parseCountRemarks(pr?.remark);
+    const remarkChoices = [...(window._countRemarkOptions || [])];
+    selectedRemarks.forEach(label => {
+      if (!remarkChoices.some(option => option.label === label)) remarkChoices.push({ id:null, label });
+    });
+    const remarkOptions = remarkChoices.map(option => `
+      <label class="count-remark-option">
+        <input type="checkbox" value="${escapeWmsText(option.label)}"
+          ${selectedRemarks.includes(option.label)?'checked':''}
+          onchange="refreshCountRemarkSummary('${it.id}')">
+        <span>${escapeWmsText(option.label)}</span>
+      </label>`).join('');
 
     items += `<div class="citem-wrap">
       <div class="citem">
@@ -6376,7 +6924,7 @@ async function loadCCount() {
           ${detHtml}
         </div>
         <button class="item-toggle ${hasExtra?'has':''}" id="tg_${it.id}" onclick="toggleExtra('${it.id}')" title="หมายเหตุ/รูป">📝</button>
-        <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+        <div class="count-value-stack">
           <input type="number" class="cqty ${v !== undefined ? 'ok' : ''}"
             id="q_${it.id}" min="0" step="1"
             value="${v !== undefined ? v : ''}" placeholder="0"
@@ -6385,8 +6933,32 @@ async function loadCCount() {
         </div>
       </div>
       <div class="item-extra ${hasExtra?'open':''}" id="extra_${it.id}">
-        <label style="font-size:12px">หมายเหตุ (ไม่บังคับ)</label>
-        <textarea id="rmk_${it.id}" placeholder="เช่น สินค้าเสียหาย, นับยาก ฯลฯ">${pr?.remark || ''}</textarea>
+        <label style="font-size:12px">หมายเหตุ (ไม่บังคับ) — เลือกได้หลายข้อ</label>
+        <div class="count-remark-picker" id="count_remark_picker_${it.id}">
+          <button type="button" class="count-remark-trigger" id="count_remark_trigger_${it.id}"
+            aria-haspopup="true" aria-expanded="false"
+            onclick="toggleCountRemarkDropdown(event,'${it.id}')">
+            <strong id="count_remark_summary_${it.id}">
+              ${selectedRemarks.length ? `${selectedRemarks.length} ข้อ: ${escapeWmsText(selectedRemarks.join(', '))}` : 'เลือกหมายเหตุ'}
+            </strong>
+            <span class="counter-picker-chevron">⌄</span>
+          </button>
+          <div class="count-remark-menu" id="count_remark_menu_${it.id}" hidden onclick="event.stopPropagation()">
+            <div class="count-remark-menu-head">
+              <span>เลือกหมายเหตุได้หลายข้อ</span>
+              <button type="button" onclick="toggleCountRemarkDropdown(event,'${it.id}')" aria-label="ปิด">✕</button>
+            </div>
+            <div class="count-remark-options" id="count_remark_options_${it.id}">${remarkOptions}</div>
+            ${prof?.role === 'admin' ? `<div class="count-remark-add-row">
+              <input type="text" id="count_remark_custom_${it.id}" placeholder="เพิ่มหมายเหตุใหม่..."
+                onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomCountRemark(event,'${it.id}');}">
+              <button type="button" class="btn btn-green"
+                onclick="addCustomCountRemark(event,'${it.id}')" aria-label="เพิ่มหมายเหตุ">+</button>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm" style="width:100%;margin-top:8px"
+              onclick="go('ad-users')">⚙️ แก้ไข / ลบรายการหมายเหตุ</button>` : ''}
+          </div>
+        </div>
         <div style="margin-top:14px">
           <label style="font-size:12px">รูปถ่าย (ไม่บังคับ)</label><br>
           <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap">
@@ -6406,7 +6978,7 @@ async function loadCCount() {
   const ids = snaps.map(s => s.item_id).join(',');
 
   cnt().innerHTML = `
-    <div class="card">
+    <div class="card count-header-card">
       <div class="mono" style="font-size:22px;font-weight:800;color:var(--text-main)">${l.code}</div>
       <div style="font-size:14px;color:var(--text-muted);margin-top:4px; font-weight:600;">${sub}</div>
       <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
@@ -6417,17 +6989,33 @@ async function loadCCount() {
         🔄 ยอดไม่ตรงจากรอบที่ ${round-1} — กรุณานับใหม่อย่างระมัดระวัง
       </div>` : ''}
       <div class="fg" style="margin-top:20px;margin-bottom:0">
-        <label>ผู้นับจริง (ทีมนับ) — แตะชื่อเพื่อเลือกได้หลายคน</label>
-        <div id="counterNamePills" class="cname-pill-wrap"></div>
-        <div style="display:flex;gap:10px;margin-top:12px">
-          <input type="text" id="counterNameNewInput" placeholder="พิมพ์ชื่อผู้นับใหม่..."
-            onkeydown="if(event.key==='Enter'){event.preventDefault();confirmNewCounterName();}">
-          <button type="button" class="btn btn-green btn-sm" onclick="confirmNewCounterName()" style="flex-shrink:0">+ เพิ่ม</button>
+        <label>ผู้นับจริง (ทีมนับ)</label>
+        <div class="counter-picker" id="counterPicker">
+          <button type="button" class="counter-picker-trigger" id="counterPickerTrigger"
+            aria-haspopup="true" aria-expanded="false" onclick="toggleCounterDropdown(event)">
+            <span class="counter-picker-trigger-copy">
+              <small>เลือกได้หลายคน</small>
+              <strong id="counterPickerSummary">เลือกผู้นับจริง</strong>
+            </span>
+            <span class="counter-picker-chevron">⌄</span>
+          </button>
+          <div class="counter-picker-menu" id="counterPickerMenu" hidden onclick="event.stopPropagation()">
+            <div class="counter-picker-title">รายชื่อผู้นับ <span>แตะเพื่อเลือก / ยกเลิก</span></div>
+            <div id="counterNameOptions" class="counter-option-list"></div>
+            ${prof?.role === 'admin' ? `<div class="counter-add-row">
+              <input type="text" id="counterNameNewInput" placeholder="เพิ่มชื่อผู้นับใหม่..."
+                onkeydown="if(event.key==='Enter'){event.preventDefault();confirmNewCounterName();}">
+              <button type="button" class="btn btn-green" onclick="confirmNewCounterName()" aria-label="เพิ่มชื่อผู้นับ">+</button>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm" style="width:100%;margin-top:8px"
+              onclick="go('ad-users')">⚙️ แก้ไข / ลบรายชื่อคนนับ</button>` : ''}
+          </div>
         </div>
+        <div id="counterSelectedChips" class="counter-selected-chips"></div>
       </div>
     </div>
     <div class="sec">📦 ${snaps.length} รายการ — กรอกจำนวนที่นับได้จริง</div>
-    <div class="card card-flush">${items}</div>
+    <div class="card card-flush count-items-card">${items}</div>
     <div style="padding:16px 20px">
       <div id="ca"></div>
       <button class="btn btn-green" id="cb" style="width:100%"
@@ -6437,27 +7025,68 @@ async function loadCCount() {
     </div>`;
 
   window._selectedCounters = new Set((window._lastPickedCounterNames||[]).filter(n => (window._counterNames||[]).some(c=>c.name===n)));
-  renderCounterPills();
+  renderCounterPicker();
 
   if (asgn.status === 'pending') {
     await sb.from('assignments').update({ status:'in_progress' }).eq('id', aid);
   }
 }
 
-function renderCounterPills() {
-  const wrap = Q('counterNamePills');
-  if (!wrap) return;
+function renderCounterPicker() {
+  const wrap = Q('counterNameOptions');
+  const summary = Q('counterPickerSummary');
+  const chips = Q('counterSelectedChips');
+  if (!wrap || !summary || !chips) return;
   const names = window._counterNames || [];
   window._selectedCounters = window._selectedCounters || new Set();
+  const selected = [...window._selectedCounters];
+
+  summary.textContent = selected.length
+    ? `${selected.length} คน: ${selected.join(', ')}`
+    : 'เลือกผู้นับจริง';
+  chips.innerHTML = selected.map(name =>
+    `<span class="counter-selected-chip">✓ ${escapeWmsText(name)}</span>`
+  ).join('');
+
   if (!names.length) {
-    wrap.innerHTML = `<div style="font-size:13px;color:var(--text-muted);padding:4px 0">ยังไม่มีชื่อในระบบ — เพิ่มชื่อใหม่ด้านล่างได้เลย</div>`;
+    wrap.innerHTML = `<div style="font-size:13px;color:#587784;padding:8px 2px">ยังไม่มีชื่อในระบบ — เพิ่มชื่อใหม่ด้านล่างได้เลย</div>`;
     return;
   }
-  wrap.innerHTML = names.map(c => {
+  wrap.innerHTML = names.map((c, index) => {
     const sel = window._selectedCounters.has(c.name);
-    const safe = c.name.replace(/'/g,"\\'");
-    return `<button type="button" class="cname-pill ${sel?'sel':''}" onclick="toggleCounterName('${safe}')">${sel?'✓ ':''}${c.name}</button>`;
+    return `<button type="button" class="counter-option ${sel?'sel':''}" onclick="toggleCounterByIndex(${index})">
+      <span class="counter-option-mark">${sel?'✓':''}</span>
+      <span>${escapeWmsText(c.name)}</span>
+    </button>`;
   }).join('');
+}
+
+function toggleCounterDropdown(event) {
+  event?.stopPropagation();
+  const menu = Q('counterPickerMenu');
+  const trigger = Q('counterPickerTrigger');
+  if (!menu || !trigger) return;
+  const willOpen = menu.hidden;
+  menu.hidden = !willOpen;
+  trigger.setAttribute('aria-expanded', String(willOpen));
+}
+
+function closeCounterDropdown() {
+  const menu = Q('counterPickerMenu');
+  const trigger = Q('counterPickerTrigger');
+  if (menu) menu.hidden = true;
+  if (trigger) trigger.setAttribute('aria-expanded', 'false');
+}
+
+document.addEventListener('click', event => {
+  const picker = Q('counterPicker');
+  if (picker && !picker.contains(event.target)) closeCounterDropdown();
+  if (!event.target.closest('.count-remark-picker')) closeCountRemarkDropdowns();
+});
+
+function toggleCounterByIndex(index) {
+  const name = window._counterNames?.[index]?.name;
+  if (name) toggleCounterName(name);
 }
 
 function toggleCounterName(name) {
@@ -6465,30 +7094,113 @@ function toggleCounterName(name) {
   if (window._selectedCounters.has(name)) window._selectedCounters.delete(name);
   else window._selectedCounters.add(name);
   window._lastPickedCounterNames = [...window._selectedCounters];
-  renderCounterPills();
+  renderCounterPicker();
 }
 
 async function confirmNewCounterName() {
+  if (prof?.role !== 'admin') { adminOnlyMessage(); return; }
   const input = Q('counterNameNewInput');
   const name = input?.value.trim();
   if (!name) { alert('กรุณาพิมพ์ชื่อผู้นับก่อน'); return; }
-
-  const { data, error } = await sb.from('counter_names')
-    .upsert({ name, created_by: me.id }, { onConflict: 'name', ignoreDuplicates: true })
-    .select('id,name');
-
-  if (error) { alert('เพิ่มชื่อไม่สำเร็จ: ' + error.message); return; }
-
-  window._counterNames = window._counterNames || [];
-  if (!window._counterNames.some(c => c.name === name)) {
-    window._counterNames.push({ name });
+  try {
+    const result = await invokeAdminMaster('counter_create', { name });
+    window._counterNames = window._counterNames || [];
+    if (!window._counterNames.some(c => c.name === result.row.name)) {
+      window._counterNames.push(result.row);
+    }
+    window._selectedCounters = window._selectedCounters || new Set();
+    window._selectedCounters.add(result.row.name);
+    window._lastPickedCounterNames = [...window._selectedCounters];
+    window._counterNames.sort((a,b) => String(a.name).localeCompare(String(b.name), 'th'));
+    renderCounterPicker();
+    input.value = '';
+  } catch (error) {
+    alert('เพิ่มชื่อไม่สำเร็จ: ' + error.message);
   }
-  window._selectedCounters = window._selectedCounters || new Set();
-  window._selectedCounters.add(name);
-  window._lastPickedCounterNames = [...window._selectedCounters];
+}
 
-  renderCounterPills();
-  input.value = '';
+function closeCountRemarkDropdowns(exceptItemId='') {
+  document.querySelectorAll('.count-remark-menu').forEach(menu => {
+    const itemId = menu.id.replace('count_remark_menu_', '');
+    if (!exceptItemId || itemId !== String(exceptItemId)) {
+      menu.hidden = true;
+      Q(`count_remark_trigger_${itemId}`)?.setAttribute('aria-expanded', 'false');
+    }
+  });
+}
+
+function toggleCountRemarkDropdown(event, itemId) {
+  event?.preventDefault();
+  event?.stopPropagation();
+  const menu = Q(`count_remark_menu_${itemId}`);
+  const trigger = Q(`count_remark_trigger_${itemId}`);
+  if (!menu || !trigger) return;
+  const willOpen = menu.hidden;
+  closeCountRemarkDropdowns(itemId);
+  menu.hidden = !willOpen;
+  trigger.setAttribute('aria-expanded', String(willOpen));
+}
+
+function getSelectedCountRemarks(itemId) {
+  const list = Q(`count_remark_options_${itemId}`);
+  if (!list) return [];
+  return [...new Set(
+    [...list.querySelectorAll('input[type="checkbox"]')]
+      .filter(box => box.checked)
+      .map(box => box.value.trim())
+      .filter(Boolean)
+  )];
+}
+
+function refreshCountRemarkSummary(itemId) {
+  const selected = getSelectedCountRemarks(itemId);
+  const summary = Q(`count_remark_summary_${itemId}`);
+  const toggle = Q(`tg_${itemId}`);
+  if (summary) {
+    summary.textContent = selected.length
+      ? `${selected.length} ข้อ: ${selected.join(', ')}`
+      : 'เลือกหมายเหตุ';
+  }
+  if (toggle) toggle.classList.toggle('has', selected.length > 0 || !!window._photoMap?.[itemId]);
+}
+
+async function addCustomCountRemark(event, itemId) {
+  event?.preventDefault();
+  event?.stopPropagation();
+  if (prof?.role !== 'admin') { adminOnlyMessage(); return; }
+  const input = Q(`count_remark_custom_${itemId}`);
+  const list = Q(`count_remark_options_${itemId}`);
+  const text = (input?.value || '').trim();
+  if (!text || !list) return;
+
+  const boxes = [...list.querySelectorAll('input[type="checkbox"]')];
+  let checkbox = boxes.find(box =>
+    box.value.toLocaleLowerCase('th-TH') === text.toLocaleLowerCase('th-TH')
+  );
+
+  try {
+    if (!checkbox) {
+      const result = await invokeAdminMaster('remark_create', { context:'count', label:text });
+      window._countRemarkOptions = window._countRemarkOptions || [];
+      window._countRemarkOptions.push(result.row);
+      const label = document.createElement('label');
+      label.className = 'count-remark-option';
+      checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.value = result.row.label;
+      checkbox.addEventListener('change', () => refreshCountRemarkSummary(itemId));
+      const span = document.createElement('span');
+      span.textContent = result.row.label;
+      label.append(checkbox, span);
+      list.appendChild(label);
+    }
+    checkbox.checked = true;
+    input.value = '';
+    refreshCountRemarkSummary(itemId);
+    input.focus();
+  } catch (error) {
+    alert('เพิ่มหมายเหตุไม่สำเร็จ: ' + error.message);
+  }
 }
 
 function toggleExtra(itemId) {
@@ -6539,7 +7251,7 @@ async function submitCount(aid, round, idsStr) {
       al.innerHTML = `<div class="alert alert-red">กรอกจำนวนให้ครบทุกรายการ (ถ้าไม่มีสินค้าให้กรอก 0)</div>`;
       return;
     }
-    const remark   = Q('rmk_'+iid)?.value?.trim() || null;
+    const remark   = getSelectedCountRemarks(iid).join('\n') || null;
     const photoUrl = (window._photoMap && window._photoMap[iid]) || null;
     recs.push({
       assignment_id: aid, item_id: iid, round,
@@ -6626,10 +7338,16 @@ async function loadSvDash() {
   const curName = sessions.find(s=>s.id===curSid)?.name || sessions[0].name;
   const sessOpts = sessions.map(s=>`<option value="${s.id}" ${s.id===curSid?'selected':''}>${s.name}</option>`).join('');
 
-  const { data: asgns } = await sb.from('assignments')
-    .select('id,status,assigned_to,location_id,locations(code,zone,row_no,level),profiles!assigned_to(name)')
-    .eq('session_id', curSid)
-    .order('status');
+  const [{ data: asgns }, { data: wmsRemarkRows }] = await Promise.all([
+    sb.from('assignments')
+      .select('id,status,assigned_to,location_id,locations(code,zone,row_no,level)')
+      .eq('session_id', curSid)
+      .order('status'),
+    sb.from('remark_options').select('id,label').eq('context','wms').order('label'),
+  ]);
+  window._wmsNoteOptions = wmsRemarkRows?.length
+    ? wmsRemarkRows
+    : WMS_NOTE_PRESETS.map(label => ({ id:null, label }));
 
   if (!asgns?.length) {
     cnt().innerHTML = `
@@ -6656,7 +7374,7 @@ async function loadSvDash() {
 
   const allAsgnIds = asgns.map(a => a.id);
   const [{ data: allCounts }, { data: allSnapshots }, rules] = await Promise.all([
-    sb.from('count_records').select('assignment_id,item_id,round,count_qty,counted_at').in('assignment_id', allAsgnIds),
+    sb.from('count_records').select('assignment_id,item_id,round,count_qty,counted_at,actual_counter_name').in('assignment_id', allAsgnIds),
     sb.from('stock_snapshot').select('location_id,item_id,onhand_qty').eq('session_id', curSid),
     getSessionRules(curSid),
   ]);
@@ -6670,6 +7388,7 @@ async function loadSvDash() {
     if (!countByAsgn[c.assignment_id][c.item_id]) countByAsgn[c.assignment_id][c.item_id] = {};
     countByAsgn[c.assignment_id][c.item_id][c.round] = +c.count_qty;
   });
+  const actualCountersByAssignment = buildActualCounterMap(allCounts || []);
 
   const diffAssignments = [];
   for (const a of asgns) {
@@ -6781,6 +7500,7 @@ async function loadSvDash() {
   const allWmsRows = [...wmsRows, ...pendingWmsRows];
   window._wmsRows = allWmsRows;
   window._wmsAsgnInfoMap = asgnInfoMap;
+  window._actualCountersByAssignment = actualCountersByAssignment;
 
   let diffPlus = 0, diffMinus = 0;
   const gainItemKeys = new Set();
@@ -6830,7 +7550,9 @@ async function loadSvDash() {
   countedAssignments.forEach(a => {
     if (a.location_id) countedLocationSet.add(a.location_id);
     else if (a.locations?.code) countedLocationSet.add(a.locations.code);
-    if (a.assigned_to) countedCounterSet.add(a.assigned_to);
+  });
+  (allCounts || []).forEach(c => {
+    splitActualCounterNames(c.actual_counter_name).forEach(name => countedCounterSet.add(name));
   });
   const countedItemSet = new Set();
   const countedOhKeys = new Set();
@@ -7018,23 +7740,31 @@ async function loadSvDash() {
   const varianceAngle = total ? (varCount / total) * 360 : 0;
   const statusGradient = `conic-gradient(#62dbe7 0deg ${doneAngle}deg, #ffbd59 ${doneAngle}deg ${doneAngle + varianceAngle}deg, #e6e3e5 ${doneAngle + varianceAngle}deg 360deg)`;
 
-  const byUser = {};
-  for (const a of asgns) {
-    const uid = a.assigned_to;
-    if (!byUser[uid]) byUser[uid] = { name: a.profiles?.name || '?', total:0, done:0, var:0, items:[] };
-    byUser[uid].total++;
-    if (['completed','approved'].includes(a.status)) byUser[uid].done++;
-    if (['round1_done','round2_done','round3_done'].includes(a.status)) byUser[uid].var++;
-    byUser[uid].items.push(a);
-  }
+  const byCounter = {};
+  (allCounts || []).forEach(record => {
+    const assignment = asgnInfoMap[record.assignment_id];
+    if (!assignment) return;
+    splitActualCounterNames(record.actual_counter_name).forEach(counterName => {
+      if (!byCounter[counterName]) byCounter[counterName] = { name:counterName, assignmentMap:new Map() };
+      byCounter[counterName].assignmentMap.set(assignment.id, assignment);
+    });
+  });
 
   let peopleRows = '';
-  Object.entries(byUser).forEach(([uid, u], idx) => {
+  Object.values(byCounter).sort((a,b) => a.name.localeCompare(b.name, 'th')).forEach((counter, idx) => {
+    const items = [...counter.assignmentMap.values()];
+    const u = {
+      name: counter.name,
+      items,
+      total: items.length,
+      done: items.filter(a => ['completed','approved'].includes(a.status)).length,
+      var: items.filter(a => ['round1_done','round2_done','round3_done'].includes(a.status)).length,
+    };
     const p = Math.round(u.done / u.total * 100);
-    peopleRows += `<div class="tab-row" style="border-bottom:1px solid rgba(0,0,0,0.06);padding:14px 10px" onclick="toggleUserDetail('${idx}')">
+    peopleRows += `<div class="tab-row" style="border-bottom:1px solid rgba(0,0,0,0.06);padding:14px 10px" onclick="toggleCounterDetail('${idx}')">
       <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px">
         <div style="flex:1;min-width:0">
-          <div style="font-size:16px;font-weight:700;color:var(--text-main)">👤 ${u.name}</div>
+          <div style="font-size:16px;font-weight:700;color:var(--text-main)">👤 คนนับ: ${escapeWmsText(u.name)}</div>
           <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
             <span class="tag tag-green">${u.done} เสร็จ</span>
             ${u.var ? `<span class="tag tag-amber">${u.var} variance</span>` : ''}
@@ -7073,7 +7803,7 @@ async function loadSvDash() {
       <div class="tab-row" style="display:flex;align-items:center;gap:12px; padding: 10px;" onclick="toggleVarianceDetail('${a.id}',${i})">
         <div style="flex:1;min-width:0">
           <div class="mono" style="font-size:16px;font-weight:800;color:var(--text-main)">${l?.code||'?'}</div>
-          <div style="font-size:13px;color:var(--text-muted);margin-top:4px;font-weight:600">👤 ${a.profiles?.name||'?'} · ${[l?.zone,l?.row_no,l?.level].filter(Boolean).join(' · ')}</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-top:4px;font-weight:600">👤 คนนับจริง: ${escapeWmsText((actualCountersByAssignment[a.id] || []).join(', ') || 'ไม่ระบุคนนับ')} · ${[l?.zone,l?.row_no,l?.level].filter(Boolean).join(' · ')}</div>
         </div>
         <span class="tag ${si.cls}">${si.lbl}</span>
         <span class="caret" style="font-size:18px">▾</span>
@@ -7096,7 +7826,7 @@ async function loadSvDash() {
         <div class="row" style="padding: 14px 20px;">
           <div class="row-body">
             <div class="row-title mono" style="font-size: 14px; color: var(--text-main);">${loc}</div>
-            <div class="row-sub" style="font-size: 12px;">${v.items?.code||'?'} · 👤 ${v.profiles?.name||'?'}</div>
+            <div class="row-sub" style="font-size: 12px;">${v.items?.code||'?'} · 👤 User ผู้อนุมัติ: ${escapeWmsText(v.profiles?.name||'?')}</div>
           </div>
           <div style="text-align:right;">
             <div style="font-size: 18px; font-weight: 800; font-family: 'Fredoka'; color: ${color};">${sign}${d}</div>
@@ -7299,8 +8029,8 @@ async function loadSvDash() {
 
   const teamProgressTabHtml = `
     <div>
-      <div style="font-size:18px;font-weight:800;color:var(--text-main);margin-bottom:18px">👥 ความคืบหน้าการทำงาน (Team Progress)</div>
-      ${peopleRows || `<div style="padding:30px 0;text-align:center;color:var(--text-muted);font-size:14px;font-weight:600">ยังไม่มีใครถูก Assign งาน</div>`}
+      <div style="font-size:18px;font-weight:800;color:var(--text-main);margin-bottom:18px">👥 ความคืบหน้าคนนับจริง (Team Progress)</div>
+      ${peopleRows || `<div style="padding:30px 0;text-align:center;color:var(--text-muted);font-size:14px;font-weight:600">ยังไม่มีข้อมูลคนนับจริง</div>`}
     </div>`;
 
   const varianceTabHtml = `<div>${varianceRowsHtml}</div>`;
@@ -7371,7 +8101,7 @@ async function loadSvDash() {
           <option value="">ทั้งหมด</option>
           ${[...wmsLevels].sort().map(l=>`<option value="${l}" ${wmsLevel===l?'selected':''}>${l}</option>`).join('')}
         </select></div>
-      <div><label style="font-size:11px">ผู้ตรวจนับ</label>
+      <div><label style="font-size:11px">USER ผู้คอนเฟิร์ม</label>
         <select id="wms-user" onchange="updateWmsFilter('User',this.value)">
           <option value="">ทั้งหมด</option>
           <option value="_pending" ${wmsUser==='_pending'?'selected':''}>⏳ รอคอนเฟิร์ม</option>
@@ -7429,7 +8159,7 @@ async function loadSvDash() {
   }
 }
 
-function toggleUserDetail(idx) {
+function toggleCounterDetail(idx) {
   const el = Q('udetail_'+idx);
   if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
@@ -7473,33 +8203,41 @@ function toggleWmsNoteMenu(event, key) {
   if (willOpen) setTimeout(() => Q(`wms_note_custom_${key}`)?.focus(), 30);
 }
 
-function addCustomWmsNoteOption(event, key) {
+async function addCustomWmsNoteOption(event, key) {
   event?.preventDefault();
   event?.stopPropagation();
+  if (prof?.role !== 'admin') { adminOnlyMessage(); return; }
   const input = Q(`wms_note_custom_${key}`);
   const list = Q(`wms_note_options_${key}`);
   const text = (input?.value || '').trim();
   if (!text || !list) return;
   const exists = [...list.querySelectorAll('input[type="checkbox"]')]
     .some(box => box.value.toLocaleLowerCase('th-TH') === text.toLocaleLowerCase('th-TH'));
-  if (exists) {
-    const existing = [...list.querySelectorAll('input[type="checkbox"]')]
-      .find(box => box.value.toLocaleLowerCase('th-TH') === text.toLocaleLowerCase('th-TH'));
-    if (existing) existing.checked = true;
-  } else {
-    const label = document.createElement('label');
-    label.className = 'wms-note-option';
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.value = text;
-    checkbox.checked = true;
-    const span = document.createElement('span');
-    span.textContent = text;
-    label.append(checkbox, span);
-    list.appendChild(label);
+  try {
+    if (exists) {
+      const existing = [...list.querySelectorAll('input[type="checkbox"]')]
+        .find(box => box.value.toLocaleLowerCase('th-TH') === text.toLocaleLowerCase('th-TH'));
+      if (existing) existing.checked = true;
+    } else {
+      const result = await invokeAdminMaster('remark_create', { context:'wms', label:text });
+      window._wmsNoteOptions = window._wmsNoteOptions || [];
+      window._wmsNoteOptions.push(result.row);
+      const label = document.createElement('label');
+      label.className = 'wms-note-option';
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.value = result.row.label;
+      checkbox.checked = true;
+      const span = document.createElement('span');
+      span.textContent = result.row.label;
+      label.append(checkbox, span);
+      list.appendChild(label);
+    }
+    input.value = '';
+    input.focus();
+  } catch (error) {
+    alert('เพิ่มหมายเหตุไม่สำเร็จ: ' + error.message);
   }
-  input.value = '';
-  input.focus();
 }
 
 async function saveWmsNotes(assignmentId, itemId, key) {
@@ -7623,16 +8361,19 @@ function renderWmsList() {
     const varAmt = +v.variance;
     const noteKey = wmsDomKey(v.assignment_id, v.item_id);
     const notes = Array.isArray(v.wms_notes) ? v.wms_notes : [];
+    const actualCounterText = escapeWmsText(
+      (window._actualCountersByAssignment?.[v.assignment_id] || []).join(', ') || 'ไม่ระบุคนนับ'
+    );
     const assignmentArg = JSON.stringify(v.assignment_id || '');
     const itemArg = JSON.stringify(v.item_id || '');
     const statusBadge = isPending ? `<span class="tag tag-amber" style="font-size:10px">⏳ รอคอนเฟิร์ม</span>` : `<span class="tag tag-blue" style="font-size:10px">✅ คอนเฟิร์มแล้ว</span>`;
     const wmsButton = isPending
       ? `<button class="btn btn-sm btn-amber wms-action-btn" onclick="go('sv-detail',{aid:${assignmentArg}})">${wmsIconSvg('search')}<span>ไปคอนเฟิร์ม</span></button>`
       : `<button class="btn btn-sm ${isFixed?'btn-green':'btn-ghost'} wms-action-btn" onclick="toggleWmsFixed(${JSON.stringify(v.id || '')},${!isFixed})">${wmsIconSvg(isFixed?'reviewed':'pending')}<span>${isFixed?'ตรวจสอบแล้ว':'ยังไม่ได้ตรวจสอบ'}</span></button>`;
-    const noteOptions = WMS_NOTE_PRESETS.map(text => `
+    const noteOptions = (window._wmsNoteOptions || WMS_NOTE_PRESETS.map(label => ({ label }))).map(option => `
       <label class="wms-note-option">
-        <input type="checkbox" value="${escapeWmsText(text)}">
-        <span>${escapeWmsText(text)}</span>
+        <input type="checkbox" value="${escapeWmsText(option.label)}">
+        <span>${escapeWmsText(option.label)}</span>
       </label>`).join('');
     const noteButton = `
       <div class="wms-note-control">
@@ -7650,13 +8391,15 @@ function renderWmsList() {
               onclick="toggleWmsNoteMenu(event,'${noteKey}')" aria-label="ปิด">${wmsIconSvg('close',16)}</button>
           </div>
           <div class="wms-note-option-list" id="wms_note_options_${noteKey}">${noteOptions}</div>
-          <div class="wms-note-add-row">
+          ${prof?.role === 'admin' ? `<div class="wms-note-add-row">
             <input id="wms_note_custom_${noteKey}" type="text" maxlength="120"
               placeholder="พิมพ์หมายเหตุใหม่..."
               onkeydown="if(event.key==='Enter'){addCustomWmsNoteOption(event,'${noteKey}')}">
             <button type="button" class="btn btn-blue wms-note-plus"
               onclick="addCustomWmsNoteOption(event,'${noteKey}')" aria-label="เพิ่มหมายเหตุใหม่">+</button>
           </div>
+          <button type="button" class="btn btn-ghost btn-sm" style="width:100%;margin-top:8px"
+            onclick="go('ad-users')">⚙️ แก้ไข / ลบรายการหมายเหตุ</button>` : ''}
           <button type="button" class="btn btn-green btn-sm wms-action-btn wms-note-save"
             id="wms_note_save_${noteKey}"
             onclick='saveWmsNotes(${assignmentArg},${itemArg},"${noteKey}")'>
@@ -7678,8 +8421,8 @@ function renderWmsList() {
         <div style="font-size:13px;color:var(--text-muted);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v.items?.code||''}${v.items?.description?' · '+v.items.description:''}</div>
         <div style="font-size:11px;color:var(--text-muted);margin-top:4px; font-weight:600;">
           ${isPending 
-            ? `นับได้: ${v.final_qty} · OH: ${v.final_qty - varAmt} · โดย: ${v.profiles?.name||'?'}`
-            : `โดย ${v.profiles?.name||'?'}`
+            ? `นับได้: ${v.final_qty} · OH: ${v.final_qty - varAmt} · คนนับจริง: ${actualCounterText}`
+            : `ยืนยันโดย User: ${escapeWmsText(v.profiles?.name||'?')}`
           }
         </div>
       </div>
@@ -7714,15 +8457,15 @@ async function toggleVarianceDetail(aid, idx) {
 
 async function renderVarianceItemDetail(aid, container, idx) {
   const { data: asgn } = await sb.from('assignments')
-    .select('id,status,location_id,session_id,assigned_to,locations(code,zone,area),profiles!assigned_to(name)')
+    .select('id,status,location_id,session_id,assigned_to,locations(code,zone,area)')
     .eq('id', aid).single();
 
   if (!asgn) { container.innerHTML = `<div class="alert alert-red" style="margin:10px">ไม่พบข้อมูล</div>`; return; }
 
-  const [{ data: snaps }, { data: counts }, { data: counters }, rules] = await Promise.all([
+  const [{ data: snaps }, { data: counts }, { data: users }, rules] = await Promise.all([
     sb.from('stock_snapshot').select('item_id,onhand_qty,al_qty,items(id,code,description)').eq('session_id', asgn.session_id).eq('location_id', asgn.location_id),
-    sb.from('count_records').select('item_id,round,count_qty,remark,photo_url').eq('assignment_id', aid),
-    sb.from('profiles').select('id,name').in('role',['counter','supervisor','admin']).order('name'),
+    sb.from('count_records').select('item_id,round,count_qty,remark,photo_url,actual_counter_name').eq('assignment_id', aid),
+    sb.from('profiles').select('id,name').order('name'),
     getSessionRules(asgn.session_id),
   ]);
 
@@ -7735,7 +8478,10 @@ async function renderVarianceItemDetail(aid, container, idx) {
     PENDING: { cls:'tag-amber',  lbl:'PENDING' , row:''      },
     '':      { cls:'tag-gray',   lbl:'-'       , row:''      },
   };
-  const fmt = x => (x===undefined || x===null) ? '—' : x.count_qty;
+  const fmt = x => {
+    if (x===undefined || x===null) return '—';
+    return `${x.count_qty} · ${escapeWmsText(x.actual_counter_name || 'ไม่ระบุคนนับ')}`;
+  };
 
   let varRows = '';
   for (const s of snaps || []) {
@@ -7770,8 +8516,8 @@ async function renderVarianceItemDetail(aid, container, idx) {
   let maxRoundCounted = 0;
   counts?.forEach(c => { if (c.round > maxRoundCounted) maxRoundCounted = c.round; });
   const nextPhysicalRound = maxRoundCounted + 1;
-  const otherCounters = (counters||[]).filter(u => u.id !== asgn.assigned_to);
-  const cOpts = otherCounters.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
+  const otherUsers = (users||[]).filter(u => u.id !== asgn.assigned_to);
+  const userOpts = otherUsers.map(u=>`<option value="${u.id}">${escapeWmsText(u.name)}</option>`).join('');
 
   container.innerHTML = `
     <div>${varRows}</div>
@@ -7781,11 +8527,11 @@ async function renderVarianceItemDetail(aid, container, idx) {
       <button class="btn btn-green" onclick="doApproveInline('${aid}','${idx}')" style="margin-bottom:12px;width:100%">✅ คอนเฟิร์มยอดนับ</button>
       ${nextPhysicalRound <= 3 ? `
       <div style="background:rgba(255,255,255,0.5);border-radius:20px;padding:16px;margin-top:10px; box-shadow: inset 2px 2px 5px rgba(0,0,0,0.02)">
-        <div style="font-size:13px;font-weight:800;color:var(--primary-blue);margin-bottom:10px">🔄 ส่งนับรอบที่ ${nextPhysicalRound} ต่อ</div>
-        ${otherCounters.length ? `<div style="display:flex;gap:10px">
-          <select id="vreassign_${idx}" style="flex:1">${cOpts}</select>
-          <button class="btn btn-green btn-sm" onclick="doReassignCounter('${aid}','${idx}',${nextPhysicalRound})" style="flex-shrink:0">ส่งงาน</button>
-        </div>` : `<div style="font-size:13px;font-weight:600;color:var(--text-muted)">ไม่มีผู้นับคนอื่นในระบบให้เลือก</div>`}
+        <div style="font-size:13px;font-weight:800;color:var(--primary-blue);margin-bottom:10px">🔄 จ่ายงานรอบที่ ${nextPhysicalRound} ให้ User</div>
+        ${otherUsers.length ? `<div style="display:flex;gap:10px">
+          <select id="vreassign_${idx}" style="flex:1">${userOpts}</select>
+          <button class="btn btn-green btn-sm" onclick="doReassignUser('${aid}','${idx}',${nextPhysicalRound})" style="flex-shrink:0">จ่ายงาน</button>
+        </div>` : `<div style="font-size:13px;font-weight:600;color:var(--text-muted)">ไม่มี User อื่นในระบบให้เลือก</div>`}
       </div>` : ''}
     </div>`;
 }
@@ -7813,7 +8559,7 @@ async function doApproveInline(aid, idx) {
   setTimeout(() => loadSvDash(), 1000);
 }
 
-async function doReassignCounter(aid, idx, targetRound) {
+async function doReassignUser(aid, idx, targetRound) {
   const sel = Q('vreassign_'+idx);
   const uid = sel?.value;
   if (!uid) return;
@@ -7824,7 +8570,7 @@ async function doReassignCounter(aid, idx, targetRound) {
   await sb.from('assignments').update(updates).eq('id', aid);
   const label = sel.options[sel.selectedIndex]?.textContent || '';
   logAudit(before?.session_id, before?.location_id, null, 'reassign', before?.profiles?.name, label, aid);
-  alert(`✅ ส่งงานนี้ให้ ${label} นับรอบที่ ${targetRound||''} ต่อแล้ว`);
+  alert(`✅ จ่ายงานรอบที่ ${targetRound||''} ให้ User ${label} แล้ว`);
   loadSvDash();
 }
 
@@ -7833,7 +8579,7 @@ async function loadSvList() {
   if (!sess?.length) { cnt().innerHTML = `<div class="card"><div class="alert alert-blue">ไม่มี Session ที่ Active</div></div>`; return; }
 
   const { data: asgns } = await sb.from('assignments')
-    .select('id,status,locations(code,zone,area),profiles!assigned_to(name)')
+    .select('id,status,locations(code,zone,area)')
     .in('session_id', sess.map(s => s.id))
     .in('status', ['round1_done','round2_done','round3_done'])
     .order('status');
@@ -7845,13 +8591,18 @@ async function loadSvList() {
     </div>`; return;
   }
 
+  const { data: counterRows } = await sb.from('count_records')
+    .select('assignment_id,actual_counter_name')
+    .in('assignment_id', asgns.map(a => a.id));
+  const counterMap = buildActualCounterMap(counterRows || []);
+
   let html = '<div class="card card-flush">';
   for (const a of asgns) {
     const l = a.locations, si = tagInfo(a.status);
     html += `<div class="row click" onclick="go('sv-detail',{aid:'${a.id}'})">
       <div class="row-body">
         <div class="row-title mono">${l.code}</div>
-        <div class="row-sub">${[l.zone,l.area].filter(Boolean).join(' · ')} · <span style="font-weight:700; color:var(--primary-blue)">${a.profiles?.name || '?'}</span></div>
+        <div class="row-sub">${[l.zone,l.area].filter(Boolean).join(' · ')} · <span style="font-weight:700; color:var(--primary-blue)">คนนับจริง: ${escapeWmsText((counterMap[a.id] || []).join(', ') || 'ไม่ระบุคนนับ')}</span></div>
       </div>
       <span class="tag ${si.cls}">${si.lbl}</span>
       <span class="caret">›</span>
@@ -7862,16 +8613,16 @@ async function loadSvList() {
 
 async function loadSvDetail() {
   const { aid } = S;
-  const { data: asgn } = await sb.from('assignments').select('id,status,location_id,session_id,assigned_to,locations(code,zone,area),profiles!assigned_to(name)').eq('id', aid).single();
+  const { data: asgn } = await sb.from('assignments').select('id,status,location_id,session_id,assigned_to,locations(code,zone,area)').eq('id', aid).single();
   if (!asgn) { go('sv-list'); return; }
 
   const l = asgn.locations;
   const isAdminOrSup = ['admin','supervisor'].includes(prof?.role);
 
-  const [{ data: snaps }, { data: counts }, { data: counters }, rules] = await Promise.all([
+  const [{ data: snaps }, { data: counts }, { data: users }, rules] = await Promise.all([
     sb.from('stock_snapshot').select('item_id,onhand_qty,al_qty,items(id,code,description)').eq('session_id', asgn.session_id).eq('location_id', asgn.location_id),
-    sb.from('count_records').select('item_id,round,count_qty,remark,photo_url').eq('assignment_id', aid),
-    sb.from('profiles').select('id,name').in('role',['counter','supervisor','admin']).order('name'),
+    sb.from('count_records').select('item_id,round,count_qty,remark,photo_url,actual_counter_name').eq('assignment_id', aid),
+    sb.from('profiles').select('id,name').order('name'),
     getSessionRules(asgn.session_id),
   ]);
 
@@ -7882,10 +8633,15 @@ async function loadSvDetail() {
   counts?.forEach(c => { if (c.round > maxRoundCounted) maxRoundCounted = c.round; });
   const roundNum = maxRoundCounted || 1;
   const nextPhysicalRound = maxRoundCounted + 1;
-  const otherCounters = (counters||[]).filter(u => u.id !== asgn.assigned_to);
+  const otherUsers = (users||[]).filter(u => u.id !== asgn.assigned_to);
 
   const VS = { OK: { cls:'tag-green', lbl:'OK', row:'exact' }, Diff: { cls:'tag-red', lbl:'Diff', row:'diff' }, PENDING: { cls:'tag-amber', lbl:'PENDING', row:'' }, '': { cls:'tag-gray', lbl:'-', row:'' } };
-  let hasVar = false; let varRows = ''; const fmt = x => (x===undefined || x===null) ? '—' : x.count_qty;
+  let hasVar = false; let varRows = '';
+  const fmt = x => {
+    if (x===undefined || x===null) return '—';
+    return `${x.count_qty} · ${escapeWmsText(x.actual_counter_name || 'ไม่ระบุคนนับ')}`;
+  };
+  const actualCounterDisplay = escapeWmsText(actualCounterLabel(counts || []));
 
   for (const s of snaps || []) {
     const it = s.items; const v = byItem[it.id] || {};
@@ -7931,7 +8687,7 @@ async function loadSvDetail() {
     <div class="card">
       <div class="mono" style="font-size:22px;font-weight:800;color:var(--text-main)">${l.code}</div>
       <div style="font-size:14px;color:var(--text-muted);margin-top:6px; font-weight:600;">
-        ${[l.zone,l.area].filter(Boolean).join(' · ')} · Counter: <span style="color:var(--primary-blue)">${asgn.profiles?.name || '?'}</span>
+        ${[l.zone,l.area].filter(Boolean).join(' · ')} · คนนับจริง: <span style="color:var(--primary-blue)">${actualCounterDisplay}</span>
       </div>
       <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
         <span class="tag tag-blue">รอบที่ ${roundNum}</span>
@@ -7946,11 +8702,11 @@ async function loadSvDetail() {
       <button class="btn btn-green" onclick="doApprove('${aid}')" style="margin-bottom:16px;width:100%">✅ คอนเฟิร์มยอดนับ</button>
       ${nextPhysicalRound <= 3 ? `
       <div style="background:var(--neu-surface);border-radius:24px;padding:20px;box-shadow: 10px 10px 20px var(--neu-shadow-dark), -10px -10px 20px var(--neu-shadow-light)">
-        <div style="font-size:14px;font-weight:800;color:var(--primary-blue);margin-bottom:12px">🔄 ส่งนับรอบที่ ${nextPhysicalRound} ต่อ</div>
-        ${otherCounters.length ? `<div style="display:flex;gap:10px">
-          <select id="recount-user" style="flex:1">${otherCounters.map(u=>`<option value="${u.id}">${u.name}</option>`).join('')}</select>
-          <button class="btn btn-green btn-sm" onclick="reqRecount('${aid}',${nextPhysicalRound})" style="flex-shrink:0">ส่งงาน</button>
-        </div>` : `<div style="font-size:13px;font-weight:600;color:var(--text-muted)">ไม่มีผู้นับคนอื่นในระบบให้เลือก</div>`}
+        <div style="font-size:14px;font-weight:800;color:var(--primary-blue);margin-bottom:12px">🔄 จ่ายงานรอบที่ ${nextPhysicalRound} ให้ User</div>
+        ${otherUsers.length ? `<div style="display:flex;gap:10px">
+          <select id="recount-user" style="flex:1">${otherUsers.map(u=>`<option value="${u.id}">${escapeWmsText(u.name)}</option>`).join('')}</select>
+          <button class="btn btn-green btn-sm" onclick="reqRecount('${aid}',${nextPhysicalRound})" style="flex-shrink:0">จ่ายงาน</button>
+        </div>` : `<div style="font-size:13px;font-weight:600;color:var(--text-muted)">ไม่มี User อื่นในระบบให้เลือก</div>`}
       </div>` : ''}
     </div>`;
 }
@@ -7983,7 +8739,7 @@ async function doApprove(aid) {
 }
 
 async function reqRecount(aid, targetRound) {
-  const uid = Q('recount-user')?.value; if (!uid) { alert('กรุณาเลือกผู้นับก่อน'); return; }
+  const uid = Q('recount-user')?.value; if (!uid) { alert('กรุณาเลือก User ผู้รับงานก่อน'); return; }
   const sel = Q('recount-user');
   const { data: before } = await sb.from('assignments').select('session_id,location_id,profiles!assigned_to(name)').eq('id', aid).single();
   const statusForTarget = { 2:'round1_done', 3:'round2_done' }[targetRound];
@@ -7992,7 +8748,7 @@ async function reqRecount(aid, targetRound) {
   await sb.from('assignments').update(updates).eq('id', aid);
   const label = sel.options[sel.selectedIndex]?.textContent || '';
   logAudit(before?.session_id, before?.location_id, null, 'reassign', before?.profiles?.name, label, aid);
-  Q('sva').innerHTML = `<div class="alert alert-green">✅ ส่งงานนี้ให้ผู้นับที่เลือกแล้ว</div>`;
+  Q('sva').innerHTML = `<div class="alert alert-green">✅ จ่ายงานให้ User ที่เลือกแล้ว</div>`;
   setTimeout(() => go('sv-list'), 1500);
 }
 
@@ -8003,6 +8759,7 @@ async function loadAdManage() {
   const mc = Q('manage-content'); if (!mc) return;
   if (tab === 'sessions') await renderManageSessions(mc);
   else if (tab === 'assign') await renderManageAssign(mc);
+  else if (tab === 'backup') await renderManageBackup(mc);
   else await renderManageImport(mc);
 }
 
@@ -8011,6 +8768,7 @@ async function renderManageSessions(container) {
   if (error) { container.innerHTML = errBox(error.message); return; }
 
   const isAdminOrSup = ['admin','supervisor'].includes(prof?.role);
+  const isAdmin = prof?.role === 'admin';
   const SBG = { draft:'tag-gray', active:'tag-green', closed:'tag-blue' };
   const SLB = { draft:'Draft', active:'Active', closed:'Closed' };
   let html = sessions?.length ? '' : `<div style="text-align:center;padding:40px"><div style="font-size:54px">📁</div><div style="color:var(--text-muted);font-weight:700;margin-top:16px; font-size:16px;">ยังไม่มี Session</div></div>`;
@@ -8018,8 +8776,12 @@ async function renderManageSessions(container) {
   for (const s of sessions || []) {
     const ohBadge = s.show_oh ? `<span class="tag tag-green" style="font-size:10px">🔓 เห็น OH</span>` : `<span class="tag tag-gray"  style="font-size:10px">🔒 Blind</span>`;
     html += `<div style="display:flex;align-items:center;padding:16px 0;border-bottom:1px solid rgba(255,255,255,0.4);gap:10px;flex-wrap:wrap">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:16px;font-weight:800;color:var(--text-main)">${s.name}</div>
+      <div style="flex:1;min-width:220px">
+        ${isAdmin ? `<div style="display:flex;gap:8px;align-items:center">
+          <input id="sess_name_${s.id}" value="${escapeWmsText(s.name)}" maxlength="120"
+            aria-label="ชื่อ Session" style="font-size:15px;font-weight:800;min-width:180px">
+          <button class="btn btn-blue btn-sm" onclick="renameSess('${s.id}')">บันทึกชื่อ</button>
+        </div>` : `<div style="font-size:16px;font-weight:800;color:var(--text-main)">${escapeWmsText(s.name)}</div>`}
         <div style="font-size:12px;color:var(--text-muted);margin-top:6px;display:flex;gap:8px;flex-wrap:wrap; font-weight:600;">
           ${new Date(s.created_at).toLocaleDateString('th-TH')} ${ohBadge}
         </div>
@@ -8029,24 +8791,25 @@ async function renderManageSessions(container) {
         ${isAdminOrSup && s.status==='draft'  ? `<button class="btn btn-green btn-sm" onclick="activateSess('${s.id}')">เปิด</button>` : ''}
         ${isAdminOrSup && s.status==='active' ? `<button class="btn btn-ghost btn-sm" onclick="closeSess('${s.id}')">ปิด</button>` : ''}
         ${isAdminOrSup && s.status==='closed' ? `<button class="btn btn-green btn-sm" onclick="reopenSess('${s.id}')">เปิดใหม่</button>` : ''}
-        ${isAdminOrSup ? `<button class="btn btn-red btn-sm" onclick="deleteSess('${s.id}','${s.name.replace(/'/g,"\\'")}')">🗑️</button>` : ''}
+        ${isAdmin ? `<button class="btn btn-red btn-sm admin-delete-icon"
+          onclick='deleteSess("${s.id}",${inlineJson(s.name)})'>${adminTrashIconSvg()} <span>ลบถาวร</span></button>` : ''}
       </div>
     </div>`;
   }
-  container.innerHTML = html + `<button class="btn btn-blue" style="margin-top:24px; width: 100%;" onclick="go('ad-new')">＋ สร้าง Session ใหม่</button>`;
+  container.innerHTML = html + `${isAdmin ? `<button class="btn btn-blue" style="margin-top:24px; width: 100%;" onclick="go('ad-new')">＋ สร้าง Session ใหม่</button>` : ''}`;
 }
 
 async function renderManageAssign(container) {
   const isAdminOrSup = ['admin','supervisor'].includes(prof?.role);
-  const [{ data: sessions }, { data: counters }] = await Promise.all([
+  const [{ data: sessions }, { data: users }] = await Promise.all([
     sb.from('count_sessions').select('id,name,show_oh').eq('status','active'),
-    sb.from('profiles').select('id,name').in('role',['counter','supervisor','admin']).order('name'),
+    sb.from('profiles').select('id,name').order('name'),
   ]);
 
   if (!sessions?.length) { container.innerHTML = `<div class="alert alert-amber">ไม่มี Session ที่ Active — ไปสร้างและเปิด Session ก่อนน้า</div>`; return; }
 
-  const sOpts = sessions.map(s=>`<option value="${s.id}" data-show-oh="${s.show_oh||false}">${s.name}</option>`).join('');
-  const cOpts = counters?.map(u=>`<option value="${u.id}">${u.name}</option>`).join('') || '<option>ไม่มี Counter</option>';
+  const sOpts = sessions.map(s=>`<option value="${s.id}" data-show-oh="${s.show_oh||false}">${escapeWmsText(s.name)}</option>`).join('');
+  const userOpts = users?.map(u=>`<option value="${u.id}">${escapeWmsText(u.name)}</option>`).join('') || '<option value="">ไม่มี User</option>';
   const firstSess = sessions[0];
 
   container.innerHTML = `
@@ -8058,15 +8821,21 @@ async function renderManageAssign(container) {
       <div id="zone-dash-body" style="border-top:1px solid rgba(255,255,255,0.4)"><div class="load" style="padding:20px;font-size:14px;text-align:center; font-weight:600;">⏳ กำลังคำนวณ...</div></div>
     </details>
     <div id="aa"></div>
+    <div class="alert alert-blue" style="line-height:1.65">
+      <strong>User ผู้รับงาน</strong> = บัญชีที่ใช้ล็อกอินและรับ Location<br>
+      <strong>คนนับจริง</strong> = เลือกภายในหน้าบันทึกการนับ และใช้แสดงในรายงานผลการนับ
+    </div>
+    ${prof?.role === 'admin' ? `<button class="btn btn-ghost btn-sm" style="margin-bottom:16px"
+      onclick="go('ad-users')">⚙️ แก้ไข / ลบ User และข้อมูล Dropdown</button>` : ''}
     <div class="fg"><label>SESSION</label>
       <select id="as-sess" onchange="refreshLocs();refreshBulkFilters();syncOHToggle();if(Q('zoneDashDetails')?.open)refreshZoneDashboard();">${sOpts}</select>
     </div>
 
     ${isAdminOrSup ? `<div style="background:var(--neu-surface);border-radius:24px;padding:20px;margin-bottom:20px;box-shadow: 8px 8px 16px var(--neu-shadow-dark), -8px -8px 16px var(--neu-shadow-light)">
-      <div style="font-size:14px;font-weight:800;color:var(--text-main);margin-bottom:12px">👁️ ควบคุมการแสดง OH ให้ Counter</div>
+      <div style="font-size:14px;font-weight:800;color:var(--text-main);margin-bottom:12px">👁️ ควบคุมการแสดง OH ให้ User ผู้รับงาน</div>
       <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
         <input type="checkbox" id="oh-toggle" ${firstSess?.show_oh?'checked':''} onchange="toggleOH()" style="width:22px;height:22px;accent-color:var(--primary-blue); box-shadow:none;">
-        <span style="font-size:14px;font-weight:700">เปิดให้ Counter เห็นยอด OH ขณะนับ</span>
+        <span style="font-size:14px;font-weight:700">เปิดให้ User ผู้รับงานเห็นยอด OH ขณะบันทึกยอด</span>
         <span id="oh-status" class="tag ${firstSess?.show_oh?'tag-green':'tag-gray'}">${firstSess?.show_oh?'🔓 เห็น OH':'🔒 Blind'}</span>
       </label>
     </div>` : ''}
@@ -8077,7 +8846,7 @@ async function renderManageAssign(container) {
         <span style="margin-left:auto;font-size:12px;color:var(--text-muted);font-weight:600">แตะเพื่อเปิด</span>
       </summary>
       <div style="padding:0 20px 20px">
-        <div class="fg"><label>COUNTER</label><select id="as-user">${cOpts}</select></div>
+        <div class="fg"><label>USER ผู้รับงาน</label><select id="as-user">${userOpts}</select></div>
         <div class="fg" style="margin-bottom:14px"><label>LOCATION</label><select id="as-loc"><option value="">กำลังโหลด...</option></select></div>
         <button class="btn btn-green" onclick="doAssign()" style="width:100%">✓ มอบหมายงาน</button>
       </div>
@@ -8097,8 +8866,8 @@ async function renderManageAssign(container) {
           <div><label style="font-size:11px">LEVEL</label>
             <select id="bulk-level" onchange="refreshBulkDependentFilters()"><option value="">ทั้งหมด</option></select></div>
         </div>
-        <div class="fg" style="margin-bottom:12px"><label style="font-size:11px">COUNTER รอบ 1</label>
-          <select id="bulk-user">${cOpts}</select></div>
+        <div class="fg" style="margin-bottom:12px"><label style="font-size:11px">USER ผู้รับงานรอบ 1</label>
+          <select id="bulk-user">${userOpts}</select></div>
         <div id="bulk-preview" style="font-size:13px;color:var(--primary-blue);margin-bottom:12px;font-weight:800"></div>
         <button class="btn btn-blue" id="bulk-btn" onclick="doBulkAssign()" style="width:100%" disabled>⚡ Assign ทั้งหมด</button>
       </div>
@@ -8106,7 +8875,7 @@ async function renderManageAssign(container) {
 
     ${isAdminOrSup ? `<details style="background:var(--neu-surface);border-radius:24px;padding:0;margin-bottom:16px;overflow:hidden;box-shadow: 8px 8px 16px var(--neu-shadow-dark), -8px -8px 16px var(--neu-shadow-light)">
       <summary style="cursor:pointer;padding:16px 20px;font-size:14px;font-weight:800;color:var(--text-main);list-style:none;display:flex;align-items:center;gap:8px; outline:none;">
-        <span style="font-size:18px">🔄</span> เปลี่ยน Counter รอบ 2/3
+        <span style="font-size:18px">🔄</span> เปลี่ยน User ผู้รับงานรอบ 2/3
         <span style="margin-left:auto;font-size:12px;color:var(--text-muted);font-weight:600">แตะเพื่อเปิด</span>
       </summary>
       <div style="padding:0 20px 20px">
@@ -8122,10 +8891,10 @@ async function renderManageAssign(container) {
           <div><label style="font-size:11px">ROW</label>
             <select id="r23-row" onchange="refreshR23Preview()"><option value="">ทั้งหมด</option></select></div>
         </div>
-        <div class="fg" style="margin-bottom:12px"><label style="font-size:11px">COUNTER ที่จะนับต่อ</label>
-          <select id="r23-user">${cOpts}</select></div>
+        <div class="fg" style="margin-bottom:12px"><label style="font-size:11px">USER ผู้รับงานรอบถัดไป</label>
+          <select id="r23-user">${userOpts}</select></div>
         <div id="r23-preview" style="font-size:13px;color:var(--primary-blue);margin-bottom:12px;font-weight:800"></div>
-        <button class="btn btn-green" id="r23-btn" onclick="doR23Assign()" style="width:100%" disabled>🔄 เปลี่ยน Counter</button>
+        <button class="btn btn-green" id="r23-btn" onclick="doR23Assign()" style="width:100%" disabled>🔄 เปลี่ยน User ผู้รับงาน</button>
       </div>
     </details>` : ''}
 
@@ -8158,13 +8927,13 @@ async function refreshZoneDashboard() {
     zoneTotals[z] = (zoneTotals[z]||0) + 1;
   });
 
-  const zoneAssigned = {}; const zoneCounters = {};
+  const zoneAssigned = {}; const zoneUsers = {};
   (asgns||[]).forEach(a => {
     const z = a.locations?.zone || '(ไม่ระบุ Zone)';
     zoneAssigned[z] = (zoneAssigned[z]||0) + 1;
-    const cname = a.profiles?.name || '?';
-    zoneCounters[z] = zoneCounters[z] || {};
-    zoneCounters[z][cname] = (zoneCounters[z][cname]||0) + 1;
+    const userName = a.profiles?.name || 'ไม่ระบุ User';
+    zoneUsers[z] = zoneUsers[z] || {};
+    zoneUsers[z][userName] = (zoneUsers[z][userName]||0) + 1;
   });
 
   const allZones = [...new Set([...Object.keys(zoneTotals), ...Object.keys(zoneAssigned)])].sort();
@@ -8172,7 +8941,7 @@ async function refreshZoneDashboard() {
 
   box.innerHTML = allZones.map(z => {
     const total = zoneTotals[z] || 0; const assigned = zoneAssigned[z] || 0; const pct = total ? Math.round(assigned/total*100) : 0;
-    const counterList = Object.entries(zoneCounters[z] || {}).sort((a,b) => b[1]-a[1]).map(([name,c]) => `<span class="tag tag-gray" style="font-size:11px">${name} · ${c}</span>`).join(' ');
+    const userList = Object.entries(zoneUsers[z] || {}).sort((a,b) => b[1]-a[1]).map(([name,c]) => `<span class="tag tag-gray" style="font-size:11px">User: ${escapeWmsText(name)} · ${c}</span>`).join(' ');
     return `<div style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.4)">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
         <span style="font-size:14px;font-weight:800;color:var(--text-main)">${z}</span>
@@ -8181,7 +8950,7 @@ async function refreshZoneDashboard() {
       <div class="gauge-container" style="padding:8px;margin-top:8px; background:var(--neu-surface); border-radius:20px; box-shadow: inset 4px 4px 8px var(--neu-shadow-dark), inset -4px -4px 8px var(--neu-shadow-light);">
         <div class="prog" style="height:10px"><div class="prog-fill" style="width:${pct}%"></div></div>
       </div>
-      ${counterList ? `<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px">${counterList}</div>` : ''}
+      ${userList ? `<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px">${userList}</div>` : ''}
     </div>`;
   }).join('');
 }
@@ -8205,7 +8974,9 @@ async function renderManageImport(container) {
 
     <div style="border-top:2px dashed rgba(255,255,255,0.6); margin:30px 0 20px; box-shadow: 0 1px 0 rgba(0,0,0,0.05);"></div>
 
-    <div style="font-size:15px;font-weight:800;color:var(--accent-red);margin-bottom:12px">🗑️ ลบ Location ตาม Zone / Row / Session</div>
+    <div class="admin-delete-icon" style="font-size:15px;font-weight:800;color:var(--accent-red);margin-bottom:12px">
+      ${adminTrashIconSvg()} <span>ลบ Location ตาม Zone / Row / Session</span>
+    </div>
     <div class="alert alert-amber" style="font-size:13px; line-height:1.6;">⚠️ เลือก Session = ลบเฉพาะข้อมูลใน Session นั้น<br>เว้น Session ว่าง = ลบ Location ออกจากระบบจริงทุก Session</div>
     <div class="fg"><label>SESSION (ไม่บังคับ)</label><select id="del-session" onchange="refreshDeleteZonePreview()"><option value="">กำลังโหลด...</option></select></div>
     <div class="grid-3" style="margin-bottom:14px">
@@ -8215,7 +8986,8 @@ async function renderManageImport(container) {
     </div>
     <div id="del-preview" style="font-size:13px;color:var(--accent-red);margin-bottom:14px;font-weight:800"></div>
     <div id="del-alert"></div>
-    <button class="btn btn-red" id="del-btn" onclick="doDeleteByZoneRow()" style="width:100%" disabled>🗑️ ลบทั้งหมดที่เลือก</button>`;
+    <button class="btn btn-red admin-delete-icon" id="del-btn" onclick="doDeleteByZoneRow()"
+      style="width:100%" disabled>${adminTrashIconSvg()} <span>ลบทั้งหมดที่เลือก</span></button>`;
 
   Q('ixlsx')?.addEventListener('change', readXlsxFile);
   loadDeleteZoneFilters();
@@ -8269,17 +9041,22 @@ async function refreshR23Preview() {
 async function doR23Assign() {
   const uid = Q('r23-user')?.value; const asgns = window._r23Asgns || [];
   if (!uid || !asgns.length) return;
-  Q('r23-btn').disabled = true; Q('r23-preview').innerHTML = `<span>⏳ กำลังอัปเดต ${asgns.length} assignments...</span>`;
+  Q('r23-btn').disabled = true; Q('r23-preview').innerHTML = `<span>⏳ กำลังเปลี่ยน User ผู้รับงาน ${asgns.length} assignments...</span>`;
   const newLabel = Q('r23-user').options[Q('r23-user').selectedIndex]?.textContent || '';
+  const previousUserIds = [...new Set(asgns.map(a => a.assigned_to).filter(Boolean))];
+  const { data: previousUsers } = previousUserIds.length
+    ? await sb.from('profiles').select('id,name').in('id', previousUserIds)
+    : { data: [] };
+  const previousUserMap = Object.fromEntries((previousUsers || []).map(user => [user.id, user.name]));
   const BATCH = 200;
   for (let i = 0; i < asgns.length; i += BATCH) {
     const chunk = asgns.slice(i, i+BATCH);
     for (const a of chunk) {
       await sb.from('assignments').update({ assigned_to: uid }).eq('id', a.id);
-      logAudit(a.session_id, a.location_id, null, 'reassign', a.assigned_to, newLabel, a.id);
+      logAudit(a.session_id, a.location_id, null, 'reassign', previousUserMap[a.assigned_to] || 'ไม่ระบุ User', newLabel, a.id);
     }
   }
-  Q('r23-preview').innerHTML = `<span style="color:var(--accent-green);font-weight:800">✅ เปลี่ยน Counter เรียบร้อย ${asgns.length} locations</span>`;
+  Q('r23-preview').innerHTML = `<span style="color:var(--accent-green);font-weight:800">✅ เปลี่ยน User ผู้รับงานเรียบร้อย ${asgns.length} locations</span>`;
   Q('r23-btn').disabled = false; window._r23Asgns = []; refreshLocs();
 }
 
@@ -8334,14 +9111,14 @@ function refreshBulkPreview() {
     seen.add(l.id); count++;
   }
   const prev = Q('bulk-preview'), btn = Q('bulk-btn'); if (!prev || !btn) return;
-  if (count > 0) { prev.innerHTML = `📍 จะ Assign <strong>${count} locations</strong> ให้ Counter ที่เลือก`; btn.disabled = false; } 
+  if (count > 0) { prev.innerHTML = `📍 จะ Assign <strong>${count} locations</strong> ให้ User ที่เลือก`; btn.disabled = false; } 
   else { prev.innerHTML = `<span style="color:var(--text-muted)">ไม่มี Location ที่ตรงเงื่อนไข</span>`; btn.disabled = true; }
 }
 
 async function doBulkAssign() {
   const sid = Q('as-sess')?.value; const uid = Q('bulk-user')?.value; const zone = Q('bulk-zone')?.value; const row = Q('bulk-row')?.value; const level = Q('bulk-level')?.value;
   const al = Q('aa'), btn = Q('bulk-btn');
-  if (!sid || !uid) { al.innerHTML = `<div class="alert alert-red">เลือก Session และ Counter ก่อน</div>`; return; }
+  if (!sid || !uid) { al.innerHTML = `<div class="alert alert-red">เลือก Session และ User ผู้รับงานก่อน</div>`; return; }
 
   const snaps = window._bulkSnaps || []; const assignedSet = window._bulkAssigned || new Set();
   const seen = new Set(), toAssign = [];
@@ -8381,13 +9158,17 @@ async function refreshLocs() {
 
   const stuckCount = asgns.filter(a => !['completed','approved'].includes(a.status)).length;
   let html = '';
-  if (stuckCount > 0) { html += `<div style="padding:14px 20px;background:rgba(251, 113, 133, 0.05);border-bottom:1px solid rgba(255,255,255,0.4)"><button class="btn btn-ghost btn-sm" style="color:var(--accent-red)" onclick="deleteStuckAssignments()">🗑 ลบที่ยังไม่เสร็จทั้งหมด (${stuckCount})</button></div>`; }
+  if (stuckCount > 0) { html += `<div style="padding:14px 20px;background:rgba(251, 113, 133,0.05);border-bottom:1px solid rgba(255,255,255,0.4)"><button class="btn btn-ghost btn-sm admin-delete-icon" style="color:var(--accent-red)" onclick="deleteStuckAssignments()">${adminTrashIconSvg()} <span>ลบที่ยังไม่เสร็จทั้งหมด (${stuckCount})</span></button></div>`; }
   html += asgns.map(a => {
     const si = tagInfo(a.status); const code = (a.locations?.code || '').replace(/'/g, '');
     return `<div class="row" style="cursor:default">
-      <div class="row-body"><div class="row-title mono">${a.locations?.code}</div><div class="row-sub">${a.profiles?.name || '?'}</div></div>
+      <div class="row-body"><div class="row-title mono">${a.locations?.code}</div><div class="row-sub">User ผู้รับงาน: ${escapeWmsText(a.profiles?.name || 'ไม่ระบุ')}</div></div>
       <span class="tag ${si.cls}">${si.lbl}</span>
-      <button onclick="deleteAssignment('${a.id}','${code}')" title="ลบ Assignment นี้" style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;padding:8px;line-height:1;flex-shrink:0; transition:0.2s;">🗑</button>
+      <button class="admin-delete-icon" onclick="deleteAssignment('${a.id}','${code}')"
+        title="ลบ Assignment นี้" aria-label="ลบ Assignment นี้"
+        style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:8px;line-height:1;flex-shrink:0;transition:0.2s;">
+        ${adminTrashIconSvg(18)}
+      </button>
     </div>`;
   }).join('');
   al.innerHTML = html;
@@ -8439,7 +9220,7 @@ function openPrintFormWindow(rows, title) {
   for (let i = 0; i < rows.length; i += ROWS_PER_PAGE) pages.push(rows.slice(i, i+ROWS_PER_PAGE));
   if (!pages.length) pages.push([]);
   const totalPages = pages.length; const todayStr = new Date().toLocaleDateString('th-TH', { year:'numeric', month:'long', day:'numeric' });
-  const pagesHtml = pages.map((pageRows, pIdx) => `<section class="pf-page"><header class="pf-header"><img class="pf-logo" src="${PF_LOGO_B64}" alt="logo"><div class="pf-title">${pfEscapeHtml(title)}</div><div class="pf-meta"><div>${todayStr}</div><div>Page ${pIdx+1} / ${totalPages}</div></div></header><table class="pf-table"><thead><tr><th style="width:11%">Location</th><th style="width:13%">Item</th><th style="width:23%">Description</th><th style="width:9%">Inventory status</th><th style="width:9%">Storage Template</th><th style="width:8%">Count 1</th><th style="width:8%">Count 2</th><th style="width:8%">Count 3</th><th style="width:11%">Remark</th></tr></thead><tbody>${pageRows.length ? pageRows.map(r => `<tr><td>${pfEscapeHtml(r.locCode)}</td><td>${pfEscapeHtml(r.itemCode)}</td><td>${pfEscapeHtml(r.desc)}</td><td>${pfEscapeHtml(r.status)}</td><td></td><td></td><td></td><td></td><td></td></tr>`).join('') : `<tr><td colspan="9" style="text-align:center;color:#888">ไม่มีรายการ</td></tr>`}</tbody></table><footer class="pf-footer"><div>ผู้ทำรายการ...........................</div><div>เวลาเริ่ม...........................</div><div>เวลาจบ...........................</div></footer></section>`).join('');
+  const pagesHtml = pages.map((pageRows, pIdx) => `<section class="pf-page"><header class="pf-header"><img class="pf-logo" src="${PF_LOGO_B64}" alt="logo"><div class="pf-title">${pfEscapeHtml(title)}</div><div class="pf-meta"><div>${todayStr}</div><div>Page ${pIdx+1} / ${totalPages}</div></div></header><table class="pf-table"><thead><tr><th style="width:11%">Location</th><th style="width:13%">Item</th><th style="width:23%">Description</th><th style="width:9%">Inventory status</th><th style="width:9%">Storage Template</th><th style="width:8%">Count 1</th><th style="width:8%">Count 2</th><th style="width:8%">Count 3</th><th style="width:11%">Remark</th></tr></thead><tbody>${pageRows.length ? pageRows.map(r => `<tr><td>${pfEscapeHtml(r.locCode)}</td><td>${pfEscapeHtml(r.itemCode)}</td><td>${pfEscapeHtml(r.desc)}</td><td>${pfEscapeHtml(r.status)}</td><td></td><td></td><td></td><td></td><td></td></tr>`).join('') : `<tr><td colspan="9" style="text-align:center;color:#888">ไม่มีรายการ</td></tr>`}</tbody></table><footer class="pf-footer"><div>คนนับจริง...........................</div><div>เวลาเริ่ม...........................</div><div>เวลาจบ...........................</div></footer></section>`).join('');
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${pfEscapeHtml(title)}</title><style>@page { size: A4 landscape; margin: 8mm 6mm; } * { box-sizing:border-box; } body { margin:0; font-family: Arial, 'Sarabun', 'Tahoma', sans-serif; color:#000; } .pf-page { page-break-after: always; } .pf-page:last-child { page-break-after: auto; } .pf-header { display:flex; align-items:center; gap:14px; border-bottom:2.5px solid #000; padding-bottom:6px; margin-bottom:8px; } .pf-logo { height:42px; } .pf-title { flex:1; text-align:center; font-size:24px; font-weight:bold; } .pf-meta { font-size:11px; text-align:right; line-height:1.5; white-space:nowrap; } .pf-table { width:100%; border-collapse:collapse; font-size:11px; table-layout:fixed; } .pf-table th, .pf-table td { border:1px solid #000; padding:5px 6px; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .pf-table th { background:#f0f0f0; font-weight:bold; font-size:10.5px; } .pf-table td { height:22px; } .pf-footer { display:flex; justify-content:space-between; margin-top:12px; font-size:12px; } @media print { .pf-noprint { display:none; } }
 </style></head><body><div class="pf-noprint" style="padding:10px;background:#fffbe6;border-bottom:1px solid #ccc;font-family:sans-serif;font-size:13px">กำลังเปิดหน้าต่างพิมพ์... กด Ctrl+P (หรือ Cmd+P บน Mac) เพื่อพิมพ์</div>${pagesHtml}<script>window.onload = function(){ setTimeout(function(){ window.print(); }, 300); };<\/script></body></html>`;
   const win = window.open('', '_blank'); if (!win) { alert('เบราว์เซอร์บล็อกป๊อปอัพ'); return; }
@@ -8450,9 +9231,11 @@ async function loadAdHistory() {
   if (!['admin','supervisor'].includes(prof?.role)) { go('c-tasks'); return; }
   const { data: sessions } = await sb.from('count_sessions').select('id,name').order('created_at',{ascending:false});
   const sOpts = '<option value="">ทุก Session</option>' + (sessions||[]).map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
-  const sid = S._histSid || ''; const cid = S._histCid || ''; const st = S._histSt || ''; const searchQ = S._histSearch || '';
-  const { data: counters } = await sb.from('profiles').select('id,name').order('name');
-  const cOpts = '<option value="">ทุกคน</option>' + (counters||[]).map(u=>`<option value="${u.id}" ${u.id===cid?'selected':''}>${u.name}</option>`).join('');
+  const sid = S._histSid || ''; const counterName = S._histCounterName || ''; const st = S._histSt || ''; const searchQ = S._histSearch || '';
+  const { data: actualCounters } = await sb.from('counter_names').select('name').order('name');
+  const counterOpts = '<option value="">คนนับทั้งหมด</option>' + (actualCounters||[]).map(counter =>
+    `<option value="${escapeWmsText(counter.name)}" ${counter.name===counterName?'selected':''}>${escapeWmsText(counter.name)}</option>`
+  ).join('');
 
   cnt().innerHTML = `
     <div class="card">
@@ -8466,16 +9249,16 @@ async function loadAdHistory() {
       </div>
       <div class="grid-3" style="margin-bottom:10px">
         <div><label style="font-size:11px">SESSION</label><select id="hist-sess" onchange="S._histSid=this.value;loadAdHistory()">${sOpts}</select></div>
-        <div><label style="font-size:11px">COUNTER</label><select id="hist-cnt" onchange="S._histCid=this.value;loadAdHistory()">${cOpts}</select></div>
+        <div><label style="font-size:11px">คนนับจริง</label><select id="hist-cnt" onchange="S._histCounterName=this.value;loadAdHistory()">${counterOpts}</select></div>
         <div><label style="font-size:11px">สถานะ</label><select id="hist-st" onchange="S._histSt=this.value;loadAdHistory()"><option value="">ทั้งหมด</option><option value="completed">เสร็จ</option><option value="approved">อนุมัติแล้ว</option><option value="round1_done">รอรอบ 2</option><option value="round2_done">รอรอบ 3</option><option value="round3_done">รอ Supervisor</option></select></div>
       </div>
     </div>
     <div id="hist-list"><div class="load" style="text-align:center; padding:20px; font-weight:600;">⏳ กำลังโหลด...</div></div>`;
 
-  if (Q('hist-sess') && sid) Q('hist-sess').value = sid; if (Q('hist-cnt') && cid) Q('hist-cnt').value = cid; if (Q('hist-st') && st) Q('hist-st').value = st;
+  if (Q('hist-sess') && sid) Q('hist-sess').value = sid; if (Q('hist-cnt') && counterName) Q('hist-cnt').value = counterName; if (Q('hist-st') && st) Q('hist-st').value = st;
 
-  let q = sb.from('assignments').select('id,status,created_at,location_id,locations(code,zone),profiles!assigned_to(name),count_sessions(name)').order('created_at',{ascending:false}).limit(100);
-  if (sid) q = q.eq('session_id', sid); if (cid) q = q.eq('assigned_to', cid); if (st) q = q.eq('status', st);
+  let q = sb.from('assignments').select('id,status,created_at,location_id,locations(code,zone),count_sessions(name)').order('created_at',{ascending:false}).limit(100);
+  if (sid) q = q.eq('session_id', sid); if (st) q = q.eq('status', st);
 
   let { data: asgns, error } = await q;
   const histList = Q('hist-list'); if (!histList) return;
@@ -8501,17 +9284,29 @@ async function loadAdHistory() {
   }
 
   if (!asgns?.length) { histList.innerHTML = `<div class="card" style="text-align:center;padding:40px;color:var(--text-muted); font-weight:600;">ไม่พบข้อมูลตามเงื่อนไข</div>`; return; }
+
+  const { data: historyCounterRows } = await sb.from('count_records')
+    .select('assignment_id,actual_counter_name')
+    .in('assignment_id', asgns.map(a => a.id));
+  const historyCounterMap = buildActualCounterMap(historyCounterRows || []);
+  if (counterName) {
+    asgns = asgns.filter(a => (historyCounterMap[a.id] || []).includes(counterName));
+  }
+
+  if (!asgns.length) { histList.innerHTML = `<div class="card" style="text-align:center;padding:40px;color:var(--text-muted); font-weight:600;">ไม่พบประวัติของคนนับที่เลือก</div>`; return; }
+
   histList.innerHTML = '<div class="card card-flush">' + asgns.map(a => {
     const si = tagInfo(a.status);
-    return `<div class="row click" onclick="go('ad-txlog',{aid:'${a.id}'})"><div class="row-body"><div class="row-title mono">${a.locations?.code || '?'}</div><div class="row-sub"><span style="color:var(--primary-blue);font-weight:700;">${a.count_sessions?.name||''}</span> · ${a.profiles?.name||'?'}</div><div class="row-sub">${new Date(a.created_at).toLocaleString('th-TH')}</div></div><span class="tag ${si.cls}">${si.lbl}</span><span class="caret">›</span></div>`;
+    const countedBy = (historyCounterMap[a.id] || []).join(', ') || 'ไม่ระบุคนนับ';
+    return `<div class="row click" onclick="go('ad-txlog',{aid:'${a.id}'})"><div class="row-body"><div class="row-title mono">${a.locations?.code || '?'}</div><div class="row-sub"><span style="color:var(--primary-blue);font-weight:700;">${a.count_sessions?.name||''}</span> · คนนับจริง: ${escapeWmsText(countedBy)}</div><div class="row-sub">${new Date(a.created_at).toLocaleString('th-TH')}</div></div><span class="tag ${si.cls}">${si.lbl}</span><span class="caret">›</span></div>`;
   }).join('') + '</div>';
 }
 
 async function loadAdTxLog() {
   const { aid } = S; if (!aid) { go('ad-history'); return; }
   const [{ data: asgn }, { data: recs }, { data: approvals, error: apprErr }] = await Promise.all([
-    sb.from('assignments').select('id,status,location_id,session_id,locations(code,zone),profiles!assigned_to(name),count_sessions(name)').eq('id', aid).single(),
-    sb.from('count_records').select('item_id,round,count_qty,counted_at,remark,photo_url,counted_by,actual_counter_name,profiles!counted_by(name),actual_counter:profiles!actual_counter_id(name),items(code,description)').eq('assignment_id', aid).order('counted_at'),
+    sb.from('assignments').select('id,status,location_id,session_id,locations(code,zone),count_sessions(name)').eq('id', aid).single(),
+    sb.from('count_records').select('item_id,round,count_qty,counted_at,remark,photo_url,actual_counter_name,items(code,description)').eq('assignment_id', aid).order('counted_at'),
     sb.from('variance_approvals').select('item_id,final_qty,variance,resolution,approved_by,created_at,items(code,description),profiles!approved_by(name)').eq('assignment_id', aid).order('created_at'),
   ]);
   if (!asgn) { go('ad-history'); return; }
@@ -8540,25 +9335,26 @@ async function loadAdTxLog() {
   events.sort((a,b) => new Date(a.at||0) - new Date(b.at||0));
 
   const si = tagInfo(asgn.status);
-  const ACTION_META = { oh_edit: { icon:'✏️', label:'แก้ไขยอด OH' }, reassign: { icon:'🔄', label:'เปลี่ยนผู้นับ' } };
+  const pageCounterLabel = actualCounterLabel(recs || []);
+  const ACTION_META = { oh_edit: { icon:'✏️', label:'แก้ไขยอด OH' }, reassign: { icon:'🔄', label:'เปลี่ยน User ผู้รับงาน' } };
   let rows = '';
   for (const ev of events) {
     if (ev.type === 'count') {
       const r = ev.data; const ohInfo = ohMap[r.item_id];
-      rows += `<div class="row" style="cursor:default;flex-wrap:wrap"><div class="row-body"><div class="row-title mono" style="font-size:14px">${r.items?.code||'?'}</div><div class="row-sub">${r.items?.description||''}</div><div class="row-sub">รอบ ${r.round} · นับโดย: ${r.actual_counter_name || r.actual_counter?.name || r.profiles?.name || '?'}</div><div class="row-sub">${r.counted_at ? new Date(r.counted_at).toLocaleString('th-TH') : ''}</div>${r.remark ? `<div class="row-sub" style="color:var(--primary-blue); font-weight:600;">📝 ${r.remark}</div>` : ''}${r.photo_url ? `<a href="${r.photo_url}" target="_blank" style="font-size:12px;font-weight:700;color:var(--accent-red)">📷 ดูรูป</a>` : ''}</div><div style="text-align:right;flex-shrink:0"><div style="font-size:32px;font-weight:800;font-family:'Fredoka';color:var(--text-main)">${r.count_qty}</div><span class="tag tag-blue" style="font-size:10px">R${r.round}</span>${ohInfo ? `<div class="oh-chip" style="margin-top:8px;font-size:12px;padding:4px 10px">OH: ${ohInfo.oh}${ohInfo.al!=null?` <span class="al-part">· AL ${ohInfo.al}</span>`:''}</div>` : ''}</div></div>`;
+      rows += `<div class="row" style="cursor:default;flex-wrap:wrap"><div class="row-body"><div class="row-title mono" style="font-size:14px">${r.items?.code||'?'}</div><div class="row-sub">${r.items?.description||''}</div><div class="row-sub">รอบ ${r.round} · คนนับจริง: ${escapeWmsText(r.actual_counter_name || 'ไม่ระบุคนนับ')}</div><div class="row-sub">${r.counted_at ? new Date(r.counted_at).toLocaleString('th-TH') : ''}</div>${r.remark ? `<div class="row-sub" style="color:var(--primary-blue); font-weight:600;">📝 ${escapeWmsText(r.remark)}</div>` : ''}${r.photo_url ? `<a href="${r.photo_url}" target="_blank" style="font-size:12px;font-weight:700;color:var(--accent-red)">📷 ดูรูป</a>` : ''}</div><div style="text-align:right;flex-shrink:0"><div style="font-size:32px;font-weight:800;font-family:'Fredoka';color:var(--text-main)">${r.count_qty}</div><span class="tag tag-blue" style="font-size:10px">R${r.round}</span>${ohInfo ? `<div class="oh-chip" style="margin-top:8px;font-size:12px;padding:4px 10px">OH: ${ohInfo.oh}${ohInfo.al!=null?` <span class="al-part">· AL ${ohInfo.al}</span>`:''}</div>` : ''}</div></div>`;
     } else if (ev.type === 'approval') {
       const a = ev.data; const isOk = a.resolution === 'ok';
-      rows += `<div class="row" style="cursor:default;flex-wrap:wrap;background:${isOk?'rgba(74, 222, 128, 0.08)':'rgba(251, 113, 133, 0.08)'}"><div class="row-body"><div class="row-title mono" style="font-size:14px">${a.items?.code||'?'}</div><div class="row-sub">${a.items?.description||''}</div><div class="row-sub">${isOk?'✅':'❌'} คอนเฟิร์มยอดโดย: <span style="font-weight:700;">${a.profiles?.name||'?'}</span></div><div class="row-sub">${a.created_at ? new Date(a.created_at).toLocaleString('th-TH') : ''}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:32px;font-weight:800;font-family:'Fredoka';color:var(--text-main)">${a.final_qty}</div><span class="tag ${isOk?'tag-green':'tag-red'}" style="font-size:10px">${a.variance>0?'+':''}${a.variance}</span></div></div>`;
+      rows += `<div class="row" style="cursor:default;flex-wrap:wrap;background:${isOk?'rgba(74, 222, 128, 0.08)':'rgba(251, 113, 133, 0.08)'}"><div class="row-body"><div class="row-title mono" style="font-size:14px">${a.items?.code||'?'}</div><div class="row-sub">${a.items?.description||''}</div><div class="row-sub">${isOk?'✅':'❌'} คอนเฟิร์มยอดโดย User: <span style="font-weight:700;">${escapeWmsText(a.profiles?.name||'?')}</span></div><div class="row-sub">${a.created_at ? new Date(a.created_at).toLocaleString('th-TH') : ''}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:32px;font-weight:800;font-family:'Fredoka';color:var(--text-main)">${a.final_qty}</div><span class="tag ${isOk?'tag-green':'tag-red'}" style="font-size:10px">${a.variance>0?'+':''}${a.variance}</span></div></div>`;
     } else {
       const a = ev.data; const meta = ACTION_META[a.action] || { icon:'📝', label: a.action };
-      rows += `<div class="row" style="cursor:default;flex-wrap:wrap;background:rgba(114, 213, 246, 0.1)"><div class="row-body"><div class="row-title mono" style="font-size:14px">${a.items?.code || meta.label}</div>${a.items?.code ? `<div class="row-sub" style="font-weight:700; color:var(--primary-blue);">${meta.icon} ${meta.label}</div>` : ''}<div class="row-sub">โดย: ${a.profiles?.name||'?'}</div><div class="row-sub">${a.created_at ? new Date(a.created_at).toLocaleString('th-TH') : ''}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:16px;font-weight:800;color:var(--text-main)">${a.old_value ?? '—'} → ${a.new_value ?? '—'}</div><span class="tag tag-blue" style="font-size:10px; margin-top:6px;">${meta.icon} ${meta.label}</span></div></div>`;
+      rows += `<div class="row" style="cursor:default;flex-wrap:wrap;background:rgba(114, 213, 246, 0.1)"><div class="row-body"><div class="row-title mono" style="font-size:14px">${a.items?.code || meta.label}</div>${a.items?.code ? `<div class="row-sub" style="font-weight:700; color:var(--primary-blue);">${meta.icon} ${meta.label}</div>` : ''}<div class="row-sub">ดำเนินการโดย User: ${escapeWmsText(a.profiles?.name||'?')}</div><div class="row-sub">${a.created_at ? new Date(a.created_at).toLocaleString('th-TH') : ''}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:16px;font-weight:800;color:var(--text-main)">${a.old_value ?? '—'} → ${a.new_value ?? '—'}</div><span class="tag tag-blue" style="font-size:10px; margin-top:6px;">${meta.icon} ${meta.label}</span></div></div>`;
     }
   }
 
   cnt().innerHTML = `
     <div class="card">
       <div class="mono" style="font-size:22px;font-weight:800">${asgn.locations?.code}</div>
-      <div style="font-size:14px;color:var(--text-muted);margin-top:6px; font-weight:600;"><span style="color:var(--primary-blue)">${asgn.count_sessions?.name||''}</span> · ${asgn.profiles?.name||'?'}</div>
+      <div style="font-size:14px;color:var(--text-muted);margin-top:6px; font-weight:600;"><span style="color:var(--primary-blue)">${asgn.count_sessions?.name||''}</span> · คนนับจริง: ${escapeWmsText(pageCounterLabel)}</div>
       <div style="margin-top:12px"><span class="tag ${si.cls}">${si.lbl}</span></div>
       ${showMismatchWarning ? `<div class="alert alert-red" style="margin-top:16px">⚠️ พบ ${mismatchItems.length} รายการที่ยอดนับไม่ตรงกับ OH ปัจจุบัน</div><button class="btn btn-red btn-sm" onclick="sendBackToVariance('${aid}')">📤 ส่งกลับไปตรวจสอบใน Variance</button>` : ''}
     </div>
@@ -8588,15 +9384,32 @@ async function createSess() {
 }
 
 async function activateSess(id) { await sb.from('count_sessions').update({ status:'active' }).eq('id', id); loadAdSess(); }
-async function closeSess(id) { if (!confirm('ปิด Session นี้? Counter จะนับเพิ่มไม่ได้แล้ว')) return; await sb.from('count_sessions').update({ status:'closed', closed_at:new Date().toISOString() }).eq('id', id); loadAdSess(); }
+async function closeSess(id) { if (!confirm('ปิด Session นี้? User จะบันทึกยอดเพิ่มไม่ได้แล้ว')) return; await sb.from('count_sessions').update({ status:'closed', closed_at:new Date().toISOString() }).eq('id', id); loadAdSess(); }
 async function reopenSess(id) { if (!confirm('เปิด Session นี้ใหม่อีกครั้ง?')) return; await sb.from('count_sessions').update({ status:'active', closed_at:null }).eq('id', id); loadAdSess(); }
+
+async function renameSess(id) {
+  if (prof?.role !== 'admin') { adminOnlyMessage(); return; }
+  const name = Q(`sess_name_${id}`)?.value.trim();
+  if (!name) { alert('กรุณาระบุชื่อ Session'); return; }
+  try {
+    await invokeAdminMaster('session_rename', { id, name });
+    alert('✅ เปลี่ยนชื่อ Session และข้อมูลที่เชื่อมโยงเรียบร้อยแล้ว');
+    loadAdSess();
+  } catch (error) {
+    alert('แก้ชื่อ Session ไม่สำเร็จ: ' + error.message);
+  }
+}
+
 async function deleteSess(id, name) {
-  if (!confirm(`ลบ Session "${name}" ?`)) return;
-  const { data: asgns } = await sb.from('assignments').select('id').eq('session_id', id);
-  const aIds = (asgns||[]).map(a=>a.id);
-  if (aIds.length) { await sb.from('variance_approvals').delete().in('assignment_id', aIds); await sb.from('count_records').delete().in('assignment_id', aIds); await sb.from('assignments').delete().eq('session_id', id); }
-  await sb.from('stock_snapshot_detail').delete().eq('session_id', id); await sb.from('stock_snapshot').delete().eq('session_id', id); await sb.from('count_sessions').delete().eq('id', id);
-  loadAdSess();
+  if (prof?.role !== 'admin') { adminOnlyMessage(); return; }
+  if (!confirm(`ลบ Session "${name}" แบบถาวร?\n\nงานที่จ่าย ผลการนับ รูปถ่าย หมายเหตุ และ Stock Snapshot ใน Session นี้จะถูกลบทั้งหมด และกู้คืนจากหน้านี้ไม่ได้`)) return;
+  try {
+    await invokeAdminMaster('session_delete', { id });
+    alert('✅ ลบ Session และข้อมูลที่เกี่ยวข้องแบบถาวรแล้ว');
+    loadAdSess();
+  } catch (error) {
+    alert('ลบ Session ไม่สำเร็จ: ' + error.message);
+  }
 }
 
 async function loadDeleteZoneFilters() {
@@ -8693,13 +9506,20 @@ function refreshXlsxPreview() {
   for (const row of _xlsxRawRows) {
     const keys = Object.keys(row);
     const findVal = (terms) => { const k = keys.find(key => terms.some(t => key.toUpperCase().includes(t))); return k ? String(row[k]).trim() : ''; };
+    const findExactVal = (terms) => {
+      const normalize = value => String(value).trim().toUpperCase().replace(/[\s_-]+/g, '');
+      const wanted = terms.map(normalize);
+      const k = keys.find(key => wanted.includes(normalize(key)));
+      return k ? String(row[k]).trim() : '';
+    };
     const locCode = findVal(['LOCATION', 'LOC_CODE', 'LOC']); const itemCode = findVal(['ITEM_CODE', 'ITEM', 'SKU', 'ARTICLE', 'MATERIAL']);
     const itemDesc = findVal(['ITEM_DESC', 'DESCRIPTION', 'DESC', 'NAME']); const onhand = parseFloat(findVal(['ONHAND', 'OH', 'QTY', 'QUANTITY', 'STOCK'])) || 0;
     const alQty = findVal(['AL', 'ALLOCATED']) ? parseFloat(findVal(['AL', 'ALLOCATED'])) : null;
     const lpn = findVal(['LPN', 'LICENSE_PLATE', 'PALLET']); const lot = findVal(['LOT', 'BATCH']); const invStatus = findVal(['STATUS', 'INV_STATUS', 'INVENTORY_STATUS']);
+    const uom = findExactVal(['UOM', 'UNIT', 'UNIT OF MEASURE', 'UNIT_OF_MEASURE', 'หน่วยนับ', 'หน่วย']);
     if (!locCode || !itemCode) continue;
     if (locFilter) { const regex = new RegExp('^' + locFilter.replace(/%/g, '.*'), 'i'); if (!regex.test(locCode)) continue; }
-    parsed.push({ locCode, itemCode, itemDesc, onhand, alQty, lpn, lot, invStatus });
+    parsed.push({ locCode, itemCode, itemDesc, onhand, alQty, lpn, lot, invStatus, uom });
   }
   _xlsxParsed = parsed;
   if (prev) { prev.style.display = 'block'; prev.innerHTML = `<div class="alert alert-blue" style="font-size:13px;margin-bottom:0">📊 พบ <strong>${parsed.length}</strong> รายการที่พร้อม Import (จากทั้งหมด ${_xlsxRawRows.length} แถว)</div>`; }
@@ -8728,7 +9548,7 @@ async function doImportXlsx() {
       const key = `${sid}|${locId}|${itemId}`;
       if (!snapMap.has(key)) snapMap.set(key, { session_id: sid, location_id: locId, item_id: itemId, onhand_qty: 0, al_qty: r.alQty });
       snapMap.get(key).onhand_qty += r.onhand;
-      if (r.lpn || r.lot || r.invStatus) detailsList.push({ session_id: sid, location_id: locId, item_id: itemId, license_plate: r.lpn || null, lot: r.lot || null, inventory_status: r.invStatus || null, qty: r.onhand });
+      if (r.lpn || r.lot || r.invStatus || r.uom) detailsList.push({ session_id: sid, location_id: locId, item_id: itemId, license_plate: r.lpn || null, lot: r.lot || null, inventory_status: r.invStatus || null, qty: r.onhand, uom: r.uom || null });
     });
 
     const snapList = Array.from(snapMap.values()); const BATCH = 200;
@@ -8743,17 +9563,747 @@ async function doImportXlsx() {
   } catch (err) { al.innerHTML = errBox(err.message || 'เกิดข้อผิดพลาดระหว่าง Import'); } finally { btn.disabled = false; }
 }
 
-async function loadAdUsers() {
-  if (prof?.role !== 'admin') { go(home()); return; }
-  const { data: users, error } = await sb.from('profiles').select('*').order('name');
-  if (error) { cnt().innerHTML = errBox(error.message); return; }
-  let rows = (users || []).map(u => `<div class="row" style="cursor:default"><div class="row-body"><div class="row-title">${u.name || 'ไม่มีชื่อ'}</div><div class="row-sub">${u.email || ''}</div></div><select style="width:auto;font-size:13px;padding:8px 16px; font-weight:700;" onchange="updateUserRole('${u.id}', this.value)"><option value="counter" ${u.role==='counter'?'selected':''}>Counter</option><option value="supervisor" ${u.role==='supervisor'?'selected':''}>Supervisor</option><option value="admin" ${u.role==='admin'?'selected':''}>Admin</option></select></div>`).join('');
-  cnt().innerHTML = `<div class="card card-flush"><div class="sec" style="font-size:15px; margin-top:10px;">🔑 จัดการทีมงานและสิทธิ์ผู้ใช้งาน (${users?.length || 0} คน)</div>${rows}</div>`;
+function backupCountCards(counts={}) {
+  const labels = {
+    Sessions:'Session', Assignments:'งานที่จ่าย', Stock:'Stock',
+    Stock_Detail:'LPN / Lot', Counts:'ผลการนับ', Approvals:'ผลอนุมัติ',
+    Audit:'Audit Log', Photos:'รูปถ่าย',
+  };
+  return `<div class="backup-count-grid">${Object.entries(labels).map(([key,label]) => `
+    <div class="backup-count-chip">
+      <strong>${Number(counts[key] || 0).toLocaleString()}</strong>
+      <span>${label}</span>
+    </div>`).join('')}</div>`;
 }
 
-async function updateUserRole(uid, role) {
-  const { error } = await sb.from('profiles').update({ role }).eq('id', uid);
-  if (error) alert('อัปเดตสิทธิ์ไม่สำเร็จ: ' + error.message); else alert('✅ อัปเดตสิทธิ์เรียบร้อยแล้ว');
+function setBackupProgress(percent, text='', channel='restore') {
+  const bar = Q(`backup-${channel}-progress-bar`);
+  const label = Q(`backup-${channel}-progress-text`);
+  if (bar) bar.style.width = `${Math.max(0, Math.min(100, Number(percent) || 0))}%`;
+  if (label && text) label.textContent = text;
+}
+
+function backupSelectedSessionIds() {
+  const value = Q('backup-session')?.value || '';
+  const sessions = window._backupSessions || [];
+  if (value === 'ALL') return sessions.map(session => session.id);
+  return value ? [value] : [];
+}
+
+async function renderManageBackup(container) {
+  if (prof?.role !== 'admin') {
+    container.innerHTML = `<div class="alert alert-red">ระบบ Backup/Restore ใช้ได้เฉพาะ Admin เท่านั้น</div>`;
+    return;
+  }
+  const [{ data: sessions, error: sessionError }, { data: events, error: eventError }] = await Promise.all([
+    sb.from('count_sessions').select('id,name,status,created_at').order('created_at',{ascending:false}),
+    sb.from('backup_events')
+      .select('id,action,file_name,session_ids,row_counts,status,created_at,profiles!performed_by(name)')
+      .order('created_at',{ascending:false})
+      .limit(12),
+  ]);
+  if (sessionError) { container.innerHTML = errBox(sessionError.message); return; }
+  if (eventError) console.warn('โหลดประวัติ Backup ไม่สำเร็จ:', eventError.message);
+
+  window._backupSessions = sessions || [];
+  _backupParsed = null;
+  _lastBackupExport = null;
+  const sessionOptions = (sessions || []).map(session =>
+    `<option value="${session.id}">${escapeWmsText(session.name)} · ${escapeWmsText(session.status || '')}</option>`
+  ).join('');
+  const actionLabels = {
+    export:'Backup Excel',
+    delete_after_export:'ลบหลัง Backup',
+    restore:'Restore Excel',
+  };
+  const eventRows = (events || []).map(event => `
+    <div class="backup-history-row">
+      <div>
+        <div style="font-weight:800;color:var(--text-main)">${actionLabels[event.action] || event.action}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:3px;word-break:break-all">${escapeWmsText(event.file_name)}</div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:3px">
+          ${event.created_at ? new Date(event.created_at).toLocaleString('th-TH') : ''} ·
+          ${escapeWmsText(event.profiles?.name || 'Admin')}
+        </div>
+      </div>
+      <span class="tag ${event.status==='completed'?'tag-green':'tag-red'}">${event.status==='completed'?'สำเร็จ':'ไม่ครบ'}</span>
+    </div>`).join('');
+
+  container.innerHTML = `
+    <div class="alert alert-blue" style="line-height:1.7">
+      <strong>Backup แบบกู้คืนได้</strong><br>
+      Excel จะเก็บ UUID และความสัมพันธ์ของ Session, Location, Item, งานที่จ่าย, Stock, LPN/Lot,
+      ผลการนับ, หมายเหตุ, รูปถ่ายแบบ URL และผลอนุมัติครบทุกตาราง<br>
+      <span style="font-size:11px">หมายเหตุ: บัญชี User Login และรหัสผ่านไม่ถูกลบหรือสร้างใหม่จากไฟล์นี้</span>
+    </div>
+    <div class="backup-grid">
+      <section class="backup-panel">
+        <div class="backup-panel-title">${navIconSvg('backup',24)} <span>1. สร้างไฟล์ Backup</span></div>
+        <div class="fg">
+          <label>เลือกข้อมูลที่ต้องการ Backup</label>
+          <select id="backup-session" onchange="refreshBackupScopeSummary()">
+            ${(sessions || []).length > 1 ? `<option value="ALL">ทุก Session (${sessions.length})</option>` : ''}
+            ${sessionOptions}
+          </select>
+        </div>
+        <div class="fg">
+          <label>หลังสร้างไฟล์สำเร็จ</label>
+          <select id="backup-after-mode" onchange="Q('backup-delete-area').hidden=true">
+            <option value="keep">เก็บข้อมูลไว้ในระบบ</option>
+            <option value="delete">เตรียมลบ Session หลังตรวจไฟล์แล้ว</option>
+          </select>
+        </div>
+        <div id="backup-scope-summary">
+          ${(sessions || []).length ? `<div class="load" style="padding:15px">กำลังตรวจจำนวนข้อมูล...</div>`
+            : `<div class="alert alert-amber">ยังไม่มี Session สำหรับ Backup</div>`}
+        </div>
+        <button class="btn btn-blue" id="backup-export-btn" style="width:100%;margin-top:16px"
+          onclick="exportBackupExcel()" ${(sessions || []).length?'':'disabled'}>
+          ${navIconSvg('backup',18)} ดาวน์โหลด Backup Excel
+        </button>
+        <div style="margin-top:14px">
+          <div id="backup-export-progress-text" style="font-size:11px;color:var(--text-muted);font-weight:700">พร้อมสร้าง Backup</div>
+          <div class="backup-progress"><span id="backup-export-progress-bar"></span></div>
+        </div>
+        <div id="backup-export-alert" style="margin-top:12px"></div>
+        <div id="backup-delete-area" hidden style="margin-top:14px">
+          <div class="alert alert-red" style="line-height:1.65">
+            ตรวจว่าไฟล์เปิดได้และเก็บไฟล์ไว้เรียบร้อยก่อนกดลบ<br>
+            ระบบจะลบเฉพาะข้อมูล Session ในฐานข้อมูล ส่วนไฟล์รูปจะเก็บไว้เพื่อ Restore
+          </div>
+          <button class="btn btn-red admin-delete-icon" style="width:100%" onclick="deleteLastBackedUpSessions()">
+            ${adminTrashIconSvg()} <span>ลบข้อมูลที่ Backup แล้ว</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="backup-panel">
+        <div class="backup-panel-title">${navIconSvg('import',24)} <span>2. Restore จาก Excel</span></div>
+        <div class="alert alert-amber" style="font-size:12px;line-height:1.65">
+          ใช้เฉพาะไฟล์ที่สร้างจากเมนู Backup นี้ ระบบจะตรวจ Manifest, จำนวนแถว และ checksum ก่อน Import
+        </div>
+        <div class="fg">
+          <label>เลือกไฟล์ Backup (.xlsx)</label>
+          <input class="backup-file-input" type="file" id="backup-import-file" accept=".xlsx"
+            onchange="readBackupExcelFile(event)">
+        </div>
+        <div id="backup-import-preview">
+          <div class="load" style="padding:18px">ยังไม่ได้เลือกไฟล์</div>
+        </div>
+        <div style="margin-top:16px">
+          <div id="backup-restore-progress-text" style="font-size:11px;color:var(--text-muted);font-weight:700">พร้อมทำงาน</div>
+          <div class="backup-progress"><span id="backup-restore-progress-bar"></span></div>
+        </div>
+        <button class="btn btn-green" id="backup-restore-btn" style="width:100%;margin-top:16px"
+          onclick="restoreBackupExcel()" disabled>
+          ${navIconSvg('import',18)} ตรวจแล้ว · เริ่ม Restore
+        </button>
+        <div id="backup-restore-alert" style="margin-top:12px"></div>
+      </section>
+    </div>
+    <details class="admin-master-group" style="margin-top:18px">
+      <summary>
+        <span>${navIconSvg('history',20)}</span>
+        <span class="admin-master-group-title">ประวัติ Backup / Restore</span>
+        <span class="admin-master-group-hint">แตะเพื่อเปิด</span>
+        <span class="admin-master-group-chevron">⌄</span>
+      </summary>
+      <div class="admin-master-group-body">
+        ${eventRows || `<div class="load" style="padding:24px">ยังไม่มีประวัติ</div>`}
+      </div>
+    </details>`;
+
+  if ((sessions || []).length) await refreshBackupScopeSummary();
+}
+
+async function refreshBackupScopeSummary() {
+  const sessionIds = backupSelectedSessionIds();
+  const container = Q('backup-scope-summary');
+  const button = Q('backup-export-btn');
+  if (!container || !button || !sessionIds.length) return;
+  button.disabled = true;
+  container.innerHTML = `<div class="load" style="padding:15px">กำลังตรวจจำนวนข้อมูล...</div>`;
+  let ready = false;
+  try {
+    const result = await invokeAdminBackup('scope_summary', { session_ids: sessionIds });
+    window._backupScopeCounts = result.counts || {};
+    container.innerHTML = backupCountCards(result.counts);
+    ready = Number(result.counts?.Sessions || 0) === sessionIds.length;
+    if (!ready) throw new Error('ตรวจพบ Session ไม่ครบ กรุณาโหลดหน้าใหม่ก่อน Backup');
+  } catch (error) {
+    container.innerHTML = errBox(error.message);
+  } finally {
+    button.disabled = !ready;
+  }
+}
+
+async function fetchAllBackupRows(table, columns, applyFilter) {
+  const output = [];
+  for (let from = 0; ; from += 1000) {
+    let query = sb.from(table).select(columns.join(',')).order('id').range(from, from + 999);
+    if (applyFilter) query = applyFilter(query);
+    const { data, error } = await query;
+    if (error) throw new Error(`อ่าน ${table} ไม่สำเร็จ: ${error.message}`);
+    output.push(...(data || []));
+    if (!data || data.length < 1000) break;
+  }
+  return output;
+}
+
+async function fetchBackupRowsByValues(table, columns, filterColumn, values) {
+  const cleanValues = [...new Set((values || []).filter(Boolean))];
+  if (!cleanValues.length) return [];
+  const output = [];
+  for (let start = 0; start < cleanValues.length; start += 50) {
+    const batch = cleanValues.slice(start, start + 50);
+    const rows = await fetchAllBackupRows(table, columns, query => query.in(filterColumn, batch));
+    output.push(...rows);
+  }
+  return output;
+}
+
+function backupCanonicalValue(value) {
+  if (value === null || value === undefined || value === '') return '<NULL>';
+  if (value === true) return '<TRUE>';
+  if (value === false) return '<FALSE>';
+  if (typeof value === 'number') return Number.isFinite(value) ? String(value) : '<INVALID>';
+  return String(value).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+}
+
+function backupRowsChecksum(rows, columns) {
+  let hash = 2166136261;
+  const update = text => {
+    const source = String(text);
+    for (let i = 0; i < source.length; i++) {
+      hash ^= source.charCodeAt(i);
+      hash = Math.imul(hash, 16777619) >>> 0;
+    }
+  };
+  update(columns.join('\t')); update('\n');
+  (rows || []).forEach(row => {
+    columns.forEach(column => { update(backupCanonicalValue(row[column])); update('\t'); });
+    update('\n');
+  });
+  return hash.toString(16).padStart(8,'0');
+}
+
+async function collectBackupData(sessionIds) {
+  const dataBySheet = {};
+  for (let index = 0; index < BACKUP_SHEET_SPECS.length; index++) {
+    const spec = BACKUP_SHEET_SPECS[index];
+    setBackupProgress(Math.round(index / BACKUP_SHEET_SPECS.length * 72),
+      `กำลังอ่าน ${spec.sheet} (${index + 1}/${BACKUP_SHEET_SPECS.length})...`, 'export');
+    let rows = [];
+    if (spec.scope === 'master' || spec.scope === 'reference') {
+      rows = await fetchAllBackupRows(spec.table, spec.columns);
+    } else if (spec.scope === 'session') {
+      const filterColumn = spec.table === 'count_sessions' ? 'id' : 'session_id';
+      rows = await fetchBackupRowsByValues(spec.table, spec.columns, filterColumn, sessionIds);
+    } else {
+      const assignmentIds = (dataBySheet.Assignments || []).map(row => row.id);
+      rows = await fetchBackupRowsByValues(spec.table, spec.columns, 'assignment_id', assignmentIds);
+    }
+    if (rows.length > 1048575 - 1) {
+      throw new Error(`${spec.sheet} มีมากกว่า 1,048,574 แถว เกินขนาดสูงสุดของ Excel กรุณา Backup แยก Session`);
+    }
+    dataBySheet[spec.sheet] = rows;
+  }
+  return dataBySheet;
+}
+
+function backupSafeFilePart(value) {
+  return String(value || 'sessions')
+    .replace(/[\\/:*?"<>|]/g,'_')
+    .replace(/\s+/g,'_')
+    .slice(0,50);
+}
+
+function backupTimestampForFile(date=new Date()) {
+  const pad = value => String(value).padStart(2,'0');
+  return `${date.getFullYear()}${pad(date.getMonth()+1)}${pad(date.getDate())}_${pad(date.getHours())}${pad(date.getMinutes())}`;
+}
+
+function buildBackupWorkbook(dataBySheet, sessionIds, fileName) {
+  if (typeof XLSX === 'undefined') throw new Error('ไม่พบระบบอ่าน/เขียน Excel');
+  const createdAt = new Date().toISOString();
+  const rowCounts = {};
+  const sheetHashes = {};
+  BACKUP_SHEET_SPECS.forEach(spec => {
+    const rows = dataBySheet[spec.sheet] || [];
+    rowCounts[spec.sheet] = rows.length;
+    sheetHashes[spec.sheet] = backupRowsChecksum(rows, spec.columns);
+  });
+
+  const manifestEntries = [
+    { key:'backup_format', value:BACKUP_FORMAT },
+    { key:'format_version', value:BACKUP_FORMAT_VERSION },
+    { key:'created_at', value:createdAt },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'v59' },
+    { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
+    { key:'file_name', value:fileName },
+    { key:'session_ids', value:JSON.stringify(sessionIds) },
+    { key:'photo_backup_mode', value:'storage_url_preserved' },
+    ...BACKUP_SHEET_SPECS.flatMap(spec => [
+      { key:`rows:${spec.sheet}`, value:String(rowCounts[spec.sheet]) },
+      { key:`hash:${spec.sheet}`, value:sheetHashes[spec.sheet] },
+    ]),
+  ];
+  const manifestHash = backupRowsChecksum(manifestEntries, ['key','value']);
+  manifestEntries.push({ key:'manifest_hash', value:manifestHash });
+
+  const workbook = XLSX.utils.book_new();
+  workbook.Props = {
+    Title: `Cycle Count Backup ${createdAt}`,
+    Subject: 'Restorable Cycle Count database backup',
+    Author: prof?.name || 'Cycle Count Admin',
+    CreatedDate: new Date(),
+  };
+  const readme = [
+    ['CYCLE COUNT BACKUP','ไฟล์สำรองข้อมูลสำหรับนำกลับเข้าระบบ'],
+    ['คำเตือน','ห้ามเปลี่ยนชื่อชีต หัวคอลัมน์ UUID หรือข้อมูลในไฟล์'],
+    ['รูปถ่าย','เก็บเป็น URL และระบบจะรักษาไฟล์รูปใน Storage เมื่อลบผ่านเมนู Backup'],
+    ['ข้อมูลระบบ','Locations, Items, คนนับจริง และตัวเลือกหมายเหตุจะถูก Restore กลับด้วย'],
+    ['User Login','ไฟล์นี้ไม่เก็บรหัสผ่านและไม่สร้างบัญชี Auth ใหม่; Profiles ใช้เป็นข้อมูลอ้างอิง'],
+    ['วิธี Restore','เมนู จัดการงาน / Sessions → Backup / Restore → เลือกไฟล์นี้'],
+    ['สร้างเมื่อ',createdAt],
+    ['จำนวน Session',sessionIds.length],
+    ['Manifest checksum',manifestHash],
+  ];
+  const readmeSheet = XLSX.utils.aoa_to_sheet(readme);
+  readmeSheet['!cols'] = [{wch:24},{wch:80}];
+  XLSX.utils.book_append_sheet(workbook, readmeSheet, 'README');
+
+  const manifestSheet = XLSX.utils.json_to_sheet(manifestEntries, { header:['key','value'] });
+  manifestSheet['!cols'] = [{wch:28},{wch:90}];
+  XLSX.utils.book_append_sheet(workbook, manifestSheet, 'Manifest');
+
+  BACKUP_SHEET_SPECS.forEach(spec => {
+    const rows = dataBySheet[spec.sheet] || [];
+    const sheet = XLSX.utils.json_to_sheet(rows, { header:spec.columns, skipHeader:false });
+    sheet['!cols'] = spec.columns.map(column => ({
+      wch: column === 'id' || column.endsWith('_id') ? 38
+        : column.includes('_at') ? 26
+        : ['description','remark','photo_url','old_value','new_value','supervisor_note'].includes(column) ? 46
+        : 18,
+    }));
+    if (rows.length) sheet['!autofilter'] = { ref:sheet['!ref'] };
+    XLSX.utils.book_append_sheet(workbook, sheet, spec.sheet);
+  });
+
+  return { workbook, manifestHash, rowCounts, sheetHashes, createdAt };
+}
+
+async function exportBackupExcel() {
+  if (prof?.role !== 'admin') { adminOnlyMessage(); return; }
+  const sessionIds = backupSelectedSessionIds();
+  if (!sessionIds.length) { alert('กรุณาเลือก Session'); return; }
+  const button = Q('backup-export-btn');
+  const alertBox = Q('backup-export-alert');
+  const deleteArea = Q('backup-delete-area');
+  if (button) button.disabled = true;
+  if (deleteArea) deleteArea.hidden = true;
+  _lastBackupExport = null;
+  try {
+    if (alertBox) alertBox.innerHTML = `<div class="alert alert-blue">กำลังรวบรวมข้อมูล กรุณาอย่าปิดหน้านี้...</div>`;
+    setBackupProgress(1,'เริ่มสร้าง Backup...','export');
+    const dataBySheet = await collectBackupData(sessionIds);
+    const sessions = dataBySheet.Sessions || [];
+    const scopeName = sessions.length === 1 ? sessions[0].name : `${sessions.length}_Sessions`;
+    const fileName = `CycleCount_Backup_${backupTimestampForFile()}_${backupSafeFilePart(scopeName)}.xlsx`;
+    setBackupProgress(78,'กำลังสร้าง Workbook และตรวจ checksum...','export');
+    const built = buildBackupWorkbook(dataBySheet, sessionIds, fileName);
+    setBackupProgress(90,'กำลังดาวน์โหลด Excel...','export');
+    XLSX.writeFile(built.workbook, fileName, { bookType:'xlsx', compression:true });
+
+    const logResult = await invokeAdminBackup('log_export', {
+      file_name:fileName,
+      session_ids:sessionIds,
+      manifest_hash:built.manifestHash,
+      row_counts:built.rowCounts,
+    });
+    _lastBackupExport = {
+      fileName,
+      sessionIds,
+      manifestHash:built.manifestHash,
+      rowCounts:built.rowCounts,
+      backupEventId:logResult.backup_event_id,
+    };
+    setBackupProgress(100,'Backup สำเร็จ','export');
+    if (alertBox) alertBox.innerHTML = `<div class="alert alert-green" style="line-height:1.65">
+      ✅ ดาวน์โหลด <strong>${escapeWmsText(fileName)}</strong> แล้ว<br>
+      ${Object.values(built.rowCounts).reduce((sum,value)=>sum+Number(value||0),0).toLocaleString()} แถว · checksum ${built.manifestHash}
+    </div>`;
+    if (Q('backup-after-mode')?.value === 'delete' && deleteArea) deleteArea.hidden = false;
+  } catch (error) {
+    console.error(error);
+    setBackupProgress(0,'Backup ไม่สำเร็จ','export');
+    if (alertBox) alertBox.innerHTML = errBox(error.message || error);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+async function deleteLastBackedUpSessions() {
+  if (!_lastBackupExport) { alert('กรุณาสร้างไฟล์ Backup ใหม่ก่อนลบข้อมูล'); return; }
+  const sessionNames = (window._backupSessions || [])
+    .filter(session => _lastBackupExport.sessionIds.includes(session.id))
+    .map(session => session.name).join(', ');
+  const answer = prompt(`กำลังจะลบข้อมูล Session แบบถาวร:\n${sessionNames}\n\nพิมพ์คำว่า ลบถาวร เพื่อยืนยัน`);
+  if (answer !== 'ลบถาวร') { alert('ยกเลิกการลบข้อมูล'); return; }
+  const alertBox = Q('backup-export-alert');
+  try {
+    if (alertBox) alertBox.innerHTML = `<div class="alert alert-blue">กำลังลบข้อมูลที่ Backup แล้ว...</div>`;
+    const result = await invokeAdminBackup('delete_sessions', {
+      session_ids:_lastBackupExport.sessionIds,
+      backup_event_id:_lastBackupExport.backupEventId,
+    });
+    alert(`✅ ลบข้อมูล Session แล้ว\nไฟล์รูปยังถูกเก็บไว้สำหรับ Restore`);
+    _lastBackupExport = null;
+    await loadAdManage();
+  } catch (error) {
+    if (alertBox) alertBox.innerHTML = errBox(error.message || error);
+  }
+}
+
+function backupManifestFromSheet(workbook) {
+  const sheet = workbook.Sheets.Manifest;
+  if (!sheet) throw new Error('ไม่พบชีต Manifest');
+  const values = XLSX.utils.sheet_to_json(sheet, { header:1, defval:'', raw:true });
+  if (!values.length || values[0][0] !== 'key' || values[0][1] !== 'value') {
+    throw new Error('รูปแบบ Manifest ไม่ถูกต้อง');
+  }
+  const entries = values.slice(1)
+    .filter(row => String(row[0] || '').trim())
+    .map(row => ({ key:String(row[0]), value:String(row[1] ?? '') }));
+  const map = Object.fromEntries(entries.map(entry => [entry.key,entry.value]));
+  const baseEntries = entries.filter(entry => entry.key !== 'manifest_hash');
+  const computedHash = backupRowsChecksum(baseEntries, ['key','value']);
+  if (map.backup_format !== BACKUP_FORMAT) throw new Error('ไฟล์นี้ไม่ใช่ Cycle Count Backup');
+  if (map.format_version !== BACKUP_FORMAT_VERSION) throw new Error(`ไม่รองรับ Backup Version ${map.format_version || '?'}`);
+  if (!map.manifest_hash || map.manifest_hash !== computedHash) throw new Error('Manifest checksum ไม่ตรง ไฟล์อาจถูกแก้ไข');
+  let sessionIds;
+  try { sessionIds = JSON.parse(map.session_ids); } catch (_) { throw new Error('รายการ Session ใน Manifest ไม่ถูกต้อง'); }
+  if (!Array.isArray(sessionIds) || !sessionIds.length) throw new Error('ไม่พบ Session ใน Manifest');
+  return { map, entries, sessionIds, manifestHash:computedHash };
+}
+
+async function readBackupExcelFile(event) {
+  const file = event?.target?.files?.[0];
+  const preview = Q('backup-import-preview');
+  const button = Q('backup-restore-btn');
+  const alertBox = Q('backup-restore-alert');
+  _backupParsed = null;
+  if (button) button.disabled = true;
+  if (alertBox) alertBox.innerHTML = '';
+  if (!file) {
+    if (preview) preview.innerHTML = `<div class="load" style="padding:18px">ยังไม่ได้เลือกไฟล์</div>`;
+    return;
+  }
+  try {
+    if (preview) preview.innerHTML = `<div class="load" style="padding:18px">กำลังตรวจไฟล์และ checksum...</div>`;
+    setBackupProgress(5,'กำลังอ่านไฟล์ Excel...');
+    const workbook = XLSX.read(await file.arrayBuffer(), { type:'array', cellDates:false });
+    const manifest = backupManifestFromSheet(workbook);
+    const dataBySheet = {};
+    const rowCounts = {};
+
+    for (let index = 0; index < BACKUP_SHEET_SPECS.length; index++) {
+      const spec = BACKUP_SHEET_SPECS[index];
+      const sheet = workbook.Sheets[spec.sheet];
+      if (!sheet) throw new Error(`ไม่พบชีต ${spec.sheet}`);
+      if (!sheet['!ref']) throw new Error(`ชีต ${spec.sheet} ไม่มีหัวคอลัมน์`);
+      const sheetRange = XLSX.utils.decode_range(sheet['!ref']);
+      const headers = [];
+      for (let column = sheetRange.s.c; column <= sheetRange.e.c; column++) {
+        const cell = sheet[XLSX.utils.encode_cell({ r:sheetRange.s.r, c:column })];
+        headers.push(String(cell?.v ?? ''));
+      }
+      const missingColumns = spec.columns.filter(column => !headers.includes(column));
+      if (missingColumns.length) throw new Error(`${spec.sheet} ขาดคอลัมน์: ${missingColumns.join(', ')}`);
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval:null, raw:true })
+        .filter(row => row.id !== null && row.id !== undefined && String(row.id).trim() !== '');
+      const expectedRows = Number(manifest.map[`rows:${spec.sheet}`]);
+      if (!Number.isInteger(expectedRows) || rows.length !== expectedRows) {
+        throw new Error(`${spec.sheet} จำนวนแถวไม่ตรง: พบ ${rows.length}, Manifest ${expectedRows}`);
+      }
+      const checksum = backupRowsChecksum(rows, spec.columns);
+      if (checksum !== manifest.map[`hash:${spec.sheet}`]) {
+        throw new Error(`${spec.sheet} checksum ไม่ตรง ไฟล์อาจถูกแก้ไขหรือเสียหาย`);
+      }
+      dataBySheet[spec.sheet] = rows;
+      rowCounts[spec.sheet] = rows.length;
+      setBackupProgress(5 + Math.round((index + 1) / BACKUP_SHEET_SPECS.length * 45),
+        `ตรวจ ${spec.sheet} แล้ว (${rows.length.toLocaleString()} แถว)`);
+    }
+
+    _backupParsed = {
+      fileName:file.name,
+      sessionIds:manifest.sessionIds,
+      manifestHash:manifest.manifestHash,
+      rowCounts,
+      dataBySheet,
+    };
+    const totalRows = Object.values(rowCounts).reduce((sum,value)=>sum+Number(value||0),0);
+    if (preview) preview.innerHTML = `
+      <div class="alert alert-green" style="line-height:1.6">
+        ✅ ไฟล์ถูกต้อง · ${manifest.sessionIds.length} Session · ${totalRows.toLocaleString()} แถว<br>
+        สร้างเมื่อ ${manifest.map.created_at ? new Date(manifest.map.created_at).toLocaleString('th-TH') : '-'}
+      </div>
+      ${backupCountCards(rowCounts)}`;
+    setBackupProgress(50,'ตรวจไฟล์ผ่าน พร้อม Restore');
+    if (button) button.disabled = false;
+  } catch (error) {
+    console.error(error);
+    setBackupProgress(0,'ไฟล์ไม่ผ่านการตรวจ');
+    if (preview) preview.innerHTML = errBox(error.message || error);
+  }
+}
+
+async function restoreBackupExcel() {
+  if (prof?.role !== 'admin') { adminOnlyMessage(); return; }
+  if (!_backupParsed) { alert('กรุณาเลือกและตรวจไฟล์ Backup ก่อน'); return; }
+  if (!confirm(`Restore ข้อมูลจากไฟล์ "${_backupParsed.fileName}"?\n\nข้อมูล ID เดิมจะถูกกู้คืน และรายการที่มีอยู่แล้วจะถูกอัปเดตโดยไม่สร้างซ้ำ`)) return;
+  const button = Q('backup-restore-btn');
+  const alertBox = Q('backup-restore-alert');
+  if (button) button.disabled = true;
+  try {
+    const totalRows = BACKUP_RESTORE_ORDER.reduce((sum,sheet) =>
+      sum + (_backupParsed.dataBySheet[sheet]?.length || 0), 0);
+    let completed = 0;
+    for (const sheetName of BACKUP_RESTORE_ORDER) {
+      const spec = BACKUP_SHEET_SPECS.find(item => item.sheet === sheetName);
+      const rows = _backupParsed.dataBySheet[sheetName] || [];
+      for (let start = 0; start < rows.length; start += BACKUP_BATCH_SIZE) {
+        const batch = rows.slice(start, start + BACKUP_BATCH_SIZE);
+        await invokeAdminBackup('restore_batch', { table:spec.table, rows:batch });
+        completed += batch.length;
+        setBackupProgress(50 + Math.round(completed / Math.max(1,totalRows) * 47),
+          `Restore ${sheetName}: ${Math.min(start + batch.length, rows.length).toLocaleString()} / ${rows.length.toLocaleString()}`);
+        await new Promise(resolve => requestAnimationFrame(resolve));
+      }
+    }
+    setBackupProgress(98,'กำลังตรวจจำนวนข้อมูลหลัง Restore...');
+    const result = await invokeAdminBackup('complete_restore', {
+      session_ids:_backupParsed.sessionIds,
+      file_name:_backupParsed.fileName,
+      manifest_hash:_backupParsed.manifestHash,
+      row_counts:_backupParsed.rowCounts,
+    });
+    setBackupProgress(100,'Restore สำเร็จและตรวจจำนวนครบ');
+    if (alertBox) alertBox.innerHTML = `<div class="alert alert-green" style="line-height:1.65">
+      ✅ Restore สำเร็จ ข้อมูล Session และความสัมพันธ์กลับมาครบ<br>
+      ${backupCountCards(result.actual)}
+    </div>`;
+    if (Q('backup-import-file')) Q('backup-import-file').value = '';
+    _backupParsed = null;
+  } catch (error) {
+    console.error(error);
+    if (alertBox) alertBox.innerHTML = `<div class="alert alert-red" style="line-height:1.65">
+      ❌ ${escapeWmsText(error.message || error)}<br>
+      สามารถเลือกไฟล์เดิมแล้ว Restore ซ้ำได้ ระบบจะทำต่อโดยไม่สร้างข้อมูลซ้ำ
+    </div>`;
+  } finally {
+    if (button) button.disabled = !_backupParsed;
+  }
+}
+
+async function loadAdUsers() {
+  if (prof?.role !== 'admin') { go(home()); return; }
+  const [
+    { data: users, error: userError },
+    { data: counters, error: counterError },
+    { data: remarks, error: remarkError },
+  ] = await Promise.all([
+    sb.from('profiles').select('id,name,role').order('name'),
+    sb.from('counter_names').select('id,name').order('name'),
+    sb.from('remark_options').select('id,context,label').order('context').order('label'),
+  ]);
+  const error = userError || counterError || remarkError;
+  if (error) { cnt().innerHTML = errBox(error.message); return; }
+
+  const masterGroup = (icon, title, count, body) => `
+    <details class="admin-master-group">
+      <summary>
+        <span aria-hidden="true">${icon}</span>
+        <span class="admin-master-group-title">${title} (${count})</span>
+        <span class="admin-master-group-hint">แตะเพื่อเปิด</span>
+        <span class="admin-master-group-chevron" aria-hidden="true">⌄</span>
+      </summary>
+      <div class="admin-master-group-body">${body}</div>
+    </details>`;
+
+  const userRows = (users || []).map(u => `
+    <div class="row" style="cursor:default;align-items:flex-end;gap:10px;flex-wrap:wrap">
+      <div class="row-body" style="min-width:220px">
+        <label style="font-size:11px">ชื่อ User ที่ใช้ล็อกอิน</label>
+        <input id="admin_user_name_${u.id}" value="${escapeWmsText(u.name || '')}" maxlength="120">
+      </div>
+      <select style="width:auto;font-size:13px;padding:10px 14px;font-weight:700"
+        onchange="updateUserRole('${u.id}',this.value,this)">
+        <option value="counter" ${u.role==='counter'?'selected':''}>User (รับงาน)</option>
+        <option value="supervisor" ${u.role==='supervisor'?'selected':''}>Supervisor</option>
+        <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
+      </select>
+      <button class="btn btn-blue btn-sm" onclick="saveUserName('${u.id}')">บันทึกชื่อ</button>
+      <button class="btn btn-red btn-sm admin-delete-icon" onclick="deleteLoginUser('${u.id}')"
+        ${u.id===me?.id?'disabled title="ลบบัญชีที่กำลังใช้งานไม่ได้"':''}>
+        ${adminTrashIconSvg()} <span>ลบถาวร</span>
+      </button>
+    </div>`).join('');
+
+  const counterRows = (counters || []).map(c => `
+    <div class="row" style="cursor:default;gap:10px">
+      <input id="admin_counter_name_${c.id}" value="${escapeWmsText(c.name)}" maxlength="120"
+        style="flex:1;min-width:160px">
+      <button class="btn btn-blue btn-sm" onclick="saveCounterName('${c.id}')">บันทึก</button>
+      <button class="btn btn-red btn-sm admin-delete-icon" onclick="deleteCounterName('${c.id}')"
+        title="ลบคนนับ" aria-label="ลบคนนับ">${adminTrashIconSvg()}</button>
+    </div>`).join('');
+
+  const remarkSection = (context, title) => {
+    const contextRemarks = (remarks || []).filter(r => r.context === context);
+    const rows = contextRemarks.map(r => `
+      <div class="row" style="cursor:default;gap:10px">
+        <input id="admin_remark_${r.id}" value="${escapeWmsText(r.label)}" maxlength="120"
+          style="flex:1;min-width:160px">
+        <button class="btn btn-blue btn-sm" onclick="saveRemarkOption('${r.id}')">บันทึก</button>
+        <button class="btn btn-red btn-sm admin-delete-icon" onclick="deleteRemarkOption('${r.id}')"
+          title="ลบหมายเหตุ" aria-label="ลบหมายเหตุ">${adminTrashIconSvg()}</button>
+      </div>`).join('');
+    const body = `
+      ${rows || `<div class="load" style="padding:20px">ยังไม่มีรายการ</div>`}
+      <div style="display:flex;gap:8px;padding:14px 16px;flex-wrap:wrap">
+        <input id="admin_remark_new_${context}" placeholder="เพิ่มรายการใหม่..." maxlength="120" style="flex:1;min-width:180px">
+        <button class="btn btn-green btn-sm" onclick="addRemarkOption('${context}')">＋ เพิ่ม</button>
+      </div>`;
+    return masterGroup(context === 'count' ? '📝' : '🛠️', title, contextRemarks.length, body);
+  };
+
+  cnt().innerHTML = `
+    <div class="alert alert-blue" style="line-height:1.7">
+      🔒 หน้านี้ใช้ได้เฉพาะ Admin<br>
+      การเปลี่ยนชื่อจะเปลี่ยนข้อมูลเดิมในประวัติทั้งหมดด้วย ส่วนปุ่มลบจะลบข้อมูลนั้นแบบถาวร
+    </div>
+    ${masterGroup('🔑','User ที่ใช้ล็อกอินและรับงาน',users?.length || 0,
+      userRows || `<div class="load" style="padding:24px">ยังไม่มี User</div>`)}
+    ${masterGroup('👥','คนนับจริง',counters?.length || 0,`
+      ${counterRows || `<div class="load" style="padding:24px">ยังไม่มีคนนับ</div>`}
+      <div style="display:flex;gap:8px;padding:14px 16px;flex-wrap:wrap">
+        <input id="admin_counter_new" placeholder="เพิ่มชื่อคนนับใหม่..." maxlength="120" style="flex:1;min-width:180px">
+        <button class="btn btn-green btn-sm" onclick="addCounterName()">＋ เพิ่ม</button>
+      </div>`)}
+    ${remarkSection('count','หมายเหตุหน้าบันทึกการนับ')}
+    ${remarkSection('wms','หมายเหตุปรับยอด WMS')}`;
+}
+
+async function saveUserName(id) {
+  const name = Q(`admin_user_name_${id}`)?.value.trim();
+  if (!name) { alert('กรุณาระบุชื่อ User'); return; }
+  try {
+    await invokeAdminMaster('user_rename', { id, name });
+    alert('✅ เปลี่ยนชื่อ User และข้อมูลเดิมเรียบร้อยแล้ว');
+    if (id === me?.id) { prof.name = name; render(); }
+    else loadAdUsers();
+  } catch (error) {
+    alert('แก้ชื่อ User ไม่สำเร็จ: ' + error.message);
+  }
+}
+
+async function updateUserRole(id, role, selectEl) {
+  try {
+    await invokeAdminMaster('user_role', { id, role });
+    if (selectEl) selectEl.dataset.previous = role;
+    alert('✅ อัปเดตสิทธิ์เรียบร้อยแล้ว');
+    if (id === me?.id) {
+      await loadProf();
+      go(home(), {}, { resetHistory:true });
+    }
+  } catch (error) {
+    alert('อัปเดตสิทธิ์ไม่สำเร็จ: ' + error.message);
+    loadAdUsers();
+  }
+}
+
+async function deleteLoginUser(id) {
+  if (id === me?.id) { alert('ไม่สามารถลบบัญชีที่กำลังใช้งานอยู่'); return; }
+  if (!confirm('ลบ User นี้แบบถาวร?\n\nบัญชีจะเข้าสู่ระบบไม่ได้อีก งานและประวัติการนับเดิมจะยังอยู่ แต่ช่อง User ผู้รับงานเดิมจะแสดงเป็น “ไม่ระบุ User”')) return;
+  try {
+    await invokeAdminMaster('user_delete', { id });
+    alert('✅ ลบ User แบบถาวรแล้ว');
+    loadAdUsers();
+  } catch (error) {
+    alert('ลบ User ไม่สำเร็จ: ' + error.message);
+  }
+}
+
+async function addCounterName() {
+  const input = Q('admin_counter_new');
+  const name = input?.value.trim();
+  if (!name) { alert('กรุณาระบุชื่อคนนับ'); return; }
+  try {
+    await invokeAdminMaster('counter_create', { name });
+    loadAdUsers();
+  } catch (error) {
+    alert('เพิ่มคนนับไม่สำเร็จ: ' + error.message);
+  }
+}
+
+async function saveCounterName(id) {
+  const name = Q(`admin_counter_name_${id}`)?.value.trim();
+  if (!name) { alert('กรุณาระบุชื่อคนนับ'); return; }
+  try {
+    await invokeAdminMaster('counter_rename', { id, name });
+    alert('✅ เปลี่ยนชื่อคนนับในรายการและประวัติเดิมแล้ว');
+    loadAdUsers();
+  } catch (error) {
+    alert('แก้ชื่อคนนับไม่สำเร็จ: ' + error.message);
+  }
+}
+
+async function deleteCounterName(id) {
+  if (!confirm('ลบคนนับนี้แบบถาวร?\nชื่อดังกล่าวจะถูกนำออกจากประวัติการนับเดิมด้วย')) return;
+  try {
+    await invokeAdminMaster('counter_delete', { id });
+    alert('✅ ลบคนนับแบบถาวรแล้ว');
+    loadAdUsers();
+  } catch (error) {
+    alert('ลบคนนับไม่สำเร็จ: ' + error.message);
+  }
+}
+
+async function addRemarkOption(context) {
+  const input = Q(`admin_remark_new_${context}`);
+  const label = input?.value.trim();
+  if (!label) { alert('กรุณาระบุข้อความหมายเหตุ'); return; }
+  try {
+    await invokeAdminMaster('remark_create', { context, label });
+    loadAdUsers();
+  } catch (error) {
+    alert('เพิ่มหมายเหตุไม่สำเร็จ: ' + error.message);
+  }
+}
+
+async function saveRemarkOption(id) {
+  const label = Q(`admin_remark_${id}`)?.value.trim();
+  if (!label) { alert('กรุณาระบุข้อความหมายเหตุ'); return; }
+  try {
+    await invokeAdminMaster('remark_rename', { id, label });
+    alert('✅ เปลี่ยนหมายเหตุใน dropdown และประวัติเดิมแล้ว');
+    loadAdUsers();
+  } catch (error) {
+    alert('แก้หมายเหตุไม่สำเร็จ: ' + error.message);
+  }
+}
+
+async function deleteRemarkOption(id) {
+  if (!confirm('ลบหมายเหตุนี้แบบถาวร?\nข้อความนี้จะถูกนำออกจากประวัติเดิมด้วย')) return;
+  try {
+    await invokeAdminMaster('remark_delete', { id });
+    alert('✅ ลบหมายเหตุแบบถาวรแล้ว');
+    loadAdUsers();
+  } catch (error) {
+    alert('ลบหมายเหตุไม่สำเร็จ: ' + error.message);
+  }
 }
 
 // Start Application
