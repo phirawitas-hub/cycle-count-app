@@ -5738,7 +5738,8 @@ function adminOnlyMessage() {
 }
 
 const BACKUP_FORMAT = 'CYCLE_COUNT_BACKUP';
-const BACKUP_FORMAT_VERSION = '1';
+const BACKUP_FORMAT_VERSION = '2';
+const BACKUP_SUPPORTED_VERSIONS = new Set(['1','2']);
 const BACKUP_BATCH_SIZE = 500;
 const BACKUP_SHEET_SPECS = [
   { sheet:'Sessions', table:'count_sessions', scope:'session', columns:['id','name','status','created_by','created_at','closed_at','show_oh','max_rounds','repeat_match_action'], restore:true },
@@ -9763,6 +9764,17 @@ async function fetchBackupRowsByValues(table, columns, filterColumn, values) {
 }
 
 function backupCanonicalValue(value) {
+  if (value === null || value === undefined) return 'N;';
+  if (value === true) return 'B:1;';
+  if (value === false) return 'B:0;';
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? `D:${String(value)};` : 'D:INVALID;';
+  }
+  const source = String(value).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  return `S:${source.length}:${source};`;
+}
+
+function backupCanonicalValueV1(value) {
   if (value === null || value === undefined || value === '') return '<NULL>';
   if (value === true) return '<TRUE>';
   if (value === false) return '<FALSE>';
@@ -9770,8 +9782,11 @@ function backupCanonicalValue(value) {
   return String(value).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 }
 
-function backupRowsChecksum(rows, columns) {
+function backupRowsChecksum(rows, columns, formatVersion=BACKUP_FORMAT_VERSION) {
   let hash = 2166136261;
+  const canonicalValue = String(formatVersion) === '1'
+    ? backupCanonicalValueV1
+    : backupCanonicalValue;
   const update = text => {
     const source = String(text);
     for (let i = 0; i < source.length; i++) {
@@ -9781,7 +9796,7 @@ function backupRowsChecksum(rows, columns) {
   };
   update(columns.join('\t')); update('\n');
   (rows || []).forEach(row => {
-    columns.forEach(column => { update(backupCanonicalValue(row[column])); update('\t'); });
+    columns.forEach(column => { update(canonicalValue(row[column])); update('\t'); });
     update('\n');
   });
   return hash.toString(16).padStart(8,'0');
@@ -9823,20 +9838,22 @@ function backupTimestampForFile(date=new Date()) {
   return `${date.getFullYear()}${pad(date.getMonth()+1)}${pad(date.getDate())}_${pad(date.getHours())}${pad(date.getMinutes())}`;
 }
 
-function buildBackupWorkbook(dataBySheet, sessionIds, fileName) {
+function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BACKUP_FORMAT_VERSION) {
   if (typeof XLSX === 'undefined') throw new Error('ไม่พบระบบอ่าน/เขียน Excel');
+  if (!BACKUP_SUPPORTED_VERSIONS.has(String(formatVersion))) throw new Error('Backup Format ไม่ถูกต้อง');
+  formatVersion = String(formatVersion);
   const createdAt = new Date().toISOString();
   const rowCounts = {};
   const sheetHashes = {};
   BACKUP_SHEET_SPECS.forEach(spec => {
     const rows = dataBySheet[spec.sheet] || [];
     rowCounts[spec.sheet] = rows.length;
-    sheetHashes[spec.sheet] = backupRowsChecksum(rows, spec.columns);
+    sheetHashes[spec.sheet] = backupRowsChecksum(rows, spec.columns, formatVersion);
   });
 
   const manifestEntries = [
     { key:'backup_format', value:BACKUP_FORMAT },
-    { key:'format_version', value:BACKUP_FORMAT_VERSION },
+    { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
     { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'v59' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
@@ -9848,7 +9865,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName) {
       { key:`hash:${spec.sheet}`, value:sheetHashes[spec.sheet] },
     ]),
   ];
-  const manifestHash = backupRowsChecksum(manifestEntries, ['key','value']);
+  const manifestHash = backupRowsChecksum(manifestEntries, ['key','value'], formatVersion);
   manifestEntries.push({ key:'manifest_hash', value:manifestHash });
 
   const workbook = XLSX.utils.book_new();
@@ -9976,10 +9993,12 @@ function backupManifestFromSheet(workbook) {
     .filter(row => String(row[0] || '').trim())
     .map(row => ({ key:String(row[0]), value:String(row[1] ?? '') }));
   const map = Object.fromEntries(entries.map(entry => [entry.key,entry.value]));
-  const baseEntries = entries.filter(entry => entry.key !== 'manifest_hash');
-  const computedHash = backupRowsChecksum(baseEntries, ['key','value']);
   if (map.backup_format !== BACKUP_FORMAT) throw new Error('ไฟล์นี้ไม่ใช่ Cycle Count Backup');
-  if (map.format_version !== BACKUP_FORMAT_VERSION) throw new Error(`ไม่รองรับ Backup Version ${map.format_version || '?'}`);
+  if (!BACKUP_SUPPORTED_VERSIONS.has(map.format_version)) {
+    throw new Error(`ไม่รองรับ Backup Version ${map.format_version || '?'}`);
+  }
+  const baseEntries = entries.filter(entry => entry.key !== 'manifest_hash');
+  const computedHash = backupRowsChecksum(baseEntries, ['key','value'], map.format_version);
   if (!map.manifest_hash || map.manifest_hash !== computedHash) throw new Error('Manifest checksum ไม่ตรง ไฟล์อาจถูกแก้ไข');
   let sessionIds;
   try { sessionIds = JSON.parse(map.session_ids); } catch (_) { throw new Error('รายการ Session ใน Manifest ไม่ถูกต้อง'); }
@@ -10000,12 +10019,17 @@ async function readBackupExcelFile(event) {
     return;
   }
   try {
+    if (!/\.xlsx$/i.test(file.name || '')) throw new Error('รองรับเฉพาะไฟล์ .xlsx จากเมนู Backup');
+    if (Number(file.size || 0) > 250 * 1024 * 1024) {
+      throw new Error('ไฟล์ใหญ่เกิน 250 MB กรุณา Backup/Restore แยก Session');
+    }
     if (preview) preview.innerHTML = `<div class="load" style="padding:18px">กำลังตรวจไฟล์และ checksum...</div>`;
     setBackupProgress(5,'กำลังอ่านไฟล์ Excel...');
     const workbook = XLSX.read(await file.arrayBuffer(), { type:'array', cellDates:false });
     const manifest = backupManifestFromSheet(workbook);
     const dataBySheet = {};
     const rowCounts = {};
+    let manifestTotalRows = 0;
 
     for (let index = 0; index < BACKUP_SHEET_SPECS.length; index++) {
       const spec = BACKUP_SHEET_SPECS[index];
@@ -10013,6 +10037,18 @@ async function readBackupExcelFile(event) {
       if (!sheet) throw new Error(`ไม่พบชีต ${spec.sheet}`);
       if (!sheet['!ref']) throw new Error(`ชีต ${spec.sheet} ไม่มีหัวคอลัมน์`);
       const sheetRange = XLSX.utils.decode_range(sheet['!ref']);
+      const expectedRows = Number(manifest.map[`rows:${spec.sheet}`]);
+      if (!Number.isInteger(expectedRows) || expectedRows < 0 || expectedRows > 1048574) {
+        throw new Error(`${spec.sheet} ระบุจำนวนแถวไม่ถูกต้อง`);
+      }
+      manifestTotalRows += expectedRows;
+      if (manifestTotalRows > 2000000) {
+        throw new Error('ไฟล์มีข้อมูลรวมเกิน 2,000,000 แถว กรุณา Restore แยก Session');
+      }
+      const physicalDataRows = Math.max(0, sheetRange.e.r - sheetRange.s.r);
+      if (physicalDataRows !== expectedRows) {
+        throw new Error(`${spec.sheet} โครงสร้างแถวไม่ตรงกับ Manifest`);
+      }
       const headers = [];
       for (let column = sheetRange.s.c; column <= sheetRange.e.c; column++) {
         const cell = sheet[XLSX.utils.encode_cell({ r:sheetRange.s.r, c:column })];
@@ -10022,11 +10058,10 @@ async function readBackupExcelFile(event) {
       if (missingColumns.length) throw new Error(`${spec.sheet} ขาดคอลัมน์: ${missingColumns.join(', ')}`);
       const rows = XLSX.utils.sheet_to_json(sheet, { defval:null, raw:true })
         .filter(row => row.id !== null && row.id !== undefined && String(row.id).trim() !== '');
-      const expectedRows = Number(manifest.map[`rows:${spec.sheet}`]);
-      if (!Number.isInteger(expectedRows) || rows.length !== expectedRows) {
+      if (rows.length !== expectedRows) {
         throw new Error(`${spec.sheet} จำนวนแถวไม่ตรง: พบ ${rows.length}, Manifest ${expectedRows}`);
       }
-      const checksum = backupRowsChecksum(rows, spec.columns);
+      const checksum = backupRowsChecksum(rows, spec.columns, manifest.map.format_version);
       if (checksum !== manifest.map[`hash:${spec.sheet}`]) {
         throw new Error(`${spec.sheet} checksum ไม่ตรง ไฟล์อาจถูกแก้ไขหรือเสียหาย`);
       }
