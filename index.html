@@ -9632,10 +9632,11 @@ async function renderManageBackup(container) {
 
   container.innerHTML = `
     <div class="alert alert-blue" style="line-height:1.7">
-      <strong>Backup แบบกู้คืนได้</strong><br>
-      Excel จะเก็บ UUID และความสัมพันธ์ของ Session, Location, Item, งานที่จ่าย, Stock, LPN/Lot,
-      ผลการนับ, หมายเหตุ, รูปถ่ายแบบ URL และผลอนุมัติครบทุกตาราง<br>
-      <span style="font-size:11px">หมายเหตุ: บัญชี User Login และรหัสผ่านไม่ถูกลบหรือสร้างใหม่จากไฟล์นี้</span>
+      <strong>Backup ที่อ่านง่าย ใช้งานต่อได้ และกู้คืนได้</strong><br>
+      Excel จะเปิดที่ชีต Data ซึ่งรวม Location, Zone, LPN, Item, OH, Count 1–3, Physical Count,
+      คน/เวลานับ, ผลต่าง และสถานะ WMS พร้อมแยก Count History, Stock LPN, Variance WMS
+      และ Transaction History ให้ทีมอื่นนำไปกรอง วิเคราะห์ หรือทำรายงานต่อได้<br>
+      <span style="font-size:11px">ชีตข้อมูลระบบและ UUID ยังเก็บครบสำหรับ Restore · บัญชี User Login และรหัสผ่านไม่อยู่ในไฟล์</span>
     </div>
     <div class="backup-grid">
       <section class="backup-panel">
@@ -9681,7 +9682,8 @@ async function renderManageBackup(container) {
       <section class="backup-panel">
         <div class="backup-panel-title">${navIconSvg('import',24)} <span>2. Restore จาก Excel</span></div>
         <div class="alert alert-amber" style="font-size:12px;line-height:1.65">
-          ใช้เฉพาะไฟล์ที่สร้างจากเมนู Backup นี้ ระบบจะตรวจ Manifest, จำนวนแถว และ checksum ก่อน Import
+          ใช้ไฟล์ที่สร้างจากเมนู Backup นี้ได้โดยตรง ระบบจะอ่านเฉพาะชีตข้อมูลระบบ
+          และตรวจ Manifest, จำนวนแถว และ checksum ก่อน Import
         </div>
         <div class="fg">
           <label>เลือกไฟล์ Backup (.xlsx)</label>
@@ -9838,6 +9840,414 @@ function backupTimestampForFile(date=new Date()) {
   return `${date.getFullYear()}${pad(date.getMonth()+1)}${pad(date.getDate())}_${pad(date.getHours())}${pad(date.getMinutes())}`;
 }
 
+function backupHasValue(value) {
+  return value !== null && value !== undefined && value !== '';
+}
+
+function backupNumber(value) {
+  if (!backupHasValue(value)) return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function backupDateForTeam(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  try {
+    return new Intl.DateTimeFormat('sv-SE', {
+      timeZone:'Asia/Bangkok',
+      year:'numeric', month:'2-digit', day:'2-digit',
+      hour:'2-digit', minute:'2-digit', second:'2-digit',
+      hour12:false,
+    }).format(date);
+  } catch (_) {
+    return date.toISOString().replace('T',' ').slice(0,19);
+  }
+}
+
+function backupLatestRecord(rows, dateColumn='counted_at') {
+  return (rows || []).reduce((latest,row) => {
+    if (!latest) return row;
+    const latestTime = Date.parse(latest?.[dateColumn] || '') || 0;
+    const rowTime = Date.parse(row?.[dateColumn] || '') || 0;
+    return rowTime >= latestTime ? row : latest;
+  }, null);
+}
+
+function backupTeamSheetColumns() {
+  const col = (key, header, width=18, type='text') => ({ key, header, width, type });
+  return {
+    Data: [
+      col('session','Session',28), col('sessionStatus','Session Status',16),
+      col('location','Location',18), col('zone','Zone',16), col('area','Area',14),
+      col('rowNo','Row',10), col('level','Level',10), col('locationType','Location Type',16),
+      col('locationCategory','Location Category',18), col('lpn','LPN',28), col('lot','Lot',20),
+      col('inventoryStatus','Inventory Status',18), col('uom','UOM',10),
+      col('item','Item',24), col('description','Description',44),
+      col('itemInventoryType','Item Inventory Type',20), col('itemCategory','Item Category',18),
+      col('stockOnhand','Stock Onhand',16,'number'), col('alQty','AL Qty',14,'number'),
+      col('count1','Count 1',13,'number'), col('count1Counter','Count 1 Counter',22),
+      col('count1Time','Count 1 Time (Bangkok)',22), col('count1User','Count 1 User',20),
+      col('count1Remark','Count 1 Remark',30),
+      col('count2','Count 2',13,'number'), col('count2Counter','Count 2 Counter',22),
+      col('count2Time','Count 2 Time (Bangkok)',22), col('count2User','Count 2 User',20),
+      col('count2Remark','Count 2 Remark',30),
+      col('count3','Count 3',13,'number'), col('count3Counter','Count 3 Counter',22),
+      col('count3Time','Count 3 Time (Bangkok)',22), col('count3User','Count 3 User',20),
+      col('count3Remark','Count 3 Remark',30),
+      col('physicalCount','Physical Count',16,'number'), col('variance','Variance',14,'number'),
+      col('result','Result',14), col('assignmentStatus','Assignment Status',18),
+      col('assignedUser','Assigned User',20), col('round2Counter','Round 2 Assigned Counter',24),
+      col('round3Counter','Round 3 Assigned Counter',24), col('approvalResolution','Resolution',24),
+      col('supervisorNote','Supervisor Note',34), col('approvedBy','Approved By',20),
+      col('approvedAt','Approved At (Bangkok)',22), col('wmsStatus','WMS Status',18),
+      col('wmsFixedBy','WMS Fixed By',20), col('wmsFixedAt','WMS Fixed At (Bangkok)',22),
+      col('photoUrl','Photo URL',44,'url'), col('sessionId','Session ID',38),
+      col('assignmentId','Assignment ID',38), col('locationId','Location ID',38),
+      col('itemId','Item ID',38),
+    ],
+    Count_History: [
+      col('session','Session',28), col('location','Location',18), col('zone','Zone',16),
+      col('area','Area',14), col('item','Item',24), col('description','Description',44),
+      col('round','Count Round',13,'number'), col('countQty','Count Qty',14,'number'),
+      col('actualCounter','Actual Counter',22), col('countedBy','Recorded By User',20),
+      col('countedAt','Counted At (Bangkok)',22), col('remark','Remark',34),
+      col('photoUrl','Photo URL',44,'url'), col('assignmentStatus','Assignment Status',18),
+      col('sessionId','Session ID',38), col('assignmentId','Assignment ID',38),
+      col('locationId','Location ID',38), col('itemId','Item ID',38), col('countRecordId','Count Record ID',38),
+    ],
+    Stock_LPN: [
+      col('session','Session',28), col('location','Location',18), col('zone','Zone',16),
+      col('area','Area',14), col('lpn','LPN',30), col('lot','Lot',22),
+      col('inventoryStatus','Inventory Status',18), col('item','Item',24),
+      col('description','Description',44), col('detailQty','LPN / Lot Qty',16,'number'),
+      col('uom','UOM',10), col('stockOnhand','Stock Onhand',16,'number'),
+      col('alQty','AL Qty',14,'number'), col('count1','Count 1',13,'number'),
+      col('count2','Count 2',13,'number'), col('count3','Count 3',13,'number'),
+      col('physicalCount','Physical Count',16,'number'), col('variance','Variance',14,'number'),
+      col('result','Result',14), col('sessionId','Session ID',38),
+      col('locationId','Location ID',38), col('itemId','Item ID',38), col('stockDetailId','Stock Detail ID',38),
+    ],
+    Variance_WMS: [
+      col('session','Session',28), col('location','Location',18), col('zone','Zone',16),
+      col('item','Item',24), col('description','Description',44),
+      col('stockOnhand','Stock Onhand',16,'number'), col('count1','Count 1',13,'number'),
+      col('count2','Count 2',13,'number'), col('count3','Count 3',13,'number'),
+      col('physicalCount','Physical Count',16,'number'), col('variance','Variance',14,'number'),
+      col('result','Gain / Lost',14), col('approvalResolution','Resolution',24),
+      col('supervisorNote','Supervisor Note',34), col('approvedBy','Approved By',20),
+      col('approvedAt','Approved At (Bangkok)',22), col('wmsStatus','WMS Status',18),
+      col('wmsFixedBy','WMS Fixed By',20), col('wmsFixedAt','WMS Fixed At (Bangkok)',22),
+      col('assignedUser','Assigned User',20), col('sessionId','Session ID',38),
+      col('assignmentId','Assignment ID',38), col('locationId','Location ID',38), col('itemId','Item ID',38),
+    ],
+    Transaction_History: [
+      col('createdAt','Transaction Time (Bangkok)',22), col('action','Action',26),
+      col('session','Session',28), col('location','Location',18), col('zone','Zone',16),
+      col('item','Item',24), col('description','Description',44), col('performedBy','Performed By',22),
+      col('oldValue','Old Value',46), col('newValue','New Value',46),
+      col('sessionId','Session ID',38), col('assignmentId','Assignment ID',38),
+      col('locationId','Location ID',38), col('itemId','Item ID',38), col('auditId','Audit ID',38),
+    ],
+    Session_Summary: [
+      col('session','Session',30), col('status','Status',16), col('createdAt','Created At (Bangkok)',22),
+      col('closedAt','Closed At (Bangkok)',22), col('assignments','Assignments',14,'number'),
+      col('locations','Locations',12,'number'), col('items','Stock Lines',12,'number'),
+      col('countedItems','Counted Items',14,'number'), col('countEvents','Count Events',14,'number'),
+      col('countedLocations','Counted Locations',17,'number'), col('stockOnhand','Stock Onhand',16,'number'),
+      col('physicalCount','Physical Count',16,'number'), col('variance','Net Variance',14,'number'),
+      col('diffItems','Diff Items',12,'number'), col('matchItems','Match Items',12,'number'),
+      col('stockAccuracy','Stock Accuracy %',17,'number'), col('wmsPending','WMS Pending',14,'number'),
+      col('wmsFixed','WMS Fixed',12,'number'), col('sessionId','Session ID',38),
+    ],
+  };
+}
+
+function buildTeamBackupData(dataBySheet) {
+  const sessions = dataBySheet.Sessions || [];
+  const locations = dataBySheet.Locations || [];
+  const items = dataBySheet.Items || [];
+  const assignments = dataBySheet.Assignments || [];
+  const stocks = dataBySheet.Stock || [];
+  const stockDetails = dataBySheet.Stock_Detail || [];
+  const counts = dataBySheet.Counts || [];
+  const approvals = dataBySheet.Approvals || [];
+  const audits = dataBySheet.Audit || [];
+  const profiles = dataBySheet.Profiles || [];
+  const counters = dataBySheet.Counters || [];
+
+  const byId = rows => new Map(rows.map(row => [String(row.id),row]));
+  const sessionById = byId(sessions);
+  const locationById = byId(locations);
+  const itemById = byId(items);
+  const assignmentById = byId(assignments);
+  const profileById = byId(profiles);
+  const counterById = byId(counters);
+  const profileName = id => profileById.get(String(id || ''))?.name || '';
+  const counterName = id => counterById.get(String(id || ''))?.name || '';
+  const sessionLocationKey = (sessionId,locationId) => `${sessionId || ''}|${locationId || ''}`;
+  const assignmentItemKey = (assignmentId,itemId) => `${assignmentId || ''}|${itemId || ''}`;
+  const stockKey = (sessionId,locationId,itemId) => `${sessionId || ''}|${locationId || ''}|${itemId || ''}`;
+
+  const assignmentIdsByLocation = new Map();
+  assignments.forEach(assignment => {
+    const key = sessionLocationKey(assignment.session_id, assignment.location_id);
+    if (!assignmentIdsByLocation.has(key)) assignmentIdsByLocation.set(key,[]);
+    assignmentIdsByLocation.get(key).push(String(assignment.id));
+  });
+
+  const countGroups = new Map();
+  counts.forEach(count => {
+    const key = assignmentItemKey(count.assignment_id, count.item_id);
+    if (!countGroups.has(key)) countGroups.set(key,[]);
+    countGroups.get(key).push(count);
+  });
+  const approvalGroups = new Map();
+  approvals.forEach(approval => {
+    const key = assignmentItemKey(approval.assignment_id, approval.item_id);
+    if (!approvalGroups.has(key)) approvalGroups.set(key,[]);
+    approvalGroups.get(key).push(approval);
+  });
+  const approvalByWork = new Map([...approvalGroups.entries()].map(([key,rows]) =>
+    [key,backupLatestRecord(rows,'approved_at')]));
+
+  const stockByKey = new Map();
+  stocks.forEach(stock => stockByKey.set(stockKey(stock.session_id,stock.location_id,stock.item_id),stock));
+  const detailsByStock = new Map();
+  stockDetails.forEach(detail => {
+    const key = stockKey(detail.session_id,detail.location_id,detail.item_id);
+    if (!detailsByStock.has(key)) detailsByStock.set(key,[]);
+    detailsByStock.get(key).push(detail);
+  });
+
+  const workRows = new Map();
+  const addWork = (assignment,itemId,stock=null) => {
+    const assignmentId = assignment?.id || '';
+    const key = assignment
+      ? assignmentItemKey(assignmentId,itemId)
+      : `NO_ASSIGNMENT|${stockKey(stock?.session_id,stock?.location_id,itemId)}`;
+    if (!workRows.has(key)) workRows.set(key,{ assignment, itemId, stock });
+    else if (stock) workRows.get(key).stock = stock;
+  };
+
+  stocks.forEach(stock => {
+    const candidateIds = assignmentIdsByLocation.get(sessionLocationKey(stock.session_id,stock.location_id)) || [];
+    const assignmentId = candidateIds.find(id =>
+      countGroups.has(assignmentItemKey(id,stock.item_id)) || approvalByWork.has(assignmentItemKey(id,stock.item_id)))
+      || candidateIds[0] || '';
+    addWork(assignmentById.get(String(assignmentId)) || null, stock.item_id, stock);
+  });
+  counts.forEach(count => {
+    const assignment = assignmentById.get(String(count.assignment_id)) || null;
+    const stock = assignment ? stockByKey.get(stockKey(assignment.session_id,assignment.location_id,count.item_id)) : null;
+    addWork(assignment,count.item_id,stock || null);
+  });
+  approvals.forEach(approval => {
+    const assignment = assignmentById.get(String(approval.assignment_id)) || null;
+    const stock = assignment ? stockByKey.get(stockKey(assignment.session_id,assignment.location_id,approval.item_id)) : null;
+    addWork(assignment,approval.item_id,stock || null);
+  });
+
+  const actualCounterName = record =>
+    record?.actual_counter_name || counterName(record?.actual_counter_id) || profileName(record?.counted_by);
+  const countUserName = record => profileName(record?.counted_by);
+  const countRound = (rows,round) => backupLatestRecord((rows || []).filter(row => Number(row.round) === round));
+  const joinUnique = (rows,column) => [...new Set((rows || []).map(row => String(row?.[column] || '').trim()).filter(Boolean))].join(' | ');
+
+  const dataRows = [...workRows.values()].map(work => {
+    const assignment = work.assignment;
+    const sessionId = assignment?.session_id || work.stock?.session_id || '';
+    const locationId = assignment?.location_id || work.stock?.location_id || '';
+    const itemId = work.itemId || work.stock?.item_id || '';
+    const session = sessionById.get(String(sessionId)) || {};
+    const location = locationById.get(String(locationId)) || {};
+    const item = itemById.get(String(itemId)) || {};
+    const workKey = assignmentItemKey(assignment?.id,itemId);
+    const workCounts = countGroups.get(workKey) || [];
+    const approval = approvalByWork.get(workKey) || null;
+    const detailRows = detailsByStock.get(stockKey(sessionId,locationId,itemId)) || [];
+    const c1 = countRound(workCounts,1);
+    const c2 = countRound(workCounts,2);
+    const c3 = countRound(workCounts,3);
+    const finalCountRecord = [...workCounts].sort((a,b) =>
+      (Number(b.round)||0) - (Number(a.round)||0)
+      || ((Date.parse(b.counted_at || '')||0) - (Date.parse(a.counted_at || '')||0)))[0] || null;
+    const stockOnhand = backupNumber(work.stock?.onhand_qty);
+    const approvedFinal = backupNumber(approval?.final_qty);
+    const physicalCount = approvedFinal !== null ? approvedFinal : backupNumber(finalCountRecord?.count_qty);
+    const approvedVariance = backupNumber(approval?.variance);
+    const variance = approvedVariance !== null ? approvedVariance
+      : (physicalCount !== null && stockOnhand !== null ? physicalCount - stockOnhand : null);
+    const result = physicalCount === null ? 'ยังไม่ได้นับ'
+      : variance === 0 ? 'Match'
+      : variance > 0 ? 'Gain' : 'Lost';
+    const countFields = record => ({
+      value:backupNumber(record?.count_qty),
+      counter:actualCounterName(record),
+      time:backupDateForTeam(record?.counted_at),
+      user:countUserName(record),
+      remark:record?.remark || '',
+    });
+    const r1 = countFields(c1), r2 = countFields(c2), r3 = countFields(c3);
+    return {
+      session:session.name || '', sessionStatus:session.status || '', location:location.code || '',
+      zone:location.zone || '', area:location.area || '', rowNo:location.row_no || '',
+      level:location.level || '', locationType:location.type || '', locationCategory:location.category || '',
+      lpn:joinUnique(detailRows,'license_plate'), lot:joinUnique(detailRows,'lot'),
+      inventoryStatus:joinUnique(detailRows,'inventory_status'), uom:joinUnique(detailRows,'uom'),
+      item:item.code || '', description:item.description || '', itemInventoryType:item.inventory_type || '',
+      itemCategory:item.category || '', stockOnhand, alQty:backupNumber(work.stock?.al_qty),
+      count1:r1.value, count1Counter:r1.counter, count1Time:r1.time, count1User:r1.user, count1Remark:r1.remark,
+      count2:r2.value, count2Counter:r2.counter, count2Time:r2.time, count2User:r2.user, count2Remark:r2.remark,
+      count3:r3.value, count3Counter:r3.counter, count3Time:r3.time, count3User:r3.user, count3Remark:r3.remark,
+      physicalCount, variance, result, assignmentStatus:assignment?.status || '',
+      assignedUser:profileName(assignment?.assigned_to), round2Counter:counterName(assignment?.counter_r2_id),
+      round3Counter:counterName(assignment?.counter_r3_id), approvalResolution:approval?.resolution || '',
+      supervisorNote:approval?.supervisor_note || '', approvedBy:profileName(approval?.approved_by),
+      approvedAt:backupDateForTeam(approval?.approved_at),
+      wmsStatus:approval ? (approval.wms_fixed ? 'แก้ไขแล้ว' : 'ยังไม่แก้ WMS') : '',
+      wmsFixedBy:profileName(approval?.wms_fixed_by), wmsFixedAt:backupDateForTeam(approval?.wms_fixed_at),
+      photoUrl:finalCountRecord?.photo_url || '', sessionId, assignmentId:assignment?.id || '',
+      locationId, itemId, hasApproval:Boolean(approval),
+    };
+  }).sort((a,b) =>
+    String(a.session).localeCompare(String(b.session),'th')
+    || String(a.zone).localeCompare(String(b.zone),'th')
+    || String(a.location).localeCompare(String(b.location),'en',{numeric:true})
+    || String(a.item).localeCompare(String(b.item),'en',{numeric:true}));
+
+  const dataByComposite = new Map(dataRows.map(row => [stockKey(row.sessionId,row.locationId,row.itemId),row]));
+  const countHistory = counts.map(count => {
+    const assignment = assignmentById.get(String(count.assignment_id)) || {};
+    const session = sessionById.get(String(assignment.session_id)) || {};
+    const location = locationById.get(String(assignment.location_id)) || {};
+    const item = itemById.get(String(count.item_id)) || {};
+    return {
+      session:session.name || '', location:location.code || '', zone:location.zone || '', area:location.area || '',
+      item:item.code || '', description:item.description || '', round:backupNumber(count.round),
+      countQty:backupNumber(count.count_qty), actualCounter:actualCounterName(count),
+      countedBy:countUserName(count), countedAt:backupDateForTeam(count.counted_at),
+      remark:count.remark || '', photoUrl:count.photo_url || '', assignmentStatus:assignment.status || '',
+      sessionId:assignment.session_id || '', assignmentId:count.assignment_id || '',
+      locationId:assignment.location_id || '', itemId:count.item_id || '', countRecordId:count.id || '',
+    };
+  }).sort((a,b) =>
+    String(a.session).localeCompare(String(b.session),'th')
+    || String(a.location).localeCompare(String(b.location),'en',{numeric:true})
+    || String(a.item).localeCompare(String(b.item),'en',{numeric:true})
+    || (Number(a.round)||0) - (Number(b.round)||0)
+    || String(a.countedAt).localeCompare(String(b.countedAt)));
+
+  const stockLpn = stockDetails.map(detail => {
+    const session = sessionById.get(String(detail.session_id)) || {};
+    const location = locationById.get(String(detail.location_id)) || {};
+    const item = itemById.get(String(detail.item_id)) || {};
+    const stock = stockByKey.get(stockKey(detail.session_id,detail.location_id,detail.item_id)) || {};
+    const work = dataByComposite.get(stockKey(detail.session_id,detail.location_id,detail.item_id)) || {};
+    return {
+      session:session.name || '', location:location.code || '', zone:location.zone || '', area:location.area || '',
+      lpn:detail.license_plate || '', lot:detail.lot || '', inventoryStatus:detail.inventory_status || '',
+      item:item.code || '', description:item.description || '', detailQty:backupNumber(detail.qty),
+      uom:detail.uom || '', stockOnhand:backupNumber(stock.onhand_qty), alQty:backupNumber(stock.al_qty),
+      count1:work.count1 ?? null, count2:work.count2 ?? null, count3:work.count3 ?? null,
+      physicalCount:work.physicalCount ?? null, variance:work.variance ?? null, result:work.result || '',
+      sessionId:detail.session_id || '', locationId:detail.location_id || '', itemId:detail.item_id || '',
+      stockDetailId:detail.id || '',
+    };
+  }).sort((a,b) =>
+    String(a.session).localeCompare(String(b.session),'th')
+    || String(a.location).localeCompare(String(b.location),'en',{numeric:true})
+    || String(a.item).localeCompare(String(b.item),'en',{numeric:true})
+    || String(a.lpn).localeCompare(String(b.lpn),'en',{numeric:true}));
+
+  const varianceWms = dataRows.filter(row =>
+    row.hasApproval || (row.physicalCount !== null && row.variance !== 0));
+
+  const transactionHistory = audits.map(audit => {
+    const assignment = assignmentById.get(String(audit.assignment_id)) || {};
+    const sessionId = audit.session_id || assignment.session_id || '';
+    const locationId = audit.location_id || assignment.location_id || '';
+    const session = sessionById.get(String(sessionId)) || {};
+    const location = locationById.get(String(locationId)) || {};
+    const item = itemById.get(String(audit.item_id)) || {};
+    return {
+      createdAt:backupDateForTeam(audit.created_at), action:audit.action || '', session:session.name || '',
+      location:location.code || '', zone:location.zone || '', item:item.code || '',
+      description:item.description || '', performedBy:profileName(audit.performed_by),
+      oldValue:audit.old_value ?? '', newValue:audit.new_value ?? '', sessionId,
+      assignmentId:audit.assignment_id || '', locationId, itemId:audit.item_id || '', auditId:audit.id || '',
+    };
+  }).sort((a,b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+
+  const sessionSummary = sessions.map(session => {
+    const sessionAssignments = assignments.filter(row => String(row.session_id) === String(session.id));
+    const sessionData = dataRows.filter(row => String(row.sessionId) === String(session.id));
+    const sessionCounts = countHistory.filter(row => String(row.sessionId) === String(session.id));
+    const countedData = sessionData.filter(row => row.physicalCount !== null);
+    const absVariance = countedData.reduce((sum,row) => sum + Math.abs(Number(row.variance || 0)),0);
+    const stockBase = countedData.reduce((sum,row) => sum + Math.abs(Number(row.stockOnhand || 0)),0);
+    const accuracy = stockBase > 0 ? Math.max(0,100 - absVariance / stockBase * 100) : 100;
+    const unique = (rows,key) => new Set(rows.map(row => row[key]).filter(Boolean)).size;
+    return {
+      session:session.name || '', status:session.status || '', createdAt:backupDateForTeam(session.created_at),
+      closedAt:backupDateForTeam(session.closed_at), assignments:sessionAssignments.length,
+      locations:unique(sessionAssignments,'location_id'), items:sessionData.length, countedItems:countedData.length,
+      countEvents:sessionCounts.length, countedLocations:unique(countedData,'locationId'),
+      stockOnhand:sessionData.reduce((sum,row) => sum + Number(row.stockOnhand || 0),0),
+      physicalCount:countedData.reduce((sum,row) => sum + Number(row.physicalCount || 0),0),
+      variance:countedData.reduce((sum,row) => sum + Number(row.variance || 0),0),
+      diffItems:countedData.filter(row => Number(row.variance || 0) !== 0).length,
+      matchItems:countedData.filter(row => Number(row.variance || 0) === 0).length,
+      stockAccuracy:Number(accuracy.toFixed(2)),
+      wmsPending:varianceWms.filter(row => String(row.sessionId) === String(session.id) && row.wmsStatus === 'ยังไม่แก้ WMS').length,
+      wmsFixed:varianceWms.filter(row => String(row.sessionId) === String(session.id) && row.wmsStatus === 'แก้ไขแล้ว').length,
+      sessionId:session.id || '',
+    };
+  });
+
+  return {
+    Data:dataRows,
+    Count_History:countHistory,
+    Stock_LPN:stockLpn,
+    Variance_WMS:varianceWms,
+    Transaction_History:transactionHistory,
+    Session_Summary:sessionSummary,
+  };
+}
+
+function appendTeamBackupSheet(workbook, sheetName, rows, columns) {
+  if ((rows || []).length > 1048574) {
+    throw new Error(`${sheetName} มีข้อมูลเกินขนาดสูงสุดของ Excel กรุณา Backup แยก Session`);
+  }
+  const headers = columns.map(column => column.header);
+  const output = (rows || []).map(row => Object.fromEntries(columns.map(column =>
+    [column.header,row?.[column.key] ?? ''])));
+  const sheet = XLSX.utils.json_to_sheet(output, { header:headers, skipHeader:false });
+  sheet['!cols'] = columns.map(column => ({ wch:column.width }));
+  sheet['!rows'] = [{ hpt:28 }];
+  sheet['!autofilter'] = { ref:sheet['!ref'] };
+  sheet['!freeze'] = { xSplit:0, ySplit:1, topLeftCell:'A2', activePane:'bottomLeft', state:'frozen' };
+  headers.forEach((header,columnIndex) => {
+    const cell = sheet[XLSX.utils.encode_cell({ r:0, c:columnIndex })];
+    if (cell) {
+      cell.s = {
+        font:{ bold:true, color:{ rgb:'FFFFFF' } },
+        fill:{ patternType:'solid', fgColor:{ rgb:'0B7D87' } },
+        alignment:{ horizontal:'center', vertical:'center', wrapText:true },
+      };
+    }
+    const column = columns[columnIndex];
+    for (let rowIndex = 1; rowIndex <= (rows || []).length; rowIndex++) {
+      const dataCell = sheet[XLSX.utils.encode_cell({ r:rowIndex, c:columnIndex })];
+      if (!dataCell) continue;
+      if (column.type === 'number') dataCell.z = '#,##0.00;[Red]-#,##0.00;0';
+      if (column.type === 'url' && dataCell.v) dataCell.l = { Target:String(dataCell.v), Tooltip:'เปิดไฟล์ / รูปถ่าย' };
+    }
+  });
+  XLSX.utils.book_append_sheet(workbook, sheet, sheetName);
+}
+
 function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BACKUP_FORMAT_VERSION) {
   if (typeof XLSX === 'undefined') throw new Error('ไม่พบระบบอ่าน/เขียน Excel');
   if (!BACKUP_SUPPORTED_VERSIONS.has(String(formatVersion))) throw new Error('Backup Format ไม่ถูกต้อง');
@@ -9871,15 +10281,28 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
   const workbook = XLSX.utils.book_new();
   workbook.Props = {
     Title: `Cycle Count Backup ${createdAt}`,
-    Subject: 'Restorable Cycle Count database backup',
+    Subject: 'Team-readable and restorable Cycle Count database backup',
     Author: prof?.name || 'Cycle Count Admin',
     CreatedDate: new Date(),
   };
+  workbook.Workbook = { Views:[{ activeTab:0 }] };
+  const teamData = buildTeamBackupData(dataBySheet);
+  const teamColumns = backupTeamSheetColumns();
+  ['Data','Count_History','Stock_LPN','Variance_WMS','Transaction_History','Session_Summary']
+    .forEach(sheetName => appendTeamBackupSheet(workbook,sheetName,teamData[sheetName],teamColumns[sheetName]));
+
   const readme = [
-    ['CYCLE COUNT BACKUP','ไฟล์สำรองข้อมูลสำหรับนำกลับเข้าระบบ'],
-    ['คำเตือน','ห้ามเปลี่ยนชื่อชีต หัวคอลัมน์ UUID หรือข้อมูลในไฟล์'],
+    ['CYCLE COUNT BACKUP','ไฟล์ข้อมูลการนับที่ทีมอื่นอ่าน ใช้งานต่อ และ Restore กลับเข้าระบบได้'],
+    ['Data','ตารางหลัก 1 แถวต่อ Location + Item: OH, Count 1–3, Physical Count, คน/เวลานับ, Zone, ผลต่าง และ WMS'],
+    ['Count_History','ประวัติการนับจริงทุกครั้ง ทุก Round พร้อมคนนับ เวลา หมายเหตุ และ URL รูป'],
+    ['Stock_LPN','รายละเอียด Stock ระดับ LPN / Lot / Inventory Status พร้อมผลนับของ Location + Item'],
+    ['Variance_WMS','รายการ Gain / Lost และสถานะการตรวจอนุมัติหรือแก้ไข WMS'],
+    ['Transaction_History','ประวัติการทำรายการจาก Audit Log โดยแปลง UUID เป็นชื่อ Session, Location และ Item ให้อ่านง่าย'],
+    ['Session_Summary','สรุปจำนวนงาน ผลการนับ Stock Accuracy และสถานะ WMS แยก Session'],
+    ['การใช้งานต่อ','ทีมสามารถกรอง คัดลอก หรือแก้ไข 6 ชีตด้านบนได้ เพราะ Restore จะไม่อ่านชีตเหล่านี้'],
+    ['คำเตือน Restore','ห้ามแก้ชื่อชีตหรือข้อมูลตั้งแต่ Manifest เป็นต้นไป เพราะเป็นข้อมูลระบบที่ใช้ checksum'],
     ['รูปถ่าย','เก็บเป็น URL และระบบจะรักษาไฟล์รูปใน Storage เมื่อลบผ่านเมนู Backup'],
-    ['ข้อมูลระบบ','Locations, Items, คนนับจริง และตัวเลือกหมายเหตุจะถูก Restore กลับด้วย'],
+    ['ข้อมูลระบบ','Session, Locations, Items, งานที่จ่าย, Stock, LPN/Lot, Counts, Approvals, Audit, คนนับ และหมายเหตุอยู่ครบ'],
     ['User Login','ไฟล์นี้ไม่เก็บรหัสผ่านและไม่สร้างบัญชี Auth ใหม่; Profiles ใช้เป็นข้อมูลอ้างอิง'],
     ['วิธี Restore','เมนู จัดการงาน / Sessions → Backup / Restore → เลือกไฟล์นี้'],
     ['สร้างเมื่อ',createdAt],
@@ -9907,7 +10330,8 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     XLSX.utils.book_append_sheet(workbook, sheet, spec.sheet);
   });
 
-  return { workbook, manifestHash, rowCounts, sheetHashes, createdAt };
+  const businessCounts = Object.fromEntries(Object.entries(teamData).map(([key,rows]) => [key,rows.length]));
+  return { workbook, manifestHash, rowCounts, sheetHashes, businessCounts, createdAt };
 }
 
 async function exportBackupExcel() {
@@ -9948,7 +10372,9 @@ async function exportBackupExcel() {
     setBackupProgress(100,'Backup สำเร็จ','export');
     if (alertBox) alertBox.innerHTML = `<div class="alert alert-green" style="line-height:1.65">
       ✅ ดาวน์โหลด <strong>${escapeWmsText(fileName)}</strong> แล้ว<br>
-      ${Object.values(built.rowCounts).reduce((sum,value)=>sum+Number(value||0),0).toLocaleString()} แถว · checksum ${built.manifestHash}
+      ชีต Data พร้อมใช้งาน ${Number(built.businessCounts?.Data || 0).toLocaleString()} แถว ·
+      Count History ${Number(built.businessCounts?.Count_History || 0).toLocaleString()} รายการ<br>
+      ข้อมูลระบบ ${Object.values(built.rowCounts).reduce((sum,value)=>sum+Number(value||0),0).toLocaleString()} แถว · checksum ${built.manifestHash}
     </div>`;
     if (Q('backup-after-mode')?.value === 'delete' && deleteArea) deleteArea.hidden = false;
   } catch (error) {
