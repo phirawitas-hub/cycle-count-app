@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cycle Count v51 - Responsive Chart &amp; Centered Status</title>
+<title>Cycle Count v54 - Smart Back Navigation</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -177,6 +177,40 @@ body{
 }
 .toggle-sidebar-btn:active { box-shadow: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light); }
 .topbar-title { font-size: 24px; font-weight: 700; color: var(--text-main); font-family: 'Fredoka', sans-serif;}
+.page-back-btn {
+  min-width: 86px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 15px;
+  border: none;
+  border-radius: 16px;
+  background: var(--neu-surface);
+  color: var(--text-main);
+  box-shadow: 5px 5px 11px var(--neu-shadow-dark), -5px -5px 11px var(--neu-shadow-light);
+  font-family: 'Mitr', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform .18s ease, box-shadow .18s ease, color .18s ease;
+  flex: 0 0 auto;
+}
+.page-back-btn:hover {
+  color: var(--primary-blue);
+  transform: translateX(-2px);
+}
+.page-back-btn:active {
+  transform: translateX(-1px) scale(.98);
+  box-shadow: inset 3px 3px 7px var(--neu-shadow-dark), inset -3px -3px 7px var(--neu-shadow-light);
+}
+.page-back-btn svg {
+  width: 19px;
+  height: 19px;
+  display: block;
+  flex: 0 0 auto;
+}
 
 .topbar-right { display: flex; align-items: center; gap: 16px; }
 .user-profile {
@@ -217,7 +251,16 @@ body{
   .sidebar.collapsed .nav-item { justify-content:flex-start; padding:14px 20px; }
   .main-wrapper { height: 100vh; width:100%; }
   .topbar { padding:0 12px; }
+  .topbar-left { min-width:0; gap:8px; }
   .topbar-title { font-size:18px; max-width:48vw; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .page-back-btn {
+    min-width: 42px;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    border-radius: 14px;
+  }
+  .page-back-btn span { display:none; }
   .topbar-right { gap:8px; }
   .top-out-btn { padding:9px 12px; }
   .user-name { display: none; }
@@ -427,6 +470,196 @@ select { appearance: none; background-image: url('data:image/svg+xml;charset=US-
 .status-badge-number { font-size: 36px; font-weight: 800; font-family: 'Fredoka', sans-serif; line-height: 1; margin-top: 10px; }
 .status-badge-card.unfixed .status-badge-number { color: var(--accent-red); }
 .status-badge-card.fixed .status-badge-number { color: var(--primary-blue); }
+.wms-status-card-icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--primary-blue);
+  background: rgba(255,255,255,.48);
+  box-shadow: inset 2px 2px 5px rgba(0,0,0,.05), 0 7px 14px rgba(0,109,119,.08);
+}
+.status-badge-card.unfixed .wms-status-card-icon { color: var(--accent-red); }
+.wms-status-card-icon svg { width: 25px; height: 25px; display: block; }
+
+.wms-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 0;
+  border-bottom: 1px solid rgba(255,255,255,.46);
+}
+.wms-row-main { min-width: 0; transition: opacity .2s ease; }
+.wms-row.is-checked .wms-row-main { opacity: .62; }
+.wms-row-side { min-width: 148px; text-align: right; }
+.wms-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.wms-action-btn {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 14px;
+  white-space: nowrap;
+}
+.wms-action-btn svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  flex: 0 0 auto;
+}
+.wms-note-control { position: relative; }
+.wms-note-btn.has-notes {
+  color: var(--primary-blue);
+  box-shadow: inset 3px 3px 7px var(--neu-shadow-dark), inset -3px -3px 7px var(--neu-shadow-light);
+}
+.wms-note-count {
+  min-width: 20px;
+  height: 20px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--primary-blue);
+  color: #fff;
+  font-family: 'Fredoka','Mitr',sans-serif;
+  font-size: 11px;
+  line-height: 1;
+}
+.wms-note-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 80;
+  width: min(330px, calc(100vw - 42px));
+  padding: 16px;
+  border: 1px solid rgba(255,255,255,.78);
+  border-radius: 20px;
+  background: var(--neu-surface);
+  box-shadow: 12px 16px 34px rgba(0,109,119,.18), -5px -5px 16px rgba(255,255,255,.86);
+  text-align: left;
+}
+.wms-note-menu[hidden] { display: none; }
+.wms-note-menu-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 800;
+}
+.wms-note-option-list {
+  max-height: 176px;
+  overflow-y: auto;
+  display: grid;
+  gap: 7px;
+  padding: 2px 3px 2px 1px;
+}
+.wms-note-option {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 36px;
+  padding: 7px 10px;
+  border-radius: 12px;
+  background: rgba(237,246,249,.78);
+  color: var(--text-main);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.wms-note-option input {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: var(--primary-blue);
+  flex: 0 0 auto;
+}
+.wms-note-add-row {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 40px;
+  gap: 8px;
+  margin-top: 10px;
+}
+.wms-note-add-row input {
+  min-width: 0;
+  min-height: 40px;
+  padding: 9px 12px;
+  font-size: 12px;
+}
+.wms-note-plus {
+  width: 40px;
+  min-height: 40px;
+  padding: 0;
+  border-radius: 13px;
+  font-size: 22px;
+  line-height: 1;
+}
+.wms-note-save { width: 100%; margin-top: 10px; }
+.wms-note-chips {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  max-width: 360px;
+  margin-left: auto;
+}
+.wms-note-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 190px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(131,197,190,.18);
+  color: var(--primary-blue);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 680px) {
+  .wms-row {
+    grid-template-columns: minmax(0,1fr);
+    gap: 12px;
+    padding: 17px 0;
+  }
+  .wms-row-side {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: auto minmax(0,1fr);
+    align-items: center;
+    gap: 12px;
+    text-align: left;
+  }
+  .wms-actions { justify-content: flex-end; }
+  .wms-note-chips { grid-column: 1 / -1; justify-content: flex-start; margin-left: 0; }
+  .wms-note-menu { right: 0; }
+}
+
+@media (max-width: 430px) {
+  .wms-row-side { grid-template-columns: 1fr; }
+  .wms-actions { justify-content: stretch; }
+  .wms-action-btn { flex: 1 1 132px; padding-inline: 10px; }
+  .wms-note-control { flex: 1 1 132px; }
+  .wms-note-control > .wms-action-btn { width: 100%; }
+  .wms-note-menu { right: -2px; width: min(330px, calc(100vw - 54px)); }
+}
 
 details summary { box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px var(--neu-shadow-light); border-radius: 16px; }
 
@@ -5023,7 +5256,7 @@ function fmtDMY(value) {
   if (Number.isNaN(d.getTime())) return String(value);
   return d.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
-window.__CYCLE_COUNT_BUILD__ = 'v51';
+window.__CYCLE_COUNT_BUILD__ = 'v54';
 
 let _viewportSyncFrame = 0;
 function syncViewportSize() {
@@ -5054,6 +5287,9 @@ let _xlsxRawRows = null;
 let _xlsxParsed  = null;   
 let _svDashOpenVarianceIdx = null;   
 let _dashTab = 'summary';
+let _navStack = [];
+const NAV_DETAIL_PAGES = new Set(['c-count','sv-detail','ad-txlog','ad-new']);
+const BACK_BUTTON_PAGES = new Set(['c-count','sv-detail','sv-list','ad-txlog','ad-new']);
 
 async function boot() {
   try {
@@ -5104,9 +5340,41 @@ function home() {
   return 'login';
 }
 
-function go(page, extra = {}) {
-  if (page !== 'sv-dash') delete extra._dashAnchor;
-  S = { page, ...extra };
+function syncNavigationStateGlobals() {
+  if (S._dashTab) _dashTab = S._dashTab;
+  if (S._manageTab) _manageTab = S._manageTab;
+}
+
+function go(page, extra = {}, navOptions = {}) {
+  const currentPage = S?.page || '';
+  const nextExtra = { ...extra };
+  if (page !== 'sv-dash') delete nextExtra._dashAnchor;
+
+  if (navOptions.resetHistory || page === 'login') _navStack = [];
+
+  const previousState = _navStack[_navStack.length - 1];
+  const isReturningToStoredPage =
+    NAV_DETAIL_PAGES.has(currentPage) &&
+    previousState?.page === page &&
+    currentPage !== page;
+
+  if (isReturningToStoredPage) {
+    _navStack.pop();
+    S = { ...previousState, ...nextExtra, page };
+  } else {
+    const shouldRememberCurrent =
+      !navOptions.replace &&
+      currentPage &&
+      currentPage !== page &&
+      NAV_DETAIL_PAGES.has(page);
+    if (shouldRememberCurrent) {
+      _navStack.push({ ...S });
+      if (_navStack.length > 20) _navStack.shift();
+    }
+    S = { page, ...nextExtra };
+  }
+
+  syncNavigationStateGlobals();
   try {
     render();
     window.scrollTo(0, 0);
@@ -5114,6 +5382,43 @@ function go(page, extra = {}) {
     console.error("Render Error:", err);
     alert(`เกิดข้อผิดพลาดในการแสดงหน้าจอ: ${err.message}`);
   }
+}
+
+function goPrimary(page) {
+  go(page, {}, { replace:true, resetHistory:true });
+}
+
+function goBack() {
+  const previousState = _navStack.pop();
+  if (previousState?.page) {
+    S = { ...previousState };
+    syncNavigationStateGlobals();
+    render();
+    window.scrollTo(0, 0);
+    return;
+  }
+
+  const currentPage = S?.page;
+  if (currentPage === 'c-count') return go('c-tasks', {}, { replace:true });
+  if (currentPage === 'sv-detail') return go('sv-list', {}, { replace:true });
+  if (currentPage === 'sv-list') {
+    return go('sv-dash', { _dashTab:'variance', _dashSid:S._dashSid }, { replace:true });
+  }
+  if (currentPage === 'ad-txlog') return go('ad-history', {}, { replace:true });
+  if (currentPage === 'ad-new') {
+    return go('ad-manage', { _manageTab:'sessions' }, { replace:true });
+  }
+  go(home(), {}, { replace:true });
+}
+
+function pageBackButtonHtml(page) {
+  if (!BACK_BUTTON_PAGES.has(page)) return '';
+  return `<button class="page-back-btn" type="button" onclick="goBack()" aria-label="ย้อนกลับไปหน้าก่อนหน้า" title="ย้อนกลับ">
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m14.5 5-7 7 7 7"/><path d="M8 12h11"/>
+    </svg>
+    <span>ย้อนกลับ</span>
+  </button>`;
 }
 
 function compassIconSvg(size=20) {
@@ -5242,7 +5547,7 @@ function renderResponsivePreviewContent() {
     <div class="summary-page-header">
       <div class="summary-greeting-wrap">
         <div class="summary-greeting">Hello, AuD</div>
-        <div class="summary-greeting-sub">Cycle Count Dashboard · Responsive Chart Fix v51</div>
+        <div class="summary-greeting-sub">Cycle Count Dashboard · Smart Back Navigation v54</div>
       </div>
       <div class="summary-header-actions">
         <label class="summary-session-search" title="เลือก Session">
@@ -5278,16 +5583,16 @@ function renderResponsivePreviewContent() {
           <div class="summary-card-kicker">WMS ADJUST</div>
           <h2>การปรับยอด WMS</h2>
           <div class="summary-wms-total-block"><strong>15</strong><span>DIFF ทั้งหมด</span></div>
-          <div class="summary-wms-progress-head"><span>ความคืบหน้าการแก้ไข</span><strong>67%</strong></div>
+          <div class="summary-wms-progress-head"><span>ความคืบหน้าการตรวจสอบ</span><strong>67%</strong></div>
           <div class="summary-wms-linear-progress"><span style="width:67%"></span></div>
           <div class="summary-wms-columns" aria-label="ตัวอย่างสถานะการปรับยอด WMS">
             <div class="summary-wms-column-item unfixed">
               <div class="summary-wms-column-value">5</div><div class="summary-wms-column-track"><span style="height:33%"></span></div>
-              <div class="summary-wms-column-label">ยังไม่แก้ WMS</div><div class="summary-wms-column-percent">33%</div>
+              <div class="summary-wms-column-label">ยังไม่ได้ตรวจสอบ</div><div class="summary-wms-column-percent">33%</div>
             </div>
             <div class="summary-wms-column-item fixed">
               <div class="summary-wms-column-value">10</div><div class="summary-wms-column-track"><span style="height:67%"></span></div>
-              <div class="summary-wms-column-label">แก้ไขแล้ว</div><div class="summary-wms-column-percent">67%</div>
+              <div class="summary-wms-column-label">ตรวจสอบแล้ว</div><div class="summary-wms-column-percent">67%</div>
             </div>
           </div>
         </article>
@@ -5417,7 +5722,7 @@ function render() {
         </button><div class="nav-submenu">${children}</div></div>`;
     }
     const isActive = page === item.id;
-    return `<button class="nav-item ${isActive?'active':''}" onclick="go('${item.id}');closeMobileSidebar()" title="${item.name}"><span class="nav-icon">${item.icon}</span><span>${item.name}</span></button>`;
+    return `<button class="nav-item ${isActive?'active':''}" onclick="goPrimary('${item.id}');closeMobileSidebar()" title="${item.name}"><span class="nav-icon">${item.icon}</span><span>${item.name}</span></button>`;
   }).join('');
 
   const isCollapsed = window._sidebarCollapsed || false;
@@ -5452,6 +5757,7 @@ function render() {
         <header class="topbar">
           <div class="topbar-left">
             <button class="toggle-sidebar-btn mobile-menu-trigger" type="button" onclick="handleSidebarToggle()" aria-label="เปิดหรือปิดเมนู"><span></span></button>
+            ${pageBackButtonHtml(page)}
             <h1 class="topbar-title">${pageTitle}</h1>
           </div>
           <div class="topbar-right">
@@ -5527,15 +5833,65 @@ function toggleNavGroup(group) {
   document.querySelectorAll('.nav-group').forEach(el => el.classList.toggle('open', el.dataset.group === window._openNavGroup));
 }
 function openDashboardMenu(tab) {
+  _navStack = [];
   _dashTab = tab; S = { page:'sv-dash', _dashTab:tab, _dashSid:S._dashSid };
   render();
 }
 function openManageMenu(tab) {
+  _navStack = [];
   _manageTab = tab; S = { page:'ad-manage', _manageTab:tab };
   render();
 }
 
 function Q(id) { return document.getElementById(id); }
+
+function escapeWmsText(value='') {
+  return String(value).replace(/[&<>"']/g, ch => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+  }[ch]));
+}
+
+function wmsDomKey(assignmentId, itemId) {
+  return `${assignmentId}_${itemId}`.replace(/[^a-zA-Z0-9_-]/g, '_');
+}
+
+function wmsIconSvg(name, size=18) {
+  const paths = {
+    note: `<path d="M5.75 2h10.5A2.75 2.75 0 0 1 19 4.75v9.5A2.75 2.75 0 0 1 16.25 17H10l-5 4v-4.9A2.74 2.74 0 0 1 3 13.45v-8.7A2.75 2.75 0 0 1 5.75 2"/><path d="M7.5 7.5h9M7.5 11.5h6"/>`,
+    reviewed: `<path d="M12 2.5 19 5v5.8c0 4.35-2.87 8.3-7 9.7-4.13-1.4-7-5.35-7-9.7V5l7-2.5Z"/><path d="m8.6 11.4 2.15 2.15 4.65-4.7"/>`,
+    pending: `<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M9 3.5h6M8 8h8M8 12h5"/><circle cx="16.5" cy="16.5" r="2.5"/>`,
+    search: `<circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.3 15.3 4.2 4.2"/>`,
+    plus: `<path d="M12 5v14M5 12h14"/>`,
+    close: `<path d="m6 6 12 12M18 6 6 18"/>`,
+  };
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${paths[name] || paths.note}</svg>`;
+}
+
+function fillDependentSelect(id, values, allLabel='ทั้งหมด', preferredValue) {
+  const select = Q(id);
+  if (!select) return '';
+  const current = preferredValue === undefined ? select.value : String(preferredValue || '');
+  const cleanValues = [...new Set(
+    [...values]
+      .filter(value => value !== null && value !== undefined && String(value).trim() !== '')
+      .map(value => String(value))
+  )].sort((a, b) => a.localeCompare(b, undefined, { numeric:true, sensitivity:'base' }));
+
+  select.replaceChildren();
+  const allOption = document.createElement('option');
+  allOption.value = '';
+  allOption.textContent = allLabel;
+  select.appendChild(allOption);
+  cleanValues.forEach(value => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = value;
+    select.appendChild(option);
+  });
+  select.value = cleanValues.includes(current) ? current : '';
+  return select.value;
+}
+
 function cnt() { return Q('cnt'); }
 function rLabel(r) { return {admin:'Admin',counter:'Counter',supervisor:'Supervisor'}[r] || (r||''); }
 function errBox(msg) { return `<div class="card"><div class="alert alert-red">❌ ${msg}</div></div>`; }
@@ -5785,19 +6141,6 @@ async function loadCTasks() {
 
   window._myTasks = asgns;
 
-  const rows = new Set(), poss = new Set(), lvls = new Set();
-  asgns.forEach(a => {
-    const parts = (a.locations?.code || '').split('-');
-    if (parts[1]) rows.add(parts[1]);
-    if (parts[2]) poss.add(parts[2]);
-    if (parts[3]) lvls.add(parts[3]);
-  });
-  const fillSel = (id, vals) => {
-    const el = Q(id); if (!el) return;
-    el.innerHTML = '<option value="">ทั้งหมด</option>' +
-      [...vals].sort().map(v => `<option value="${v}">${v}</option>`).join('');
-  };
-
   const done = asgns.filter(a => ['completed','approved'].includes(a.status)).length;
   const pct  = Math.round(done / asgns.length * 100);
 
@@ -5815,24 +6158,35 @@ async function loadCTasks() {
       <div class="grid-3">
         <div class="fg" style="margin:0">
           <label style="font-size:11px">ROW</label>
-          <select id="mt-row" onchange="renderMyTasks()" style="font-size:14px;"></select>
+          <select id="mt-row" onchange="S._mtRow=this.value;refreshMyTaskFilters()" style="font-size:14px;"></select>
         </div>
         <div class="fg" style="margin:0">
           <label style="font-size:11px">POSITION</label>
-          <select id="mt-pos" onchange="renderMyTasks()" style="font-size:14px;"></select>
+          <select id="mt-pos" onchange="S._mtPos=this.value;refreshMyTaskFilters()" style="font-size:14px;"></select>
         </div>
         <div class="fg" style="margin:0">
           <label style="font-size:11px">LEVEL</label>
-          <select id="mt-lvl" onchange="renderMyTasks()" style="font-size:14px;"></select>
+          <select id="mt-lvl" onchange="S._mtLvl=this.value;refreshMyTaskFilters()" style="font-size:14px;"></select>
         </div>
       </div>
     </div>
     <div class="card card-flush" id="mt-list"></div>`;
 
-  fillSel('mt-row', rows);
-  fillSel('mt-pos', poss);
-  fillSel('mt-lvl', lvls);
+  refreshMyTaskFilters();
+}
 
+function refreshMyTaskFilters() {
+  const entries = (window._myTasks || []).map(a => {
+    const parts = (a.locations?.code || '').split('-');
+    return { row:parts[1] || '', position:parts[2] || '', level:parts[3] || '' };
+  });
+  const row = fillDependentSelect('mt-row', entries.map(entry => entry.row), 'ทั้งหมด', S._mtRow);
+  S._mtRow = row;
+  const rowEntries = entries.filter(entry => !row || entry.row === row);
+  const position = fillDependentSelect('mt-pos', rowEntries.map(entry => entry.position), 'ทั้งหมด', S._mtPos);
+  S._mtPos = position;
+  const positionEntries = rowEntries.filter(entry => !position || entry.position === position);
+  S._mtLvl = fillDependentSelect('mt-lvl', positionEntries.map(entry => entry.level), 'ทั้งหมด', S._mtLvl);
   renderMyTasks();
 }
 
@@ -6360,15 +6714,28 @@ async function loadSvDash() {
 
   const allItemIds = [...new Set(wmsRows.map(v => v.item_id).filter(Boolean))];
   const allApproverIds = [...new Set(wmsRows.map(v => v.approved_by).filter(Boolean))];
-  const [{ data: itemsData }, { data: approversData }] = await Promise.all([
+  const [{ data: itemsData }, { data: approversData }, { data: wmsNoteRows, error: wmsNoteError }] = await Promise.all([
     allItemIds.length ? sb.from('items').select('id,code,description').in('id', allItemIds) : { data: [] },
     allApproverIds.length ? sb.from('profiles').select('id,name').in('id', allApproverIds) : { data: [] },
+    sb.from('audit_log')
+      .select('id,assignment_id,item_id,new_value,created_at')
+      .eq('session_id', curSid)
+      .eq('action', 'wms_note')
+      .order('created_at', { ascending: true }),
   ]);
   const itemMap = Object.fromEntries((itemsData||[]).map(i => [i.id, i]));
   const approverMap = Object.fromEntries((approversData||[]).map(p => [p.id, p]));
+  const wmsNoteMap = {};
+  if (wmsNoteError) console.warn('โหลดหมายเหตุ WMS ไม่สำเร็จ:', wmsNoteError.message);
+  (wmsNoteRows||[]).forEach(n => {
+    const key = `${n.assignment_id}|${n.item_id}`;
+    if (!wmsNoteMap[key]) wmsNoteMap[key] = [];
+    wmsNoteMap[key].push({ id:n.id, text:n.new_value || '', created_at:n.created_at });
+  });
   wmsRows.forEach(v => {
     v.items = itemMap[v.item_id] || { code: '?', description: '' };
     v.profiles = approverMap[v.approved_by] || { name: '?' };
+    v.wms_notes = wmsNoteMap[`${v.assignment_id}|${v.item_id}`] || [];
   });
 
   const approvedAsgnIds = new Set(wmsRows.filter(v => v.wms_fixed).map(v => v.assignment_id));
@@ -6399,6 +6766,7 @@ async function loadSvDash() {
         created_at: null,
         items: { code: '?', description: '' },
         profiles: { name: '(ยังไม่คอนเฟิร์ม)' },
+        wms_notes: wmsNoteMap[`${a.id}|${itemId}`] || [],
       });
     }
   }
@@ -6789,7 +7157,7 @@ async function loadSvDash() {
         </div>
 
         <div class="summary-wms-progress-head">
-          <span>ความคืบหน้าการแก้ไข</span>
+          <span>ความคืบหน้าการตรวจสอบ</span>
           <strong>${summaryWmsFixedPercent}%</strong>
         </div>
         <div class="summary-wms-linear-progress">
@@ -6802,7 +7170,7 @@ async function loadSvDash() {
             <div class="summary-wms-column-track">
               <span style="height:${summaryWmsUnfixedCount ? Math.max(12, summaryWmsUnfixedPercent) : 4}%"></span>
             </div>
-            <div class="summary-wms-column-label">ยังไม่แก้ WMS</div>
+            <div class="summary-wms-column-label">ยังไม่ได้ตรวจสอบ</div>
             <div class="summary-wms-column-percent">${summaryWmsUnfixedPercent}%</div>
           </div>
           <div class="summary-wms-column-item fixed">
@@ -6810,7 +7178,7 @@ async function loadSvDash() {
             <div class="summary-wms-column-track">
               <span style="height:${summaryWmsFixedCount ? Math.max(12, summaryWmsFixedPercent) : 4}%"></span>
             </div>
-            <div class="summary-wms-column-label">แก้ไขแล้ว</div>
+            <div class="summary-wms-column-label">ตรวจสอบแล้ว</div>
             <div class="summary-wms-column-percent">${summaryWmsFixedPercent}%</div>
           </div>
         </div>
@@ -6968,7 +7336,7 @@ async function loadSvDash() {
       <div>
         <div style="font-size:13px;font-weight:800;color:var(--text-muted);text-transform:uppercase">ทั้งหมด</div>
         <div class="wms-summary-number">${wmsTotalCount}</div>
-        <div class="wms-summary-percent">${wmsFixedPercent}% แก้ไขแล้ว</div>
+        <div class="wms-summary-percent">${wmsFixedPercent}% ตรวจสอบแล้ว</div>
       </div>
       <div class="wms-summary-ring">
         <svg viewBox="0 0 100 100" class="wms-ring-svg">
@@ -6982,14 +7350,14 @@ async function loadSvDash() {
     </div>
     <div class="status-badge-grid">
       <div class="status-badge-card unfixed">
-        <div style="font-size:28px; background:rgba(255,255,255,0.4); border-radius:50%; padding:10px; box-shadow: inset 2px 2px 5px rgba(0,0,0,0.05);">🔧</div>
+        <div class="wms-status-card-icon">${wmsIconSvg('pending', 25)}</div>
         <div class="status-badge-number">${wmsUnfixedCount}</div>
-        <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-top:6px">ยังไม่แก้ WMS</div>
+        <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-top:6px">ยังไม่ได้ตรวจสอบ</div>
       </div>
       <div class="status-badge-card fixed">
-        <div style="font-size:28px; background:rgba(255,255,255,0.4); border-radius:50%; padding:10px; box-shadow: inset 2px 2px 5px rgba(0,0,0,0.05);">✅</div>
+        <div class="wms-status-card-icon">${wmsIconSvg('reviewed', 25)}</div>
         <div class="status-badge-number">${wmsFixedCount}</div>
-        <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-top:6px">แก้ไขแล้ว</div>
+        <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-top:6px">ตรวจสอบแล้ว</div>
       </div>
     </div>
     <div class="grid-3" style="margin-bottom:14px">
@@ -7016,8 +7384,8 @@ async function loadSvDash() {
     </div>
     <div class="fg" style="margin-bottom:16px">
       <select id="wms-status" onchange="updateWmsFilter('Filter',this.value)">
-        <option value="unfixed" ${wmsFilter==='unfixed'?'selected':''}>ยังไม่แก้ WMS</option>
-        <option value="fixed" ${wmsFilter==='fixed'?'selected':''}>แก้แล้ว</option>
+        <option value="unfixed" ${wmsFilter==='unfixed'?'selected':''}>ยังไม่ได้ตรวจสอบ</option>
+        <option value="fixed" ${wmsFilter==='fixed'?'selected':''}>ตรวจสอบแล้ว</option>
         <option value="pending" ${wmsFilter==='pending'?'selected':''}>⏳ รอคอนเฟิร์ม</option>
         <option value="all" ${wmsFilter==='all'?'selected':''}>ทั้งหมด</option>
       </select>
@@ -7055,7 +7423,10 @@ async function loadSvDash() {
 
   cnt().innerHTML = `${sessionControl}
     <div class="${tab === 'summary' ? 'summary-dashboard-content' : 'card'}" id="dash-content">${tabContent}</div>`;
-  if (tab === 'wms') renderWmsList();
+  if (tab === 'wms') {
+    refreshWmsDependentFilters();
+    renderWmsList();
+  }
 }
 
 function toggleUserDetail(idx) {
@@ -7078,7 +7449,138 @@ async function toggleWmsFixed(vaId, checked) {
   }
 }
 
-function updateWmsFilter(key, value) { S['_wms'+key] = value; renderWmsList(); }
+const WMS_NOTE_PRESETS = [
+  'รอตรวจสอบเอกสาร',
+  'รอตรวจสอบ Location',
+  'รอตรวจสอบ Item',
+  'ส่งแก้ไขยอด WMS',
+];
+
+function closeWmsNoteMenus(exceptKey='') {
+  document.querySelectorAll('.wms-note-menu').forEach(menu => {
+    if (!exceptKey || menu.id !== `wms_note_menu_${exceptKey}`) menu.hidden = true;
+  });
+}
+
+function toggleWmsNoteMenu(event, key) {
+  event?.preventDefault();
+  event?.stopPropagation();
+  const menu = Q(`wms_note_menu_${key}`);
+  if (!menu) return;
+  const willOpen = menu.hidden;
+  closeWmsNoteMenus(key);
+  menu.hidden = !willOpen;
+  if (willOpen) setTimeout(() => Q(`wms_note_custom_${key}`)?.focus(), 30);
+}
+
+function addCustomWmsNoteOption(event, key) {
+  event?.preventDefault();
+  event?.stopPropagation();
+  const input = Q(`wms_note_custom_${key}`);
+  const list = Q(`wms_note_options_${key}`);
+  const text = (input?.value || '').trim();
+  if (!text || !list) return;
+  const exists = [...list.querySelectorAll('input[type="checkbox"]')]
+    .some(box => box.value.toLocaleLowerCase('th-TH') === text.toLocaleLowerCase('th-TH'));
+  if (exists) {
+    const existing = [...list.querySelectorAll('input[type="checkbox"]')]
+      .find(box => box.value.toLocaleLowerCase('th-TH') === text.toLocaleLowerCase('th-TH'));
+    if (existing) existing.checked = true;
+  } else {
+    const label = document.createElement('label');
+    label.className = 'wms-note-option';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.value = text;
+    checkbox.checked = true;
+    const span = document.createElement('span');
+    span.textContent = text;
+    label.append(checkbox, span);
+    list.appendChild(label);
+  }
+  input.value = '';
+  input.focus();
+}
+
+async function saveWmsNotes(assignmentId, itemId, key) {
+  const menu = Q(`wms_note_menu_${key}`);
+  const saveBtn = Q(`wms_note_save_${key}`);
+  if (!menu) return;
+  const notes = [...new Set(
+    [...menu.querySelectorAll('.wms-note-option input[type="checkbox"]')]
+      .filter(box => box.checked)
+      .map(box => box.value.trim())
+      .filter(Boolean)
+  )];
+  if (!notes.length) {
+    alert('กรุณาเลือกหรือเพิ่มหมายเหตุอย่างน้อย 1 ข้อ');
+    return;
+  }
+
+  const assignment = window._wmsAsgnInfoMap?.[assignmentId];
+  const rows = notes.map(note => ({
+    session_id: S._dashSid || assignment?.session_id || null,
+    location_id: assignment?.location_id || null,
+    item_id: itemId || null,
+    assignment_id: assignmentId || null,
+    action: 'wms_note',
+    old_value: null,
+    new_value: note,
+    performed_by: me?.id || null,
+  }));
+
+  try {
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = 'กำลังบันทึก...';
+    }
+    const { error } = await sb.from('audit_log').insert(rows);
+    if (error) throw error;
+
+    const target = (window._wmsRows || [])
+      .find(v => v.assignment_id === assignmentId && v.item_id === itemId);
+    if (target) {
+      target.wms_notes = [
+        ...(target.wms_notes || []),
+        ...rows.map((n, index) => ({
+          id: n.id || `new_${Date.now()}_${index}`,
+          text: n.new_value,
+          created_at: n.created_at || new Date().toISOString(),
+        })),
+      ];
+    }
+    renderWmsList();
+  } catch (error) {
+    console.error(error);
+    alert('บันทึกหมายเหตุไม่สำเร็จ: ' + (error.message || error));
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = `${wmsIconSvg('reviewed', 17)} บันทึกหมายเหตุ`;
+    }
+  }
+}
+
+document.addEventListener('click', event => {
+  if (!event.target.closest('.wms-note-control')) closeWmsNoteMenus();
+});
+
+function refreshWmsDependentFilters() {
+  const rows = window._wmsRows || [];
+  const asgnInfoMap = window._wmsAsgnInfoMap || {};
+  const zone = Q('wms-zone')?.value || S._wmsZone || '';
+  const levels = rows
+    .map(row => asgnInfoMap[row.assignment_id]?.locations)
+    .filter(location => location && (!zone || location.zone === zone))
+    .map(location => location.level);
+  const selectedLevel = fillDependentSelect('wms-level', levels);
+  S._wmsLevel = selectedLevel;
+}
+
+function updateWmsFilter(key, value) {
+  S['_wms'+key] = value;
+  if (key === 'Zone') refreshWmsDependentFilters();
+  renderWmsList();
+}
 
 function renderWmsList() {
   const container = Q('wms-list');
@@ -7106,8 +7608,8 @@ function renderWmsList() {
   });
 
   if (!filtered.length) {
-    const msg = filterStatus==='unfixed' ? '🎉 ไม่มีรายการค้างแก้ WMS' 
-      : filterStatus==='fixed' ? 'ยังไม่มีรายการที่แก้แล้ว' 
+    const msg = filterStatus==='unfixed' ? '🎉 ไม่มีรายการที่ยังไม่ได้ตรวจสอบ' 
+      : filterStatus==='fixed' ? 'ยังไม่มีรายการที่ตรวจสอบแล้ว' 
       : filterStatus==='pending' ? '⏳ ไม่มีรายการที่รอคอนเฟิร์ม'
       : 'ไม่พบรายการตามตัวกรองที่เลือก';
     container.innerHTML = `<div style="padding:40px 0;text-align:center;color:var(--text-muted);font-size:14px; font-weight:600;">${msg}</div>`;
@@ -7119,11 +7621,56 @@ function renderWmsList() {
     const isFixed = !!v.wms_fixed;
     const isPending = !!v._isPending;
     const varAmt = +v.variance;
+    const noteKey = wmsDomKey(v.assignment_id, v.item_id);
+    const notes = Array.isArray(v.wms_notes) ? v.wms_notes : [];
+    const assignmentArg = JSON.stringify(v.assignment_id || '');
+    const itemArg = JSON.stringify(v.item_id || '');
     const statusBadge = isPending ? `<span class="tag tag-amber" style="font-size:10px">⏳ รอคอนเฟิร์ม</span>` : `<span class="tag tag-blue" style="font-size:10px">✅ คอนเฟิร์มแล้ว</span>`;
-    const wmsButton = isPending ? `<button class="btn btn-sm btn-amber" onclick="go('sv-detail',{aid:'${v.assignment_id}'})">🔍 ไปคอนเฟิร์ม</button>` : `<button class="btn btn-sm ${isFixed?'btn-green':'btn-ghost'}" onclick="toggleWmsFixed('${v.id}',${!isFixed})">${isFixed?'✅ แก้แล้ว':'⬜ แก้แล้ว?'}</button>`;
+    const wmsButton = isPending
+      ? `<button class="btn btn-sm btn-amber wms-action-btn" onclick="go('sv-detail',{aid:${assignmentArg}})">${wmsIconSvg('search')}<span>ไปคอนเฟิร์ม</span></button>`
+      : `<button class="btn btn-sm ${isFixed?'btn-green':'btn-ghost'} wms-action-btn" onclick="toggleWmsFixed(${JSON.stringify(v.id || '')},${!isFixed})">${wmsIconSvg(isFixed?'reviewed':'pending')}<span>${isFixed?'ตรวจสอบแล้ว':'ยังไม่ได้ตรวจสอบ'}</span></button>`;
+    const noteOptions = WMS_NOTE_PRESETS.map(text => `
+      <label class="wms-note-option">
+        <input type="checkbox" value="${escapeWmsText(text)}">
+        <span>${escapeWmsText(text)}</span>
+      </label>`).join('');
+    const noteButton = `
+      <div class="wms-note-control">
+        <button class="btn btn-sm btn-ghost wms-action-btn wms-note-btn ${notes.length?'has-notes':''}"
+          onclick="toggleWmsNoteMenu(event,'${noteKey}')" aria-haspopup="true"
+          aria-controls="wms_note_menu_${noteKey}">
+          ${wmsIconSvg('note')}
+          <span>เพิ่มหมายเหตุ</span>
+          ${notes.length ? `<span class="wms-note-count">${notes.length}</span>` : ''}
+        </button>
+        <div class="wms-note-menu" id="wms_note_menu_${noteKey}" hidden onclick="event.stopPropagation()">
+          <div class="wms-note-menu-title">
+            <span>เลือกได้หลายข้อ</span>
+            <button type="button" class="btn btn-ghost" style="width:32px;height:32px;padding:0;border-radius:10px"
+              onclick="toggleWmsNoteMenu(event,'${noteKey}')" aria-label="ปิด">${wmsIconSvg('close',16)}</button>
+          </div>
+          <div class="wms-note-option-list" id="wms_note_options_${noteKey}">${noteOptions}</div>
+          <div class="wms-note-add-row">
+            <input id="wms_note_custom_${noteKey}" type="text" maxlength="120"
+              placeholder="พิมพ์หมายเหตุใหม่..."
+              onkeydown="if(event.key==='Enter'){addCustomWmsNoteOption(event,'${noteKey}')}">
+            <button type="button" class="btn btn-blue wms-note-plus"
+              onclick="addCustomWmsNoteOption(event,'${noteKey}')" aria-label="เพิ่มหมายเหตุใหม่">+</button>
+          </div>
+          <button type="button" class="btn btn-green btn-sm wms-action-btn wms-note-save"
+            id="wms_note_save_${noteKey}"
+            onclick='saveWmsNotes(${assignmentArg},${itemArg},"${noteKey}")'>
+            ${wmsIconSvg('reviewed',17)} <span>บันทึกหมายเหตุ</span>
+          </button>
+        </div>
+      </div>`;
+    const noteChips = notes.length ? `
+      <div class="wms-note-chips" title="หมายเหตุที่บันทึกแล้ว">
+        ${notes.map(note => `<span class="wms-note-chip">${escapeWmsText(note.text || note.new_value || '')}</span>`).join('')}
+      </div>` : '';
 
-    return `<div style="border-bottom:1px solid rgba(255,255,255,0.4);padding:16px 0;display:flex;align-items:center;gap:12px;${isFixed?'opacity:.6':''}">
-      <div style="flex:1;min-width:0">
+    return `<div class="wms-row ${isFixed?'is-checked':''}">
+      <div class="wms-row-main">
         <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap">
           <span class="mono" style="font-size:15px;font-weight:800;color:var(--text-main)">${loc?.code||'?'}</span>
           ${statusBadge}
@@ -7136,10 +7683,13 @@ function renderWmsList() {
           }
         </div>
       </div>
-      <div style="text-align:right;flex-shrink:0">
+      <div class="wms-row-side">
+        <div>
         <div style="font-size:22px;font-weight:800;font-family:'Fredoka';color:${varAmt>0?'var(--accent-green)':'var(--accent-red)'}">${varAmt>0?'+':''}${varAmt}</div>
-        <div style="font-size:10px;color:var(--text-muted);margin-bottom:8px; font-weight:600;">${isPending ? 'ยอดนับ' : 'ยืนยัน ' + v.final_qty}</div>
-        ${wmsButton}
+        <div style="font-size:10px;color:var(--text-muted);font-weight:600;">${isPending ? 'ยอดนับ' : 'ยืนยัน ' + v.final_qty}</div>
+        </div>
+        <div class="wms-actions">${wmsButton}${noteButton}</div>
+        ${noteChips}
       </div>
     </div>`;
   }).join('');
@@ -7541,11 +8091,11 @@ async function renderManageAssign(container) {
       <div style="padding:0 20px 20px">
         <div class="grid-3" style="margin-bottom:12px">
           <div><label style="font-size:11px">ZONE</label>
-            <select id="bulk-zone" onchange="refreshBulkPreview()"><option value="">ทั้งหมด</option></select></div>
+            <select id="bulk-zone" onchange="refreshBulkDependentFilters()"><option value="">ทั้งหมด</option></select></div>
           <div><label style="font-size:11px">ROW</label>
-            <select id="bulk-row" onchange="refreshBulkPreview()"><option value="">ทั้งหมด</option></select></div>
+            <select id="bulk-row" onchange="refreshBulkDependentFilters()"><option value="">ทั้งหมด</option></select></div>
           <div><label style="font-size:11px">LEVEL</label>
-            <select id="bulk-level" onchange="refreshBulkPreview()"><option value="">ทั้งหมด</option></select></div>
+            <select id="bulk-level" onchange="refreshBulkDependentFilters()"><option value="">ทั้งหมด</option></select></div>
         </div>
         <div class="fg" style="margin-bottom:12px"><label style="font-size:11px">COUNTER รอบ 1</label>
           <select id="bulk-user">${cOpts}</select></div>
@@ -7688,18 +8238,25 @@ async function toggleOH() {
 }
 
 async function refreshR23Preview() {
-  const sid = Q('as-sess')?.value; const status = Q('r23-round')?.value || 'round1_done'; const zone = Q('r23-zone')?.value || ''; const row = Q('r23-row')?.value || '';
+  const sid = Q('as-sess')?.value; const status = Q('r23-round')?.value || 'round1_done';
   const prev = Q('r23-preview'), btn = Q('r23-btn'); if (!sid || !prev || !btn) return;
-  let q = sb.from('assignments').select('id,session_id,location_id,assigned_to,locations(zone,row_no)').eq('session_id', sid).eq('status', status);
-  const { data: asgns, error } = await q;
+  const { data: asgns, error } = await sb.from('assignments')
+    .select('id,session_id,location_id,assigned_to,locations(zone,row_no)')
+    .eq('session_id', sid)
+    .eq('status', status);
+  if (error) {
+    prev.innerHTML = `<span style="color:var(--accent-red)">${escapeWmsText(error.message)}</span>`;
+    btn.disabled = true;
+    return;
+  }
 
-  const zones = new Set(), rows = new Set();
-  asgns?.forEach(a => { if (a.locations?.zone) zones.add(a.locations.zone); if (a.locations?.row_no) rows.add(a.locations.row_no); });
-  const fillSel = (id, vals) => { const el = Q(id); if (!el) return; const cur = el.value; el.innerHTML = '<option value="">ทั้งหมด</option>' + [...vals].sort().map(v=>`<option value="${v}" ${v===cur?'selected':''}>${v}</option>`).join(''); };
-  fillSel('r23-zone', zones); fillSel('r23-row',  rows);
+  fillDependentSelect('r23-zone', (asgns||[]).map(a => a.locations?.zone));
+  const zone = Q('r23-zone')?.value || '';
+  const zoneAssignments = (asgns||[]).filter(a => !zone || a.locations?.zone === zone);
+  fillDependentSelect('r23-row', zoneAssignments.map(a => a.locations?.row_no));
+  const row = Q('r23-row')?.value || '';
 
-  const filtered = (asgns||[]).filter(a => {
-    if (zone && a.locations?.zone !== zone) return false;
+  const filtered = zoneAssignments.filter(a => {
     if (row  && a.locations?.row_no !== row) return false;
     return true;
   });
@@ -7734,15 +8291,37 @@ async function refreshBulkFilters() {
   ]);
 
   const assignedSet = new Set(existing?.map(a => a.location_id) || []);
-  const zones = new Set(), rows = new Set(), levels = new Set(); const seen = new Set();
-  for (const s of snaps || []) {
-    const l = s.locations; if (!l || seen.has(l.id) || assignedSet.has(l.id)) continue;
-    seen.add(l.id); if (l.zone) zones.add(l.zone); if (l.row_no) rows.add(l.row_no); if (l.level) levels.add(l.level);
-  }
+  window._bulkSnaps = snaps || [];
+  window._bulkAssigned = assignedSet;
+  refreshBulkDependentFilters();
+}
 
-  const fill = (id, vals) => { const el = Q(id); if (!el) return; const cur = el.value; el.innerHTML = '<option value="">ทั้งหมด</option>' + [...vals].sort().map(v => `<option value="${v}" ${v===cur?'selected':''}>${v}</option>`).join(''); };
-  fill('bulk-zone', zones); fill('bulk-row', rows); fill('bulk-level', levels);
-  window._bulkSnaps = snaps || []; window._bulkAssigned = assignedSet; refreshBulkPreview();
+function getBulkAvailableLocations() {
+  const snaps = window._bulkSnaps || [];
+  const assignedSet = window._bulkAssigned || new Set();
+  const seen = new Set();
+  const locations = [];
+  for (const snap of snaps) {
+    const location = snap.locations;
+    if (!location || seen.has(location.id) || assignedSet.has(location.id)) continue;
+    seen.add(location.id);
+    locations.push(location);
+  }
+  return locations;
+}
+
+function refreshBulkDependentFilters() {
+  const locations = getBulkAvailableLocations();
+  fillDependentSelect('bulk-zone', locations.map(location => location.zone));
+  const zone = Q('bulk-zone')?.value || '';
+  const zoneLocations = locations.filter(location => !zone || location.zone === zone);
+
+  fillDependentSelect('bulk-row', zoneLocations.map(location => location.row_no));
+  const row = Q('bulk-row')?.value || '';
+  const rowLocations = zoneLocations.filter(location => !row || location.row_no === row);
+
+  fillDependentSelect('bulk-level', rowLocations.map(location => location.level));
+  refreshBulkPreview();
 }
 
 function refreshBulkPreview() {
@@ -8022,12 +8601,19 @@ async function deleteSess(id, name) {
 
 async function loadDeleteZoneFilters() {
   const [{ data: locData }, { data: sessData }] = await Promise.all([ sb.from('locations').select('zone,row_no'), sb.from('count_sessions').select('id,name').order('created_at',{ascending:false}) ]);
-  const zones = new Set(), rows = new Set(); (locData||[]).forEach(l => { if (l.zone) zones.add(l.zone); if (l.row_no) rows.add(l.row_no); });
-  const fill = (id, vals) => { const el = Q(id); if (!el) return; el.innerHTML = '<option value="">ทั้งหมด</option>' + [...vals].sort().map(v => `<option value="${v}">${v}</option>`).join(''); };
-  fill('del-zone', zones); fill('del-row', rows);
+  window._deleteFilterLocations = locData || [];
+  refreshDeleteDependentFilters();
   const sEl = Q('del-session');
   if (sEl) { sEl.innerHTML = '<option value="">ทุก Session (ลบ Location ออกจากระบบจริง)</option>' + (sessData||[]).map(s => `<option value="${s.id}">${s.name}</option>`).join(''); }
   refreshDeleteZonePreview();
+}
+
+function refreshDeleteDependentFilters() {
+  const locations = window._deleteFilterLocations || [];
+  fillDependentSelect('del-zone', locations.map(location => location.zone));
+  const zone = Q('del-zone')?.value || '';
+  const zoneLocations = locations.filter(location => !zone || location.zone === zone);
+  fillDependentSelect('del-row', zoneLocations.map(location => location.row_no));
 }
 
 function buildDelLocQuery(zone, row, code, selectCols, selectOpts) {
@@ -8037,6 +8623,7 @@ function buildDelLocQuery(zone, row, code, selectCols, selectOpts) {
 }
 
 async function refreshDeleteZonePreview() {
+  refreshDeleteDependentFilters();
   const sid = Q('del-session')?.value || ''; const zone = Q('del-zone')?.value || ''; const row = Q('del-row')?.value || ''; const code = Q('del-code')?.value.trim() || '';
   const prev = Q('del-preview'), btn = Q('del-btn'); if (!prev || !btn) return;
   if (!zone && !row && !code) { prev.innerHTML = `<span style="color:var(--text-muted);font-weight:600">เลือกอย่างน้อย 1 เงื่อนไข</span>`; btn.disabled = true; return; }
