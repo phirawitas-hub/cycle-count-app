@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cycle Count v50 - Zoom Boundary Bugfix</title>
+<title>Cycle Count v51 - Responsive Chart &amp; Centered Status</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -4967,6 +4967,47 @@ body {
   }
 }
 
+/* ══════════════════════════════════════════════════════════
+   v51 — responsive curved hourly chart + centred status copy
+   Keeps every V50 card position and all existing functions.
+   ══════════════════════════════════════════════════════════ */
+.summary-hour-chart-line {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  display: flex !important;
+  align-items: stretch !important;
+  justify-content: center !important;
+  container-type: inline-size;
+}
+
+.summary-hour-svg {
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+}
+
+.summary-hour-line,
+.summary-hour-gridline {
+  vector-effect: non-scaling-stroke;
+}
+
+.summary-hour-axis-text {
+  font-size: clamp(14px, 3cqw, 17px) !important;
+  font-weight: 800 !important;
+}
+
+.session-thermo-left {
+  align-items: center !important;
+  justify-self: stretch !important;
+  padding-left: 0 !important;
+  text-align: center !important;
+}
+
 </style>
 </head>
 <body>
@@ -4982,7 +5023,7 @@ function fmtDMY(value) {
   if (Number.isNaN(d.getTime())) return String(value);
   return d.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
-window.__CYCLE_COUNT_BUILD__ = 'v50';
+window.__CYCLE_COUNT_BUILD__ = 'v51';
 
 let _viewportSyncFrame = 0;
 function syncViewportSize() {
@@ -5159,13 +5200,13 @@ function renderResponsivePreviewContent() {
     </div>`;
 
   const hourlySvg = `
-    <svg viewBox="0 0 560 220" class="summary-hour-svg" aria-label="กราฟตัวอย่างงานรายชั่วโมง">
+    <svg viewBox="0 0 560 220" preserveAspectRatio="xMidYMid meet" class="summary-hour-svg" aria-label="กราฟตัวอย่างงานรายชั่วโมง">
       <line x1="18" y1="186" x2="542" y2="186" class="summary-hour-gridline"/>
       <line x1="18" y1="146" x2="542" y2="146" class="summary-hour-gridline"/>
       <line x1="18" y1="106" x2="542" y2="106" class="summary-hour-gridline"/>
       <line x1="18" y1="66" x2="542" y2="66" class="summary-hour-gridline"/>
-      <polygon points="18,186 18,186 55,166 93,146 130,186 168,126 205,166 243,186 280,106 318,46 355,166 393,166 430,186 468,146 505,166 542,186 542,186" class="summary-hour-area"/>
-      <polyline points="18,186 55,166 93,146 130,186 168,126 205,166 243,186 280,106 318,46 355,166 393,166 430,186 468,146 505,166 542,186" class="summary-hour-line"/>
+      <path d="M 18 186 C 23.9 182.8, 43.0 172.4, 55 166 C 67.0 159.6, 81.0 142.8, 93 146 C 105.0 149.2, 118.0 186.0, 130 186 C 142.0 182.8, 156.0 129.2, 168 126 C 180.0 122.8, 193.0 156.4, 205 166 C 217.0 175.6, 231.0 186.0, 243 186 C 255.0 176.4, 268.0 128.4, 280 106 C 292.0 83.6, 306.0 36.4, 318 46 C 330.0 55.6, 343.0 146.8, 355 166 C 367.0 185.2, 381.0 162.8, 393 166 C 405.0 169.2, 418.0 186.0, 430 186 C 442.0 182.8, 456.0 149.2, 468 146 C 480.0 142.8, 493.2 159.6, 505 166 C 516.8 172.4, 536.1 182.8, 542 186 L 542 186 L 18 186 Z" class="summary-hour-area"/>
+      <path d="M 18 186 C 23.9 182.8, 43.0 172.4, 55 166 C 67.0 159.6, 81.0 142.8, 93 146 C 105.0 149.2, 118.0 186.0, 130 186 C 142.0 182.8, 156.0 129.2, 168 126 C 180.0 122.8, 193.0 156.4, 205 166 C 217.0 175.6, 231.0 186.0, 243 186 C 255.0 176.4, 268.0 128.4, 280 106 C 292.0 83.6, 306.0 36.4, 318 46 C 330.0 55.6, 343.0 146.8, 355 166 C 367.0 185.2, 381.0 162.8, 393 166 C 405.0 169.2, 418.0 186.0, 430 186 C 442.0 182.8, 456.0 149.2, 468 146 C 480.0 142.8, 493.2 159.6, 505 166 C 516.8 172.4, 536.1 182.8, 542 186" class="summary-hour-line"/>
       <g class="summary-hour-preview-points">
         <circle cx="55" cy="166" r="4.5" class="summary-hour-dot active"/><text x="55" y="151" text-anchor="middle" class="summary-hour-svg-label">1</text>
         <circle cx="93" cy="146" r="4.5" class="summary-hour-dot active"/><text x="93" y="131" text-anchor="middle" class="summary-hour-svg-label">2</text>
@@ -5201,7 +5242,7 @@ function renderResponsivePreviewContent() {
     <div class="summary-page-header">
       <div class="summary-greeting-wrap">
         <div class="summary-greeting">Hello, AuD</div>
-        <div class="summary-greeting-sub">Cycle Count Dashboard · Zoom Boundary Bugfix v50</div>
+        <div class="summary-greeting-sub">Cycle Count Dashboard · Responsive Chart Fix v51</div>
       </div>
       <div class="summary-header-actions">
         <label class="summary-session-search" title="เลือก Session">
@@ -6559,8 +6600,31 @@ async function loadSvDash() {
     const y = m.top + plotH - ((v / maxHourly) * (plotH - 8));
     return { h, v, x, y };
   });
-  const linePoints = points.map(p => `${p.x},${p.y}`).join(' ');
-  const areaPoints = [`${points[0]?.x || m.left},${m.top + plotH}`, ...points.map(p => `${p.x},${p.y}`), `${points[points.length-1]?.x || m.left},${m.top + plotH}`].join(' ');
+  // Catmull-Rom → cubic Bézier: gentle curve that still passes through every real data point.
+  const smoothHourlyPath = chartPoints => {
+    if (!chartPoints.length) return '';
+    if (chartPoints.length === 1) return `M ${chartPoints[0].x} ${chartPoints[0].y}`;
+    const curveStrength = .16;
+    const clampY = value => Math.max(m.top, Math.min(m.top + plotH, value));
+    let path = `M ${chartPoints[0].x} ${chartPoints[0].y}`;
+    for (let i = 0; i < chartPoints.length - 1; i++) {
+      const p0 = chartPoints[i - 1] || chartPoints[i];
+      const p1 = chartPoints[i];
+      const p2 = chartPoints[i + 1];
+      const p3 = chartPoints[i + 2] || p2;
+      const c1x = p1.x + ((p2.x - p0.x) * curveStrength);
+      const c1y = clampY(p1.y + ((p2.y - p0.y) * curveStrength));
+      const c2x = p2.x - ((p3.x - p1.x) * curveStrength);
+      const c2y = clampY(p2.y - ((p3.y - p1.y) * curveStrength));
+      path += ` C ${c1x.toFixed(2)} ${c1y.toFixed(2)}, ${c2x.toFixed(2)} ${c2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+    }
+    return path;
+  };
+  const linePath = smoothHourlyPath(points);
+  const chartBaseY = m.top + plotH;
+  const areaPath = points.length
+    ? `${linePath} L ${points[points.length - 1].x} ${chartBaseY} L ${points[0].x} ${chartBaseY} Z`
+    : '';
   const gridLines = [0, .25, .5, .75, 1].map(r => {
     const y = m.top + plotH - (r * plotH);
     return `<line x1="${m.left}" y1="${y}" x2="${svgWidth - m.right}" y2="${y}" class="summary-hour-gridline"/>`;
@@ -6568,10 +6632,10 @@ async function loadSvDash() {
   const pointLabels = points.map(p => p.v ? `<text x="${p.x}" y="${p.y - 12}" text-anchor="middle" class="summary-hour-svg-label">${p.v}</text>` : '').join('');
   const pointDots = points.map(p => `<circle cx="${p.x}" cy="${p.y}" r="${p.v ? 4.5 : 2.5}" class="summary-hour-dot ${p.v ? 'active' : ''}"/>`).join('');
   const axisLabels = points.map(p => `<text x="${p.x}" y="${svgHeight - 8}" text-anchor="middle" class="summary-hour-axis-text">${String(p.h).padStart(2,'0')}</text>`).join('');
-  const hourlyChartSvg = `<svg viewBox="0 0 ${svgWidth} ${svgHeight}" class="summary-hour-svg" aria-label="Hourly counting chart">
+  const hourlyChartSvg = `<svg viewBox="0 0 ${svgWidth} ${svgHeight}" preserveAspectRatio="xMidYMid meet" class="summary-hour-svg" aria-label="Hourly counting chart">
     ${gridLines}
-    <polygon points="${areaPoints}" class="summary-hour-area"/>
-    <polyline points="${linePoints}" class="summary-hour-line"/>
+    <path d="${areaPath}" class="summary-hour-area"/>
+    <path d="${linePath}" class="summary-hour-line"/>
     ${pointDots}
     ${pointLabels}
     ${axisLabels}
