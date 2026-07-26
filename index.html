@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cycle Count v63 - User ID, Avatar and Full Theme</title>
+<title>Cycle Count v65.1 - Edge Function Fix</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.min.js"></script>
 <!-- SheetJS สำหรับอ่านไฟล์ XLSX -->
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <!-- html5-qrcode สำหรับสแกน Location -->
@@ -7091,6 +7091,344 @@ input::placeholder, textarea::placeholder {
   .admin-user-actions { grid-column:auto; }
 }
 
+/* ══════════════════════════════════════════════════════════
+   v64 — three-part theme editor and complete color coverage
+   Geometry remains unchanged; these rules only control colors.
+   ══════════════════════════════════════════════════════════ */
+.theme-settings-area {
+  overflow:hidden;
+  border:2px solid color-mix(in srgb,var(--brand-border) 48%,transparent);
+  border-radius:22px;
+  background:var(--brand-card-bg);
+}
+.theme-settings-area + .theme-settings-area { margin-top:14px; }
+.theme-settings-area > summary {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:18px 20px;
+  cursor:pointer;
+  color:var(--brand-heading);
+  background:color-mix(in srgb,var(--brand-secondary-bg) 74%,var(--brand-card-bg));
+  list-style:none;
+}
+.theme-settings-area > summary::-webkit-details-marker { display:none; }
+.theme-settings-area > summary > span:first-child { display:grid; gap:4px; }
+.theme-settings-area > summary strong { font-size:16px; font-weight:700; }
+.theme-settings-area > summary small { color:var(--brand-muted-text); font-size:11px; font-weight:500; }
+.theme-area-count {
+  flex:none;
+  padding:6px 10px;
+  border-radius:999px;
+  color:var(--brand-secondary-text);
+  background:var(--brand-card-bg);
+  font-size:11px;
+  font-weight:700;
+}
+.theme-settings-area-body { padding:14px; background:var(--brand-page-bg); }
+.theme-settings-area .theme-settings-group { background:var(--brand-card-bg); }
+.admin-user-row-grid {
+  grid-template-columns:minmax(150px,1fr) minmax(130px,.8fr) minmax(120px,.65fr) minmax(175px,1fr) minmax(210px,1.15fr) !important;
+  align-items:end;
+}
+.admin-user-row-grid .admin-user-actions {
+  grid-column:1/-1;
+  justify-content:flex-end;
+  padding-top:4px;
+}
+
+/* Collapsed Sidebar keeps compact submenus visible and clickable. */
+.sidebar.collapsed { overflow:hidden; }
+.sidebar.collapsed .nav-group.open .nav-submenu {
+  display:flex !important;
+  width:100%;
+  margin:2px 0 5px !important;
+  padding:0 !important;
+  align-items:center;
+  gap:4px !important;
+  border-left:0 !important;
+}
+.sidebar.collapsed .nav-subitem {
+  flex:0 0 44px !important;
+  width:44px !important;
+  max-width:44px !important;
+  min-height:38px !important;
+  margin:0 auto;
+  padding:8px !important;
+  justify-content:center !important;
+  border-radius:13px !important;
+}
+.sidebar.collapsed .nav-subitem span:not(.nav-icon) { display:none !important; }
+.sidebar.collapsed .nav-subitem .nav-icon {
+  display:inline-flex !important;
+  width:20px !important;
+  min-width:20px !important;
+  margin:0 !important;
+}
+
+/* Sidebar theme */
+.sidebar { background:linear-gradient(180deg,var(--theme-sidebar-start),var(--theme-sidebar-end)) !important; }
+.sidebar-logo-icon { color:var(--theme-menu-active-text) !important; background:var(--theme-sidebar-logo-bg) !important; }
+.sidebar-title { color:var(--theme-sidebar-title-text) !important; }
+.sidebar-sub, .sidebar-footer { color:var(--theme-sidebar-sub-text) !important; }
+.sidebar-footer, .nav-submenu { border-color:var(--theme-sidebar-divider) !important; }
+.sidebar .nav-item:not(.active) { color:var(--theme-sidebar-text) !important; }
+.sidebar .nav-item:not(.active):hover {
+  color:var(--theme-sidebar-hover-text) !important;
+  background:var(--theme-sidebar-hover-bg) !important;
+}
+.sidebar .nav-item.active {
+  color:var(--theme-menu-active-text) !important;
+  background:var(--theme-menu-active-bg) !important;
+}
+.sidebar-menu { scrollbar-color:var(--theme-sidebar-scrollbar) transparent !important; }
+.sidebar-menu::-webkit-scrollbar-thumb { background:var(--theme-sidebar-scrollbar) !important; }
+
+/* Every non-dashboard menu uses one shared direction. */
+body, .lbox { background-color:var(--theme-page-bg) !important; color:var(--theme-body-text-color) !important; }
+.app-container { background-color:var(--theme-app-frame-bg) !important; }
+.main-wrapper:not(.summary-view) .page-content {
+  color:var(--theme-body-text-color) !important;
+  background:var(--theme-page-bg) !important;
+}
+.main-wrapper:not(.summary-view) .page-content .card,
+.main-wrapper:not(.summary-view) .page-content .panel,
+.main-wrapper:not(.summary-view) .page-content .content-card,
+.main-wrapper:not(.summary-view) .page-content .settings-card,
+.main-wrapper:not(.summary-view) .page-content .admin-settings-card,
+.main-wrapper:not(.summary-view) .page-content .admin-master-group,
+.main-wrapper:not(.summary-view) .page-content .row,
+.main-wrapper:not(.summary-view) .page-content .table-shell {
+  color:var(--theme-body-text-color) !important;
+  background:var(--theme-card-bg) !important;
+  border-color:var(--theme-border-color) !important;
+}
+.main-wrapper:not(.summary-view) .page-content h1,
+.main-wrapper:not(.summary-view) .page-content h2,
+.main-wrapper:not(.summary-view) .page-content h3,
+.main-wrapper:not(.summary-view) .page-content h4,
+.main-wrapper:not(.summary-view) .page-content .row-title,
+.main-wrapper:not(.summary-view) .page-content .section-title,
+.topbar-title {
+  color:var(--theme-heading-color) !important;
+}
+.main-wrapper:not(.summary-view) .page-content p,
+.main-wrapper:not(.summary-view) .page-content small,
+.main-wrapper:not(.summary-view) .page-content .row-sub,
+.main-wrapper:not(.summary-view) .page-content .admin-user-meta {
+  color:var(--theme-muted-text-color) !important;
+}
+input, select, textarea {
+  color:var(--theme-input-text) !important;
+  background:var(--theme-input-bg) !important;
+  border-color:var(--theme-input-border) !important;
+}
+thead, .table-head, .table-header {
+  color:var(--theme-table-header-text) !important;
+  background:var(--theme-table-header-bg) !important;
+}
+tbody tr, .table-row {
+  color:var(--theme-table-row-text) !important;
+  background:var(--theme-table-row-bg) !important;
+}
+.wms-ring-bg, .gauge-track { stroke:var(--theme-menu-chart-track) !important; }
+.wms-ring-progress, .gauge-progress { stroke:var(--theme-menu-chart-primary) !important; }
+.prog { background:var(--theme-menu-chart-track) !important; }
+.prog-fill, .backup-progress span {
+  background:linear-gradient(90deg,var(--theme-menu-chart-primary),var(--theme-menu-chart-secondary)) !important;
+}
+.wms-ring-text, .gauge-value { color:var(--theme-menu-chart-text) !important; }
+
+/* Dashboard — general */
+.main-wrapper.summary-view,
+.main-wrapper.summary-view .page-content,
+#dash-content,
+.summary-dashboard-content { background:var(--theme-dashboard-bg) !important; }
+#dash-content .summary-card:not(.summary-accuracy-card) {
+  background:var(--theme-dashboard-card-bg) !important;
+  border-color:var(--theme-dashboard-border) !important;
+}
+#dash-content .summary-card h2,
+#dash-content .summary-greeting,
+#dash-content .summary-zone-row-title,
+#dash-content .summary-metric-title {
+  color:var(--theme-dashboard-heading) !important;
+}
+#dash-content .summary-card,
+#dash-content .summary-card strong { color:var(--theme-dashboard-text); }
+#dash-content .summary-card-kicker,
+#dash-content .summary-greeting-sub,
+#dash-content .summary-card-chip,
+#dash-content .summary-zone-row-meta,
+#dash-content .summary-chart-empty {
+  color:var(--theme-dashboard-muted) !important;
+}
+
+/* Dashboard — KPI */
+#dash-content .summary-metrics-grid-minimal .summary-metric-card.tone-mint { background:var(--theme-kpi-mint) !important; }
+#dash-content .summary-metrics-grid-minimal .summary-metric-card.tone-mint strong { color:var(--theme-kpi-mint-text) !important; }
+#dash-content .summary-metrics-grid-minimal .summary-metric-card.tone-lilac { background:var(--theme-kpi-sku) !important; }
+#dash-content .summary-metrics-grid-minimal .summary-metric-card.tone-lilac strong { color:var(--theme-kpi-sku-text) !important; }
+#dash-content .summary-metrics-grid-minimal .summary-metric-card.tone-sand { background:var(--theme-kpi-blush) !important; }
+#dash-content .summary-metrics-grid-minimal .summary-metric-card.tone-sand strong { color:var(--theme-kpi-blush-text) !important; }
+#dash-content .summary-metrics-grid-minimal .summary-metric-card.tone-peach { background:var(--theme-kpi-coral) !important; }
+#dash-content .summary-metrics-grid-minimal .summary-metric-card.tone-peach strong { color:var(--theme-kpi-coral-text) !important; }
+
+/* Dashboard — Stock Accuracy */
+#dash-content .summary-accuracy-core {
+  color:var(--theme-accuracy-body-text) !important;
+  background:linear-gradient(180deg,var(--theme-accuracy-start),var(--theme-accuracy-end)) !important;
+}
+#dash-content .summary-accuracy-layer-back { background:var(--theme-accuracy-layer-back) !important; }
+#dash-content .summary-accuracy-layer-bottom { background:var(--theme-accuracy-layer-bottom) !important; }
+#dash-content .summary-accuracy-card .summary-card-kicker,
+#dash-content .summary-accuracy-card h2,
+#dash-content .summary-accuracy-card .summary-card-chip { color:var(--theme-accuracy-heading-text) !important; }
+#dash-content .summary-accuracy-stack .summary-accuracy-ring {
+  background:conic-gradient(var(--theme-accuracy-ring-main) 0 var(--accuracy-angle),var(--theme-accuracy-ring-diff) var(--accuracy-angle) 360deg) !important;
+}
+#dash-content .summary-accuracy-stack .summary-accuracy-ring::before { background:var(--theme-accuracy-end) !important; }
+#dash-content .summary-accuracy-stack .summary-accuracy-ring-inner strong { color:var(--theme-accuracy-body-text) !important; }
+#dash-content .summary-gain-loss.gain strong,
+#dash-content .summary-gain-loss.gain small { color:var(--theme-accuracy-gain-text) !important; }
+#dash-content .summary-gain-loss.loss strong,
+#dash-content .summary-gain-loss.loss small { color:var(--theme-accuracy-lost-text) !important; }
+
+/* Dashboard — WMS adjustment */
+#dash-content .summary-wms-card { background:var(--theme-wms-card-bg) !important; }
+#dash-content .summary-wms-card h2,
+#dash-content .summary-wms-card .summary-card-kicker { color:var(--theme-wms-heading-text) !important; }
+#dash-content .summary-wms-total-block { background:var(--theme-wms-card-bg) !important; }
+#dash-content .summary-wms-total-block strong,
+#dash-content .summary-wms-column-value { color:var(--theme-wms-value-text) !important; }
+#dash-content .summary-wms-total-block span,
+#dash-content .summary-wms-progress-head span { color:var(--theme-wms-body-text) !important; }
+#dash-content .summary-wms-progress-head strong { color:var(--theme-wms-done-text) !important; }
+#dash-content .summary-wms-linear-progress,
+#dash-content .summary-wms-column-track { background:var(--theme-wms-progress-track) !important; }
+#dash-content .summary-wms-linear-progress span,
+#dash-content .summary-wms-column-item.fixed .summary-wms-column-track span { background:var(--theme-wms-done-bar) !important; }
+#dash-content .summary-wms-column-item.unfixed .summary-wms-column-track span { background:var(--theme-wms-pending-bar) !important; }
+#dash-content .summary-wms-column-item.unfixed .summary-wms-column-label { color:var(--theme-wms-pending-text) !important; }
+#dash-content .summary-wms-column-item.fixed .summary-wms-column-label { color:var(--theme-wms-done-text) !important; }
+
+/* Dashboard — Hourly chart */
+#dash-content .summary-hourly-card { background:var(--theme-hourly-card-bg) !important; }
+#dash-content .summary-hourly-card h2,
+#dash-content .summary-hourly-card .summary-card-kicker { color:var(--theme-hourly-heading-text) !important; }
+#dash-content .summary-hour-footnote,
+#dash-content .summary-hour-axis-text,
+#dash-content .summary-hour-stat-label,
+#dash-content .summary-hour-stat-sub { color:var(--theme-hourly-text) !important; fill:var(--theme-hourly-text) !important; }
+#dash-content .summary-hour-stat-value { color:var(--theme-hourly-stat-text) !important; }
+#dash-content .hour-box.total { background:var(--theme-hourly-stat-work-bg) !important; }
+#dash-content .hour-box.regular { background:var(--theme-hourly-stat-regular-bg) !important; }
+#dash-content .hour-box.ot { background:var(--theme-hourly-stat-ot-bg) !important; }
+#dash-content .hour-box.average { background:var(--theme-hourly-stat-average-bg) !important; }
+#dash-content .summary-hour-line { stroke:var(--theme-chart-line) !important; }
+#dash-content .summary-hour-area { fill:var(--theme-chart-area) !important; }
+#dash-content .summary-hour-dot { fill:var(--theme-chart-line) !important; }
+#dash-content .summary-hour-svg-label { fill:var(--theme-chart-point-text) !important; }
+
+/* Dashboard — Zone */
+#dash-content .summary-zones-card,
+#dash-content .summary-zone-row { background:var(--theme-zone-card-bg) !important; }
+#dash-content .summary-zones-card h2,
+#dash-content .summary-zone-row-title,
+#dash-content .summary-zone-metric-head b { color:var(--theme-zone-heading-text) !important; }
+#dash-content .summary-zone-row-meta,
+#dash-content .summary-zone-metric-head span { color:var(--theme-zone-text) !important; }
+#dash-content .summary-zone-track { background:var(--theme-zone-progress-track) !important; }
+#dash-content .summary-zone-track.progress span {
+  background:linear-gradient(90deg,var(--theme-progress-start),var(--theme-progress-end)) !important;
+}
+#dash-content .summary-zone-track.accuracy span { background:var(--theme-zone-accuracy-bar) !important; }
+
+/* Dashboard — Session Status */
+#dash-content .summary-status-card { background:var(--theme-session-card-bg) !important; }
+#dash-content .session-thermo-title,
+#dash-content .session-thermo-sub strong { color:var(--theme-session-heading-text) !important; }
+#dash-content .session-thermo-sub,
+#dash-content .session-thermo-gauge span { color:var(--theme-session-text) !important; }
+#dash-content .session-thermo-gauge {
+  background:conic-gradient(var(--theme-session-donut-done) 0 var(--session-angle),var(--theme-session-donut-remain) var(--session-angle) 360deg) !important;
+}
+#dash-content .session-thermo-row {
+  color:var(--theme-session-row-text) !important;
+  background:var(--theme-session-row-bg) !important;
+}
+#dash-content .session-thermo-row.active {
+  color:var(--theme-session-active-text) !important;
+  background:var(--theme-session-active-bg) !important;
+}
+
+/* Live preview follows the same V64 variables. */
+.brand-preview-v64 .brand-preview-shell { background:var(--theme-dashboard-bg); }
+.brand-preview-v64 .brand-preview-side { background:linear-gradient(180deg,var(--theme-sidebar-start),var(--theme-sidebar-end)); }
+.brand-preview-v64 .sidebar-logo-icon { background:var(--theme-sidebar-logo-bg) !important; }
+.brand-preview-v64 .brand-preview-side-title { color:var(--theme-sidebar-title-text); }
+.brand-preview-v64 .brand-preview-side-sub { color:var(--theme-sidebar-sub-text); }
+.brand-preview-v64 .brand-preview-title { color:var(--theme-dashboard-heading); }
+.brand-preview-v64 .brand-preview-sub { color:var(--theme-dashboard-muted); }
+.brand-preview-v64 .brand-preview-kpi:nth-child(1){color:var(--theme-kpi-mint-text);background:var(--theme-kpi-mint)}
+.brand-preview-v64 .brand-preview-kpi:nth-child(2){color:var(--theme-kpi-sku-text);background:var(--theme-kpi-sku)}
+.brand-preview-v64 .brand-preview-kpi:nth-child(3){color:var(--theme-kpi-blush-text);background:var(--theme-kpi-blush)}
+.brand-preview-v64 .brand-preview-kpi:nth-child(4){color:var(--theme-kpi-coral-text);background:var(--theme-kpi-coral)}
+.brand-preview-v64 .brand-preview-accuracy { color:var(--theme-accuracy-body-text);background:linear-gradient(180deg,var(--theme-accuracy-start),var(--theme-accuracy-end)); }
+.brand-preview-v64 .brand-preview-ring { background:conic-gradient(var(--theme-accuracy-ring-main) 0 88%,var(--theme-accuracy-ring-diff) 88%); }
+.brand-preview-v64 .brand-preview-ring::after { color:var(--theme-accuracy-body-text);background:var(--theme-accuracy-end); }
+.brand-preview-v64 .brand-preview-chart { background:var(--theme-hourly-card-bg);border-color:var(--theme-dashboard-border); }
+.brand-preview-v64 .brand-preview-chart .line { stroke:var(--theme-chart-line); }
+.brand-preview-v64 .brand-preview-chart .area { fill:var(--theme-chart-area); }
+.brand-preview-v64 .brand-preview-progress { background:var(--theme-zone-progress-track); }
+.brand-preview-v64 .brand-preview-progress span { background:linear-gradient(90deg,var(--theme-progress-start),var(--theme-progress-end)); }
+.brand-preview-extra-grid {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;
+  margin-top:12px;
+}
+.brand-preview-extra-grid > div {
+  min-height:132px;
+  padding:14px;
+  border:1px solid var(--theme-dashboard-border);
+  border-radius:16px;
+  color:var(--theme-dashboard-text);
+  background:var(--theme-dashboard-card-bg);
+  font-size:10px;
+  font-weight:700;
+}
+.brand-preview-wms { background:var(--theme-wms-card-bg) !important; color:var(--theme-wms-heading-text) !important; }
+.brand-preview-wms-bars { height:80px; display:flex; align-items:flex-end; justify-content:center; gap:18px; margin-top:8px; }
+.brand-preview-wms-bars i { width:24px; border-radius:8px 8px 4px 4px; background:var(--theme-wms-progress-track); }
+.brand-preview-wms-bars .pending { background:var(--theme-wms-pending-bar); }
+.brand-preview-wms-bars .done { background:var(--theme-wms-done-bar); }
+.brand-preview-zone { background:var(--theme-zone-card-bg) !important; color:var(--theme-zone-heading-text) !important; }
+.brand-preview-zone > span { display:block; margin:10px 0 4px; color:var(--theme-zone-text); }
+.preview-zone-track { height:7px; overflow:hidden; border-radius:999px; background:var(--theme-zone-progress-track); }
+.preview-zone-track i { display:block; width:72%; height:100%; }
+.preview-zone-track.progress i { background:linear-gradient(90deg,var(--theme-progress-start),var(--theme-progress-end)); }
+.preview-zone-track.accuracy i { width:91%; background:var(--theme-zone-accuracy-bar); }
+.brand-preview-session { position:relative; background:var(--theme-session-card-bg) !important; color:var(--theme-session-heading-text) !important; }
+.preview-session-donut {
+  width:68px; height:68px; margin:8px auto 4px; border-radius:50%;
+  background:conic-gradient(var(--theme-session-donut-done) 0 72%,var(--theme-session-donut-remain) 72%);
+  box-shadow:inset 0 0 0 18px var(--theme-session-card-bg);
+}
+.preview-session-row { padding:5px 8px; border-radius:7px; color:var(--theme-session-row-text); background:var(--theme-session-row-bg); text-align:center; }
+.preview-session-row.active { color:var(--theme-session-active-text); background:var(--theme-session-active-bg); }
+
+@media (max-width:1200px) {
+  .admin-user-row-grid { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+}
+@media (max-width:700px) {
+  .admin-user-row-grid { grid-template-columns:1fr !important; }
+  .theme-settings-area > summary { padding:15px; align-items:flex-start; }
+  .theme-settings-area > summary strong { font-size:14px; }
+  .theme-settings-area-body { padding:10px; }
+}
+
 </style>
 </head>
 <body>
@@ -7106,7 +7444,7 @@ function fmtDMY(value) {
   if (Number.isNaN(d.getTime())) return String(value);
   return d.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
-window.__CYCLE_COUNT_BUILD__ = 'v63';
+window.__CYCLE_COUNT_BUILD__ = 'v65.1';
 
 let _viewportSyncFrame = 0;
 function syncViewportSize() {
@@ -7132,16 +7470,83 @@ const SUPA_KEY = 'sb_publishable_EuJ-IUiXWBLSNvQsG0CJ5w_C2LHJXAL';
 let sb, me, prof;
 let S = {};
 
-const BRANDING_STORAGE_KEY = 'cycle_count_ui_branding_v63';
+const BRANDING_STORAGE_KEY = 'cycle_count_ui_branding_v65';
+const LEGACY_BRANDING_STORAGE_KEYS = ['cycle_count_ui_branding_v64', 'cycle_count_ui_branding_v63'];
 const DEFAULT_BRANDING = Object.freeze({
   systemName: 'Cycle Count',
   systemSubtitle: 'Warehouse v1.0',
+  dashboardBg: '#F7FBFC',
+  dashboardCardBg: '#FFFFFF',
+  dashboardBorder: '#D9ECEE',
+  dashboardHeading: '#006D77',
+  dashboardText: '#16383C',
+  dashboardMuted: '#638083',
+  kpiMint: '#83C5BE',
+  kpiMintText: '#006D77',
+  kpiSku: '#3AA6A5',
+  kpiSkuText: '#FFFFFF',
+  kpiBlush: '#FFD9CF',
+  kpiBlushText: '#006D77',
+  kpiCoral: '#E29578',
+  kpiCoralText: '#FFFFFF',
+  accuracyStart: '#83C5BE',
+  accuracyEnd: '#006D77',
+  accuracyLayerBack: '#A8D5C7',
+  accuracyLayerBottom: '#E7AB8E',
+  accuracyRingMain: '#E29578',
+  accuracyRingDiff: '#FFD9CF',
+  accuracyHeadingText: '#FFFFFF',
+  accuracyBodyText: '#FFFFFF',
+  accuracyGainText: '#007B83',
+  accuracyLostText: '#E29578',
+  wmsCardBg: '#FFFFFF',
+  wmsHeadingText: '#006D77',
+  wmsBodyText: '#638083',
+  wmsValueText: '#17121A',
+  wmsProgressTrack: '#EAE7E9',
+  wmsPendingBar: '#EF91A2',
+  wmsDoneBar: '#58CADC',
+  wmsPendingText: '#4F484D',
+  wmsDoneText: '#007B83',
+  hourlyCardBg: '#FFFFFF',
+  hourlyHeadingText: '#006D77',
+  hourlyText: '#638083',
+  hourlyStatWorkBg: '#E1F1F2',
+  hourlyStatRegularBg: '#EAF4F8',
+  hourlyStatOtBg: '#FFF0EB',
+  hourlyStatAverageBg: '#F8ECE8',
+  hourlyStatText: '#006D77',
+  chartLine: '#007B83',
+  chartArea: '#D9EEF0',
+  chartPointText: '#006D77',
+  zoneCardBg: '#FFFFFF',
+  zoneHeadingText: '#006D77',
+  zoneText: '#638083',
+  zoneProgressTrack: '#E8EFEF',
+  progressStart: '#68D7D4',
+  progressEnd: '#34BEE0',
+  zoneAccuracyBar: '#F0A38C',
+  sessionCardBg: '#FFFFFF',
+  sessionHeadingText: '#006D77',
+  sessionText: '#638083',
+  sessionDonutDone: '#007B83',
+  sessionDonutRemain: '#DDEDEF',
+  sessionRowBg: '#F0ECEE',
+  sessionRowText: '#4F484D',
+  sessionActiveBg: '#5ED1DE',
+  sessionActiveText: '#FFFFFF',
   sidebarStart: '#83C5BE',
   sidebarEnd: '#006D77',
   sidebarText: '#FFFFFF',
   sidebarHoverBg: '#DCEFF1',
+  sidebarHoverText: '#006D77',
   menuActiveBg: '#EDF6F9',
   menuActiveText: '#006D77',
+  sidebarLogoBg: '#FFFFFF',
+  sidebarTitleText: '#FFFFFF',
+  sidebarSubText: '#FFFFFF',
+  sidebarDivider: '#A9D8D4',
+  sidebarScrollbar: '#BFE5E2',
   pageBg: '#EDF6F9',
   appFrameBg: '#FFFFFF',
   cardBg: '#FFFFFF',
@@ -7151,6 +7556,7 @@ const DEFAULT_BRANDING = Object.freeze({
   mutedTextColor: '#638083',
   inputBg: '#F5FAFB',
   inputText: '#16383C',
+  inputBorder: '#83C5BE',
   primaryColor: '#006D77',
   primaryText: '#FFFFFF',
   secondaryBg: '#E3F1F3',
@@ -7158,71 +7564,105 @@ const DEFAULT_BRANDING = Object.freeze({
   successColor: '#2A9D8F',
   warningColor: '#E9C46A',
   dangerColor: '#E29578',
-  kpiMint: '#83C5BE',
-  kpiSku: '#3AA6A5',
-  kpiBlush: '#FFD9CF',
-  kpiCoral: '#E29578',
-  chartLine: '#007B83',
-  chartArea: '#D9EEF0',
-  progressStart: '#68D7D4',
-  progressEnd: '#34BEE0',
-  accuracyStart: '#83C5BE',
-  accuracyEnd: '#006D77',
-  accuracyLayerBack: '#A8D5C7',
-  accuracyLayerBottom: '#E7AB8E',
-  accuracyRingMain: '#E29578',
-  accuracyRingDiff: '#FFD9CF',
+  tableHeaderBg: '#E3F1F3',
+  tableHeaderText: '#006D77',
+  tableRowBg: '#FFFFFF',
+  tableRowText: '#16383C',
+  menuChartPrimary: '#006D77',
+  menuChartSecondary: '#68D7D4',
+  menuChartTrack: '#DDEDEF',
+  menuChartText: '#16383C',
   logoDataUrl: '',
 });
-const BRANDING_COLOR_GROUPS = Object.freeze([
-  { title:'พื้นหลัง ตัวอักษร และช่องกรอก', fields:[
-    { key:'pageBg', label:'พื้นหลังหน้าระบบ' },
-    { key:'appFrameBg', label:'พื้นหลังกรอบระบบ' },
-    { key:'cardBg', label:'พื้นหลังการ์ด' },
-    { key:'borderColor', label:'เส้นขอบและกรอบ' },
-    { key:'headingColor', label:'สีหัวข้อทุกหน้า' },
-    { key:'bodyTextColor', label:'สีข้อความทั่วไป' },
-    { key:'mutedTextColor', label:'สีข้อความรายละเอียด' },
-    { key:'inputBg', label:'พื้นหลังช่องกรอก' },
-    { key:'inputText', label:'ข้อความในช่องกรอก' },
+const BRANDING_THEME_AREAS = Object.freeze([
+  { key:'dashboard', title:'1. Dashboard และกราฟ', description:'แยกสีทุกการ์ด ตัวอักษร และกราฟในหน้า Dashboard', sections:[
+    { title:'ภาพรวม Dashboard', fields:[
+      { key:'dashboardBg', label:'พื้นหลัง Dashboard' }, { key:'dashboardCardBg', label:'พื้นหลังการ์ด' },
+      { key:'dashboardBorder', label:'เส้นขอบการ์ด' }, { key:'dashboardHeading', label:'หัวข้อ Dashboard' },
+      { key:'dashboardText', label:'ข้อความหลัก' }, { key:'dashboardMuted', label:'ข้อความรายละเอียด' },
+    ]},
+    { title:'KPI 4 การ์ด', fields:[
+      { key:'kpiMint', label:'พื้น Location' }, { key:'kpiMintText', label:'ตัวเลข Location' },
+      { key:'kpiSku', label:'พื้น SKU' }, { key:'kpiSkuText', label:'ตัวเลข SKU' },
+      { key:'kpiBlush', label:'พื้น OH' }, { key:'kpiBlushText', label:'ตัวเลข OH' },
+      { key:'kpiCoral', label:'พื้นคนนับ' }, { key:'kpiCoralText', label:'ตัวเลขคนนับ' },
+    ]},
+    { title:'Stock Accuracy', fields:[
+      { key:'accuracyStart', label:'พื้นการ์ด — สีบน' }, { key:'accuracyEnd', label:'พื้นการ์ด — สีล่าง' },
+      { key:'accuracyLayerBack', label:'แผ่นซ้อนด้านหลัง' }, { key:'accuracyLayerBottom', label:'แผ่นซ้อนด้านล่าง' },
+      { key:'accuracyRingMain', label:'วงแหวนหลัก' }, { key:'accuracyRingDiff', label:'วงแหวนส่วนต่าง' },
+      { key:'accuracyHeadingText', label:'สีหัวข้อ' }, { key:'accuracyBodyText', label:'ตัวเลข/รายละเอียด' },
+      { key:'accuracyGainText', label:'ข้อความ Gain' }, { key:'accuracyLostText', label:'ข้อความ Lost' },
+    ]},
+    { title:'การปรับยอด WMS', fields:[
+      { key:'wmsCardBg', label:'พื้นหลังการ์ด' }, { key:'wmsHeadingText', label:'สีหัวข้อ' },
+      { key:'wmsBodyText', label:'สีรายละเอียด' }, { key:'wmsValueText', label:'สีตัวเลขหลัก' },
+      { key:'wmsProgressTrack', label:'พื้นราง Progress' }, { key:'wmsPendingBar', label:'แท่งยังไม่ตรวจ' },
+      { key:'wmsDoneBar', label:'แท่งตรวจแล้ว' }, { key:'wmsPendingText', label:'ข้อความยังไม่ตรวจ' },
+      { key:'wmsDoneText', label:'ข้อความตรวจแล้ว' },
+    ]},
+    { title:'ความคืบหน้ารายชั่วโมง', fields:[
+      { key:'hourlyCardBg', label:'พื้นหลังการ์ด' }, { key:'hourlyHeadingText', label:'สีหัวข้อ' },
+      { key:'hourlyText', label:'สีรายละเอียด/แกนเวลา' }, { key:'hourlyStatWorkBg', label:'พื้นกล่อง Work' },
+      { key:'hourlyStatRegularBg', label:'พื้นเวลาปกติ' }, { key:'hourlyStatOtBg', label:'พื้น OT' },
+      { key:'hourlyStatAverageBg', label:'พื้นค่าเฉลี่ย' }, { key:'hourlyStatText', label:'ตัวเลขสรุป' },
+      { key:'chartLine', label:'เส้นกราฟ' }, { key:'chartArea', label:'พื้นที่ใต้กราฟ' },
+      { key:'chartPointText', label:'ตัวเลขบนกราฟ' },
+    ]},
+    { title:'ความคืบหน้าตาม Zone', fields:[
+      { key:'zoneCardBg', label:'พื้นหลังการ์ด' }, { key:'zoneHeadingText', label:'สีหัวข้อ' },
+      { key:'zoneText', label:'สีรายละเอียด' }, { key:'zoneProgressTrack', label:'พื้นราง Progress' },
+      { key:'progressStart', label:'Progress — สีเริ่ม' }, { key:'progressEnd', label:'Progress — สีจบ' },
+      { key:'zoneAccuracyBar', label:'แถบ Accuracy' },
+    ]},
+    { title:'Session Status', fields:[
+      { key:'sessionCardBg', label:'พื้นหลังการ์ด' }, { key:'sessionHeadingText', label:'สีหัวข้อ' },
+      { key:'sessionText', label:'สีรายละเอียด' }, { key:'sessionDonutDone', label:'วงกลม Completed' },
+      { key:'sessionDonutRemain', label:'วงกลมคงเหลือ' }, { key:'sessionRowBg', label:'พื้นแถวสถานะ' },
+      { key:'sessionRowText', label:'ข้อความแถวสถานะ' }, { key:'sessionActiveBg', label:'พื้นแถวที่เน้น' },
+      { key:'sessionActiveText', label:'ข้อความแถวที่เน้น' },
+    ]},
   ]},
-  { title:'เมนูด้านข้าง', fields:[
-    { key:'sidebarStart', label:'พื้นเมนู — สีบน' },
-    { key:'sidebarEnd', label:'พื้นเมนู — สีล่าง' },
-    { key:'sidebarText', label:'ไอคอน/ข้อความเมนู' },
-    { key:'sidebarHoverBg', label:'พื้นเมนูเมื่อชี้' },
-    { key:'menuActiveBg', label:'พื้นเมนูที่เลือก' },
-    { key:'menuActiveText', label:'ข้อความเมนูที่เลือก' },
+  { key:'sidebar', title:'2. Sidebar ด้านข้าง', description:'ควบคุมพื้นหลัง โลโก้ เมนูหลัก เมนูย่อย และ Scrollbar', sections:[
+    { title:'พื้นและโลโก้', fields:[
+      { key:'sidebarStart', label:'พื้น Sidebar — สีบน' }, { key:'sidebarEnd', label:'พื้น Sidebar — สีล่าง' },
+      { key:'sidebarLogoBg', label:'พื้นหลังโลโก้' }, { key:'sidebarTitleText', label:'ชื่อระบบ' },
+      { key:'sidebarSubText', label:'ชื่อรอง/เวอร์ชัน' }, { key:'sidebarDivider', label:'เส้นแบ่งเมนู' },
+      { key:'sidebarScrollbar', label:'Scrollbar' },
+    ]},
+    { title:'เมนูหลักและเมนูย่อย', fields:[
+      { key:'sidebarText', label:'ไอคอน/ข้อความปกติ' }, { key:'sidebarHoverBg', label:'พื้นเมื่อชี้' },
+      { key:'sidebarHoverText', label:'ข้อความเมื่อชี้' }, { key:'menuActiveBg', label:'พื้นเมนูที่เลือก' },
+      { key:'menuActiveText', label:'ข้อความเมนูที่เลือก' },
+    ]},
   ]},
-  { title:'ปุ่มและสถานะ', fields:[
-    { key:'primaryColor', label:'พื้นปุ่มหลัก' },
-    { key:'primaryText', label:'ข้อความปุ่มหลัก' },
-    { key:'secondaryBg', label:'พื้นปุ่มรอง' },
-    { key:'secondaryText', label:'ข้อความปุ่มรอง' },
-    { key:'successColor', label:'สถานะสำเร็จ' },
-    { key:'warningColor', label:'สถานะรอ/เตือน' },
-    { key:'dangerColor', label:'สถานะผิดพลาด/ปุ่มลบ' },
-  ]},
-  { title:'Dashboard และกราฟ', fields:[
-    { key:'kpiMint', label:'การ์ด KPI — Location' },
-    { key:'kpiSku', label:'การ์ด KPI — SKU' },
-    { key:'kpiBlush', label:'การ์ด KPI — OH' },
-    { key:'kpiCoral', label:'การ์ด KPI — คนนับ' },
-    { key:'chartLine', label:'เส้นกราฟ' },
-    { key:'chartArea', label:'พื้นที่ใต้กราฟ' },
-    { key:'progressStart', label:'แถบ Progress — เริ่ม' },
-    { key:'progressEnd', label:'แถบ Progress — จบ' },
-  ]},
-  { title:'การ์ด Stock Accuracy', fields:[
-    { key:'accuracyStart', label:'พื้นการ์ด — สีบน' },
-    { key:'accuracyEnd', label:'พื้นการ์ด — สีล่าง' },
-    { key:'accuracyLayerBack', label:'แผ่นซ้อนด้านหลัง' },
-    { key:'accuracyLayerBottom', label:'แผ่นซ้อนด้านล่าง' },
-    { key:'accuracyRingMain', label:'วงแหวน Accuracy' },
-    { key:'accuracyRingDiff', label:'วงแหวนส่วนต่าง' },
+  { key:'menus', title:'3. เมนูใช้งานทุกหน้า', description:'ใช้เป็นมาตรฐานเดียวกันกับหน้ารับงาน นับงาน Variance WMS รายงาน และ Admin', sections:[
+    { title:'พื้นหลัง การ์ด และตัวอักษร', fields:[
+      { key:'pageBg', label:'พื้นหลังทุกหน้า' }, { key:'appFrameBg', label:'พื้นกรอบระบบ' },
+      { key:'cardBg', label:'พื้นหลังการ์ด/Panel' }, { key:'borderColor', label:'เส้นขอบและกรอบ' },
+      { key:'headingColor', label:'หัวข้อทุกหน้า' }, { key:'bodyTextColor', label:'ข้อความหลัก' },
+      { key:'mutedTextColor', label:'ข้อความรายละเอียด' },
+    ]},
+    { title:'ช่องกรอก ปุ่ม และสถานะ', fields:[
+      { key:'inputBg', label:'พื้นช่องกรอก' }, { key:'inputText', label:'ข้อความในช่องกรอก' },
+      { key:'inputBorder', label:'ขอบช่องกรอก' }, { key:'primaryColor', label:'พื้นปุ่มหลัก' },
+      { key:'primaryText', label:'ข้อความปุ่มหลัก' }, { key:'secondaryBg', label:'พื้นปุ่มรอง' },
+      { key:'secondaryText', label:'ข้อความปุ่มรอง' }, { key:'successColor', label:'สถานะสำเร็จ' },
+      { key:'warningColor', label:'สถานะรอ/เตือน' }, { key:'dangerColor', label:'ผิดพลาด/ปุ่มลบ' },
+    ]},
+    { title:'ตารางและรายการ', fields:[
+      { key:'tableHeaderBg', label:'พื้นหัวตาราง' }, { key:'tableHeaderText', label:'ข้อความหัวตาราง' },
+      { key:'tableRowBg', label:'พื้นแถวข้อมูล' }, { key:'tableRowText', label:'ข้อความแถวข้อมูล' },
+    ]},
+    { title:'กราฟในเมนูอื่น (แยกจากข้อความ)', fields:[
+      { key:'menuChartPrimary', label:'กราฟสีหลัก' }, { key:'menuChartSecondary', label:'กราฟสีรอง' },
+      { key:'menuChartTrack', label:'พื้นรางกราฟ' }, { key:'menuChartText', label:'ตัวเลข/ข้อความกราฟ' },
+    ]},
   ]},
 ]);
-const BRANDING_COLOR_FIELDS = Object.freeze(BRANDING_COLOR_GROUPS.flatMap(group => group.fields));
+const BRANDING_COLOR_FIELDS = Object.freeze(
+  BRANDING_THEME_AREAS.flatMap(area => area.sections.flatMap(section => section.fields))
+);
 let uiBranding = { ...DEFAULT_BRANDING };
 let _brandingDraftLogo = '';
 let _userAvatarDrafts = {};
@@ -7253,7 +7693,11 @@ function normalizeBrandingSettings(input = {}) {
 
 function readLocalBrandingSettings() {
   try {
-    return normalizeBrandingSettings(JSON.parse(localStorage.getItem(BRANDING_STORAGE_KEY) || '{}'));
+    const current = localStorage.getItem(BRANDING_STORAGE_KEY);
+    const legacy = LEGACY_BRANDING_STORAGE_KEYS
+      .map(key => localStorage.getItem(key))
+      .find(Boolean);
+    return normalizeBrandingSettings(JSON.parse(current || legacy || '{}'));
   } catch (_) {
     return { ...DEFAULT_BRANDING };
   }
@@ -7318,7 +7762,11 @@ function applyBrandingSettings(settings, persistLocal = true) {
     '--v61-detail': uiBranding.mutedTextColor,
   };
   Object.entries(variableMap).forEach(([key, value]) => root.setProperty(key, value));
-  document.title = `${uiBranding.systemName} v63`;
+  BRANDING_COLOR_FIELDS.forEach(({ key }) => {
+    const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
+    root.setProperty(`--theme-${cssKey}`, uiBranding[key]);
+  });
+  document.title = `${uiBranding.systemName} v65.1`;
   if (persistLocal) {
     try { localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(uiBranding)); } catch (_) {}
   }
@@ -7357,10 +7805,35 @@ let _navStack = [];
 const NAV_DETAIL_PAGES = new Set(['c-count','sv-detail','ad-txlog','ad-new']);
 const BACK_BUTTON_PAGES = new Set(['c-count','sv-detail','sv-list','ad-txlog','ad-new']);
 
+async function protectedFunctionHeaders() {
+  if (!sb) throw new Error('ระบบฐานข้อมูลยังไม่พร้อม กรุณารีเฟรชหน้าแล้วลองใหม่');
+
+  let { data: sessionData, error: sessionError } = await sb.auth.getSession();
+  let session = sessionData?.session;
+  const expiresSoon = !session?.expires_at || (session.expires_at * 1000) <= (Date.now() + 60000);
+
+  if (!sessionError && session?.refresh_token && expiresSoon) {
+    const refreshed = await sb.auth.refreshSession({ refresh_token: session.refresh_token });
+    sessionError = refreshed.error;
+    session = refreshed.data?.session;
+  }
+
+  if (sessionError || !session?.access_token) {
+    throw new Error('Session หมดอายุ กรุณาออกจากระบบแล้วเข้าสู่ระบบใหม่');
+  }
+
+  return {
+    Authorization: `Bearer ${session.access_token}`,
+    apikey: SUPA_KEY,
+  };
+}
+
 async function invokeAdminMaster(action, payload = {}) {
   if (prof?.role !== 'admin') throw new Error('คำสั่งนี้ทำได้เฉพาะ Admin เท่านั้น');
+  const headers = await protectedFunctionHeaders();
   const { data, error } = await sb.functions.invoke('admin-master-data', {
     body: { action, ...payload },
+    headers,
   });
   if (error) {
     let message = error.message || 'เรียกใช้งานระบบ Admin ไม่สำเร็จ';
@@ -7376,8 +7849,10 @@ async function invokeAdminMaster(action, payload = {}) {
 
 async function invokeAdminSettings(action, payload = {}) {
   if (prof?.role !== 'admin') throw new Error('คำสั่งนี้ทำได้เฉพาะ Admin เท่านั้น');
-  const { data, error } = await sb.functions.invoke('admin-settings-v63', {
+  const headers = await protectedFunctionHeaders();
+  const { data, error } = await sb.functions.invoke('admin-settings-v65', {
     body: { action, ...payload },
+    headers,
   });
   if (error) {
     let message = error.message || 'เรียกใช้งานระบบตั้งค่า Admin ไม่สำเร็จ';
@@ -7393,8 +7868,10 @@ async function invokeAdminSettings(action, payload = {}) {
 
 async function invokeAdminBackup(action, payload = {}) {
   if (prof?.role !== 'admin') throw new Error('ระบบ Backup/Restore ใช้ได้เฉพาะ Admin เท่านั้น');
+  const headers = await protectedFunctionHeaders();
   const { data, error } = await sb.functions.invoke('admin-backup', {
     body: { action, ...payload },
+    headers,
   });
   if (error) {
     let message = error.message || 'เรียกใช้งานระบบ Backup/Restore ไม่สำเร็จ';
@@ -7707,7 +8184,7 @@ function renderResponsivePreviewContent() {
     <div class="summary-page-header">
       <div class="summary-greeting-wrap">
         <div class="summary-greeting">Hello, AuD</div>
-        <div class="summary-greeting-sub">${escapeWmsText(uiBranding.systemName)} Dashboard · v63</div>
+        <div class="summary-greeting-sub">${escapeWmsText(uiBranding.systemName)} Dashboard · v65</div>
       </div>
       <div class="summary-header-actions">
         <label class="summary-session-search" title="เลือก Session">
@@ -8273,6 +8750,26 @@ function togglePasswordInput(inputId, button) {
     button.setAttribute('title', label);
     button.classList.toggle('is-visible', !showing);
   }
+}
+
+function passwordRequirementText(role) {
+  return role === 'admin'
+    ? 'Admin: อย่างน้อย 12 ตัว มี A-Z, a-z, ตัวเลข และอักขระพิเศษ'
+    : 'User/Supervisor: อย่างน้อย 10 ตัว มี A-Z, a-z และตัวเลข';
+}
+
+function validateManagedPassword(password, role) {
+  const value = String(password || '');
+  const minimum = role === 'admin' ? 12 : 10;
+  if (value.length < minimum || value.length > 72) return passwordRequirementText(role);
+  if (!/[a-z]/.test(value) || !/[A-Z]/.test(value) || !/[0-9]/.test(value)) {
+    return passwordRequirementText(role);
+  }
+  if (role === 'admin' && !/[^A-Za-z0-9]/.test(value)) return passwordRequirementText(role);
+  if (/^(password|password123|admin123|qwerty|12345678|123456789|welcome)$/i.test(value)) {
+    return 'รหัสผ่านนี้เดาง่ายเกินไป กรุณาใช้รหัสผ่านอื่น';
+  }
+  return '';
 }
 
 async function doForgotPassword() {
@@ -8936,6 +9433,46 @@ function toggleExtra(itemId) {
 function openCameraFor(itemId)  { Q('cam_'+itemId)?.click(); }
 function openGalleryFor(itemId) { Q('gal_'+itemId)?.click(); }
 
+function prepareCountPhoto(file, maxSide = 1600, quality = .82) {
+  return new Promise((resolve, reject) => {
+    if (!file || !/^image\//i.test(file.type || '')) {
+      reject(new Error('กรุณาเลือกไฟล์รูปภาพ'));
+      return;
+    }
+    if (file.size > 25 * 1024 * 1024) {
+      reject(new Error('รูปภาพต้องมีขนาดไม่เกิน 25 MB'));
+      return;
+    }
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('ไม่สามารถอ่านรูปภาพนี้ได้'));
+    };
+    image.onload = () => {
+      try {
+        const ratio = Math.min(1, maxSide / Math.max(image.naturalWidth || 1, image.naturalHeight || 1));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(image.naturalWidth * ratio));
+        canvas.height = Math.max(1, Math.round(image.naturalHeight * ratio));
+        const context = canvas.getContext('2d');
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = 'high';
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(blob => {
+          URL.revokeObjectURL(objectUrl);
+          if (!blob) reject(new Error('ย่อรูปภาพไม่สำเร็จ'));
+          else resolve(blob);
+        }, 'image/jpeg', quality);
+      } catch (error) {
+        URL.revokeObjectURL(objectUrl);
+        reject(error);
+      }
+    };
+    image.src = objectUrl;
+  });
+}
+
 async function handlePhoto(itemId, input) {
   const file = input.files[0];
   if (!file) return;
@@ -8943,9 +9480,14 @@ async function handlePhoto(itemId, input) {
   if (thumb) { thumb.src = URL.createObjectURL(file); thumb.style.display = 'block'; }
   input.disabled = true;
   try {
-    const ext = (file.name.split('.').pop() || 'jpg').replace(/[^a-zA-Z0-9]/g,'');
-    const fileName = `${Date.now()}_${itemId}.${ext}`;
-    const { error } = await sb.storage.from('count-photos').upload(fileName, file, { upsert:true });
+    if (!me?.id) throw new Error('Session หมดอายุ กรุณาเข้าสู่ระบบใหม่');
+    const preparedPhoto = await prepareCountPhoto(file);
+    const fileName = `${me.id}/${Date.now()}_${itemId}.jpg`;
+    const { error } = await sb.storage.from('count-photos').upload(fileName, preparedPhoto, {
+      upsert:false,
+      contentType:'image/jpeg',
+      cacheControl:'3600',
+    });
     if (error) throw error;
     const { data: urlData } = sb.storage.from('count-photos').getPublicUrl(fileName);
     window._photoMap = window._photoMap || {};
@@ -12489,11 +13031,25 @@ function themeColorFieldHtml(field) {
     </div>`;
 }
 
-function themeColorGroupHtml(group, index) {
+function themeColorSectionHtml(section, index) {
   return `
-    <details class="theme-settings-group" ${index < 2 ? 'open' : ''}>
-      <summary>${group.title}<span style="color:var(--brand-muted-text);font-size:11px">${group.fields.length} สี</span></summary>
-      <div class="theme-editor-grid">${group.fields.map(themeColorFieldHtml).join('')}</div>
+    <details class="theme-settings-group" ${index === 0 ? 'open' : ''}>
+      <summary>${section.title}<span style="color:var(--brand-muted-text);font-size:11px">${section.fields.length} สี</span></summary>
+      <div class="theme-editor-grid">${section.fields.map(themeColorFieldHtml).join('')}</div>
+    </details>`;
+}
+
+function themeColorAreaHtml(area, index) {
+  const colorCount = area.sections.reduce((total, section) => total + section.fields.length, 0);
+  return `
+    <details class="theme-settings-area" ${index === 0 ? 'open' : ''}>
+      <summary>
+        <span><strong>${area.title}</strong><small>${area.description}</small></span>
+        <span class="theme-area-count">${colorCount} สี</span>
+      </summary>
+      <div class="theme-settings-area-body">
+        ${area.sections.map(themeColorSectionHtml).join('')}
+      </div>
     </details>`;
 }
 
@@ -12550,8 +13106,8 @@ async function loadAdBranding() {
       <section class="admin-settings-card">
         <div class="admin-settings-head">
           <div>
-            <h2>กำหนดธีมด้วยโค้ดสี HEX — ทุกส่วน</h2>
-            <p>กดเลือกสีหรือพิมพ์โค้ด เช่น #C8A96B · พรีวิวด้านล่างจะเปลี่ยนทันที</p>
+            <h2>กำหนดธีมด้วยโค้ดสี HEX — แบ่ง 3 ส่วนหลัก</h2>
+            <p>Dashboard และกราฟ · Sidebar ด้านข้าง · เมนูใช้งานทุกหน้า แยกสีกราฟออกจากตัวอักษร</p>
           </div>
           <div class="theme-settings-toolbar">
             <button class="btn btn-ghost btn-sm" type="button" onclick="toggleThemeGroups(true)">เปิดทั้งหมด</button>
@@ -12559,7 +13115,7 @@ async function loadAdBranding() {
           </div>
         </div>
         <div id="theme-settings-groups">
-          ${BRANDING_COLOR_GROUPS.map(themeColorGroupHtml).join('')}
+          ${BRANDING_THEME_AREAS.map(themeColorAreaHtml).join('')}
         </div>
       </section>
 
@@ -12572,7 +13128,7 @@ async function loadAdBranding() {
           <button class="btn btn-ghost btn-sm" id="branding-preview-toggle" type="button"
             onclick="toggleBrandPreview()">ซ่อนพรีวิว</button>
         </div>
-        <div class="brand-preview-v63" id="branding-live-preview">
+        <div class="brand-preview-v63 brand-preview-v64" id="branding-live-preview">
           <div class="brand-preview-shell">
             <aside class="brand-preview-side">
               <div class="sidebar-logo-icon ${_brandingDraftLogo ? 'has-custom-logo' : ''}" id="branding-preview-sidebar-logo">
@@ -12607,6 +13163,24 @@ async function loadAdBranding() {
                   </div>
                 </div>
               </div>
+              <div class="brand-preview-extra-grid">
+                <div class="brand-preview-wms">
+                  <strong>WMS Adjust</strong>
+                  <div class="brand-preview-wms-bars">
+                    <i class="pending" style="height:38%"></i><i class="done" style="height:82%"></i>
+                  </div>
+                </div>
+                <div class="brand-preview-zone">
+                  <strong>Zone Progress</strong>
+                  <span>Progress</span><div class="preview-zone-track progress"><i></i></div>
+                  <span>Accuracy</span><div class="preview-zone-track accuracy"><i></i></div>
+                </div>
+                <div class="brand-preview-session">
+                  <strong>Session Status</strong>
+                  <div class="preview-session-donut"></div>
+                  <div class="preview-session-row active">Variance</div>
+                </div>
+              </div>
             </main>
           </div>
         </div>
@@ -12622,7 +13196,7 @@ async function loadAdBranding() {
 }
 
 function toggleThemeGroups(open) {
-  document.querySelectorAll('#theme-settings-groups .theme-settings-group').forEach(group => {
+  document.querySelectorAll('#theme-settings-groups .theme-settings-area, #theme-settings-groups .theme-settings-group').forEach(group => {
     group.open = Boolean(open);
   });
 }
@@ -12883,11 +13457,21 @@ async function loadAdUsers() {
         </div>
         <div class="admin-user-field">
           <label for="admin_user_role_${u.id}">ระดับสิทธิ์</label>
-          <select id="admin_user_role_${u.id}">
+          <select id="admin_user_role_${u.id}" data-original-role="${u.role || 'counter'}">
             <option value="counter" ${u.role==='counter'?'selected':''}>User (รับงาน)</option>
             <option value="supervisor" ${u.role==='supervisor'?'selected':''}>Supervisor</option>
             <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
           </select>
+        </div>
+        <div class="admin-user-field">
+          <label for="admin_user_password_${u.id}">ตั้งรหัสผ่านใหม่</label>
+          <div class="password-input-wrap">
+            <input type="password" id="admin_user_password_${u.id}" minlength="10" maxlength="72"
+              placeholder="กรอกเมื่อต้องการเปลี่ยน"
+              onkeydown="if(event.key==='Enter')resetLoginUserPassword('${u.id}')">
+            ${passwordEyeButtonHtml(`admin_user_password_${u.id}`,'แสดงรหัสผ่านใหม่')}
+          </div>
+          <div class="admin-user-meta">ขั้นต่ำ 10 ตัว · Admin ขั้นต่ำ 12 ตัวและต้องมีอักขระพิเศษ</div>
         </div>
         <div class="admin-user-field">
           <label>รูปประจำตัว</label>
@@ -12906,25 +13490,17 @@ async function loadAdUsers() {
         </div>
         <div class="admin-user-actions">
           <button class="btn btn-blue btn-sm" onclick="saveLoginUser('${u.id}')">บันทึก</button>
-          <button class="btn btn-ghost btn-sm" onclick="toggleUserPassword('${u.id}')">ตั้งรหัสผ่าน</button>
+          <button class="btn btn-ghost btn-sm" onclick="resetLoginUserPassword('${u.id}')">บันทึกรหัสผ่าน</button>
           <button class="btn btn-red btn-sm admin-delete-icon" onclick="deleteLoginUser('${u.id}')"
             ${u.id===me?.id?'disabled title="ลบบัญชีที่กำลังใช้งานไม่ได้"':''}>
             ${adminTrashIconSvg()} <span>ลบ</span>
           </button>
         </div>
       </div>
-      <div class="admin-inline-password" id="admin_user_password_box_${u.id}">
-        <div class="password-input-wrap">
-          <input type="password" id="admin_user_password_${u.id}" minlength="8" maxlength="72"
-            placeholder="รหัสผ่านใหม่ 8–72 ตัวอักษร"
-            onkeydown="if(event.key==='Enter')resetLoginUserPassword('${u.id}')">
-          ${passwordEyeButtonHtml(`admin_user_password_${u.id}`,'แสดงรหัสผ่านใหม่')}
-        </div>
-        <button class="btn btn-blue btn-sm" onclick="resetLoginUserPassword('${u.id}')">ยืนยันรหัสผ่านใหม่</button>
-      </div>
       <div class="admin-user-meta">
         สร้างเมื่อ ${u.created_at ? new Date(u.created_at).toLocaleString('th-TH') : '—'}
         · เข้าใช้ล่าสุด ${u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleString('th-TH') : 'ยังไม่เคยเข้าสู่ระบบ'}
+        · เพื่อความปลอดภัย ระบบไม่แสดงรหัสผ่านเดิม
       </div>
     </div>`).join('');
 
@@ -12980,7 +13556,7 @@ async function loadAdUsers() {
         </div>
         <div class="admin-user-field">
           <label for="admin_user_new_role">ระดับสิทธิ์</label>
-          <select id="admin_user_new_role">
+          <select id="admin_user_new_role" onchange="updateNewUserPasswordHint()">
             <option value="counter">User (รับงาน)</option>
             <option value="supervisor">Supervisor</option>
             <option value="admin">Admin</option>
@@ -12989,11 +13565,12 @@ async function loadAdUsers() {
         <div class="admin-user-field">
           <label for="admin_user_new_password">รหัสผ่านเริ่มต้น</label>
           <div class="password-input-wrap">
-            <input type="password" id="admin_user_new_password" minlength="8" maxlength="72"
-              placeholder="อย่างน้อย 8 ตัวอักษร"
+            <input type="password" id="admin_user_new_password" minlength="10" maxlength="72"
+              placeholder="อย่างน้อย 10 ตัว มี A-Z, a-z และตัวเลข"
               onkeydown="if(event.key==='Enter')createLoginUser()">
             ${passwordEyeButtonHtml('admin_user_new_password','แสดงรหัสผ่านเริ่มต้น')}
           </div>
+          <div class="admin-user-meta" id="admin_user_new_password_hint">User/Supervisor: อย่างน้อย 10 ตัว มี A-Z, a-z และตัวเลข</div>
         </div>
         <div class="admin-user-field">
           <label>รูปประจำตัว</label>
@@ -13024,6 +13601,16 @@ async function loadAdUsers() {
     ${remarkSection('wms','หมายเหตุปรับยอด WMS')}`;
 }
 
+function updateNewUserPasswordHint() {
+  const role = Q('admin_user_new_role')?.value || 'counter';
+  const hint = Q('admin_user_new_password_hint');
+  const input = Q('admin_user_new_password');
+  if (hint) hint.textContent = passwordRequirementText(role);
+  if (input) input.placeholder = role === 'admin'
+    ? 'อย่างน้อย 12 ตัว มี A-Z, a-z, ตัวเลข และอักขระพิเศษ'
+    : 'อย่างน้อย 10 ตัว มี A-Z, a-z และตัวเลข';
+}
+
 async function createLoginUser() {
   if (prof?.role !== 'admin') { adminOnlyMessage(); return; }
   const name = Q('admin_user_new_name')?.value.trim();
@@ -13041,8 +13628,9 @@ async function createLoginUser() {
     if (alertBox) alertBox.innerHTML = `<div class="alert alert-red">User ID ต้องมี 3–40 ตัว และใช้ได้เฉพาะ a-z, 0-9, จุด, ขีดกลาง หรือขีดล่าง</div>`;
     return;
   }
-  if (password.length < 8 || password.length > 72) {
-    if (alertBox) alertBox.innerHTML = `<div class="alert alert-red">รหัสผ่านต้องมี 8–72 ตัวอักษร</div>`;
+  const passwordError = validateManagedPassword(password, role);
+  if (passwordError) {
+    if (alertBox) alertBox.innerHTML = `<div class="alert alert-red">${escapeWmsText(passwordError)}</div>`;
     return;
   }
   try {
@@ -13068,11 +13656,28 @@ async function saveLoginUser(id) {
   const name = Q(`admin_user_name_${id}`)?.value.trim();
   const loginId = Q(`admin_user_login_id_${id}`)?.value.trim().toLowerCase();
   const role = Q(`admin_user_role_${id}`)?.value;
+  const roleInput = Q(`admin_user_role_${id}`);
+  const previousRole = roleInput?.dataset.originalRole || role;
+  const passwordInput = Q(`admin_user_password_${id}`);
+  const password = passwordInput?.value || '';
   const avatarDataUrl = normalizeLogoDataUrl(_userAvatarDrafts[id]);
   if (!name || !loginId) { alert('กรุณากรอกชื่อและ User ID ให้ครบ'); return; }
   if (!/^[a-z0-9][a-z0-9._-]{2,39}$/.test(loginId)) {
     alert('User ID ต้องมี 3–40 ตัว และใช้ได้เฉพาะ a-z, 0-9, จุด, ขีดกลาง หรือขีดล่าง');
     return;
+  }
+  if (previousRole !== 'admin' && role === 'admin' && !password) {
+    alert('การเพิ่มสิทธิ์เป็น Admin ต้องกำหนดรหัสผ่าน Admin ใหม่พร้อมกัน');
+    passwordInput?.focus();
+    return;
+  }
+  if (password) {
+    const passwordError = validateManagedPassword(password, role);
+    if (passwordError) {
+      alert(passwordError);
+      passwordInput?.focus();
+      return;
+    }
   }
   try {
     await invokeAdminSettings('user_update', {
@@ -13080,8 +13685,10 @@ async function saveLoginUser(id) {
       name,
       login_id: loginId,
       role,
+      password,
       avatar_data_url: avatarDataUrl,
     });
+    if (passwordInput) passwordInput.value = '';
     alert('✅ บันทึกข้อมูล User เรียบร้อยแล้ว');
     if (id === me?.id) {
       await loadProf();
@@ -13091,7 +13698,6 @@ async function saveLoginUser(id) {
     }
   } catch (error) {
     alert('แก้ไข User ไม่สำเร็จ: ' + error.message);
-    loadAdUsers();
   }
 }
 
@@ -13104,8 +13710,10 @@ async function resetLoginUserPassword(id) {
   if (prof?.role !== 'admin') { adminOnlyMessage(); return; }
   const input = Q(`admin_user_password_${id}`);
   const password = input?.value || '';
-  if (password.length < 8 || password.length > 72) {
-    alert('รหัสผ่านต้องมี 8–72 ตัวอักษร');
+  const role = Q(`admin_user_role_${id}`)?.dataset.originalRole || Q(`admin_user_role_${id}`)?.value || 'counter';
+  const passwordError = validateManagedPassword(password, role);
+  if (passwordError) {
+    alert(passwordError);
     return;
   }
   if (!confirm('ยืนยันการตั้งรหัสผ่านใหม่ให้ User นี้?')) return;
