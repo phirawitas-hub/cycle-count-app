@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cycle Count v60 - Backup and Restore</title>
+<title>Cycle Count v63 - User ID, Avatar and Full Theme</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -2143,7 +2143,7 @@ details summary { box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px 
 .session-thermo-gauge {
   width: 152px; height: 152px; border-radius: 50%; padding: 11px;
   display:grid; place-items:center;
-  background: conic-gradient(#73dbe2 0deg ${'${pct * 3.6}'}deg, #e9e4e6 ${'${pct * 3.6}'}deg 360deg);
+  background: conic-gradient(#73dbe2 0deg var(--session-angle, 0deg), #e9e4e6 var(--session-angle, 0deg) 360deg);
   box-shadow: 0 16px 28px rgba(114,214,223,.22);
 }
 .session-thermo-gauge::before {
@@ -5679,6 +5679,1418 @@ body {
   }
 }
 
+/* ══════════════════════════════════════════════════════════
+   v61 corrected — preserve V60 card composition
+   Keep card proportions fixed; overflowing charts/lists scroll
+   inside their own area instead of stretching the dashboard.
+   ══════════════════════════════════════════════════════════ */
+:root {
+  --text-main: #006D77;
+  --text-muted: #5D8084;
+  --v61-heading: #006D77;
+  --v61-body: #264653;
+  --v61-detail: #5D8084;
+  --v61-ui-font: 'Mitr', 'Sarabun', sans-serif;
+  --v61-number-font: 'Fredoka', 'Mitr', 'Sarabun', sans-serif;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: var(--v61-ui-font);
+}
+
+body {
+  color: var(--v61-body);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  text-rendering: optimizeLegibility;
+}
+
+/* One heading standard across every page. */
+h1,
+h2,
+h3,
+h4,
+.topbar-title,
+.section-title,
+.row-title,
+.scan-header,
+.counter-picker-title,
+.wms-note-menu-title,
+.backup-panel-title,
+.admin-master-group-title,
+.summary-card h2,
+.summary-zone-row-title,
+.session-thermo-title {
+  color: var(--v61-heading) !important;
+  font-family: var(--v61-ui-font) !important;
+  font-weight: 700 !important;
+  line-height: 1.35 !important;
+}
+
+.topbar-title {
+  font-size: 24px !important;
+}
+
+.row-title,
+.scan-header,
+.backup-panel-title {
+  font-size: 16px !important;
+}
+
+.row-sub,
+.sec,
+.counter-picker-title span,
+.admin-master-group-hint,
+.backup-count-chip span {
+  color: var(--v61-detail) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  line-height: 1.5 !important;
+}
+
+label {
+  color: var(--v61-detail) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+}
+
+.btn,
+.nav-item,
+input,
+select,
+textarea {
+  font-size: 14px;
+}
+
+.nav-subitem,
+.tag,
+.sidebar-sub,
+.sidebar-footer {
+  font-size: 11px;
+}
+
+.main-wrapper,
+.page-content,
+#dash-content,
+.summary-dashboard-content {
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+.main-wrapper {
+  flex: 1 1 0;
+  width: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.summary-page-header .summary-greeting {
+  color: var(--v61-heading) !important;
+  font-family: var(--v61-number-font) !important;
+  font-size: clamp(30px, 2.5vw, 40px) !important;
+  font-weight: 700 !important;
+  line-height: 1.1 !important;
+}
+
+.summary-page-header .summary-greeting-sub {
+  color: var(--v61-detail) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+}
+
+#dash-content {
+  container-name: dash-v61-corrected;
+  container-type: inline-size;
+}
+
+.summary-dashboard-content {
+  padding: 0 0 8px;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,109,119,.28) transparent;
+}
+
+.summary-dashboard-content::-webkit-scrollbar,
+.summary-hour-chart-line::-webkit-scrollbar {
+  height: 7px;
+}
+
+.summary-dashboard-content::-webkit-scrollbar-track,
+.summary-hour-chart-line::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.summary-dashboard-content::-webkit-scrollbar-thumb,
+.summary-hour-chart-line::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(0,109,119,.25);
+}
+
+/* Exact V60-style desktop composition shown in the reference. */
+#dash-content .summary-dashboard-grid {
+  display: grid !important;
+  width: 100% !important;
+  min-width: 980px !important;
+  grid-template-columns: 286px 196px minmax(394px, 1fr) !important;
+  grid-template-rows: 124px 206px 64px 196px !important;
+  grid-template-areas:
+    "accuracy progress metrics"
+    "accuracy progress hourly"
+    "zones zones hourly"
+    "zones zones status" !important;
+  column-gap: 52px !important;
+  row-gap: 42px !important;
+  align-items: stretch !important;
+}
+
+#dash-content .summary-dashboard-grid > *,
+#dash-content .summary-metrics-grid,
+#dash-content .summary-metric-wrap,
+#dash-content .summary-hourly-card-line,
+#dash-content .summary-zones-card,
+#dash-content .summary-status-card {
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+/* Restore the original three-layer Stock Accuracy card. */
+#dash-content .summary-accuracy-card {
+  grid-area: accuracy;
+  width: 286px !important;
+  max-width: 286px !important;
+  height: 356px !important;
+  min-height: 356px !important;
+  margin: 0 10px 12px 0 !important;
+  padding: 0 !important;
+  align-self: start !important;
+  overflow: visible !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+#dash-content .summary-accuracy-card .summary-accuracy-layer {
+  inset: 0 !important;
+  border-radius: 32px !important;
+  transform-origin: center center !important;
+}
+
+#dash-content .summary-accuracy-card .summary-accuracy-layer-mid {
+  transform: none !important;
+}
+
+#dash-content .summary-accuracy-card .summary-accuracy-layer-back {
+  transform: rotate(5deg) translate(12px, 8px) !important;
+}
+
+#dash-content .summary-accuracy-card .summary-accuracy-layer-bottom {
+  transform: rotate(9deg) translate(20px, 14px) !important;
+}
+
+#dash-content .summary-accuracy-core {
+  width: 100% !important;
+  height: 356px !important;
+  min-height: 356px !important;
+  margin: 0 !important;
+  padding: 20px 20px 18px !important;
+  border-radius: 32px !important;
+}
+
+#dash-content .summary-accuracy-core h2,
+#dash-content .summary-accuracy-core .summary-card-kicker,
+#dash-content .summary-accuracy-core .summary-card-chip,
+#dash-content .summary-accuracy-ring-inner strong {
+  color: #FFFFFF !important;
+}
+
+#dash-content .summary-accuracy-ring-inner strong {
+  font-family: var(--v61-number-font) !important;
+  font-weight: 700 !important;
+}
+
+/* WMS card keeps the original narrow proportion. */
+#dash-content .summary-progress-card {
+  grid-area: progress;
+  width: 100% !important;
+  min-height: 356px !important;
+  height: 100% !important;
+  margin: 0 !important;
+  align-self: stretch !important;
+}
+
+#dash-content .summary-card h2,
+#dash-content .session-thermo-title {
+  font-size: 17px !important;
+}
+
+#dash-content .summary-card-kicker {
+  color: #5AADA9 !important;
+  font-family: var(--v61-number-font) !important;
+  font-size: 9px !important;
+  font-weight: 700 !important;
+  letter-spacing: .14em;
+}
+
+#dash-content .summary-card-chip {
+  color: var(--v61-heading) !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+}
+
+#dash-content .summary-wms-total-block strong,
+#dash-content .summary-wms-progress-head strong,
+#dash-content .summary-wms-column-value,
+#dash-content .summary-metric-card strong,
+#dash-content .summary-hour-stat-value,
+#dash-content .summary-zone-metric-head b,
+#dash-content .session-thermo-sub strong,
+#dash-content .session-thermo-gauge strong,
+#dash-content .session-thermo-row strong {
+  font-family: var(--v61-number-font) !important;
+  font-weight: 700 !important;
+  font-variant-numeric: tabular-nums;
+}
+
+#dash-content .summary-wms-total-block span,
+#dash-content .summary-wms-progress-head span,
+#dash-content .summary-wms-column-label {
+  color: var(--v61-detail) !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  line-height: 1.35 !important;
+}
+
+#dash-content .summary-wms-column-percent {
+  display: none !important;
+}
+
+#dash-content .summary-wms-columns {
+  height: 136px !important;
+  min-height: 136px !important;
+  margin-top: 14px !important;
+}
+
+#dash-content .summary-wms-column-item {
+  grid-template-rows: 23px minmax(76px, 1fr) auto !important;
+  gap: 5px !important;
+}
+
+#dash-content .summary-wms-column-track {
+  min-height: 76px !important;
+}
+
+/* KPI cards keep their compact square size. */
+#dash-content .summary-metrics-grid {
+  grid-area: metrics;
+  height: 124px !important;
+  min-height: 124px !important;
+  margin: 0 !important;
+}
+
+#dash-content .summary-metric-wrap {
+  width: 100% !important;
+  max-width: 92px !important;
+  justify-self: center !important;
+}
+
+#dash-content .summary-metric-card {
+  width: 100% !important;
+  max-width: 92px !important;
+  aspect-ratio: 1 / 1 !important;
+}
+
+#dash-content .summary-metric-title,
+#dash-content .summary-metric-wrap.sku-highlight .summary-metric-title {
+  color: var(--v61-heading) !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  line-height: 1.3 !important;
+}
+
+/* Preserve the chart ratio. Narrow cards scroll horizontally. */
+#dash-content .summary-hourly-card-line {
+  grid-area: hourly;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 15px 18px 10px !important;
+  overflow: hidden !important;
+}
+
+#dash-content .summary-hour-top-stats-boxes {
+  grid-template-columns: repeat(4, minmax(118px, 1fr)) !important;
+  gap: 8px !important;
+}
+
+#dash-content .summary-hour-top-stats-boxes .hour-box {
+  height: 74px !important;
+  min-height: 74px !important;
+  padding: 6px !important;
+}
+
+#dash-content .summary-hour-stat-label {
+  color: var(--v61-body) !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+}
+
+#dash-content .summary-hour-stat-sub {
+  color: var(--v61-detail) !important;
+  font-size: 9px !important;
+  font-weight: 500 !important;
+}
+
+#dash-content .summary-hour-chart-line {
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  min-height: 0 !important;
+  margin-top: 7px !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+#dash-content .summary-hour-svg {
+  display: block !important;
+  width: max(100%, 680px) !important;
+  min-width: 680px !important;
+  height: auto !important;
+  max-width: none !important;
+  max-height: 170px !important;
+  aspect-ratio: 1200 / 220;
+}
+
+#dash-content .summary-hour-svg-label,
+#dash-content .summary-hour-axis-text {
+  font-family: var(--v61-number-font) !important;
+  font-weight: 700 !important;
+}
+
+#dash-content .summary-hour-svg-label {
+  font-size: 12px !important;
+}
+
+#dash-content .summary-hour-axis-text {
+  font-size: 11px !important;
+}
+
+#dash-content .summary-hour-footnote {
+  color: var(--v61-detail) !important;
+  font-size: 9px !important;
+  font-weight: 500 !important;
+  line-height: 1.35 !important;
+}
+
+/* Zone retains a fixed card and scrolls only its list. */
+#dash-content .summary-zones-card {
+  grid-area: zones;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+}
+
+#dash-content .summary-zone-grid {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+#dash-content .summary-zone-row-title {
+  font-size: 15px !important;
+}
+
+#dash-content .summary-zone-row-meta,
+#dash-content .summary-zone-metric-head span {
+  color: var(--v61-detail) !important;
+  font-size: 10px !important;
+  font-weight: 500 !important;
+}
+
+/* Session Status returns to the compact bottom-right card. */
+#dash-content .summary-status-card {
+  grid-area: status;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 12px 16px !important;
+  overflow: hidden !important;
+}
+
+#dash-content .session-thermo-layout {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  grid-template-columns: minmax(120px, .92fr) 146px minmax(150px, 1.08fr) !important;
+  gap: 12px !important;
+  align-items: center !important;
+}
+
+#dash-content .session-thermo-center,
+#dash-content .session-thermo-gauge {
+  width: 146px !important;
+  height: 146px !important;
+}
+
+#dash-content .session-thermo-gauge::before {
+  width: 100px !important;
+  height: 100px !important;
+}
+
+#dash-content .session-thermo-sub span,
+#dash-content .session-thermo-gauge span,
+#dash-content .session-thermo-row span {
+  color: var(--v61-detail) !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+}
+
+@supports (container-type: inline-size) {
+  @container dash-v61-corrected (max-width: 699px) {
+    #dash-content .summary-dashboard-grid {
+      display: flex !important;
+      width: 100% !important;
+      min-width: 0 !important;
+      flex-direction: column !important;
+      gap: 20px !important;
+    }
+
+    #dash-content .summary-metrics-grid {
+      order: -1;
+      width: 100% !important;
+      height: auto !important;
+      min-height: 0 !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 14px 12px !important;
+    }
+
+    #dash-content .summary-metric-wrap {
+      max-width: 148px !important;
+    }
+
+    #dash-content .summary-metric-card {
+      max-width: 148px !important;
+    }
+
+    #dash-content .summary-accuracy-card {
+      flex: 0 0 356px !important;
+      align-self: center !important;
+      margin-bottom: 28px !important;
+    }
+
+    #dash-content .summary-progress-card {
+      flex: 0 0 372px !important;
+      width: min(100%, 280px) !important;
+      min-height: 372px !important;
+      align-self: center !important;
+    }
+
+    #dash-content .summary-hourly-card-line {
+      flex: 0 0 390px !important;
+      height: 390px !important;
+    }
+
+    #dash-content .summary-zones-card {
+      flex: 0 0 340px !important;
+      height: 340px !important;
+    }
+
+    #dash-content .summary-status-card {
+      flex: 0 0 480px !important;
+      height: 480px !important;
+    }
+
+    #dash-content .session-thermo-layout {
+      grid-template-columns: 1fr !important;
+      justify-items: center !important;
+      text-align: center !important;
+      gap: 14px !important;
+    }
+
+    #dash-content .session-thermo-left {
+      align-items: center !important;
+    }
+
+    #dash-content .session-thermo-right {
+      width: min(100%, 320px) !important;
+      justify-self: center !important;
+    }
+  }
+}
+
+/* Use the mobile/off-canvas shell on common handheld and iPad portrait widths. */
+@media (max-width: 900px) {
+  body.app-shell-mode {
+    width: 100%;
+    height: 100%;
+    min-height: 100dvh;
+    overflow: hidden;
+    padding: 0 !important;
+  }
+
+  .app-container {
+    width: 100% !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  .sidebar {
+    position: fixed !important;
+    left: -330px !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    width: min(86vw, 310px) !important;
+    height: 100dvh !important;
+    border-radius: 0 30px 30px 0 !important;
+    z-index: 1000 !important;
+  }
+
+  .sidebar.mobile-open {
+    left: 0 !important;
+  }
+
+  .sidebar.collapsed {
+    width: min(86vw, 310px) !important;
+  }
+
+  .sidebar.collapsed .sidebar-title,
+  .sidebar.collapsed .sidebar-sub,
+  .sidebar.collapsed .sidebar-footer,
+  .sidebar.collapsed .nav-item span:not(.nav-icon) {
+    display: initial !important;
+  }
+
+  .sidebar.collapsed .nav-item {
+    justify-content: flex-start !important;
+    padding: 14px 20px !important;
+  }
+
+  .sidebar-panel-toggle {
+    position: absolute !important;
+    top: 18px !important;
+    right: -9px !important;
+    left: auto !important;
+  }
+
+  .main-wrapper {
+    width: 100% !important;
+    height: 100dvh !important;
+  }
+
+  .main-wrapper.summary-view .topbar {
+    display: flex !important;
+  }
+
+  .main-wrapper.summary-view .topbar-title,
+  .main-wrapper.summary-view .topbar-right {
+    display: none !important;
+  }
+
+  .mobile-menu-trigger {
+    display: flex !important;
+    width: 42px !important;
+    height: 42px !important;
+    min-width: 42px !important;
+    border-radius: 14px !important;
+  }
+
+  .topbar {
+    height: 68px !important;
+    padding: 0 12px !important;
+  }
+
+  .topbar-left {
+    padding-left: 0 !important;
+  }
+
+  .main-wrapper.summary-view .page-content,
+  .page-content {
+    padding: 14px 12px 30px !important;
+  }
+
+  .summary-page-header {
+    min-height: 0 !important;
+    margin-bottom: 18px !important;
+    padding-left: 0 !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 14px !important;
+  }
+
+  .summary-header-actions,
+  .summary-session-search {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .summary-page-header .summary-greeting {
+    font-size: 28px !important;
+  }
+
+  #dash-content .summary-card h2,
+  #dash-content .session-thermo-title {
+    font-size: 16px !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   v62 — Admin Theme, Logo and User Management
+   Values are supplied by applyBrandingSettings().
+   ══════════════════════════════════════════════════════════ */
+:root {
+  --brand-sidebar-start: #83C5BE;
+  --brand-sidebar-end: #006D77;
+  --brand-menu-active-bg: #EDF6F9;
+  --brand-menu-active-text: #006D77;
+  --brand-page-bg: #EDF6F9;
+  --brand-card-bg: #FFFFFF;
+  --brand-border: #83C5BE;
+  --brand-heading: #006D77;
+  --brand-primary: #006D77;
+  --brand-accent: #E29578;
+}
+
+html,
+body,
+.lbox {
+  background-color: var(--brand-page-bg) !important;
+}
+
+body.app-shell-mode {
+  background:
+    radial-gradient(circle at 14% 12%, rgba(255,255,255,.34), transparent 24%),
+    linear-gradient(135deg, var(--brand-sidebar-start) 0%, var(--brand-page-bg) 100%) !important;
+}
+
+.sidebar {
+  background: linear-gradient(180deg, var(--brand-sidebar-start) 0%, var(--brand-sidebar-end) 100%) !important;
+}
+
+.nav-item.active,
+.nav-subitem.active {
+  background: var(--brand-menu-active-bg) !important;
+  color: var(--brand-menu-active-text) !important;
+}
+
+.nav-item.active .nav-icon,
+.nav-subitem.active .nav-icon,
+.nav-item.active span,
+.nav-subitem.active span {
+  color: var(--brand-menu-active-text) !important;
+}
+
+.topbar-title,
+.section-title,
+.row-title,
+.scan-header,
+.counter-picker-title,
+.wms-note-menu-title,
+.backup-panel-title,
+.admin-master-group-title,
+.summary-card h2,
+.summary-zone-row-title,
+.session-thermo-title,
+.summary-metric-title,
+.summary-greeting {
+  color: var(--brand-heading) !important;
+}
+
+.card,
+.panel,
+.content-card,
+.summary-card:not(.summary-accuracy-card),
+.summary-metric-card:not(.tone-mint):not(.tone-lilac):not(.tone-sand):not(.tone-peach),
+.settings-card,
+.profile-card,
+.table-shell,
+.table-card,
+.sheet-card,
+.form-card,
+.lcard {
+  background-color: var(--brand-card-bg) !important;
+  border-color: color-mix(in srgb, var(--brand-border) 34%, transparent) !important;
+}
+
+.summary-session-search,
+input,
+select,
+textarea {
+  border-color: color-mix(in srgb, var(--brand-border) 44%, transparent) !important;
+}
+
+.btn-blue,
+.btn-primary,
+.primary,
+button.primary,
+.action-btn.primary,
+.primary-btn,
+.apply-btn,
+.save-btn {
+  background: linear-gradient(135deg, var(--brand-sidebar-start) 0%, var(--brand-primary) 100%) !important;
+  color: #FFFFFF !important;
+}
+
+.btn-red,
+.btn-danger,
+.danger,
+.delete-btn {
+  background: var(--brand-accent) !important;
+}
+
+.sidebar-logo-icon.has-custom-logo,
+.login-brand-logo.has-custom-logo {
+  padding: 8px !important;
+  overflow: hidden;
+}
+
+.brand-logo-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: inherit;
+}
+
+.login-brand-logo {
+  width: 92px;
+  height: 92px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  border-radius: 50%;
+  color: var(--brand-primary);
+  background: var(--brand-card-bg);
+  box-shadow: 10px 10px 20px var(--neu-shadow-dark), -10px -10px 20px var(--neu-shadow-light);
+}
+
+.login-brand-logo svg {
+  width: 44px;
+  height: 44px;
+}
+
+.admin-settings-shell {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-settings-card {
+  padding: 22px;
+  border: 1px solid color-mix(in srgb, var(--brand-border) 34%, transparent);
+  border-radius: 24px;
+  background: var(--brand-card-bg);
+  box-shadow: 0 14px 30px rgba(0,109,119,.08);
+}
+
+.admin-settings-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.admin-settings-head h2 {
+  color: var(--brand-heading) !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+}
+
+.admin-settings-head p {
+  margin-top: 5px;
+  color: var(--v61-detail);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.theme-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 12px;
+}
+
+.theme-color-field {
+  display: grid;
+  grid-template-columns: 46px minmax(0,1fr);
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--brand-border) 28%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--brand-card-bg) 88%, var(--brand-page-bg));
+}
+
+.theme-color-field label {
+  grid-column: 1 / -1;
+  color: var(--brand-heading) !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+}
+
+.theme-color-picker {
+  width: 46px !important;
+  height: 42px;
+  min-height: 42px;
+  padding: 3px !important;
+  border-radius: 12px !important;
+  cursor: pointer;
+}
+
+.theme-hex-input {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  text-transform: uppercase;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace !important;
+  font-size: 14px !important;
+  font-weight: 700;
+}
+
+.brand-preview {
+  display: grid;
+  grid-template-columns: minmax(190px,.7fr) minmax(260px,1.3fr);
+  gap: 16px;
+  min-height: 230px;
+}
+
+.brand-preview-sidebar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px;
+  border-radius: 24px;
+  color: #FFFFFF;
+  background: linear-gradient(180deg, var(--brand-sidebar-start), var(--brand-sidebar-end));
+}
+
+.brand-preview-menu {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 14px;
+  color: var(--brand-menu-active-text);
+  background: var(--brand-menu-active-bg);
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.brand-preview-content {
+  padding: 18px;
+  border-radius: 24px;
+  background: var(--brand-page-bg);
+}
+
+.brand-preview-card {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  border: 2px solid var(--brand-border);
+  border-radius: 20px;
+  color: var(--brand-heading);
+  background: var(--brand-card-bg);
+  text-align: center;
+  font-weight: 700;
+}
+
+.logo-admin-layout {
+  display: grid;
+  grid-template-columns: 150px minmax(0,1fr);
+  gap: 20px;
+  align-items: center;
+}
+
+.logo-admin-preview {
+  width: 140px;
+  height: 140px;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--brand-border) 36%, transparent);
+  border-radius: 28px;
+  color: var(--brand-primary);
+  background: var(--brand-card-bg);
+}
+
+.logo-admin-preview svg {
+  width: 68px;
+  height: 68px;
+}
+
+.admin-user-create-grid,
+.admin-user-row-grid {
+  display: grid;
+  grid-template-columns: minmax(180px,1.1fr) minmax(190px,1.25fr) minmax(135px,.75fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.admin-user-create-grid {
+  grid-template-columns: minmax(180px,1fr) minmax(190px,1.15fr) minmax(135px,.7fr) minmax(160px,.8fr) auto;
+}
+
+.admin-user-field {
+  min-width: 0;
+}
+
+.admin-user-field label {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.admin-user-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-user-meta {
+  margin-top: 8px;
+  color: var(--v61-detail);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.admin-inline-password {
+  display: none;
+  grid-template-columns: minmax(180px,1fr) auto;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.admin-inline-password.open {
+  display: grid;
+}
+
+.admin-save-bar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+
+@media (max-width: 980px) {
+  .theme-editor-grid,
+  .admin-user-create-grid,
+  .admin-user-row-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-user-actions {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .theme-editor-grid,
+  .brand-preview,
+  .logo-admin-layout,
+  .admin-user-create-grid,
+  .admin-user-row-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .logo-admin-preview {
+    justify-self: center;
+  }
+
+  .admin-settings-card {
+    padding: 16px;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   v63 — complete branding surface, live preview and user IDs
+   Color-only overrides intentionally preserve the V61 card geometry.
+   ══════════════════════════════════════════════════════════ */
+:root {
+  --brand-sidebar-text:#FFFFFF;
+  --brand-sidebar-hover:#DCEFF1;
+  --brand-app-frame:#FFFFFF;
+  --brand-body-text:#16383C;
+  --brand-muted-text:#638083;
+  --brand-input-bg:#F5FAFB;
+  --brand-input-text:#16383C;
+  --brand-primary-text:#FFFFFF;
+  --brand-secondary-bg:#E3F1F3;
+  --brand-secondary-text:#006D77;
+  --brand-success:#2A9D8F;
+  --brand-warning:#E9C46A;
+  --brand-danger:#E29578;
+  --brand-kpi-mint:#83C5BE;
+  --brand-kpi-sku:#3AA6A5;
+  --brand-kpi-blush:#FFD9CF;
+  --brand-kpi-coral:#E29578;
+  --brand-chart-line:#007B83;
+  --brand-chart-area:#D9EEF0;
+  --brand-progress-start:#68D7D4;
+  --brand-progress-end:#34BEE0;
+  --brand-accuracy-start:#83C5BE;
+  --brand-accuracy-end:#006D77;
+  --brand-accuracy-layer-back:#A8D5C7;
+  --brand-accuracy-layer-bottom:#E7AB8E;
+  --brand-accuracy-ring-main:#E29578;
+  --brand-accuracy-ring-diff:#FFD9CF;
+}
+
+body,
+.main-wrapper,
+.page-content,
+.lbox { color:var(--brand-body-text) !important; }
+
+.page-content h1,
+.page-content h2,
+.page-content h3,
+.page-content h4,
+.page-content .card-title,
+.page-content .panel-title {
+  color:var(--brand-heading) !important;
+  font-weight:700 !important;
+}
+
+.app-shell,
+.main-wrapper { background-color:var(--brand-app-frame) !important; }
+
+.sidebar .nav-item:not(.active),
+.sidebar .nav-subitem:not(.active),
+.sidebar-title,
+.sidebar-sub { color:var(--brand-sidebar-text) !important; }
+
+.sidebar .nav-item:not(.active):hover,
+.sidebar .nav-subitem:not(.active):hover {
+  background:var(--brand-sidebar-hover) !important;
+  color:var(--brand-secondary-text) !important;
+}
+
+p, small, .muted, .subtext, .helper-text, .admin-user-meta,
+.summary-greeting-sub, .summary-card-kicker, .summary-metric-label,
+.summary-zone-count, .summary-accuracy-label {
+  color:var(--brand-muted-text) !important;
+}
+
+input, select, textarea {
+  color:var(--brand-input-text) !important;
+  background-color:var(--brand-input-bg) !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color:color-mix(in srgb,var(--brand-muted-text) 72%,transparent) !important;
+}
+
+.btn-blue, .btn-primary, .primary, button.primary, .action-btn.primary,
+.primary-btn, .apply-btn, .save-btn {
+  color:var(--brand-primary-text) !important;
+  background:var(--brand-primary) !important;
+}
+
+.btn-ghost, .btn-secondary, .secondary-btn {
+  color:var(--brand-secondary-text) !important;
+  background:var(--brand-secondary-bg) !important;
+}
+
+.btn-green, .alert-green, .tag-green { --accent-green:var(--brand-success); }
+.btn-green { color:#fff !important; background:var(--brand-success) !important; }
+.btn-red, .btn-danger, .danger, .delete-btn { color:#fff !important; background:var(--brand-danger) !important; }
+.alert-amber, .tag-amber { border-color:var(--brand-warning) !important; }
+
+#dash-content .summary-metrics-grid-minimal .summary-metric-card.tone-mint,
+.summary-metric-card.tone-mint { background:var(--brand-kpi-mint) !important; }
+#dash-content .summary-metrics-grid-minimal .summary-metric-card.tone-lilac,
+.summary-metric-card.tone-lilac { background:var(--brand-kpi-sku) !important; }
+#dash-content .summary-metrics-grid-minimal .summary-metric-card.tone-sand,
+.summary-metric-card.tone-sand { background:var(--brand-kpi-blush) !important; }
+#dash-content .summary-metrics-grid-minimal .summary-metric-card.tone-peach,
+.summary-metric-card.tone-peach { background:var(--brand-kpi-coral) !important; }
+#dash-content .summary-zone-track span,
+#dash-content .summary-wms-linear-progress span,
+.summary-zone-track span,
+.summary-progress-fill,
+.summary-wms-linear-progress span,
+.prog-fill,
+.backup-progress span,
+.session-thermo-fill { background:linear-gradient(90deg,var(--brand-progress-start),var(--brand-progress-end)) !important; }
+#dash-content .summary-hour-line,
+.summary-hourly-line, .summary-chart-line, .summary-hour-line { stroke:var(--brand-chart-line) !important; }
+#dash-content .summary-hour-area,
+.summary-hourly-area, .summary-chart-area, .summary-hour-area { fill:var(--brand-chart-area) !important; }
+.session-thermo-gauge {
+  background:conic-gradient(var(--brand-chart-line) 0 var(--session-angle),var(--brand-chart-area) var(--session-angle) 360deg) !important;
+}
+.session-thermo-row.active { color:var(--brand-primary-text) !important; background:var(--brand-primary) !important; }
+.summary-accuracy-core { background:linear-gradient(180deg,var(--brand-accuracy-start),var(--brand-accuracy-end)) !important; }
+.summary-accuracy-layer-back { background:var(--brand-accuracy-layer-back) !important; }
+.summary-accuracy-layer-bottom { background:var(--brand-accuracy-layer-bottom) !important; }
+.summary-accuracy-stack .summary-accuracy-ring {
+  background:conic-gradient(var(--brand-accuracy-ring-main) 0 89.1%,var(--brand-accuracy-ring-diff) 89.1% 100%) !important;
+}
+
+.theme-settings-toolbar {
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-bottom:12px;
+}
+
+.theme-settings-group {
+  overflow:hidden;
+  border:1px solid color-mix(in srgb,var(--brand-border) 34%,transparent);
+  border-radius:18px;
+  background:color-mix(in srgb,var(--brand-card-bg) 92%,var(--brand-page-bg));
+}
+
+.theme-settings-group + .theme-settings-group { margin-top:10px; }
+.theme-settings-group > summary {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:14px 16px;
+  cursor:pointer;
+  color:var(--brand-heading);
+  font-size:14px;
+  font-weight:700;
+  list-style:none;
+}
+.theme-settings-group > summary::-webkit-details-marker { display:none; }
+.theme-settings-group > summary::after { content:'＋'; font-size:17px; }
+.theme-settings-group[open] > summary::after { content:'−'; }
+.theme-settings-group .theme-editor-grid { padding:0 14px 14px; }
+
+.system-name-grid {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+  margin-bottom:16px;
+}
+
+.brand-preview-v63 {
+  overflow:hidden;
+  border:2px solid var(--brand-border);
+  border-radius:24px;
+  background:var(--brand-app-frame);
+  box-shadow:0 12px 28px rgba(0,0,0,.08);
+}
+
+.brand-preview-v63.hidden-preview { display:none; }
+.brand-preview-shell {
+  display:grid;
+  grid-template-columns:112px minmax(560px,1fr);
+  min-height:430px;
+  overflow:auto;
+  background:var(--brand-page-bg);
+}
+.brand-preview-side {
+  padding:18px 10px;
+  color:var(--brand-sidebar-text);
+  background:linear-gradient(180deg,var(--brand-sidebar-start),var(--brand-sidebar-end));
+}
+.brand-preview-side .sidebar-logo-icon { margin:0 auto 12px; }
+.brand-preview-side-title { text-align:center; font-size:13px; font-weight:700; }
+.brand-preview-side-sub { text-align:center; margin-top:2px; font-size:8px; font-weight:600; opacity:.88; }
+.brand-preview-side-menu {
+  margin-top:20px;
+  display:grid;
+  gap:8px;
+}
+.brand-preview-side-menu span {
+  display:block;
+  padding:10px 8px;
+  border-radius:11px;
+  text-align:center;
+  font-size:9px;
+  font-weight:700;
+}
+.brand-preview-side-menu span:first-child {
+  color:var(--brand-menu-active-text);
+  background:var(--brand-menu-active-bg);
+}
+.brand-preview-side-menu span:last-child { color:var(--brand-sidebar-text); }
+
+.brand-preview-main { padding:20px; }
+.brand-preview-title { color:var(--brand-heading); font-size:18px; font-weight:700; }
+.brand-preview-sub { margin-top:3px; color:var(--brand-muted-text); font-size:10px; font-weight:500; }
+.brand-preview-kpis {
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:10px;
+  margin:16px 0;
+}
+.brand-preview-kpi {
+  display:grid;
+  place-items:center;
+  min-height:70px;
+  border-radius:16px;
+  color:var(--brand-body-text);
+  font-size:24px;
+  font-weight:700;
+}
+.brand-preview-kpi:nth-child(1){background:var(--brand-kpi-mint)}
+.brand-preview-kpi:nth-child(2){background:var(--brand-kpi-sku);color:#fff}
+.brand-preview-kpi:nth-child(3){background:var(--brand-kpi-blush)}
+.brand-preview-kpi:nth-child(4){background:var(--brand-kpi-coral);color:#fff}
+.brand-preview-panels {
+  display:grid;
+  grid-template-columns:minmax(170px,.7fr) minmax(300px,1.3fr);
+  gap:12px;
+}
+.brand-preview-accuracy,
+.brand-preview-chart {
+  padding:16px;
+  border:1px solid color-mix(in srgb,var(--brand-border) 34%,transparent);
+  border-radius:18px;
+  background:var(--brand-card-bg);
+}
+.brand-preview-accuracy {
+  color:#fff;
+  background:linear-gradient(180deg,var(--brand-accuracy-start),var(--brand-accuracy-end));
+}
+.brand-preview-ring {
+  width:90px;
+  aspect-ratio:1;
+  display:grid;
+  place-items:center;
+  margin:14px auto;
+  border-radius:50%;
+  background:conic-gradient(var(--brand-accuracy-ring-main) 0 88%,var(--brand-accuracy-ring-diff) 88%);
+}
+.brand-preview-ring::after {
+  content:'99.1%';
+  width:62px;
+  aspect-ratio:1;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  background:var(--brand-accuracy-end);
+  font-size:14px;
+  font-weight:700;
+}
+.brand-preview-chart svg { width:100%; height:105px; }
+.brand-preview-chart .area { fill:var(--brand-chart-area); }
+.brand-preview-chart .line { fill:none; stroke:var(--brand-chart-line); stroke-width:4; stroke-linecap:round; stroke-linejoin:round; }
+.brand-preview-progress {
+  height:8px;
+  margin-top:12px;
+  overflow:hidden;
+  border-radius:999px;
+  background:color-mix(in srgb,var(--brand-border) 16%,var(--brand-card-bg));
+}
+.brand-preview-progress span {
+  display:block;
+  width:72%;
+  height:100%;
+  background:linear-gradient(90deg,var(--brand-progress-start),var(--brand-progress-end));
+}
+.brand-preview-actions { display:flex; gap:8px; margin-top:14px; }
+.brand-preview-actions button { min-height:34px; padding:6px 13px; border:0; border-radius:10px; font-weight:700; }
+.brand-preview-actions .main { color:var(--brand-primary-text); background:var(--brand-primary); }
+.brand-preview-actions .minor { color:var(--brand-secondary-text); background:var(--brand-secondary-bg); }
+
+.password-input-wrap { position:relative; }
+.password-input-wrap input { width:100%; padding-right:46px !important; }
+.password-eye-btn {
+  position:absolute;
+  top:50%;
+  right:6px;
+  width:36px;
+  height:36px;
+  display:grid;
+  place-items:center;
+  padding:0;
+  transform:translateY(-50%);
+  border:0;
+  border-radius:10px;
+  color:var(--brand-secondary-text);
+  background:transparent;
+  cursor:pointer;
+}
+.password-eye-btn:hover { background:var(--brand-secondary-bg); }
+.password-eye-btn svg { width:20px; height:20px; }
+
+.admin-avatar-editor {
+  display:grid;
+  grid-template-columns:68px minmax(0,1fr);
+  align-items:center;
+  gap:10px;
+}
+.admin-avatar-preview,
+.user-avatar.has-photo {
+  overflow:hidden;
+  padding:0 !important;
+  background:var(--brand-secondary-bg) !important;
+}
+.admin-avatar-preview {
+  width:64px;
+  height:64px;
+  display:grid;
+  place-items:center;
+  border:2px solid color-mix(in srgb,var(--brand-border) 44%,transparent);
+  border-radius:50%;
+  color:var(--brand-secondary-text);
+  font-size:22px;
+  font-weight:700;
+}
+.admin-avatar-preview img,
+.user-avatar.has-photo img { width:100%; height:100%; object-fit:cover; }
+.admin-avatar-controls { min-width:0; }
+.admin-avatar-file { width:100%; font-size:11px !important; }
+.admin-avatar-remove { margin-top:5px; }
+
+.admin-user-create-grid {
+  grid-template-columns:minmax(170px,1fr) minmax(145px,.8fr) minmax(125px,.7fr) minmax(170px,.9fr) minmax(210px,1.1fr) auto;
+}
+.admin-user-create-grid > .btn { min-width:145px; white-space:nowrap; }
+.admin-user-row-grid {
+  grid-template-columns:minmax(170px,1fr) minmax(145px,.8fr) minmax(125px,.7fr) minmax(210px,1.1fr) auto;
+}
+
+@media (max-width:1200px) {
+  .admin-user-create-grid,
+  .admin-user-row-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .admin-user-actions { grid-column:1/-1; }
+}
+
+@media (max-width:700px) {
+  .system-name-grid,
+  .admin-user-create-grid,
+  .admin-user-row-grid { grid-template-columns:1fr; }
+  .brand-preview-shell { grid-template-columns:92px minmax(500px,1fr); }
+  .admin-user-actions { grid-column:auto; }
+}
+
 </style>
 </head>
 <body>
@@ -5694,7 +7106,7 @@ function fmtDMY(value) {
   if (Number.isNaN(d.getTime())) return String(value);
   return d.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
-window.__CYCLE_COUNT_BUILD__ = 'v60';
+window.__CYCLE_COUNT_BUILD__ = 'v63';
 
 let _viewportSyncFrame = 0;
 function syncViewportSize() {
@@ -5719,6 +7131,220 @@ const SUPA_KEY = 'sb_publishable_EuJ-IUiXWBLSNvQsG0CJ5w_C2LHJXAL';
 
 let sb, me, prof;
 let S = {};
+
+const BRANDING_STORAGE_KEY = 'cycle_count_ui_branding_v63';
+const DEFAULT_BRANDING = Object.freeze({
+  systemName: 'Cycle Count',
+  systemSubtitle: 'Warehouse v1.0',
+  sidebarStart: '#83C5BE',
+  sidebarEnd: '#006D77',
+  sidebarText: '#FFFFFF',
+  sidebarHoverBg: '#DCEFF1',
+  menuActiveBg: '#EDF6F9',
+  menuActiveText: '#006D77',
+  pageBg: '#EDF6F9',
+  appFrameBg: '#FFFFFF',
+  cardBg: '#FFFFFF',
+  borderColor: '#83C5BE',
+  headingColor: '#006D77',
+  bodyTextColor: '#16383C',
+  mutedTextColor: '#638083',
+  inputBg: '#F5FAFB',
+  inputText: '#16383C',
+  primaryColor: '#006D77',
+  primaryText: '#FFFFFF',
+  secondaryBg: '#E3F1F3',
+  secondaryText: '#006D77',
+  successColor: '#2A9D8F',
+  warningColor: '#E9C46A',
+  dangerColor: '#E29578',
+  kpiMint: '#83C5BE',
+  kpiSku: '#3AA6A5',
+  kpiBlush: '#FFD9CF',
+  kpiCoral: '#E29578',
+  chartLine: '#007B83',
+  chartArea: '#D9EEF0',
+  progressStart: '#68D7D4',
+  progressEnd: '#34BEE0',
+  accuracyStart: '#83C5BE',
+  accuracyEnd: '#006D77',
+  accuracyLayerBack: '#A8D5C7',
+  accuracyLayerBottom: '#E7AB8E',
+  accuracyRingMain: '#E29578',
+  accuracyRingDiff: '#FFD9CF',
+  logoDataUrl: '',
+});
+const BRANDING_COLOR_GROUPS = Object.freeze([
+  { title:'พื้นหลัง ตัวอักษร และช่องกรอก', fields:[
+    { key:'pageBg', label:'พื้นหลังหน้าระบบ' },
+    { key:'appFrameBg', label:'พื้นหลังกรอบระบบ' },
+    { key:'cardBg', label:'พื้นหลังการ์ด' },
+    { key:'borderColor', label:'เส้นขอบและกรอบ' },
+    { key:'headingColor', label:'สีหัวข้อทุกหน้า' },
+    { key:'bodyTextColor', label:'สีข้อความทั่วไป' },
+    { key:'mutedTextColor', label:'สีข้อความรายละเอียด' },
+    { key:'inputBg', label:'พื้นหลังช่องกรอก' },
+    { key:'inputText', label:'ข้อความในช่องกรอก' },
+  ]},
+  { title:'เมนูด้านข้าง', fields:[
+    { key:'sidebarStart', label:'พื้นเมนู — สีบน' },
+    { key:'sidebarEnd', label:'พื้นเมนู — สีล่าง' },
+    { key:'sidebarText', label:'ไอคอน/ข้อความเมนู' },
+    { key:'sidebarHoverBg', label:'พื้นเมนูเมื่อชี้' },
+    { key:'menuActiveBg', label:'พื้นเมนูที่เลือก' },
+    { key:'menuActiveText', label:'ข้อความเมนูที่เลือก' },
+  ]},
+  { title:'ปุ่มและสถานะ', fields:[
+    { key:'primaryColor', label:'พื้นปุ่มหลัก' },
+    { key:'primaryText', label:'ข้อความปุ่มหลัก' },
+    { key:'secondaryBg', label:'พื้นปุ่มรอง' },
+    { key:'secondaryText', label:'ข้อความปุ่มรอง' },
+    { key:'successColor', label:'สถานะสำเร็จ' },
+    { key:'warningColor', label:'สถานะรอ/เตือน' },
+    { key:'dangerColor', label:'สถานะผิดพลาด/ปุ่มลบ' },
+  ]},
+  { title:'Dashboard และกราฟ', fields:[
+    { key:'kpiMint', label:'การ์ด KPI — Location' },
+    { key:'kpiSku', label:'การ์ด KPI — SKU' },
+    { key:'kpiBlush', label:'การ์ด KPI — OH' },
+    { key:'kpiCoral', label:'การ์ด KPI — คนนับ' },
+    { key:'chartLine', label:'เส้นกราฟ' },
+    { key:'chartArea', label:'พื้นที่ใต้กราฟ' },
+    { key:'progressStart', label:'แถบ Progress — เริ่ม' },
+    { key:'progressEnd', label:'แถบ Progress — จบ' },
+  ]},
+  { title:'การ์ด Stock Accuracy', fields:[
+    { key:'accuracyStart', label:'พื้นการ์ด — สีบน' },
+    { key:'accuracyEnd', label:'พื้นการ์ด — สีล่าง' },
+    { key:'accuracyLayerBack', label:'แผ่นซ้อนด้านหลัง' },
+    { key:'accuracyLayerBottom', label:'แผ่นซ้อนด้านล่าง' },
+    { key:'accuracyRingMain', label:'วงแหวน Accuracy' },
+    { key:'accuracyRingDiff', label:'วงแหวนส่วนต่าง' },
+  ]},
+]);
+const BRANDING_COLOR_FIELDS = Object.freeze(BRANDING_COLOR_GROUPS.flatMap(group => group.fields));
+let uiBranding = { ...DEFAULT_BRANDING };
+let _brandingDraftLogo = '';
+let _userAvatarDrafts = {};
+
+function normalizeHexColor(value, fallback) {
+  const color = String(value || '').trim().toUpperCase();
+  return /^#[0-9A-F]{6}$/.test(color) ? color : fallback;
+}
+
+function normalizeLogoDataUrl(value) {
+  const logo = String(value || '').trim();
+  if (!logo) return '';
+  return /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/i.test(logo) && logo.length <= 900000
+    ? logo
+    : '';
+}
+
+function normalizeBrandingSettings(input = {}) {
+  const output = {};
+  BRANDING_COLOR_FIELDS.forEach(({ key }) => {
+    output[key] = normalizeHexColor(input?.[key], DEFAULT_BRANDING[key]);
+  });
+  output.systemName = String(input?.systemName || DEFAULT_BRANDING.systemName).trim().slice(0, 60) || DEFAULT_BRANDING.systemName;
+  output.systemSubtitle = String(input?.systemSubtitle || DEFAULT_BRANDING.systemSubtitle).trim().slice(0, 100) || DEFAULT_BRANDING.systemSubtitle;
+  output.logoDataUrl = normalizeLogoDataUrl(input?.logoDataUrl);
+  return output;
+}
+
+function readLocalBrandingSettings() {
+  try {
+    return normalizeBrandingSettings(JSON.parse(localStorage.getItem(BRANDING_STORAGE_KEY) || '{}'));
+  } catch (_) {
+    return { ...DEFAULT_BRANDING };
+  }
+}
+
+function applyBrandingSettings(settings, persistLocal = true) {
+  uiBranding = normalizeBrandingSettings(settings);
+  const root = document.documentElement.style;
+  const variableMap = {
+    '--brand-sidebar-start': uiBranding.sidebarStart,
+    '--brand-sidebar-end': uiBranding.sidebarEnd,
+    '--brand-sidebar-text': uiBranding.sidebarText,
+    '--brand-sidebar-hover': uiBranding.sidebarHoverBg,
+    '--brand-menu-active-bg': uiBranding.menuActiveBg,
+    '--brand-menu-active-text': uiBranding.menuActiveText,
+    '--brand-page-bg': uiBranding.pageBg,
+    '--brand-app-frame': uiBranding.appFrameBg,
+    '--brand-card-bg': uiBranding.cardBg,
+    '--brand-border': uiBranding.borderColor,
+    '--brand-heading': uiBranding.headingColor,
+    '--brand-body-text': uiBranding.bodyTextColor,
+    '--brand-muted-text': uiBranding.mutedTextColor,
+    '--brand-input-bg': uiBranding.inputBg,
+    '--brand-input-text': uiBranding.inputText,
+    '--brand-primary': uiBranding.primaryColor,
+    '--brand-primary-text': uiBranding.primaryText,
+    '--brand-secondary-bg': uiBranding.secondaryBg,
+    '--brand-secondary-text': uiBranding.secondaryText,
+    '--brand-success': uiBranding.successColor,
+    '--brand-warning': uiBranding.warningColor,
+    '--brand-danger': uiBranding.dangerColor,
+    '--brand-accent': uiBranding.dangerColor,
+    '--brand-kpi-mint': uiBranding.kpiMint,
+    '--brand-kpi-sku': uiBranding.kpiSku,
+    '--brand-kpi-blush': uiBranding.kpiBlush,
+    '--brand-kpi-coral': uiBranding.kpiCoral,
+    '--brand-chart-line': uiBranding.chartLine,
+    '--brand-chart-area': uiBranding.chartArea,
+    '--brand-progress-start': uiBranding.progressStart,
+    '--brand-progress-end': uiBranding.progressEnd,
+    '--brand-accuracy-start': uiBranding.accuracyStart,
+    '--brand-accuracy-end': uiBranding.accuracyEnd,
+    '--brand-accuracy-layer-back': uiBranding.accuracyLayerBack,
+    '--brand-accuracy-layer-bottom': uiBranding.accuracyLayerBottom,
+    '--brand-accuracy-ring-main': uiBranding.accuracyRingMain,
+    '--brand-accuracy-ring-diff': uiBranding.accuracyRingDiff,
+    '--main-bg': uiBranding.pageBg,
+    '--neu-surface': uiBranding.pageBg,
+    '--sidebar-bg': `linear-gradient(180deg, ${uiBranding.sidebarStart} 0%, ${uiBranding.sidebarEnd} 100%)`,
+    '--sidebar-active-bg': uiBranding.menuActiveBg,
+    '--sidebar-active-text': uiBranding.menuActiveText,
+    '--primary-blue': uiBranding.primaryColor,
+    '--accent-green': uiBranding.successColor,
+    '--accent-red': uiBranding.dangerColor,
+    '--text-main': uiBranding.bodyTextColor,
+    '--text-muted': uiBranding.mutedTextColor,
+    '--color-deep': uiBranding.primaryColor,
+    '--color-mint': uiBranding.sidebarStart,
+    '--color-mist': uiBranding.pageBg,
+    '--color-coral': uiBranding.dangerColor,
+    '--v61-heading': uiBranding.headingColor,
+    '--v61-detail': uiBranding.mutedTextColor,
+  };
+  Object.entries(variableMap).forEach(([key, value]) => root.setProperty(key, value));
+  document.title = `${uiBranding.systemName} v63`;
+  if (persistLocal) {
+    try { localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(uiBranding)); } catch (_) {}
+  }
+}
+
+async function loadPublicBrandingSettings() {
+  applyBrandingSettings(readLocalBrandingSettings(), false);
+  if (!sb) return uiBranding;
+  try {
+    const { data, error } = await sb
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'ui_branding')
+      .maybeSingle();
+    if (!error && data?.value) applyBrandingSettings(data.value);
+  } catch (_) {}
+  return uiBranding;
+}
+
+function brandLogoHtml(context = 'sidebar') {
+  const logo = normalizeLogoDataUrl(uiBranding.logoDataUrl);
+  if (logo) {
+    return `<img class="brand-logo-image" src="${logo}" alt="โลโก้ ${escapeWmsText(uiBranding.systemName)}">`;
+  }
+  return navIconSvg('warehouse', context === 'login' ? 44 : 32);
+}
 
 let _html5Qr = null;   
 let _xlsxRawRows = null;   
@@ -5745,6 +7371,23 @@ async function invokeAdminMaster(action, payload = {}) {
     throw new Error(message);
   }
   if (!data?.ok) throw new Error(data?.error || 'ระบบ Admin ทำรายการไม่สำเร็จ');
+  return data;
+}
+
+async function invokeAdminSettings(action, payload = {}) {
+  if (prof?.role !== 'admin') throw new Error('คำสั่งนี้ทำได้เฉพาะ Admin เท่านั้น');
+  const { data, error } = await sb.functions.invoke('admin-settings-v63', {
+    body: { action, ...payload },
+  });
+  if (error) {
+    let message = error.message || 'เรียกใช้งานระบบตั้งค่า Admin ไม่สำเร็จ';
+    try {
+      const detail = await error.context?.json();
+      message = detail?.error || detail?.message || message;
+    } catch (_) {}
+    throw new Error(message);
+  }
+  if (!data?.ok) throw new Error(data?.error || 'ระบบตั้งค่า Admin ทำรายการไม่สำเร็จ');
   return data;
 }
 
@@ -5806,6 +7449,7 @@ async function boot() {
       return;
     }
     sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+    await loadPublicBrandingSettings();
     const { data: { session } } = await sb.auth.getSession();
     if (session?.user) {
       me = session.user;
@@ -5848,6 +7492,10 @@ function syncNavigationStateGlobals() {
 
 function go(page, extra = {}, navOptions = {}) {
   const currentPage = S?.page || '';
+  if (currentPage === 'ad-branding' && page !== 'ad-branding' && S._brandingSavedSnapshot) {
+    applyBrandingSettings(S._brandingSavedSnapshot, false);
+    delete S._brandingSavedSnapshot;
+  }
   const nextExtra = { ...extra };
   if (page !== 'sv-dash') delete nextExtra._dashAnchor;
 
@@ -5974,7 +7622,8 @@ function navIconSvg(type, size=20) {
     import: `<svg ${common}><path d="M12 3v12"/><path d="m7 10-7 7-7-7"/><path d="M4 21h16"/></svg>`,
     backup: `<svg ${common}><ellipse cx="12" cy="5" rx="7" ry="3"/><path d="M5 5v6c0 1.7 3.1 3 7 3s7-1.3 7-3V5"/><path d="M5 11v6c0 1.7 3.1 3 7 3 1.2 0 2.4-.13 3.4-.37"/><path d="m17 15 2 2 3-4"/></svg>`,
     users: `<svg ${common}><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="3"/><path d="M19 8v6M16 11h6"/></svg>`,
-    warehouse: `<svg ${common}><path d="M3 9.5 12 4l9 5.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5Z"/><path d="M9 21v-6h6v6"/></svg>`
+    warehouse: `<svg ${common}><path d="M3 9.5 12 4l9 5.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5Z"/><path d="M9 21v-6h6v6"/></svg>`,
+    theme: `<svg ${common}><path d="M12 3a9 9 0 1 0 0 18h1.4a1.8 1.8 0 0 0 0-3.6H12a1.7 1.7 0 0 1 0-3.4h2.2A6.8 6.8 0 0 0 21 7.2C21 4.9 17 3 12 3Z"/><circle cx="7.5" cy="9" r=".8" fill="currentColor"/><circle cx="10" cy="6.5" r=".8" fill="currentColor"/><circle cx="14" cy="6.3" r=".8" fill="currentColor"/><circle cx="17" cy="9" r=".8" fill="currentColor"/></svg>`
   };
   return icons[type] || icons.tasks;
 }
@@ -6058,7 +7707,7 @@ function renderResponsivePreviewContent() {
     <div class="summary-page-header">
       <div class="summary-greeting-wrap">
         <div class="summary-greeting">Hello, AuD</div>
-        <div class="summary-greeting-sub">Cycle Count Dashboard · Backup and Restore v60</div>
+        <div class="summary-greeting-sub">${escapeWmsText(uiBranding.systemName)} Dashboard · v63</div>
       </div>
       <div class="summary-header-actions">
         <label class="summary-session-search" title="เลือก Session">
@@ -6099,11 +7748,11 @@ function renderResponsivePreviewContent() {
           <div class="summary-wms-columns" aria-label="ตัวอย่างสถานะการปรับยอด WMS">
             <div class="summary-wms-column-item unfixed">
               <div class="summary-wms-column-value">5</div><div class="summary-wms-column-track"><span style="height:33%"></span></div>
-              <div class="summary-wms-column-label">ยังไม่ได้ตรวจสอบ</div><div class="summary-wms-column-percent">33%</div>
+              <div class="summary-wms-column-label">ยังไม่ได้ตรวจสอบ</div>
             </div>
             <div class="summary-wms-column-item fixed">
               <div class="summary-wms-column-value">10</div><div class="summary-wms-column-track"><span style="height:67%"></span></div>
-              <div class="summary-wms-column-label">ตรวจสอบแล้ว</div><div class="summary-wms-column-percent">67%</div>
+              <div class="summary-wms-column-label">ตรวจสอบแล้ว</div>
             </div>
           </div>
         </article>
@@ -6171,11 +7820,12 @@ function render() {
     'ad-import':  'จัดการงาน / Sessions',
     'ad-history': 'ประวัติการนับ',
     'ad-txlog':   'Transaction Log',
-    'ad-users':   'จัดการข้อมูลระบบ',
+    'ad-users':   'จัดการ User และข้อมูลระบบ',
+    'ad-branding':'ธีมและโลโก้ระบบ',
   };
 
   const currentRole = prof?.role || 'counter';
-  const pageTitle = PAGE_TITLES[page] || 'Cycle Count System';
+  const pageTitle = PAGE_TITLES[page] || uiBranding.systemName;
 
   const navMenus = {
     counter: [
@@ -6208,17 +7858,25 @@ function render() {
         { id:'manage-backup', name:'Backup / Restore', icon:navIconSvg('backup'), action:"openManageMenu('backup')" }
       ]},
       { id: 'ad-history', name: 'ประวัติการนับ', icon: navIconSvg('history') },
-      { id: 'ad-users', name: 'จัดการข้อมูลระบบ', icon: navIconSvg('users') }
+      { group: 'system', name: 'ตั้งค่าระบบ', icon: navIconSvg('theme'), children: [
+        { id:'system-branding', name:'ธีมและโลโก้', icon:navIconSvg('theme'), action:"goPrimary('ad-branding')" },
+        { id:'system-users', name:'User และข้อมูลระบบ', icon:navIconSvg('users'), action:"goPrimary('ad-users')" }
+      ]}
     ]
   };
 
   const userNavs = navMenus[currentRole] || navMenus.counter;
   const dashboardActive = page === 'sv-dash' || page === 'sv-list' || page === 'sv-detail';
   const manageActive = ['ad-manage','ad-new','ad-sessions','ad-assign','ad-import'].includes(page);
+  const systemActive = ['ad-branding','ad-users'].includes(page);
 
   const sidebarNavHtml = userNavs.map(item => {
     if (item.children) {
-      const groupActive = item.group === 'dashboard' ? dashboardActive : manageActive;
+      const groupActive = item.group === 'dashboard'
+        ? dashboardActive
+        : item.group === 'manage'
+          ? manageActive
+          : systemActive;
       const isOpen = groupActive || window._openNavGroup === item.group;
       const children = item.children.map(child => {
         let childActive = false;
@@ -6226,6 +7884,9 @@ function render() {
           childActive = (child.id === 'dash-' + (S._dashTab || _dashTab || 'summary'));
         }
         if (item.group === 'manage') childActive = child.id === 'manage-' + (_manageTab || 'sessions');
+        if (item.group === 'system') childActive =
+          (child.id === 'system-branding' && page === 'ad-branding') ||
+          (child.id === 'system-users' && page === 'ad-users');
         return `<button class="nav-item nav-subitem ${childActive?'active':''}" onclick="${child.action};closeMobileSidebar()" title="${child.name}"><span class="nav-icon">${child.icon}</span><span>${child.name}</span></button>`;
       }).join('');
       return `<div class="nav-group ${isOpen?'open':''}" data-group="${item.group}">
@@ -6239,6 +7900,10 @@ function render() {
 
   const isCollapsed = window._sidebarCollapsed || false;
   const isSummaryView = page === 'sv-dash' && (S._dashTab || _dashTab || 'summary') === 'summary';
+  const profileAvatar = normalizeLogoDataUrl(prof?.avatar_data_url);
+  const profileAvatarHtml = profileAvatar
+    ? `<img src="${profileAvatar}" alt="รูปประจำตัว ${escapeWmsText(prof?.name || 'User')}">`
+    : escapeWmsText((prof?.name || 'U').charAt(0).toUpperCase());
 
   Q('app').innerHTML = `
     <div class="app-container">
@@ -6248,19 +7913,19 @@ function render() {
     <rect x="4" y="5" width="16" height="14" rx="1.5"></rect>
     <path d="M9 5v14"></path>
   </svg>
-</button>
+        </button>
         <div class="sidebar-header">
-          <div class="sidebar-logo-icon">${navIconSvg('warehouse', 32)}</div>
+          <div class="sidebar-logo-icon ${uiBranding.logoDataUrl ? 'has-custom-logo' : ''}">${brandLogoHtml('sidebar')}</div>
           <div>
-            <div class="sidebar-title">Cycle Count</div>
-            <div class="sidebar-sub">Warehouse v1.0</div>
+            <div class="sidebar-title">${escapeWmsText(uiBranding.systemName)}</div>
+            <div class="sidebar-sub">${escapeWmsText(uiBranding.systemSubtitle)}</div>
           </div>
         </div>
         <nav class="sidebar-menu">
           ${sidebarNavHtml}
         </nav>
         <div class="sidebar-footer">
-          <div style="font-weight:600">Soft UI Pro</div>
+          <div style="font-weight:600">${escapeWmsText(uiBranding.systemSubtitle)}</div>
         </div>
       </aside>
       <div class="mobile-sidebar-backdrop" id="sidebarBackdrop" onclick="closeMobileSidebar()"></div>
@@ -6274,7 +7939,7 @@ function render() {
           </div>
           <div class="topbar-right">
             <div class="user-profile">
-              <div class="user-avatar">${(prof?.name || 'U')[0]}</div>
+              <div class="user-avatar ${profileAvatar ? 'has-photo' : ''}">${profileAvatarHtml}</div>
               <span class="user-name">${prof?.name || ''}</span>
             </div>
             <button class="top-out-btn" onclick="doLogout()">ออกจากระบบ</button>
@@ -6306,6 +7971,7 @@ function render() {
     'ad-history': loadAdHistory,
     'ad-txlog':   loadAdTxLog,
     'ad-users':   loadAdUsers,
+    'ad-branding':loadAdBranding,
   };
   
   if (L[page]) {
@@ -6319,7 +7985,7 @@ function render() {
 }
 
 function handleSidebarToggle() {
-  if (window.matchMedia('(max-width: 768px)').matches) toggleMobileSidebar();
+  if (window.matchMedia('(max-width: 900px)').matches) toggleMobileSidebar();
   else toggleSidebarCollapse();
 }
 function toggleSidebarCollapse() {
@@ -6559,44 +8225,54 @@ function paintLogin() {
     <div class="lbox">
       <div class="lcard">
         <div style="text-align:center;margin-bottom:30px">
-          <div style="font-size:60px; margin-bottom:10px; display:inline-block; padding:20px; border-radius:50%; background:var(--neu-surface); box-shadow: 10px 10px 20px var(--neu-shadow-dark), -10px -10px 20px var(--neu-shadow-light);">📦</div>
+          <div class="login-brand-logo ${uiBranding.logoDataUrl ? 'has-custom-logo' : ''}">${brandLogoHtml('login')}</div>
           <div style="font-size:26px;font-weight:800;color:var(--text-main); font-family:'Fredoka'; margin-top:20px;">เข้าสู่ระบบ</div>
-          <div style="font-weight:600; font-size:13px;color:var(--text-muted);margin-top:6px;">Cycle Count Warehouse System</div>
+          <div style="font-weight:700; font-size:15px;color:var(--brand-heading);margin-top:6px;">${escapeWmsText(uiBranding.systemName)}</div>
+          <div style="font-weight:500; font-size:12px;color:var(--brand-muted-text);margin-top:2px;">${escapeWmsText(uiBranding.systemSubtitle)}</div>
         </div>
         <div id="la"></div>
         <div class="fg" style="text-align:left">
-          <label>อีเมลผู้ใช้งาน</label>
-          <input type="email" id="le" placeholder="name@company.com">
+          <label>User ID</label>
+          <input type="text" id="le" maxlength="40" autocomplete="username" autocapitalize="none"
+            placeholder="เช่น VPW64054" onkeydown="if(event.key==='Enter')Q('lp')?.focus()">
         </div>
         <div class="fg" style="text-align:left;margin-bottom:10px">
           <label>รหัสผ่าน</label>
-          <input type="password" id="lp" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+          <div class="password-input-wrap">
+            <input type="password" id="lp" maxlength="72" autocomplete="current-password"
+              placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+            ${passwordEyeButtonHtml('lp','แสดงรหัสผ่าน')}
+          </div>
         </div>
-        <div style="text-align:right;margin-bottom:24px">
-          <a href="javascript:void(0)" onclick="doForgotPassword()" style="font-size:13px;color:var(--primary-blue);font-weight:700;text-decoration:none">ลืมรหัสผ่าน?</a>
+        <div style="text-align:right;margin-bottom:24px;color:var(--brand-muted-text);font-size:12px;font-weight:500">
+          ลืมรหัสผ่าน กรุณาติดต่อ Admin
         </div>
         <button class="btn btn-blue" id="lb" onclick="doLogin()" style="width:100%; margin-bottom: 20px;">เข้าสู่ระบบ</button>
-
-        <div style="display:flex;align-items:center;gap:15px;margin:30px 0">
-          <div style="flex:1;height:2px;background:rgba(255,255,255,0.6); box-shadow: 1px 1px 2px var(--neu-shadow-dark);"></div>
-          <span style="font-size:13px;font-weight:700;color:var(--text-muted)">หรือ</span>
-          <div style="flex:1;height:2px;background:rgba(255,255,255,0.6); box-shadow: 1px 1px 2px var(--neu-shadow-dark);"></div>
-        </div>
-
-        <button class="btn btn-ghost" onclick="doOAuth('google')" style="width:100%;margin-bottom:16px">Google Login</button>
-        <button class="btn btn-dark" onclick="doOAuth('apple')" style="width:100%">Apple Login</button>
-
-        <div style="text-align:center;margin-top:30px;font-size:14px;color:var(--text-muted);font-weight:600">
-          ยังไม่มีบัญชี? <a href="javascript:void(0)" onclick="showSignupInfo()" style="color:var(--primary-blue);font-weight:800;text-decoration:none">สมัครสมาชิก</a>
-        </div>
       </div>
     </div>`;
 }
 
-function togglePasswordVisibility() {
-  const inp = Q('lp');
-  if (!inp) return;
-  inp.type = inp.type === 'password' ? 'text' : 'password';
+function passwordEyeButtonHtml(inputId, label = 'แสดงรหัสผ่าน') {
+  return `<button class="password-eye-btn" type="button" aria-label="${label}" title="${label}"
+    onclick="togglePasswordInput('${inputId}',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+      <circle cx="12" cy="12" r="3"></circle>
+    </svg>
+  </button>`;
+}
+
+function togglePasswordInput(inputId, button) {
+  const input = Q(inputId);
+  if (!input) return;
+  const showing = input.type === 'text';
+  input.type = showing ? 'password' : 'text';
+  if (button) {
+    const label = showing ? 'แสดงรหัสผ่าน' : 'ซ่อนรหัสผ่าน';
+    button.setAttribute('aria-label', label);
+    button.setAttribute('title', label);
+    button.classList.toggle('is-visible', !showing);
+  }
 }
 
 async function doForgotPassword() {
@@ -6607,17 +8283,6 @@ async function doForgotPassword() {
   const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.href.split('#')[0] });
   if (error) { al.innerHTML = `<div class="alert alert-red">${error.message}</div>`; return; }
   al.innerHTML = `<div class="alert alert-green">✅ ส่งลิงก์รีเซ็ตรหัสผ่านไปที่ ${email} แล้ว เช็คอีเมลได้เลยจ้า</div>`;
-}
-
-async function doOAuth(provider) {
-  const al = Q('la');
-  al.innerHTML = `<div class="alert alert-blue">⏳ กำลังเชื่อมต่อกับ ${provider}...</div>`;
-  const { error } = await sb.auth.signInWithOAuth({ provider, options: { redirectTo: window.location.href.split('#')[0] } });
-  if (error) { al.innerHTML = `<div class="alert alert-red">เชื่อมต่อไม่สำเร็จ: ${error.message}</div>`; }
-}
-
-function showSignupInfo() {
-  Q('la').innerHTML = `<div class="alert alert-blue">📮 ระบบนี้สร้างบัญชีโดย Admin เท่านั้น กรุณาติดต่อผู้ดูแลระบบเพื่อขอบัญชีผู้ใช้งานครับ</div>`;
 }
 
 function paintResetPassword() {
@@ -6655,15 +8320,30 @@ async function doResetPassword() {
 }
 
 async function doLogin() {
-  const email = Q('le').value.trim(), pwd = Q('lp').value;
-  if (!email || !pwd) { Q('la').innerHTML = '<div class="alert alert-amber">ใส่รหัสและอีเมลให้ครบถ้วนก่อนน้า 🌸</div>'; return; }
+  const loginId = Q('le').value.trim().toLowerCase(), pwd = Q('lp').value;
+  if (!loginId || !pwd) { Q('la').innerHTML = '<div class="alert alert-amber">กรอก User ID และรหัสผ่านให้ครบ</div>'; return; }
+  if (!/^[a-z0-9][a-z0-9._-]{2,39}$/.test(loginId)) {
+    Q('la').innerHTML = '<div class="alert alert-red">รูปแบบ User ID ไม่ถูกต้อง</div>';
+    return;
+  }
   const btn = Q('lb');
   btn.disabled = true; btn.textContent = 'กำลังเข้าสู่ระบบ...';
-  const { error } = await sb.auth.signInWithPassword({ email, password: pwd });
-  if (error) {
-    Q('la').innerHTML = '<div class="alert alert-red">อีเมลหรือรหัสผ่านผิดพลาด ลองใหม่อีกทีนะจ๊ะ</div>';
+  const { data, error } = await sb.functions.invoke('login-by-id', {
+    body: { login_id: loginId, password: pwd },
+  });
+  if (error || !data?.ok || !data?.session?.access_token || !data?.session?.refresh_token) {
+    Q('la').innerHTML = '<div class="alert alert-red">User ID หรือรหัสผ่านไม่ถูกต้อง</div>';
     btn.disabled = false; btn.textContent = 'เข้าสู่ระบบ';
   } else {
+    const { error: sessionError } = await sb.auth.setSession({
+      access_token: data.session.access_token,
+      refresh_token: data.session.refresh_token,
+    });
+    if (sessionError) {
+      Q('la').innerHTML = '<div class="alert alert-red">เปิด Session ไม่สำเร็จ กรุณาลองอีกครั้ง</div>';
+      btn.disabled = false; btn.textContent = 'เข้าสู่ระบบ';
+      return;
+    }
     me = (await sb.auth.getUser()).data.user;
     await loadProf();
     go(home());
@@ -7941,7 +9621,6 @@ async function loadSvDash() {
               <span style="height:${summaryWmsUnfixedCount ? Math.max(12, summaryWmsUnfixedPercent) : 4}%"></span>
             </div>
             <div class="summary-wms-column-label">ยังไม่ได้ตรวจสอบ</div>
-            <div class="summary-wms-column-percent">${summaryWmsUnfixedPercent}%</div>
           </div>
           <div class="summary-wms-column-item fixed">
             <div class="summary-wms-column-value">${summaryWmsFixedCount}</div>
@@ -7949,7 +9628,6 @@ async function loadSvDash() {
               <span style="height:${summaryWmsFixedCount ? Math.max(12, summaryWmsFixedPercent) : 4}%"></span>
             </div>
             <div class="summary-wms-column-label">ตรวจสอบแล้ว</div>
-            <div class="summary-wms-column-percent">${summaryWmsFixedPercent}%</div>
           </div>
         </div>
       </article>
@@ -8175,7 +9853,7 @@ async function loadSvDash() {
     ? `<div class="summary-page-header">
         <div class="summary-greeting-wrap">
           <div class="summary-greeting">Hello, ${prof?.name || 'User'}</div>
-          <div class="summary-greeting-sub">Cycle Count Dashboard</div>
+          <div class="summary-greeting-sub">${escapeWmsText(uiBranding.systemName)} Dashboard</div>
         </div>
         <div class="summary-header-actions">
           <label class="summary-session-search" title="เลือก Session">
@@ -9260,7 +10938,8 @@ function openPrintFormWindow(rows, title) {
   for (let i = 0; i < rows.length; i += ROWS_PER_PAGE) pages.push(rows.slice(i, i+ROWS_PER_PAGE));
   if (!pages.length) pages.push([]);
   const totalPages = pages.length; const todayStr = new Date().toLocaleDateString('th-TH', { year:'numeric', month:'long', day:'numeric' });
-  const pagesHtml = pages.map((pageRows, pIdx) => `<section class="pf-page"><header class="pf-header"><img class="pf-logo" src="${PF_LOGO_B64}" alt="logo"><div class="pf-title">${pfEscapeHtml(title)}</div><div class="pf-meta"><div>${todayStr}</div><div>Page ${pIdx+1} / ${totalPages}</div></div></header><table class="pf-table"><thead><tr><th style="width:11%">Location</th><th style="width:13%">Item</th><th style="width:23%">Description</th><th style="width:9%">Inventory status</th><th style="width:9%">Storage Template</th><th style="width:8%">Count 1</th><th style="width:8%">Count 2</th><th style="width:8%">Count 3</th><th style="width:11%">Remark</th></tr></thead><tbody>${pageRows.length ? pageRows.map(r => `<tr><td>${pfEscapeHtml(r.locCode)}</td><td>${pfEscapeHtml(r.itemCode)}</td><td>${pfEscapeHtml(r.desc)}</td><td>${pfEscapeHtml(r.status)}</td><td></td><td></td><td></td><td></td><td></td></tr>`).join('') : `<tr><td colspan="9" style="text-align:center;color:#888">ไม่มีรายการ</td></tr>`}</tbody></table><footer class="pf-footer"><div>คนนับจริง...........................</div><div>เวลาเริ่ม...........................</div><div>เวลาจบ...........................</div></footer></section>`).join('');
+  const printLogo = normalizeLogoDataUrl(uiBranding.logoDataUrl) || PF_LOGO_B64;
+  const pagesHtml = pages.map((pageRows, pIdx) => `<section class="pf-page"><header class="pf-header"><img class="pf-logo" src="${printLogo}" alt="logo"><div class="pf-title">${pfEscapeHtml(title)}</div><div class="pf-meta"><div>${todayStr}</div><div>Page ${pIdx+1} / ${totalPages}</div></div></header><table class="pf-table"><thead><tr><th style="width:11%">Location</th><th style="width:13%">Item</th><th style="width:23%">Description</th><th style="width:9%">Inventory status</th><th style="width:9%">Storage Template</th><th style="width:8%">Count 1</th><th style="width:8%">Count 2</th><th style="width:8%">Count 3</th><th style="width:11%">Remark</th></tr></thead><tbody>${pageRows.length ? pageRows.map(r => `<tr><td>${pfEscapeHtml(r.locCode)}</td><td>${pfEscapeHtml(r.itemCode)}</td><td>${pfEscapeHtml(r.desc)}</td><td>${pfEscapeHtml(r.status)}</td><td></td><td></td><td></td><td></td><td></td></tr>`).join('') : `<tr><td colspan="9" style="text-align:center;color:#888">ไม่มีรายการ</td></tr>`}</tbody></table><footer class="pf-footer"><div>คนนับจริง...........................</div><div>เวลาเริ่ม...........................</div><div>เวลาจบ...........................</div></footer></section>`).join('');
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${pfEscapeHtml(title)}</title><style>@page { size: A4 landscape; margin: 8mm 6mm; } * { box-sizing:border-box; } body { margin:0; font-family: Arial, 'Sarabun', 'Tahoma', sans-serif; color:#000; } .pf-page { page-break-after: always; } .pf-page:last-child { page-break-after: auto; } .pf-header { display:flex; align-items:center; gap:14px; border-bottom:2.5px solid #000; padding-bottom:6px; margin-bottom:8px; } .pf-logo { height:42px; } .pf-title { flex:1; text-align:center; font-size:24px; font-weight:bold; } .pf-meta { font-size:11px; text-align:right; line-height:1.5; white-space:nowrap; } .pf-table { width:100%; border-collapse:collapse; font-size:11px; table-layout:fixed; } .pf-table th, .pf-table td { border:1px solid #000; padding:5px 6px; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .pf-table th { background:#f0f0f0; font-weight:bold; font-size:10.5px; } .pf-table td { height:22px; } .pf-footer { display:flex; justify-content:space-between; margin-top:12px; font-size:12px; } @media print { .pf-noprint { display:none; } }
 </style></head><body><div class="pf-noprint" style="padding:10px;background:#fffbe6;border-bottom:1px solid #ccc;font-family:sans-serif;font-size:13px">กำลังเปิดหน้าต่างพิมพ์... กด Ctrl+P (หรือ Cmd+P บน Mac) เพื่อพิมพ์</div>${pagesHtml}<script>window.onload = function(){ setTimeout(function(){ window.print(); }, 300); };<\/script></body></html>`;
   const win = window.open('', '_blank'); if (!win) { alert('เบราว์เซอร์บล็อกป๊อปอัพ'); return; }
@@ -10478,7 +12157,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'v60' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'v62' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -10796,18 +12475,387 @@ async function restoreBackupExcel() {
   }
 }
 
+function themeColorFieldHtml(field) {
+  const value = uiBranding[field.key] || DEFAULT_BRANDING[field.key];
+  return `
+    <div class="theme-color-field">
+      <label for="theme_hex_${field.key}">${field.label}</label>
+      <input class="theme-color-picker" type="color" id="theme_picker_${field.key}" value="${value}"
+        oninput="syncThemeColorField('${field.key}','picker')">
+      <input class="theme-hex-input" type="text" id="theme_hex_${field.key}" value="${value}"
+        maxlength="7" inputmode="text" spellcheck="false"
+        oninput="syncThemeColorField('${field.key}','hex')"
+        onblur="normalizeThemeColorField('${field.key}')">
+    </div>`;
+}
+
+function themeColorGroupHtml(group, index) {
+  return `
+    <details class="theme-settings-group" ${index < 2 ? 'open' : ''}>
+      <summary>${group.title}<span style="color:var(--brand-muted-text);font-size:11px">${group.fields.length} สี</span></summary>
+      <div class="theme-editor-grid">${group.fields.map(themeColorFieldHtml).join('')}</div>
+    </details>`;
+}
+
+function brandingLogoPreviewHtml(logoDataUrl = _brandingDraftLogo) {
+  const logo = normalizeLogoDataUrl(logoDataUrl);
+  return logo
+    ? `<img class="brand-logo-image" src="${logo}" alt="ตัวอย่างโลโก้">`
+    : navIconSvg('warehouse', 68);
+}
+
+async function loadAdBranding() {
+  if (prof?.role !== 'admin') { go(home()); return; }
+  _brandingDraftLogo = uiBranding.logoDataUrl || '';
+  S._brandingSavedSnapshot = { ...uiBranding };
+  cnt().innerHTML = `
+    <div class="admin-settings-shell">
+      <div class="alert alert-blue" style="line-height:1.7">
+        🔒 หน้านี้ใช้ได้เฉพาะ Admin · ชื่อ สี และโลโก้ที่บันทึกจะใช้กับหน้า Login และทุกอุปกรณ์
+      </div>
+
+      <section class="admin-settings-card">
+        <div class="admin-settings-head">
+          <div>
+            <h2>ชื่อและโลโก้ระบบ</h2>
+            <p>เปลี่ยนชื่อหลัก ชื่อรอง และโลโก้ที่แสดงในหน้า Login กับ Sidebar</p>
+          </div>
+        </div>
+        <div class="system-name-grid">
+          <div class="admin-user-field">
+            <label for="branding-system-name">ชื่อระบบ</label>
+            <input id="branding-system-name" maxlength="60" value="${escapeWmsText(uiBranding.systemName)}"
+              placeholder="เช่น Cycle Count" oninput="previewBrandingDraft()">
+          </div>
+          <div class="admin-user-field">
+            <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
+            <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
+              placeholder="เช่น Warehouse v1.0" oninput="previewBrandingDraft()">
+          </div>
+        </div>
+        <div class="logo-admin-layout">
+          <div class="logo-admin-preview ${_brandingDraftLogo ? 'has-custom-logo' : ''}" id="branding-logo-preview">
+            ${brandingLogoPreviewHtml()}
+          </div>
+          <div>
+            <input type="file" id="branding-logo-file" accept="image/png,image/jpeg,image/webp"
+              onchange="handleBrandLogoFile(this)">
+            <div class="admin-user-meta">รองรับ PNG, JPG, WEBP ไม่เกิน 5 MB · ระบบย่อรูปให้อัตโนมัติ</div>
+            <button class="btn btn-ghost btn-sm" type="button" style="margin-top:12px"
+              onclick="removeBrandLogo()">ใช้ไอคอนเริ่มต้น</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-settings-card">
+        <div class="admin-settings-head">
+          <div>
+            <h2>กำหนดธีมด้วยโค้ดสี HEX — ทุกส่วน</h2>
+            <p>กดเลือกสีหรือพิมพ์โค้ด เช่น #C8A96B · พรีวิวด้านล่างจะเปลี่ยนทันที</p>
+          </div>
+          <div class="theme-settings-toolbar">
+            <button class="btn btn-ghost btn-sm" type="button" onclick="toggleThemeGroups(true)">เปิดทั้งหมด</button>
+            <button class="btn btn-ghost btn-sm" type="button" onclick="toggleThemeGroups(false)">ซ่อนทั้งหมด</button>
+          </div>
+        </div>
+        <div id="theme-settings-groups">
+          ${BRANDING_COLOR_GROUPS.map(themeColorGroupHtml).join('')}
+        </div>
+      </section>
+
+      <section class="admin-settings-card">
+        <div class="admin-settings-head">
+          <div>
+            <h2>พรีวิวธีมแบบเต็ม</h2>
+            <p>จำลอง Sidebar, KPI, Stock Accuracy, กราฟ, Progress และปุ่ม โดยไม่กระทบข้อมูลจริง</p>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="branding-preview-toggle" type="button"
+            onclick="toggleBrandPreview()">ซ่อนพรีวิว</button>
+        </div>
+        <div class="brand-preview-v63" id="branding-live-preview">
+          <div class="brand-preview-shell">
+            <aside class="brand-preview-side">
+              <div class="sidebar-logo-icon ${_brandingDraftLogo ? 'has-custom-logo' : ''}" id="branding-preview-sidebar-logo">
+                ${brandingLogoPreviewHtml()}
+              </div>
+              <div class="brand-preview-side-title" id="branding-preview-name">${escapeWmsText(uiBranding.systemName)}</div>
+              <div class="brand-preview-side-sub" id="branding-preview-subtitle">${escapeWmsText(uiBranding.systemSubtitle)}</div>
+              <div class="brand-preview-side-menu"><span>Dashboard</span><span>Settings</span></div>
+            </aside>
+            <main class="brand-preview-main">
+              <div class="brand-preview-title">Dashboard Preview</div>
+              <div class="brand-preview-sub">ตัวอย่างสีและองค์ประกอบหลักของระบบ</div>
+              <div class="brand-preview-kpis">
+                <div class="brand-preview-kpi">22</div><div class="brand-preview-kpi">38</div>
+                <div class="brand-preview-kpi">0</div><div class="brand-preview-kpi">2</div>
+              </div>
+              <div class="brand-preview-panels">
+                <div class="brand-preview-accuracy">
+                  <strong>Stock Accuracy</strong>
+                  <div class="brand-preview-ring"></div>
+                </div>
+                <div class="brand-preview-chart">
+                  <strong style="color:var(--brand-heading)">Hourly Counting</strong>
+                  <svg viewBox="0 0 360 110" role="img" aria-label="ตัวอย่างกราฟ">
+                    <path class="area" d="M5 93 L55 74 L102 87 L155 40 L205 69 L260 25 L310 65 L355 48 L355 103 L5 103 Z"></path>
+                    <path class="line" d="M5 93 L55 74 L102 87 L155 40 L205 69 L260 25 L310 65 L355 48"></path>
+                  </svg>
+                  <div class="brand-preview-progress"><span></span></div>
+                  <div class="brand-preview-actions">
+                    <button class="main" type="button">ปุ่มหลัก</button>
+                    <button class="minor" type="button">ปุ่มรอง</button>
+                  </div>
+                </div>
+              </div>
+            </main>
+          </div>
+        </div>
+      </section>
+
+      <div id="branding-save-alert"></div>
+      <div class="admin-save-bar">
+        <button class="btn btn-ghost" type="button" onclick="resetBrandingDraft()">คืนค่าเริ่มต้นทั้งหมด</button>
+        <button class="btn btn-ghost" type="button" onclick="cancelBrandingChanges()">ยกเลิกการแก้ไข</button>
+        <button class="btn btn-blue" id="branding-save-btn" type="button" onclick="saveBrandingSettings()">บันทึกชื่อ ธีม และโลโก้</button>
+      </div>
+    </div>`;
+}
+
+function toggleThemeGroups(open) {
+  document.querySelectorAll('#theme-settings-groups .theme-settings-group').forEach(group => {
+    group.open = Boolean(open);
+  });
+}
+
+function toggleBrandPreview() {
+  const preview = Q('branding-live-preview');
+  const button = Q('branding-preview-toggle');
+  if (!preview || !button) return;
+  const hidden = preview.classList.toggle('hidden-preview');
+  button.textContent = hidden ? 'แสดงพรีวิว' : 'ซ่อนพรีวิว';
+}
+
+function syncThemeColorField(key, source) {
+  const picker = Q(`theme_picker_${key}`);
+  const hex = Q(`theme_hex_${key}`);
+  if (!picker || !hex) return;
+  if (source === 'picker') hex.value = String(picker.value || '').toUpperCase();
+  const value = String(hex.value || '').trim().toUpperCase();
+  hex.value = value;
+  const valid = /^#[0-9A-F]{6}$/.test(value);
+  hex.style.borderColor = valid ? '' : 'var(--brand-danger)';
+  if (!valid) return;
+  picker.value = value;
+  previewBrandingDraft();
+}
+
+function normalizeThemeColorField(key) {
+  const hex = Q(`theme_hex_${key}`);
+  if (!hex) return;
+  const fallback = uiBranding[key] || DEFAULT_BRANDING[key];
+  hex.value = normalizeHexColor(hex.value, fallback);
+  syncThemeColorField(key, 'hex');
+}
+
+function collectBrandingDraft() {
+  const draft = {
+    systemName: Q('branding-system-name')?.value || uiBranding.systemName,
+    systemSubtitle: Q('branding-system-subtitle')?.value || uiBranding.systemSubtitle,
+    logoDataUrl: _brandingDraftLogo,
+  };
+  BRANDING_COLOR_FIELDS.forEach(({ key, label }) => {
+    const value = String(Q(`theme_hex_${key}`)?.value || '').trim().toUpperCase();
+    if (!/^#[0-9A-F]{6}$/.test(value)) throw new Error(`โค้ดสี “${label}” ไม่ถูกต้อง`);
+    draft[key] = value;
+  });
+  return normalizeBrandingSettings(draft);
+}
+
+function previewBrandingDraft() {
+  try {
+    const draft = collectBrandingDraft();
+    applyBrandingSettings(draft, false);
+    if (Q('branding-preview-name')) Q('branding-preview-name').textContent = draft.systemName;
+    if (Q('branding-preview-subtitle')) Q('branding-preview-subtitle').textContent = draft.systemSubtitle;
+  } catch (_) {}
+}
+
+function resizeBrandLogo(file, maxSide = 420, quality = .88) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('อ่านไฟล์โลโก้ไม่สำเร็จ'));
+    reader.onload = () => {
+      const image = new Image();
+      image.onerror = () => reject(new Error('ไฟล์นี้ไม่ใช่รูปภาพที่รองรับ'));
+      image.onload = () => {
+        const ratio = Math.min(1, maxSide / Math.max(image.naturalWidth || 1, image.naturalHeight || 1));
+        const width = Math.max(1, Math.round(image.naturalWidth * ratio));
+        const height = Math.max(1, Math.round(image.naturalHeight * ratio));
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext('2d');
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = 'high';
+        context.clearRect(0, 0, width, height);
+        context.drawImage(image, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/webp', quality));
+      };
+      image.src = String(reader.result || '');
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleBrandLogoFile(input) {
+  const file = input?.files?.[0];
+  if (!file) return;
+  if (!/^image\/(png|jpeg|webp)$/i.test(file.type || '')) {
+    alert('รองรับเฉพาะไฟล์ PNG, JPG และ WEBP');
+    input.value = '';
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    alert('ไฟล์โลโก้ต้องมีขนาดไม่เกิน 5 MB');
+    input.value = '';
+    return;
+  }
+  try {
+    let dataUrl = await resizeBrandLogo(file);
+    if (dataUrl.length > 900000) dataUrl = await resizeBrandLogo(file, 300, .76);
+    _brandingDraftLogo = normalizeLogoDataUrl(dataUrl);
+    if (!_brandingDraftLogo) throw new Error('โลโก้หลังย่อยังมีขนาดใหญ่เกินไป');
+    const logoPreview = Q('branding-logo-preview');
+    const sidebarPreview = Q('branding-preview-sidebar-logo');
+    if (logoPreview) {
+      logoPreview.classList.add('has-custom-logo');
+      logoPreview.innerHTML = brandingLogoPreviewHtml();
+    }
+    if (sidebarPreview) {
+      sidebarPreview.classList.add('has-custom-logo');
+      sidebarPreview.innerHTML = brandingLogoPreviewHtml();
+    }
+    previewBrandingDraft();
+  } catch (error) {
+    alert(error.message || 'เตรียมโลโก้ไม่สำเร็จ');
+    input.value = '';
+  }
+}
+
+function removeBrandLogo() {
+  _brandingDraftLogo = '';
+  const logoPreview = Q('branding-logo-preview');
+  const sidebarPreview = Q('branding-preview-sidebar-logo');
+  if (logoPreview) {
+    logoPreview.classList.remove('has-custom-logo');
+    logoPreview.innerHTML = brandingLogoPreviewHtml('');
+  }
+  if (sidebarPreview) {
+    sidebarPreview.classList.remove('has-custom-logo');
+    sidebarPreview.innerHTML = brandingLogoPreviewHtml('');
+  }
+  previewBrandingDraft();
+}
+
+function resetBrandingDraft() {
+  BRANDING_COLOR_FIELDS.forEach(({ key }) => {
+    const picker = Q(`theme_picker_${key}`);
+    const hex = Q(`theme_hex_${key}`);
+    if (picker) picker.value = DEFAULT_BRANDING[key];
+    if (hex) {
+      hex.value = DEFAULT_BRANDING[key];
+      hex.style.borderColor = '';
+    }
+  });
+  if (Q('branding-system-name')) Q('branding-system-name').value = DEFAULT_BRANDING.systemName;
+  if (Q('branding-system-subtitle')) Q('branding-system-subtitle').value = DEFAULT_BRANDING.systemSubtitle;
+  _brandingDraftLogo = '';
+  removeBrandLogo();
+  previewBrandingDraft();
+}
+
+function cancelBrandingChanges() {
+  applyBrandingSettings(S._brandingSavedSnapshot || DEFAULT_BRANDING, false);
+  loadAdBranding();
+}
+
+async function saveBrandingSettings() {
+  if (prof?.role !== 'admin') { adminOnlyMessage(); return; }
+  const alertBox = Q('branding-save-alert');
+  const button = Q('branding-save-btn');
+  try {
+    const settings = collectBrandingDraft();
+    if (button) { button.disabled = true; button.textContent = 'กำลังบันทึก...'; }
+    if (alertBox) alertBox.innerHTML = `<div class="alert alert-blue">⏳ กำลังบันทึกชื่อ ธีม และโลโก้...</div>`;
+    const result = await invokeAdminSettings('branding_save', { settings });
+    applyBrandingSettings(result.settings || settings);
+    S._brandingSavedSnapshot = { ...uiBranding };
+    if (alertBox) alertBox.innerHTML = `<div class="alert alert-green">✅ บันทึกชื่อ ธีม และโลโก้เรียบร้อยแล้ว</div>`;
+    setTimeout(() => render(), 700);
+  } catch (error) {
+    if (alertBox) alertBox.innerHTML = `<div class="alert alert-red">❌ ${escapeWmsText(error.message || error)}</div>`;
+    if (button) { button.disabled = false; button.textContent = 'บันทึกชื่อ ธีม และโลโก้'; }
+  }
+}
+
+function userAvatarPreviewHtml(key, name = 'U') {
+  const avatar = normalizeLogoDataUrl(_userAvatarDrafts[key]);
+  return avatar
+    ? `<img src="${avatar}" alt="รูปประจำตัว">`
+    : escapeWmsText(String(name || 'U').trim().charAt(0).toUpperCase() || 'U');
+}
+
+async function handleUserAvatarFile(input, key) {
+  const file = input?.files?.[0];
+  if (!file) return;
+  if (!/^image\/(png|jpeg|webp)$/i.test(file.type || '')) {
+    alert('รองรับรูปประจำตัวเฉพาะ PNG, JPG และ WEBP');
+    input.value = '';
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    alert('รูปประจำตัวต้องมีขนาดไม่เกิน 5 MB');
+    input.value = '';
+    return;
+  }
+  try {
+    let dataUrl = await resizeBrandLogo(file, 320, .86);
+    if (dataUrl.length > 900000) dataUrl = await resizeBrandLogo(file, 220, .74);
+    _userAvatarDrafts[key] = normalizeLogoDataUrl(dataUrl);
+    if (!_userAvatarDrafts[key]) throw new Error('รูปหลังย่อยังมีขนาดใหญ่เกินไป');
+    const preview = Q(`admin_user_avatar_preview_${key}`);
+    const name = Q(key === 'new' ? 'admin_user_new_name' : `admin_user_name_${key}`)?.value || 'U';
+    if (preview) preview.innerHTML = userAvatarPreviewHtml(key, name);
+  } catch (error) {
+    alert(error.message || 'เตรียมรูปประจำตัวไม่สำเร็จ');
+    input.value = '';
+  }
+}
+
+function removeUserAvatar(key) {
+  _userAvatarDrafts[key] = '';
+  const preview = Q(`admin_user_avatar_preview_${key}`);
+  const name = Q(key === 'new' ? 'admin_user_new_name' : `admin_user_name_${key}`)?.value || 'U';
+  if (preview) preview.innerHTML = userAvatarPreviewHtml(key, name);
+  const input = Q(`admin_user_avatar_file_${key}`);
+  if (input) input.value = '';
+}
+
 async function loadAdUsers() {
   if (prof?.role !== 'admin') { go(home()); return; }
   const [
-    { data: users, error: userError },
+    userResult,
     { data: counters, error: counterError },
     { data: remarks, error: remarkError },
   ] = await Promise.all([
-    sb.from('profiles').select('id,name,role').order('name'),
+    invokeAdminSettings('user_list'),
     sb.from('counter_names').select('id,name').order('name'),
     sb.from('remark_options').select('id,context,label').order('context').order('label'),
   ]);
-  const error = userError || counterError || remarkError;
+  const users = userResult?.users || [];
+  _userAvatarDrafts = Object.fromEntries(users.map(user => [user.id, normalizeLogoDataUrl(user.avatar_data_url)]));
+  _userAvatarDrafts.new = '';
+  const error = counterError || remarkError;
   if (error) { cnt().innerHTML = errBox(error.message); return; }
 
   const masterGroup = (icon, title, count, body) => `
@@ -10822,22 +12870,62 @@ async function loadAdUsers() {
     </details>`;
 
   const userRows = (users || []).map(u => `
-    <div class="row" style="cursor:default;align-items:flex-end;gap:10px;flex-wrap:wrap">
-      <div class="row-body" style="min-width:220px">
-        <label style="font-size:11px">ชื่อ User ที่ใช้ล็อกอิน</label>
-        <input id="admin_user_name_${u.id}" value="${escapeWmsText(u.name || '')}" maxlength="120">
+    <div class="row" style="cursor:default;display:block">
+      <div class="admin-user-row-grid">
+        <div class="admin-user-field">
+          <label for="admin_user_name_${u.id}">ชื่อ User</label>
+          <input id="admin_user_name_${u.id}" value="${escapeWmsText(u.name || '')}" maxlength="120">
+        </div>
+        <div class="admin-user-field">
+          <label for="admin_user_login_id_${u.id}">User ID</label>
+          <input type="text" id="admin_user_login_id_${u.id}" value="${escapeWmsText(u.login_id || '')}"
+            maxlength="40" autocapitalize="none" spellcheck="false">
+        </div>
+        <div class="admin-user-field">
+          <label for="admin_user_role_${u.id}">ระดับสิทธิ์</label>
+          <select id="admin_user_role_${u.id}">
+            <option value="counter" ${u.role==='counter'?'selected':''}>User (รับงาน)</option>
+            <option value="supervisor" ${u.role==='supervisor'?'selected':''}>Supervisor</option>
+            <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
+          </select>
+        </div>
+        <div class="admin-user-field">
+          <label>รูปประจำตัว</label>
+          <div class="admin-avatar-editor">
+            <div class="admin-avatar-preview" id="admin_user_avatar_preview_${u.id}">
+              ${userAvatarPreviewHtml(u.id, u.name)}
+            </div>
+            <div class="admin-avatar-controls">
+              <input class="admin-avatar-file" type="file" id="admin_user_avatar_file_${u.id}"
+                accept="image/png,image/jpeg,image/webp"
+                onchange="handleUserAvatarFile(this,'${u.id}')">
+              <button class="btn btn-ghost btn-sm admin-avatar-remove" type="button"
+                onclick="removeUserAvatar('${u.id}')">ลบรูป</button>
+            </div>
+          </div>
+        </div>
+        <div class="admin-user-actions">
+          <button class="btn btn-blue btn-sm" onclick="saveLoginUser('${u.id}')">บันทึก</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleUserPassword('${u.id}')">ตั้งรหัสผ่าน</button>
+          <button class="btn btn-red btn-sm admin-delete-icon" onclick="deleteLoginUser('${u.id}')"
+            ${u.id===me?.id?'disabled title="ลบบัญชีที่กำลังใช้งานไม่ได้"':''}>
+            ${adminTrashIconSvg()} <span>ลบ</span>
+          </button>
+        </div>
       </div>
-      <select style="width:auto;font-size:13px;padding:10px 14px;font-weight:700"
-        onchange="updateUserRole('${u.id}',this.value,this)">
-        <option value="counter" ${u.role==='counter'?'selected':''}>User (รับงาน)</option>
-        <option value="supervisor" ${u.role==='supervisor'?'selected':''}>Supervisor</option>
-        <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
-      </select>
-      <button class="btn btn-blue btn-sm" onclick="saveUserName('${u.id}')">บันทึกชื่อ</button>
-      <button class="btn btn-red btn-sm admin-delete-icon" onclick="deleteLoginUser('${u.id}')"
-        ${u.id===me?.id?'disabled title="ลบบัญชีที่กำลังใช้งานไม่ได้"':''}>
-        ${adminTrashIconSvg()} <span>ลบถาวร</span>
-      </button>
+      <div class="admin-inline-password" id="admin_user_password_box_${u.id}">
+        <div class="password-input-wrap">
+          <input type="password" id="admin_user_password_${u.id}" minlength="8" maxlength="72"
+            placeholder="รหัสผ่านใหม่ 8–72 ตัวอักษร"
+            onkeydown="if(event.key==='Enter')resetLoginUserPassword('${u.id}')">
+          ${passwordEyeButtonHtml(`admin_user_password_${u.id}`,'แสดงรหัสผ่านใหม่')}
+        </div>
+        <button class="btn btn-blue btn-sm" onclick="resetLoginUserPassword('${u.id}')">ยืนยันรหัสผ่านใหม่</button>
+      </div>
+      <div class="admin-user-meta">
+        สร้างเมื่อ ${u.created_at ? new Date(u.created_at).toLocaleString('th-TH') : '—'}
+        · เข้าใช้ล่าสุด ${u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleString('th-TH') : 'ยังไม่เคยเข้าสู่ระบบ'}
+      </div>
     </div>`).join('');
 
   const counterRows = (counters || []).map(c => `
@@ -10871,8 +12959,59 @@ async function loadAdUsers() {
   cnt().innerHTML = `
     <div class="alert alert-blue" style="line-height:1.7">
       🔒 หน้านี้ใช้ได้เฉพาะ Admin<br>
-      การเปลี่ยนชื่อจะเปลี่ยนข้อมูลเดิมในประวัติทั้งหมดด้วย ส่วนปุ่มลบจะลบข้อมูลนั้นแบบถาวร
+      Admin สามารถสร้าง แก้ไข ตั้งรหัสผ่าน และลบบัญชีได้ ส่วนประวัติการทำงานเดิมจะยังคงอยู่
     </div>
+    <section class="admin-settings-card" style="margin-bottom:18px">
+      <div class="admin-settings-head">
+        <div>
+          <h2>สร้าง User ใหม่</h2>
+          <p>กำหนด User ID สำหรับเข้าสู่ระบบโดยไม่ต้องใช้อีเมล · รูปประจำตัวแก้ไขภายหลังได้</p>
+        </div>
+      </div>
+      <div class="admin-user-create-grid">
+        <div class="admin-user-field">
+          <label for="admin_user_new_name">ชื่อ User</label>
+          <input id="admin_user_new_name" maxlength="120" placeholder="เช่น Somchai">
+        </div>
+        <div class="admin-user-field">
+          <label for="admin_user_new_login_id">User ID</label>
+          <input type="text" id="admin_user_new_login_id" maxlength="40" autocapitalize="none"
+            spellcheck="false" placeholder="เช่น VPW64054">
+        </div>
+        <div class="admin-user-field">
+          <label for="admin_user_new_role">ระดับสิทธิ์</label>
+          <select id="admin_user_new_role">
+            <option value="counter">User (รับงาน)</option>
+            <option value="supervisor">Supervisor</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <div class="admin-user-field">
+          <label for="admin_user_new_password">รหัสผ่านเริ่มต้น</label>
+          <div class="password-input-wrap">
+            <input type="password" id="admin_user_new_password" minlength="8" maxlength="72"
+              placeholder="อย่างน้อย 8 ตัวอักษร"
+              onkeydown="if(event.key==='Enter')createLoginUser()">
+            ${passwordEyeButtonHtml('admin_user_new_password','แสดงรหัสผ่านเริ่มต้น')}
+          </div>
+        </div>
+        <div class="admin-user-field">
+          <label>รูปประจำตัว</label>
+          <div class="admin-avatar-editor">
+            <div class="admin-avatar-preview" id="admin_user_avatar_preview_new">U</div>
+            <div class="admin-avatar-controls">
+              <input class="admin-avatar-file" type="file" id="admin_user_avatar_file_new"
+                accept="image/png,image/jpeg,image/webp"
+                onchange="handleUserAvatarFile(this,'new')">
+              <button class="btn btn-ghost btn-sm admin-avatar-remove" type="button"
+                onclick="removeUserAvatar('new')">ลบรูป</button>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-green" id="admin_user_create_btn" onclick="createLoginUser()">＋ สร้าง User</button>
+      </div>
+      <div id="admin_user_create_alert" style="margin-top:12px"></div>
+    </section>
     ${masterGroup('🔑','User ที่ใช้ล็อกอินและรับงาน',users?.length || 0,
       userRows || `<div class="load" style="padding:24px">ยังไม่มี User</div>`)}
     ${masterGroup('👥','คนนับจริง',counters?.length || 0,`
@@ -10885,31 +13024,98 @@ async function loadAdUsers() {
     ${remarkSection('wms','หมายเหตุปรับยอด WMS')}`;
 }
 
-async function saveUserName(id) {
-  const name = Q(`admin_user_name_${id}`)?.value.trim();
-  if (!name) { alert('กรุณาระบุชื่อ User'); return; }
+async function createLoginUser() {
+  if (prof?.role !== 'admin') { adminOnlyMessage(); return; }
+  const name = Q('admin_user_new_name')?.value.trim();
+  const loginId = Q('admin_user_new_login_id')?.value.trim().toLowerCase();
+  const role = Q('admin_user_new_role')?.value;
+  const password = Q('admin_user_new_password')?.value || '';
+  const avatarDataUrl = normalizeLogoDataUrl(_userAvatarDrafts.new);
+  const alertBox = Q('admin_user_create_alert');
+  const button = Q('admin_user_create_btn');
+  if (!name || !loginId || !password) {
+    if (alertBox) alertBox.innerHTML = `<div class="alert alert-amber">กรอกชื่อ User ID และรหัสผ่านให้ครบ</div>`;
+    return;
+  }
+  if (!/^[a-z0-9][a-z0-9._-]{2,39}$/.test(loginId)) {
+    if (alertBox) alertBox.innerHTML = `<div class="alert alert-red">User ID ต้องมี 3–40 ตัว และใช้ได้เฉพาะ a-z, 0-9, จุด, ขีดกลาง หรือขีดล่าง</div>`;
+    return;
+  }
+  if (password.length < 8 || password.length > 72) {
+    if (alertBox) alertBox.innerHTML = `<div class="alert alert-red">รหัสผ่านต้องมี 8–72 ตัวอักษร</div>`;
+    return;
+  }
   try {
-    await invokeAdminMaster('user_rename', { id, name });
-    alert('✅ เปลี่ยนชื่อ User และข้อมูลเดิมเรียบร้อยแล้ว');
-    if (id === me?.id) { prof.name = name; render(); }
-    else loadAdUsers();
+    if (button) { button.disabled = true; button.textContent = 'กำลังสร้าง...'; }
+    if (alertBox) alertBox.innerHTML = `<div class="alert alert-blue">⏳ กำลังสร้างบัญชี...</div>`;
+    await invokeAdminSettings('user_create', {
+      name,
+      login_id: loginId,
+      role,
+      password,
+      avatar_data_url: avatarDataUrl,
+    });
+    if (alertBox) alertBox.innerHTML = `<div class="alert alert-green">✅ สร้าง User สำเร็จ</div>`;
+    setTimeout(() => loadAdUsers(), 500);
   } catch (error) {
-    alert('แก้ชื่อ User ไม่สำเร็จ: ' + error.message);
+    if (alertBox) alertBox.innerHTML = `<div class="alert alert-red">❌ ${escapeWmsText(error.message || error)}</div>`;
+    if (button) { button.disabled = false; button.textContent = '＋ สร้าง User'; }
   }
 }
 
-async function updateUserRole(id, role, selectEl) {
+async function saveLoginUser(id) {
+  if (prof?.role !== 'admin') { adminOnlyMessage(); return; }
+  const name = Q(`admin_user_name_${id}`)?.value.trim();
+  const loginId = Q(`admin_user_login_id_${id}`)?.value.trim().toLowerCase();
+  const role = Q(`admin_user_role_${id}`)?.value;
+  const avatarDataUrl = normalizeLogoDataUrl(_userAvatarDrafts[id]);
+  if (!name || !loginId) { alert('กรุณากรอกชื่อและ User ID ให้ครบ'); return; }
+  if (!/^[a-z0-9][a-z0-9._-]{2,39}$/.test(loginId)) {
+    alert('User ID ต้องมี 3–40 ตัว และใช้ได้เฉพาะ a-z, 0-9, จุด, ขีดกลาง หรือขีดล่าง');
+    return;
+  }
   try {
-    await invokeAdminMaster('user_role', { id, role });
-    if (selectEl) selectEl.dataset.previous = role;
-    alert('✅ อัปเดตสิทธิ์เรียบร้อยแล้ว');
+    await invokeAdminSettings('user_update', {
+      id,
+      name,
+      login_id: loginId,
+      role,
+      avatar_data_url: avatarDataUrl,
+    });
+    alert('✅ บันทึกข้อมูล User เรียบร้อยแล้ว');
     if (id === me?.id) {
       await loadProf();
-      go(home(), {}, { resetHistory:true });
+      render();
+    } else {
+      loadAdUsers();
     }
   } catch (error) {
-    alert('อัปเดตสิทธิ์ไม่สำเร็จ: ' + error.message);
+    alert('แก้ไข User ไม่สำเร็จ: ' + error.message);
     loadAdUsers();
+  }
+}
+
+function toggleUserPassword(id) {
+  Q(`admin_user_password_box_${id}`)?.classList.toggle('open');
+  Q(`admin_user_password_${id}`)?.focus();
+}
+
+async function resetLoginUserPassword(id) {
+  if (prof?.role !== 'admin') { adminOnlyMessage(); return; }
+  const input = Q(`admin_user_password_${id}`);
+  const password = input?.value || '';
+  if (password.length < 8 || password.length > 72) {
+    alert('รหัสผ่านต้องมี 8–72 ตัวอักษร');
+    return;
+  }
+  if (!confirm('ยืนยันการตั้งรหัสผ่านใหม่ให้ User นี้?')) return;
+  try {
+    await invokeAdminSettings('user_password', { id, password });
+    if (input) input.value = '';
+    Q(`admin_user_password_box_${id}`)?.classList.remove('open');
+    alert('✅ ตั้งรหัสผ่านใหม่เรียบร้อยแล้ว');
+  } catch (error) {
+    alert('ตั้งรหัสผ่านใหม่ไม่สำเร็จ: ' + error.message);
   }
 }
 
@@ -10917,7 +13123,7 @@ async function deleteLoginUser(id) {
   if (id === me?.id) { alert('ไม่สามารถลบบัญชีที่กำลังใช้งานอยู่'); return; }
   if (!confirm('ลบ User นี้แบบถาวร?\n\nบัญชีจะเข้าสู่ระบบไม่ได้อีก งานและประวัติการนับเดิมจะยังอยู่ แต่ช่อง User ผู้รับงานเดิมจะแสดงเป็น “ไม่ระบุ User”')) return;
   try {
-    await invokeAdminMaster('user_delete', { id });
+    await invokeAdminSettings('user_delete', { id });
     alert('✅ ลบ User แบบถาวรแล้ว');
     loadAdUsers();
   } catch (error) {
@@ -10998,6 +13204,7 @@ async function deleteRemarkOption(id) {
 // Start Application
 window.addEventListener('DOMContentLoaded', () => {
   syncViewportSize();
+  applyBrandingSettings(readLocalBrandingSettings(), false);
   boot();
 });
 </script>
