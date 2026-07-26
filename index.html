@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cycle Count v65.1 - Edge Function Fix</title>
+<title>Cycle Count v66 - Direct Edge Fix</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -7444,7 +7444,7 @@ function fmtDMY(value) {
   if (Number.isNaN(d.getTime())) return String(value);
   return d.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
-window.__CYCLE_COUNT_BUILD__ = 'v65.1';
+window.__CYCLE_COUNT_BUILD__ = 'v66';
 
 let _viewportSyncFrame = 0;
 function syncViewportSize() {
@@ -7470,8 +7470,8 @@ const SUPA_KEY = 'sb_publishable_EuJ-IUiXWBLSNvQsG0CJ5w_C2LHJXAL';
 let sb, me, prof;
 let S = {};
 
-const BRANDING_STORAGE_KEY = 'cycle_count_ui_branding_v65';
-const LEGACY_BRANDING_STORAGE_KEYS = ['cycle_count_ui_branding_v64', 'cycle_count_ui_branding_v63'];
+const BRANDING_STORAGE_KEY = 'cycle_count_ui_branding_v66';
+const LEGACY_BRANDING_STORAGE_KEYS = ['cycle_count_ui_branding_v65', 'cycle_count_ui_branding_v64', 'cycle_count_ui_branding_v63'];
 const DEFAULT_BRANDING = Object.freeze({
   systemName: 'Cycle Count',
   systemSubtitle: 'Warehouse v1.0',
@@ -7766,7 +7766,7 @@ function applyBrandingSettings(settings, persistLocal = true) {
     const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
     root.setProperty(`--theme-${cssKey}`, uiBranding[key]);
   });
-  document.title = `${uiBranding.systemName} v65.1`;
+  document.title = `${uiBranding.systemName} v66`;
   if (persistLocal) {
     try { localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(uiBranding)); } catch (_) {}
   }
@@ -7822,67 +7822,72 @@ async function protectedFunctionHeaders() {
     throw new Error('Session หมดอายุ กรุณาออกจากระบบแล้วเข้าสู่ระบบใหม่');
   }
 
+  let verified = await sb.auth.getUser(session.access_token);
+  if ((verified.error || !verified.data?.user) && session.refresh_token) {
+    const refreshed = await sb.auth.refreshSession({ refresh_token: session.refresh_token });
+    sessionError = refreshed.error;
+    session = refreshed.data?.session;
+    if (!sessionError && session?.access_token) {
+      verified = await sb.auth.getUser(session.access_token);
+    }
+  }
+
+  if (sessionError || verified.error || !verified.data?.user || !session?.access_token) {
+    throw new Error('Session ไม่ถูกต้อง กรุณาออกจากระบบแล้วเข้าสู่ระบบใหม่');
+  }
+
+  me = verified.data.user;
   return {
     Authorization: `Bearer ${session.access_token}`,
-    apikey: SUPA_KEY,
   };
+}
+
+async function invokeProtectedEdge(functionName, action, payload = {}) {
+  const headers = await protectedFunctionHeaders();
+  let response;
+  try {
+    response = await fetch(`${SUPA_URL}/functions/v1/${encodeURIComponent(functionName)}`, {
+      method: 'POST',
+      headers: {
+        ...headers,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ action, ...payload }),
+    });
+  } catch (_) {
+    throw new Error(`เชื่อมต่อ ${functionName} ไม่สำเร็จ กรุณาตรวจอินเทอร์เน็ตแล้วลองใหม่`);
+  }
+
+  const raw = await response.text();
+  let data = {};
+  try {
+    data = raw ? JSON.parse(raw) : {};
+  } catch (_) {
+    data = { error: raw };
+  }
+
+  if (!response.ok) {
+    throw new Error(data?.error || data?.message || `${functionName} ตอบกลับ HTTP ${response.status}`);
+  }
+  if (!data?.ok) {
+    throw new Error(data?.error || `${functionName} ทำรายการไม่สำเร็จ`);
+  }
+  return data;
 }
 
 async function invokeAdminMaster(action, payload = {}) {
   if (prof?.role !== 'admin') throw new Error('คำสั่งนี้ทำได้เฉพาะ Admin เท่านั้น');
-  const headers = await protectedFunctionHeaders();
-  const { data, error } = await sb.functions.invoke('admin-master-data', {
-    body: { action, ...payload },
-    headers,
-  });
-  if (error) {
-    let message = error.message || 'เรียกใช้งานระบบ Admin ไม่สำเร็จ';
-    try {
-      const detail = await error.context?.json();
-      message = detail?.error || detail?.message || message;
-    } catch (_) {}
-    throw new Error(message);
-  }
-  if (!data?.ok) throw new Error(data?.error || 'ระบบ Admin ทำรายการไม่สำเร็จ');
-  return data;
+  return invokeProtectedEdge('admin-master-data', action, payload);
 }
 
 async function invokeAdminSettings(action, payload = {}) {
   if (prof?.role !== 'admin') throw new Error('คำสั่งนี้ทำได้เฉพาะ Admin เท่านั้น');
-  const headers = await protectedFunctionHeaders();
-  const { data, error } = await sb.functions.invoke('admin-settings-v65', {
-    body: { action, ...payload },
-    headers,
-  });
-  if (error) {
-    let message = error.message || 'เรียกใช้งานระบบตั้งค่า Admin ไม่สำเร็จ';
-    try {
-      const detail = await error.context?.json();
-      message = detail?.error || detail?.message || message;
-    } catch (_) {}
-    throw new Error(message);
-  }
-  if (!data?.ok) throw new Error(data?.error || 'ระบบตั้งค่า Admin ทำรายการไม่สำเร็จ');
-  return data;
+  return invokeProtectedEdge('admin-settings-v65', action, payload);
 }
 
 async function invokeAdminBackup(action, payload = {}) {
   if (prof?.role !== 'admin') throw new Error('ระบบ Backup/Restore ใช้ได้เฉพาะ Admin เท่านั้น');
-  const headers = await protectedFunctionHeaders();
-  const { data, error } = await sb.functions.invoke('admin-backup', {
-    body: { action, ...payload },
-    headers,
-  });
-  if (error) {
-    let message = error.message || 'เรียกใช้งานระบบ Backup/Restore ไม่สำเร็จ';
-    try {
-      const detail = await error.context?.json();
-      message = detail?.error || detail?.message || message;
-    } catch (_) {}
-    throw new Error(message);
-  }
-  if (!data?.ok) throw new Error(data?.error || 'ระบบ Backup/Restore ทำรายการไม่สำเร็จ');
-  return data;
+  return invokeProtectedEdge('admin-backup', action, payload);
 }
 
 function adminOnlyMessage() {
