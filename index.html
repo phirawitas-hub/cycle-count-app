@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cycle Count v66 - Direct Edge Fix</title>
+<title>Cycle Count v68 - Session Recovery Fix</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -7444,7 +7444,7 @@ function fmtDMY(value) {
   if (Number.isNaN(d.getTime())) return String(value);
   return d.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
-window.__CYCLE_COUNT_BUILD__ = 'v66';
+window.__CYCLE_COUNT_BUILD__ = 'v68';
 
 let _viewportSyncFrame = 0;
 function syncViewportSize() {
@@ -7466,12 +7466,14 @@ window.visualViewport?.addEventListener('resize', scheduleViewportSync, { passiv
 // ══════════════════════════════════════════════════════════
 const SUPA_URL = 'https://uiuaboxsfepyftqjlwil.supabase.co';
 const SUPA_KEY = 'sb_publishable_EuJ-IUiXWBLSNvQsG0CJ5w_C2LHJXAL';
+const AUTH_STORAGE_KEY = 'cycle_count_auth_session_v2';
+const LEGACY_AUTH_STORAGE_KEYS = ['sb-uiuaboxsfepyftqjlwil-auth-token'];
 
 let sb, me, prof;
 let S = {};
 
-const BRANDING_STORAGE_KEY = 'cycle_count_ui_branding_v66';
-const LEGACY_BRANDING_STORAGE_KEYS = ['cycle_count_ui_branding_v65', 'cycle_count_ui_branding_v64', 'cycle_count_ui_branding_v63'];
+const BRANDING_STORAGE_KEY = 'cycle_count_ui_branding_v68';
+const LEGACY_BRANDING_STORAGE_KEYS = ['cycle_count_ui_branding_v67', 'cycle_count_ui_branding_v66', 'cycle_count_ui_branding_v65', 'cycle_count_ui_branding_v64', 'cycle_count_ui_branding_v63'];
 const DEFAULT_BRANDING = Object.freeze({
   systemName: 'Cycle Count',
   systemSubtitle: 'Warehouse v1.0',
@@ -7766,7 +7768,7 @@ function applyBrandingSettings(settings, persistLocal = true) {
     const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
     root.setProperty(`--theme-${cssKey}`, uiBranding[key]);
   });
-  document.title = `${uiBranding.systemName} v66`;
+  document.title = `${uiBranding.systemName} v68`;
   if (persistLocal) {
     try { localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(uiBranding)); } catch (_) {}
   }
@@ -7805,40 +7807,88 @@ let _navStack = [];
 const NAV_DETAIL_PAGES = new Set(['c-count','sv-detail','ad-txlog','ad-new']);
 const BACK_BUTTON_PAGES = new Set(['c-count','sv-detail','sv-list','ad-txlog','ad-new']);
 
+const EDGE_FUNCTION_TOKEN_SAFE_LENGTH = 16000;
+let _protectedSessionRefresh = null;
+
+function isInvalidAuthError(error) {
+  const status = Number(error?.status || error?.statusCode || 0);
+  const message = String(error?.message || error || '');
+  return [400, 401, 403].includes(status)
+    || /refresh token|jwt|session.*(?:expired|missing|invalid|not found)|invalid.*session/i.test(message);
+}
+
+async function clearLocalAuthSession() {
+  try {
+    const { error } = await sb?.auth?.signOut({ scope: 'local' }) || {};
+    if (error) throw error;
+  } catch (_) {
+    try { localStorage.removeItem(AUTH_STORAGE_KEY); } catch (_) {}
+  }
+  me = null;
+  prof = null;
+}
+
+async function requireNewLogin(message = 'Session หมดอายุ กรุณาเข้าสู่ระบบใหม่') {
+  await clearLocalAuthSession();
+  if (typeof go === 'function') go('login');
+  const error = new Error(message);
+  error.code = 'AUTH_SESSION_INVALID';
+  throw error;
+}
+
+async function refreshProtectedSession(refreshToken) {
+  if (_protectedSessionRefresh) return _protectedSessionRefresh;
+  const pending = sb.auth.refreshSession({ refresh_token: refreshToken });
+  _protectedSessionRefresh = pending;
+  try {
+    return await pending;
+  } finally {
+    if (_protectedSessionRefresh === pending) _protectedSessionRefresh = null;
+  }
+}
+
 async function protectedFunctionHeaders() {
   if (!sb) throw new Error('ระบบฐานข้อมูลยังไม่พร้อม กรุณารีเฟรชหน้าแล้วลองใหม่');
 
   let { data: sessionData, error: sessionError } = await sb.auth.getSession();
   let session = sessionData?.session;
-  const expiresSoon = !session?.expires_at || (session.expires_at * 1000) <= (Date.now() + 60000);
+  if (sessionError || !session?.access_token || !session?.refresh_token) {
+    return requireNewLogin();
+  }
 
-  if (!sessionError && session?.refresh_token && expiresSoon) {
-    const refreshed = await sb.auth.refreshSession({ refresh_token: session.refresh_token });
+  const expiresSoon = !session?.expires_at || (session.expires_at * 1000) <= (Date.now() + 60000);
+  const authMetadataHasAvatar = Boolean(
+    session?.user?.user_metadata
+    && Object.prototype.hasOwnProperty.call(session.user.user_metadata, 'avatar_data_url')
+  );
+  const accessTokenTooLarge = String(session?.access_token || '').length > EDGE_FUNCTION_TOKEN_SAFE_LENGTH;
+
+  // V65 temporarily stored the Base64 avatar in Auth user_metadata. Supabase
+  // embeds that metadata in the JWT, which can make the Authorization header
+  // too large and cause an HTTP 400 at the Edge gateway before CORS/Function
+  // code runs. Force one refresh after the server-side metadata is compacted.
+  if (!sessionError && session?.refresh_token && (expiresSoon || authMetadataHasAvatar || accessTokenTooLarge)) {
+    const refreshed = await refreshProtectedSession(session.refresh_token);
     sessionError = refreshed.error;
     session = refreshed.data?.session;
   }
 
   if (sessionError || !session?.access_token) {
-    throw new Error('Session หมดอายุ กรุณาออกจากระบบแล้วเข้าสู่ระบบใหม่');
+    if (isInvalidAuthError(sessionError)) return requireNewLogin();
+    throw new Error('เชื่อมต่อระบบตรวจสอบ Session ไม่สำเร็จ กรุณาลองใหม่');
   }
 
-  let verified = await sb.auth.getUser(session.access_token);
-  if ((verified.error || !verified.data?.user) && session.refresh_token) {
-    const refreshed = await sb.auth.refreshSession({ refresh_token: session.refresh_token });
-    sessionError = refreshed.error;
-    session = refreshed.data?.session;
-    if (!sessionError && session?.access_token) {
-      verified = await sb.auth.getUser(session.access_token);
-    }
-  }
-
-  if (sessionError || verified.error || !verified.data?.user || !session?.access_token) {
-    throw new Error('Session ไม่ถูกต้อง กรุณาออกจากระบบแล้วเข้าสู่ระบบใหม่');
+  const verified = await sb.auth.getUser(session.access_token);
+  if (verified.error || !verified.data?.user) {
+    if (isInvalidAuthError(verified.error)) return requireNewLogin('Session ไม่ถูกต้อง กรุณาเข้าสู่ระบบใหม่');
+    throw new Error('เชื่อมต่อระบบยืนยันตัวตนไม่สำเร็จ กรุณาลองใหม่');
   }
 
   me = verified.data.user;
   return {
     Authorization: `Bearer ${session.access_token}`,
+    apikey: SUPA_KEY,
+    'x-client-info': 'cycle-count-v68',
   };
 }
 
@@ -7930,11 +7980,35 @@ async function boot() {
       Q('app').innerHTML = `<div class="lbox"><div class="lcard"><div class="alert alert-red">เชื่อมต่อกับระบบฐานข้อมูลไม่ได้จ้า (Supabase SDK missing)</div></div></div>`;
       return;
     }
-    sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+    try {
+      LEGACY_AUTH_STORAGE_KEYS.forEach(key => localStorage.removeItem(key));
+    } catch (_) {}
+    sb = supabase.createClient(SUPA_URL, SUPA_KEY, {
+      auth: {
+        storageKey: AUTH_STORAGE_KEY,
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
+    });
     await loadPublicBrandingSettings();
-    const { data: { session } } = await sb.auth.getSession();
+    const { data: { session }, error: sessionError } = await sb.auth.getSession();
+    if (sessionError) {
+      await clearLocalAuthSession();
+      go('login');
+      return;
+    }
     if (session?.user) {
-      me = session.user;
+      const verified = await sb.auth.getUser(session.access_token);
+      if (verified.error || !verified.data?.user) {
+        if (isInvalidAuthError(verified.error)) {
+          await clearLocalAuthSession();
+          go('login');
+          return;
+        }
+        throw verified.error || new Error('ตรวจสอบ Session ไม่สำเร็จ');
+      }
+      me = verified.data.user;
       await loadProf();
       go(home());
     } else {
@@ -8189,7 +8263,7 @@ function renderResponsivePreviewContent() {
     <div class="summary-page-header">
       <div class="summary-greeting-wrap">
         <div class="summary-greeting">Hello, AuD</div>
-        <div class="summary-greeting-sub">${escapeWmsText(uiBranding.systemName)} Dashboard · v65</div>
+        <div class="summary-greeting-sub">${escapeWmsText(uiBranding.systemName)} Dashboard · v68</div>
       </div>
       <div class="summary-header-actions">
         <label class="summary-session-search" title="เลือก Session">
@@ -8458,6 +8532,7 @@ function render() {
   
   if (L[page]) {
      L[page]().catch(err => {
+        if (err?.code === 'AUTH_SESSION_INVALID') return;
         console.error("Page Load Error:", err);
         cnt().innerHTML = `<div class="card"><div class="alert alert-red">เกิดข้อผิดพลาดในการโหลดข้อมูล: ${err.message}</div></div>`;
      });
@@ -8852,7 +8927,10 @@ async function doLogin() {
   }
 }
 
-async function doLogout() { await sb.auth.signOut(); }
+async function doLogout() {
+  await clearLocalAuthSession();
+  go('login');
+}
 
 async function loadCTasks() {
   const { data: sess } = await sb.from('count_sessions').select('id').eq('status','active');
@@ -9593,6 +9671,40 @@ function nextRound(st) {
   return null;
 }
 
+const SUPABASE_READ_PAGE_SIZE = 1000;
+const SUPABASE_IN_BATCH_SIZE = 40;
+
+async function fetchPagedSupabaseRows(table, columns, applyFilters = query => query) {
+  const rows = [];
+  for (let from = 0; ; from += SUPABASE_READ_PAGE_SIZE) {
+    let query = sb.from(table).select(columns);
+    query = applyFilters(query);
+    const { data, error } = await query.range(from, from + SUPABASE_READ_PAGE_SIZE - 1);
+    if (error) return { data: null, error };
+    rows.push(...(data || []));
+    if (!data || data.length < SUPABASE_READ_PAGE_SIZE) break;
+  }
+  return { data: rows, error: null };
+}
+
+async function fetchSupabaseRowsByValues(table, columns, filterColumn, values) {
+  const uniqueValues = [...new Set((values || []).filter(Boolean))];
+  if (!uniqueValues.length) return { data: [], error: null };
+
+  const rows = [];
+  for (let start = 0; start < uniqueValues.length; start += SUPABASE_IN_BATCH_SIZE) {
+    const batch = uniqueValues.slice(start, start + SUPABASE_IN_BATCH_SIZE);
+    const result = await fetchPagedSupabaseRows(
+      table,
+      columns,
+      query => query.in(filterColumn, batch),
+    );
+    if (result.error) return result;
+    rows.push(...(result.data || []));
+  }
+  return { data: rows, error: null };
+}
+
 async function loadSvDash() {
   const { data: sessions } = await sb.from('count_sessions')
     .select('id,name').eq('status','active').order('created_at',{ascending:false});
@@ -9645,11 +9757,26 @@ async function loadSvDash() {
   asgns.forEach(a => { asgnInfoMap[a.id] = a; });
 
   const allAsgnIds = asgns.map(a => a.id);
-  const [{ data: allCounts }, { data: allSnapshots }, rules] = await Promise.all([
-    sb.from('count_records').select('assignment_id,item_id,round,count_qty,counted_at,actual_counter_name').in('assignment_id', allAsgnIds),
-    sb.from('stock_snapshot').select('location_id,item_id,onhand_qty').eq('session_id', curSid),
+  const [countResult, snapshotResult, rules] = await Promise.all([
+    fetchSupabaseRowsByValues(
+      'count_records',
+      'assignment_id,item_id,round,count_qty,counted_at,actual_counter_name',
+      'assignment_id',
+      allAsgnIds,
+    ),
+    fetchPagedSupabaseRows(
+      'stock_snapshot',
+      'location_id,item_id,onhand_qty',
+      query => query.eq('session_id', curSid),
+    ),
     getSessionRules(curSid),
   ]);
+  if (countResult.error || snapshotResult.error) {
+    cnt().innerHTML = errBox((countResult.error || snapshotResult.error).message);
+    return;
+  }
+  const allCounts = countResult.data || [];
+  const allSnapshots = snapshotResult.data || [];
 
   const ohMap = {};
   (allSnapshots||[]).forEach(s => { ohMap[s.location_id + '|' + s.item_id] = +s.onhand_qty; });
@@ -9682,9 +9809,12 @@ async function loadSvDash() {
   let vaError = null;
 
   try {
-    const { data: vaData, error: vaErr } = await sb.from('variance_approvals')
-      .select('id,assignment_id,item_id,final_qty,variance,resolution,approved_by,wms_fixed,wms_fixed_at,wms_fixed_by')
-      .in('assignment_id', allAsgnIds);
+    const { data: vaData, error: vaErr } = await fetchSupabaseRowsByValues(
+      'variance_approvals',
+      'id,assignment_id,item_id,final_qty,variance,resolution,approved_by,wms_fixed,wms_fixed_at,wms_fixed_by',
+      'assignment_id',
+      allAsgnIds,
+    );
 
     if (vaErr) {
       vaError = vaErr;
@@ -9706,8 +9836,8 @@ async function loadSvDash() {
   const allItemIds = [...new Set(wmsRows.map(v => v.item_id).filter(Boolean))];
   const allApproverIds = [...new Set(wmsRows.map(v => v.approved_by).filter(Boolean))];
   const [{ data: itemsData }, { data: approversData }, { data: wmsNoteRows, error: wmsNoteError }] = await Promise.all([
-    allItemIds.length ? sb.from('items').select('id,code,description').in('id', allItemIds) : { data: [] },
-    allApproverIds.length ? sb.from('profiles').select('id,name').in('id', allApproverIds) : { data: [] },
+    fetchSupabaseRowsByValues('items', 'id,code,description', 'id', allItemIds),
+    fetchSupabaseRowsByValues('profiles', 'id,name', 'id', allApproverIds),
     sb.from('audit_log')
       .select('id,assignment_id,item_id,new_value,created_at')
       .eq('session_id', curSid)
@@ -9764,7 +9894,12 @@ async function loadSvDash() {
 
   const pendingItemIds = [...new Set(pendingWmsRows.map(v => v.item_id).filter(Boolean))];
   if (pendingItemIds.length) {
-    const { data: pendingItems } = await sb.from('items').select('id,code,description').in('id', pendingItemIds);
+    const { data: pendingItems } = await fetchSupabaseRowsByValues(
+      'items',
+      'id,code,description',
+      'id',
+      pendingItemIds,
+    );
     const pItemMap = Object.fromEntries((pendingItems||[]).map(i => [i.id, i]));
     pendingWmsRows.forEach(v => { v.items = pItemMap[v.item_id] || { code: '?', description: '' }; });
   }
@@ -10856,9 +10991,12 @@ async function loadSvList() {
     </div>`; return;
   }
 
-  const { data: counterRows } = await sb.from('count_records')
-    .select('assignment_id,actual_counter_name')
-    .in('assignment_id', asgns.map(a => a.id));
+  const { data: counterRows } = await fetchSupabaseRowsByValues(
+    'count_records',
+    'assignment_id,actual_counter_name',
+    'assignment_id',
+    asgns.map(a => a.id),
+  );
   const counterMap = buildActualCounterMap(counterRows || []);
 
   let html = '<div class="card card-flush">';
@@ -11551,9 +11689,12 @@ async function loadAdHistory() {
 
   if (!asgns?.length) { histList.innerHTML = `<div class="card" style="text-align:center;padding:40px;color:var(--text-muted); font-weight:600;">ไม่พบข้อมูลตามเงื่อนไข</div>`; return; }
 
-  const { data: historyCounterRows } = await sb.from('count_records')
-    .select('assignment_id,actual_counter_name')
-    .in('assignment_id', asgns.map(a => a.id));
+  const { data: historyCounterRows } = await fetchSupabaseRowsByValues(
+    'count_records',
+    'assignment_id,actual_counter_name',
+    'assignment_id',
+    asgns.map(a => a.id),
+  );
   const historyCounterMap = buildActualCounterMap(historyCounterRows || []);
   if (counterName) {
     asgns = asgns.filter(a => (historyCounterMap[a.id] || []).includes(counterName));
@@ -12704,7 +12845,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'v62' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'v68' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
