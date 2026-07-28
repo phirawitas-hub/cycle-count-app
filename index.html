@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cycle Count v78 - Paper Form Settings</title>
+<title>Cycle Count v82 - Collapsible Management and Fresh Login</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -5538,6 +5538,13 @@ body {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 18px;
 }
+.backup-grid > .admin-master-group {
+  min-width:0;
+  margin-bottom:0;
+}
+.backup-grid > .admin-master-group > .admin-master-group-body {
+  padding:16px 18px 20px;
+}
 
 .backup-panel {
   min-width: 0;
@@ -7829,6 +7836,65 @@ tbody tr, .table-row {
   background:color-mix(in srgb, var(--theme-card-bg) 92%, white);
   box-shadow:0 8px 20px rgba(38,70,83,.06);
 }
+.session-manage-card > summary {
+  min-height:72px;
+  padding:15px 16px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  list-style:none;
+  cursor:pointer;
+  user-select:none;
+}
+.session-manage-card > summary::-webkit-details-marker { display:none; }
+.session-manage-summary-copy {
+  flex:1;
+  min-width:0;
+}
+.session-manage-summary-copy strong {
+  display:block;
+  overflow:hidden;
+  color:var(--theme-heading-color);
+  font-size:15px;
+  font-weight:900;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.session-manage-summary-meta {
+  margin-top:6px;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  flex-wrap:wrap;
+  color:var(--theme-muted-text-color);
+  font-size:10px;
+  font-weight:700;
+}
+.session-manage-chevron {
+  width:34px;
+  height:34px;
+  flex:none;
+  display:grid;
+  place-items:center;
+  border-radius:11px;
+  color:var(--theme-primary-color);
+  background:color-mix(in srgb,var(--theme-primary-color) 10%,white);
+}
+.session-manage-chevron::before {
+  content:'';
+  width:8px;
+  height:8px;
+  border-right:2px solid currentColor;
+  border-bottom:2px solid currentColor;
+  transform:translateY(-2px) rotate(45deg);
+  transition:transform .18s ease;
+}
+.session-manage-card[open] .session-manage-chevron::before {
+  transform:translateY(2px) rotate(225deg);
+}
+.session-manage-content {
+  border-top:1px solid color-mix(in srgb,var(--theme-border-color) 50%,transparent);
+}
 .session-manage-main {
   padding:16px;
   display:flex;
@@ -8270,6 +8336,35 @@ tbody tr, .table-row {
   background:var(--theme-card-bg);
   box-shadow:0 10px 26px rgba(38,70,83,.07);
 }
+.assign-step-section > summary {
+  list-style:none;
+  cursor:pointer;
+  user-select:none;
+}
+.assign-step-section > summary::-webkit-details-marker { display:none; }
+.assign-step-section:not([open]) > .assign-step-header { border-bottom:0; }
+.assign-section-chevron {
+  width:34px;
+  height:34px;
+  flex:none;
+  display:grid;
+  place-items:center;
+  border-radius:11px;
+  color:var(--theme-primary-color);
+  background:color-mix(in srgb,var(--theme-primary-color) 10%,white);
+}
+.assign-section-chevron::before {
+  content:'';
+  width:8px;
+  height:8px;
+  border-right:2px solid currentColor;
+  border-bottom:2px solid currentColor;
+  transform:translateY(-2px) rotate(45deg);
+  transition:transform .18s ease;
+}
+.assign-step-section[open] .assign-section-chevron::before {
+  transform:translateY(2px) rotate(225deg);
+}
 .assign-step-header {
   min-height:68px;
   padding:15px 18px;
@@ -8317,6 +8412,13 @@ tbody tr, .table-row {
   white-space:nowrap;
 }
 .assign-step-body { padding:18px; }
+.assign-review-controls {
+  padding:10px 14px;
+  display:flex;
+  justify-content:flex-end;
+  border-bottom:1px solid color-mix(in srgb,var(--theme-border-color) 48%,transparent);
+  background:color-mix(in srgb,var(--theme-primary-color) 5%,white);
+}
 .assign-config-grid {
   display:grid;
   grid-template-columns:minmax(280px,1fr) minmax(310px,1fr);
@@ -8709,6 +8811,9 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
     width:100%;
     margin:5px 0 0;
   }
+  .assign-review-controls .location-sort-control { width:100%; }
+  .session-manage-card > summary { align-items:flex-start; }
+  .session-manage-summary-meta .tag { font-size:8px !important; }
 }
 @media (max-width:430px) {
   .assign-hero-title h2 { font-size:18px; }
@@ -9141,6 +9246,134 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
   .paper-settings-savebar .btn { width:100%; }
 }
 
+/* v80 — deterministic SVG icons; avoids missing emoji glyph boxes */
+.ui-inline-icon {
+  width:1.05em;
+  height:1.05em;
+  margin-right:.28em;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  flex:0 0 auto;
+  color:currentColor;
+  vertical-align:-.16em;
+  line-height:1;
+}
+.ui-inline-icon:only-child { margin-right:0; }
+.ui-inline-icon svg { width:100%; height:100%; display:block; overflow:visible; }
+.assign-hero-icon > .ui-inline-icon,
+.assign-oh-icon > .ui-inline-icon,
+.assign-summary-icon > .ui-inline-icon,
+.count-rule-summary-icon > .ui-inline-icon {
+  width:56%;
+  height:56%;
+}
+.btn > .ui-inline-icon,
+.tag > .ui-inline-icon {
+  vertical-align:middle;
+}
+
+/* v81 — large, reusable success dialog for every assignment flow */
+.assignment-success-backdrop {
+  position:fixed;
+  inset:0;
+  z-index:3500;
+  display:grid;
+  place-items:center;
+  padding:22px;
+  background:rgba(13,45,51,.58);
+  backdrop-filter:blur(8px);
+  animation:assignmentSuccessFade .18s ease-out;
+}
+.assignment-success-modal {
+  width:min(560px,100%);
+  padding:32px;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 26%,transparent);
+  border-radius:28px;
+  color:var(--theme-text-color);
+  background:var(--theme-card-bg);
+  box-shadow:0 28px 80px rgba(8,42,48,.34);
+  text-align:center;
+  animation:assignmentSuccessPop .22s ease-out;
+}
+.assignment-success-icon {
+  width:82px;
+  height:82px;
+  margin:0 auto 18px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  color:#07884d;
+  background:linear-gradient(145deg,#dcfce7,#bbf7d0);
+  box-shadow:0 12px 30px rgba(22,163,74,.22);
+}
+.assignment-success-icon svg {
+  width:48px;
+  height:48px;
+  stroke-width:2.2;
+}
+.assignment-success-title {
+  margin:0;
+  color:var(--theme-heading-color);
+  font-size:26px;
+  font-weight:900;
+  line-height:1.25;
+}
+.assignment-success-summary {
+  margin:20px 0 14px;
+  padding:18px;
+  border-radius:20px;
+  background:color-mix(in srgb,var(--theme-primary-color) 9%,var(--theme-card-bg));
+}
+.assignment-success-count {
+  color:var(--theme-primary-color);
+  font-family:'Fredoka','Noto Sans Thai',sans-serif;
+  font-size:48px;
+  font-weight:900;
+  line-height:1;
+}
+.assignment-success-unit {
+  margin-top:7px;
+  color:var(--theme-muted-text-color);
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.04em;
+}
+.assignment-success-recipient {
+  margin:0 0 24px;
+  color:var(--theme-muted-text-color);
+  font-size:13px;
+  font-weight:700;
+  line-height:1.65;
+}
+.assignment-success-recipient strong {
+  color:var(--theme-heading-color);
+}
+.assignment-success-buttons {
+  display:grid;
+  grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);
+  gap:10px;
+}
+.assignment-success-buttons .btn {
+  width:100%;
+  min-height:48px;
+}
+@keyframes assignmentSuccessFade {
+  from { opacity:0; }
+  to { opacity:1; }
+}
+@keyframes assignmentSuccessPop {
+  from { opacity:0; transform:translateY(14px) scale(.97); }
+  to { opacity:1; transform:none; }
+}
+@media (max-width:600px) {
+  .assignment-success-backdrop { padding:14px; }
+  .assignment-success-modal { padding:25px 18px;border-radius:23px; }
+  .assignment-success-title { font-size:22px; }
+  .assignment-success-count { font-size:42px; }
+  .assignment-success-buttons { grid-template-columns:1fr; }
+}
+
 </style>
 </head>
 <body>
@@ -9210,7 +9443,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v78';
+window.__CYCLE_COUNT_BUILD__ = 'v82';
 
 let _viewportSyncFrame = 0;
 function syncViewportSize() {
@@ -9390,8 +9623,9 @@ const DEFAULT_BRANDING = Object.freeze({
   printOrientation: 'auto',
   printMarginMm: 7,
   printCompactRows: 24,
-  printDetailedRows: 3,
   printAccentColor: '#006D77',
+  printFormTitle: '',
+  printLogoDataUrl: '',
   printShowLogo: true,
   printShowDate: true,
   printShowPageNumber: true,
@@ -9490,6 +9724,7 @@ const BRANDING_COLOR_FIELDS = Object.freeze(
 );
 let uiBranding = { ...DEFAULT_BRANDING };
 let _brandingDraftLogo = '';
+let _paperFormLogoDraft = '';
 let _userAvatarDrafts = {};
 
 function normalizeHexColor(value, fallback) {
@@ -9517,8 +9752,9 @@ function normalizeBrandingSettings(input = {}) {
   output.printOrientation = ['auto','portrait','landscape'].includes(input?.printOrientation) ? input.printOrientation : DEFAULT_BRANDING.printOrientation;
   output.printMarginMm = Math.max(3,Math.min(20,Number(input?.printMarginMm) || DEFAULT_BRANDING.printMarginMm));
   output.printCompactRows = Math.max(8,Math.min(60,Math.floor(Number(input?.printCompactRows) || DEFAULT_BRANDING.printCompactRows)));
-  output.printDetailedRows = Math.max(1,Math.min(8,Math.floor(Number(input?.printDetailedRows) || DEFAULT_BRANDING.printDetailedRows)));
   output.printAccentColor = normalizeHexColor(input?.printAccentColor, DEFAULT_BRANDING.printAccentColor);
+  output.printFormTitle = String(input?.printFormTitle || '').trim().slice(0, 120);
+  output.printLogoDataUrl = normalizeLogoDataUrl(input?.printLogoDataUrl);
   output.printShowLogo = input?.printShowLogo !== false;
   output.printShowDate = input?.printShowDate !== false;
   output.printShowPageNumber = input?.printShowPageNumber !== false;
@@ -9603,7 +9839,7 @@ function applyBrandingSettings(settings, persistLocal = true) {
     const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
     root.setProperty(`--theme-${cssKey}`, uiBranding[key]);
   });
-  document.title = `${uiBranding.systemName} v78`;
+  document.title = `${uiBranding.systemName} v82`;
   if (persistLocal) {
     try { localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(uiBranding)); } catch (_) {}
   }
@@ -10039,7 +10275,7 @@ async function protectedFunctionHeaders() {
   return {
     Authorization: `Bearer ${session.access_token}`,
     apikey: SUPA_KEY,
-    'x-client-info': 'cycle-count-v78',
+    'x-client-info': 'cycle-count-v82',
   };
 }
 
@@ -10139,12 +10375,14 @@ async function boot() {
       return;
     }
     try {
-      LEGACY_AUTH_STORAGE_KEYS.forEach(key => localStorage.removeItem(key));
+      [AUTH_STORAGE_KEY,...LEGACY_AUTH_STORAGE_KEYS].forEach(key => localStorage.removeItem(key));
     } catch (_) {}
     sb = supabase.createClient(SUPA_URL, SUPA_KEY, {
       auth: {
         storageKey: AUTH_STORAGE_KEY,
-        persistSession: true,
+        // Keep authentication only in the current page. Reloading or opening
+        // the system again must always return to the login screen.
+        persistSession: false,
         autoRefreshToken: true,
         detectSessionInUrl: true,
       },
@@ -10341,13 +10579,164 @@ function navIconSvg(type, size=20) {
     manage: `<svg ${common}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06A2 2 0 1 1 3.41 16.96l.06-.06A1.65 1.65 0 0 0 3.8 15a1.65 1.65 0 0 0-1.51-1H2.2a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 6.24 4.3l.06.06A1.65 1.65 0 0 0 8.12 4a1.65 1.65 0 0 0 1-1.51V2.4a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06A2 2 0 1 1 20.59 7.04l-.06.06A1.65 1.65 0 0 0 20.2 9c.2.61.77 1 1.42 1h.18a2 2 0 1 1 0 4h-.18a1.65 1.65 0 0 0-1.42 1Z"/></svg>`,
     session: `<svg ${common}><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>`,
     assign: `<svg ${common}><circle cx="8" cy="8" r="3"/><path d="M2 20a6 6 0 0 1 12 0"/><path d="M16 8h6M19 5v6"/></svg>`,
-    import: `<svg ${common}><path d="M12 3v12"/><path d="m7 10-7 7-7-7"/><path d="M4 21h16"/></svg>`,
+    import: `<svg ${common}><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/></svg>`,
     backup: `<svg ${common}><ellipse cx="12" cy="5" rx="7" ry="3"/><path d="M5 5v6c0 1.7 3.1 3 7 3s7-1.3 7-3V5"/><path d="M5 11v6c0 1.7 3.1 3 7 3 1.2 0 2.4-.13 3.4-.37"/><path d="m17 15 2 2 3-4"/></svg>`,
     users: `<svg ${common}><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="3"/><path d="M19 8v6M16 11h6"/></svg>`,
     warehouse: `<svg ${common}><path d="M3 9.5 12 4l9 5.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5Z"/><path d="M9 21v-6h6v6"/></svg>`,
     theme: `<svg ${common}><path d="M12 3a9 9 0 1 0 0 18h1.4a1.8 1.8 0 0 0 0-3.6H12a1.7 1.7 0 0 1 0-3.4h2.2A6.8 6.8 0 0 0 21 7.2C21 4.9 17 3 12 3Z"/><circle cx="7.5" cy="9" r=".8" fill="currentColor"/><circle cx="10" cy="6.5" r=".8" fill="currentColor"/><circle cx="14" cy="6.3" r=".8" fill="currentColor"/><circle cx="17" cy="9" r=".8" fill="currentColor"/></svg>`
   };
   return icons[type] || icons.tasks;
+}
+
+const STABLE_UI_ICON_TOKENS = Object.freeze({
+  '⚙':'settings',
+  '⏳':'hourglass',
+  '❌':'error',
+  '🌸':'sparkle',
+  '✅':'success',
+  '🔑':'key',
+  '📭':'inbox',
+  '📋':'clipboard',
+  '📦':'box',
+  '🖨':'print',
+  '🔍':'search',
+  '📷':'camera',
+  '📝':'note',
+  '🖼':'image',
+  '🔄':'refresh',
+  '⚠':'warning',
+  '🌴':'empty',
+  '📂':'folder',
+  '👥':'users',
+  '👤':'user',
+  '🎉':'sparkle',
+  '✏':'edit',
+  '🔒':'lock',
+  '🧪':'flask',
+  '▶':'play',
+  '💾':'save',
+  '📁':'folder',
+  '🔓':'unlock',
+  '📍':'location',
+  '👁':'eye',
+  'ℹ':'info',
+  '📊':'chart',
+  '🏷':'tag',
+  '📥':'download',
+  '📤':'upload',
+  '🛠':'tools',
+});
+
+function stableUiIconSvg(type) {
+  const common = `viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"`;
+  const paths = {
+    settings:'<circle cx="12" cy="12" r="3"/><path d="M19 13.5v-3l-2-.7a7 7 0 0 0-.8-1.8l.9-1.9-2.2-2.2-1.9.9a7 7 0 0 0-1.8-.8l-.7-2h-3l-.7 2a7 7 0 0 0-1.8.8l-1.9-.9L.9 6.1 1.8 8a7 7 0 0 0-.8 1.8l-2 .7v3l2 .7a7 7 0 0 0 .8 1.8l-.9 1.9 2.2 2.2 1.9-.9a7 7 0 0 0 1.8.8l.7 2h3l.7-2a7 7 0 0 0 1.8-.8l1.9.9 2.2-2.2-.9-1.9a7 7 0 0 0 .8-1.8z" transform="translate(2)"/>',
+    hourglass:'<path d="M6 3h12M6 21h12M8 3c0 4 1.2 6.1 4 9-2.8 2.9-4 5-4 9m8-18c0 4-1.2 6.1-4 9 2.8 2.9 4 5 4 9"/><path d="M9.5 7.5h5M9.5 16.5h5"/>',
+    error:'<circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/>',
+    success:'<circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16.5 8.5"/>',
+    sparkle:'<path d="m12 3 1.3 4.2L17.5 9l-4.2 1.8L12 15l-1.3-4.2L6.5 9l4.2-1.8L12 3Z"/><path d="m18.5 14 .7 2.1 2.1.7-2.1.7-.7 2.1-.7-2.1-2.1-.7 2.1-.7.7-2.1Z"/>',
+    key:'<circle cx="8" cy="12" r="4"/><path d="M12 12h9m-3 0v3m-3-3v2"/>',
+    inbox:'<path d="M4 4h16v16H4z"/><path d="M4 14h4l2 3h4l2-3h4"/><path d="M8 8h8"/>',
+    clipboard:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5V3h6v1.5M8.5 10h7M8.5 14h7M8.5 18h5"/>',
+    box:'<path d="m4 7 8-4 8 4v10l-8 4-8-4V7Z"/><path d="m4 7 8 4 8-4M12 11v10"/>',
+    print:'<path d="M7 8V3h10v5"/><rect x="7" y="14" width="10" height="7"/><path d="M6 17H4V9h16v8h-3"/><circle cx="17" cy="12" r=".7" fill="currentColor" stroke="none"/>',
+    search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/>',
+    camera:'<path d="M4 8h4l1.5-2h5L16 8h4v11H4z"/><circle cx="12" cy="13.5" r="3.5"/>',
+    note:'<path d="M5 3h14v18H5z"/><path d="M8 8h8M8 12h8M8 16h5"/>',
+    image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m4 18 5-5 3 3 2-2 6 6"/>',
+    refresh:'<path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M18.5 10A7 7 0 0 0 6.2 6.2L4 8m16 8-2.2 1.8A7 7 0 0 1 5.5 14"/>',
+    warning:'<path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 9v5m0 3h.01"/>',
+    empty:'<path d="M12 21V8m0 4c-3.5 0-6-2-6-5 3.5 0 6 2 6 5Zm0 3c3.5 0 6-2 6-5-3.5 0-6 2-6 5Z"/><path d="M8 21h8"/>',
+    folder:'<path d="M3 6h7l2 2h9v11H3z"/><path d="M3 9h18"/>',
+    users:'<path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="3"/><path d="M20 21v-2a4 4 0 0 0-3-3.8M16.5 4.2a3 3 0 0 1 0 5.6"/>',
+    user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+    edit:'<path d="M4 20h4l11-11-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/>',
+    lock:'<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
+    unlock:'<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 7.5-2"/>',
+    flask:'<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-5-9V3"/><path d="M7.5 15h9"/>',
+    play:'<path d="m8 5 11 7-11 7V5Z"/>',
+    save:'<path d="M4 3h14l2 2v16H4z"/><path d="M8 3v6h8V3M8 21v-7h8v7"/>',
+    location:'<path d="M12 21s6-5.1 6-11a6 6 0 1 0-12 0c0 5.9 6 11 6 11Z"/><circle cx="12" cy="10" r="2"/>',
+    eye:'<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.7"/>',
+    info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10h.01"/>',
+    chart:'<path d="M4 20h16"/><rect x="5" y="11" width="3" height="6"/><rect x="10.5" y="7" width="3" height="10"/><rect x="16" y="4" width="3" height="13"/>',
+    tag:'<path d="M3 12V4h8l10 10-8 8L3 12Z"/><circle cx="7.5" cy="8" r="1"/>',
+    download:'<path d="M12 3v12m-5-5 5 5 5-5M4 21h16"/>',
+    upload:'<path d="M12 21V9m-5 5 5-5 5 5M4 3h16"/>',
+    tools:'<path d="m14 6 4-4 4 4-4 4"/><path d="M16 8 5 19l-3 1 1-3L14 6"/><path d="m10 14 4 4"/>',
+  };
+  return `<svg ${common}>${paths[type] || paths.info}</svg>`;
+}
+
+const STABLE_UI_ICON_PATTERN = new RegExp(
+  `(${Object.keys(STABLE_UI_ICON_TOKENS)
+    .map(token => token.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))
+    .join('|')})\\uFE0F?`,
+  'gu'
+);
+
+function replaceUnstableEmojiIcons(root) {
+  if (!root) return;
+  const blockedTags = new Set(['SCRIPT','STYLE','TEXTAREA','INPUT','OPTION','SVG','TITLE']);
+  const scanRoot = root.nodeType === Node.TEXT_NODE ? root.parentNode : root;
+  if (!scanRoot || blockedTags.has(scanRoot.nodeName)) return;
+  const walker = document.createTreeWalker(scanRoot,NodeFilter.SHOW_TEXT,{
+    acceptNode(node) {
+      if (!node.nodeValue || !STABLE_UI_ICON_PATTERN.test(node.nodeValue)) {
+        STABLE_UI_ICON_PATTERN.lastIndex = 0;
+        return NodeFilter.FILTER_REJECT;
+      }
+      STABLE_UI_ICON_PATTERN.lastIndex = 0;
+      const parent = node.parentElement;
+      if (!parent || blockedTags.has(parent.tagName) || parent.closest('[data-stable-icon]')) {
+        return NodeFilter.FILTER_REJECT;
+      }
+      return NodeFilter.FILTER_ACCEPT;
+    }
+  });
+  const targets = [];
+  while (walker.nextNode()) targets.push(walker.currentNode);
+  targets.forEach(node => {
+    const source = node.nodeValue || '';
+    const parts = source.split(STABLE_UI_ICON_PATTERN);
+    if (parts.length < 2) return;
+    const fragment = document.createDocumentFragment();
+    parts.forEach(part => {
+      const token = part.replace(/\uFE0F/g,'');
+      const type = STABLE_UI_ICON_TOKENS[token];
+      if (!type) {
+        if (part) fragment.appendChild(document.createTextNode(part));
+        return;
+      }
+      const icon = document.createElement('span');
+      icon.className = 'ui-inline-icon';
+      icon.dataset.stableIcon = type;
+      icon.setAttribute('aria-hidden','true');
+      icon.innerHTML = stableUiIconSvg(type);
+      fragment.appendChild(icon);
+    });
+    node.replaceWith(fragment);
+  });
+}
+
+let _stableIconObserver = null;
+function startStableUiIconGuard() {
+  if (_stableIconObserver || !document.body) return;
+  replaceUnstableEmojiIcons(document.body);
+  _stableIconObserver = new MutationObserver(mutations => {
+    mutations.forEach(mutation => {
+      if (mutation.type === 'characterData') {
+        replaceUnstableEmojiIcons(mutation.target);
+        return;
+      }
+      mutation.addedNodes.forEach(node => {
+        if (node.nodeType === Node.TEXT_NODE || node.nodeType === Node.ELEMENT_NODE) {
+          replaceUnstableEmojiIcons(node);
+        }
+      });
+    });
+  });
+  _stableIconObserver.observe(document.body,{subtree:true,childList:true,characterData:true});
 }
 
 function metricValueClass(value) {
@@ -10429,7 +10818,7 @@ function renderResponsivePreviewContent() {
     <div class="summary-page-header">
       <div class="summary-greeting-wrap">
         <div class="summary-greeting">Hello, AuD</div>
-        <div class="summary-greeting-sub">${escapeWmsText(uiBranding.systemName)} Dashboard · v78</div>
+        <div class="summary-greeting-sub">${escapeWmsText(uiBranding.systemName)} Dashboard · v82</div>
       </div>
       <div class="summary-header-actions">${dashboardFiltersHtml('<option>Cycle Count ก.ค. 2569</option>', false)}</div>
     </div>
@@ -10770,6 +11159,70 @@ function escapeWmsText(value='') {
   }[ch]));
 }
 
+let _assignmentSuccessPrintAction = null;
+let _assignmentSuccessPreviousOverflow = '';
+
+function closeAssignmentSuccessModal() {
+  const modal = Q('assignment-success-backdrop');
+  if (!modal) {
+    _assignmentSuccessPrintAction = null;
+    return;
+  }
+  modal.remove();
+  _assignmentSuccessPrintAction = null;
+  document.body.style.overflow = _assignmentSuccessPreviousOverflow;
+}
+
+function printAssignmentSuccessWork() {
+  const printAction = _assignmentSuccessPrintAction;
+  closeAssignmentSuccessModal();
+  if (typeof printAction === 'function') printAction();
+}
+
+function showAssignmentSuccessModal({
+  count=0,
+  unit='Location',
+  userName='User',
+  detail='',
+  printAction=null,
+}={}) {
+  closeAssignmentSuccessModal();
+  _assignmentSuccessPrintAction = typeof printAction === 'function' ? printAction : null;
+  _assignmentSuccessPreviousOverflow = document.body.style.overflow;
+  const safeCount = Math.max(0,Number(count) || 0);
+  const hasPrint = !!_assignmentSuccessPrintAction;
+  const backdrop = document.createElement('div');
+  backdrop.id = 'assignment-success-backdrop';
+  backdrop.className = 'assignment-success-backdrop';
+  backdrop.setAttribute('role','presentation');
+  backdrop.onclick = event => {
+    if (event.target === backdrop) closeAssignmentSuccessModal();
+  };
+  backdrop.innerHTML = `<section class="assignment-success-modal" role="dialog" aria-modal="true" aria-labelledby="assignment-success-title">
+    <div class="assignment-success-icon">${stableUiIconSvg('success')}</div>
+    <h2 class="assignment-success-title" id="assignment-success-title">จ่ายงานสำเร็จ</h2>
+    <div class="assignment-success-summary">
+      <div class="assignment-success-count">${safeCount.toLocaleString('th-TH')}</div>
+      <div class="assignment-success-unit">${escapeWmsText(unit)}</div>
+    </div>
+    <p class="assignment-success-recipient">
+      จ่ายงานให้ <strong>${escapeWmsText(userName || 'User')}</strong> เรียบร้อยแล้ว
+      ${detail ? `<br>${escapeWmsText(detail)}` : ''}
+    </p>
+    <div class="assignment-success-buttons" style="${hasPrint ? '' : 'grid-template-columns:1fr'}">
+      ${hasPrint ? `<button class="btn btn-blue" id="assignment-success-print" type="button" onclick="printAssignmentSuccessWork()">🖨️ พิมพ์งาน</button>` : ''}
+      <button class="btn btn-ghost" id="assignment-success-close" type="button" onclick="closeAssignmentSuccessModal()">ปิด</button>
+    </div>
+  </section>`;
+  document.body.appendChild(backdrop);
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => Q(hasPrint ? 'assignment-success-print' : 'assignment-success-close')?.focus(),0);
+}
+
+document.addEventListener('keydown',event => {
+  if (event.key === 'Escape' && Q('assignment-success-backdrop')) closeAssignmentSuccessModal();
+});
+
 const LOCATION_SORT_STORAGE_KEY = 'cycle_count_location_sort_direction_v1';
 let locationSortDirection = (() => {
   try { return localStorage.getItem(LOCATION_SORT_STORAGE_KEY) === 'desc' ? 'desc' : 'asc'; }
@@ -11090,7 +11543,10 @@ function paintLogin() {
         <div style="text-align:right;margin-bottom:24px;color:var(--brand-muted-text);font-size:12px;font-weight:500">
           ลืมรหัสผ่าน กรุณาติดต่อ Admin
         </div>
-        <button class="btn btn-blue" id="lb" onclick="doLogin()" style="width:100%; margin-bottom: 20px;">เข้าสู่ระบบ</button>
+        <button class="btn btn-blue" id="lb" onclick="doLogin()" style="width:100%;margin-bottom:12px">เข้าสู่ระบบ</button>
+        <div style="color:var(--brand-muted-text);font-size:10px;font-weight:600;line-height:1.55;text-align:center">
+          เพื่อความปลอดภัย ระบบจะให้ล็อกอินใหม่เมื่อรีเฟรช ปิดหน้า หรือเปิดระบบอีกครั้ง
+        </div>
       </div>
     </div>`;
 }
@@ -13362,8 +13818,14 @@ async function doReassignUser(aid, idx, targetRound) {
   await sb.from('assignments').update(updates).eq('id', aid);
   const label = sel.options[sel.selectedIndex]?.textContent || '';
   logAudit(before?.session_id, before?.location_id, null, 'reassign', before?.profiles?.name, label, aid);
-  alert(`✅ จ่ายงานรอบที่ ${targetRound||''} ให้ User ${label} แล้ว`);
   refreshDashboardData();
+  showAssignmentSuccessModal({
+    count:1,
+    unit:'Location',
+    userName:label,
+    detail:`จ่ายงานรอบที่ ${targetRound || ''} เรียบร้อยแล้ว`,
+    printAction:() => printCountForm([before?.location_id],before?.session_id),
+  });
 }
 
 async function loadSvList() {
@@ -13544,8 +14006,15 @@ async function reqRecount(aid, targetRound) {
   await sb.from('assignments').update(updates).eq('id', aid);
   const label = sel.options[sel.selectedIndex]?.textContent || '';
   logAudit(before?.session_id, before?.location_id, null, 'reassign', before?.profiles?.name, label, aid);
-  Q('sva').innerHTML = `<div class="alert alert-green">✅ จ่ายงานให้ User ที่เลือกแล้ว</div>`;
-  setTimeout(() => go('sv-list'), 1500);
+  Q('sva').innerHTML = '';
+  go('sv-list');
+  showAssignmentSuccessModal({
+    count:1,
+    unit:'Location',
+    userName:label,
+    detail:`จ่ายงานรอบที่ ${targetRound || ''} เรียบร้อยแล้ว`,
+    printAction:() => printCountForm([before?.location_id],before?.session_id),
+  });
 }
 
 let _manageTab = 'sessions';
@@ -13803,105 +14272,9 @@ async function saveSessionCountingRules(id) {
   }
 }
 
-let _annualSessionLogoDrafts = {};
-
-function annualSessionLogoPreviewHtml(sessionId) {
-  const annualLogo = normalizeLogoDataUrl(_annualSessionLogoDrafts[sessionId]);
-  const fallbackLogo = normalizeLogoDataUrl(uiBranding.logoDataUrl);
-  const logo = annualLogo || fallbackLogo;
-  return logo
-    ? `<img src="${logo}" alt="ตัวอย่างโลโก้ฟอร์มนับประจำปี">`
-    : `<span>ยังไม่มีโลโก้ · จะใช้โลโก้เริ่มต้นของฟอร์ม</span>`;
-}
-
-function annualSessionSettingsHtml(session) {
-  const title = String(session.annual_form_title || session.name || '').slice(0,120);
-  const isAnnual = session.count_mode === 'annual';
-  return `<details class="paper-session-card" ${isAnnual?'open':''}>
-    <summary>
-      <span class="assign-summary-icon">📦</span>
-      <span class="paper-session-name">
-        <strong>${escapeWmsText(session.name)}</strong>
-        <small>หัวฟอร์มและโลโก้เฉพาะ Session · การแบ่งจำนวนต่อ JOB ตั้งที่หน้าจ่ายงาน</small>
-      </span>
-      <span class="tag ${isAnnual?'tag-amber':'tag-blue'}">${isAnnual?'ANNUAL JOB':'CYCLE COUNT'}</span>
-    </summary>
-    <div class="paper-session-body">
-      <div class="paper-config-grid" style="grid-template-columns:minmax(0,1fr)">
-        <div class="fg">
-          <label>ชื่อกลางหัว Form Count</label>
-          <input id="annual_title_${session.id}" maxlength="120" value="${escapeWmsText(title)}" placeholder="เช่น KM23-CW-02">
-        </div>
-      </div>
-      <div class="annual-logo-editor">
-        <div class="annual-logo-preview" id="annual_logo_preview_${session.id}">
-          ${annualSessionLogoPreviewHtml(session.id)}
-        </div>
-        <div>
-          <div style="font-size:11px;font-weight:800;color:var(--theme-heading-color);margin-bottom:7px">โลโก้เฉพาะ Form Count ประจำปี</div>
-          <div class="annual-logo-actions">
-            <input type="file" accept="image/png,image/jpeg,image/webp"
-              onchange="handleAnnualSessionLogoFile(this,'${session.id}')">
-            <button class="btn btn-ghost btn-sm" type="button" onclick="removeAnnualSessionLogo('${session.id}')">ใช้โลโก้ระบบ</button>
-          </div>
-          <div class="admin-user-meta">รองรับ PNG, JPG, WEBP ไม่เกิน 5 MB · ใช้กับ Form Count ของ Session นี้ทั้งแบบปกติและ Annual JOB</div>
-        </div>
-      </div>
-      <div id="annual_setting_alert_${session.id}"></div>
-      <button class="btn btn-blue btn-sm" type="button" style="width:100%;margin-top:13px"
-        onclick="saveAnnualSessionSettings('${session.id}')">💾 บันทึกหัวฟอร์ม Session นี้</button>
-    </div>
-  </details>`;
-}
-
-async function handleAnnualSessionLogoFile(input, sessionId) {
-  const file = input?.files?.[0];
-  if (!file) return;
-  if (!/^image\/(png|jpeg|webp)$/i.test(file.type || '')) {
-    alert('รองรับโลโก้เฉพาะ PNG, JPG และ WEBP');
-    input.value = '';
-    return;
-  }
-  if (file.size > 5 * 1024 * 1024) {
-    alert('ไฟล์โลโก้ต้องมีขนาดไม่เกิน 5 MB');
-    input.value = '';
-    return;
-  }
-  try {
-    _annualSessionLogoDrafts[sessionId] = await resizeBrandLogo(file, 700, .9);
-    const preview = Q(`annual_logo_preview_${sessionId}`);
-    if (preview) preview.innerHTML = annualSessionLogoPreviewHtml(sessionId);
-  } catch (error) {
-    alert('เตรียมโลโก้ไม่สำเร็จ: ' + (error.message || error));
-  }
-}
-
-function removeAnnualSessionLogo(sessionId) {
-  _annualSessionLogoDrafts[sessionId] = '';
-  const preview = Q(`annual_logo_preview_${sessionId}`);
-  if (preview) preview.innerHTML = annualSessionLogoPreviewHtml(sessionId);
-}
-
-async function saveAnnualSessionSettings(sessionId) {
-  if (prof?.role !== 'admin') { adminOnlyMessage(); return; }
-  const alertBox = Q(`annual_setting_alert_${sessionId}`);
-  const formTitle = String(Q(`annual_title_${sessionId}`)?.value || '').trim().slice(0,120) || null;
-  const logoDataUrl = normalizeLogoDataUrl(_annualSessionLogoDrafts[sessionId]) || null;
-  if (alertBox) alertBox.innerHTML = `<div class="alert alert-blue" style="margin-top:12px">⏳ กำลังบันทึก...</div>`;
-  const { error } = await sb.from('count_sessions').update({
-    annual_form_title:formTitle,
-    annual_form_logo_data_url:logoDataUrl,
-  }).eq('id',sessionId);
-  if (error) {
-    if (alertBox) alertBox.innerHTML = `<div class="alert alert-red" style="margin-top:12px">❌ ${escapeWmsText(error.message)}</div>`;
-    return;
-  }
-  if (alertBox) alertBox.innerHTML = `<div class="alert alert-green" style="margin-top:12px">✅ บันทึกชื่อหัวฟอร์มและโลโก้ของ Session นี้แล้ว</div>`;
-}
-
 async function renderManageSessions(container) {
   const { data: sessions, error } = await sb.from('count_sessions')
-    .select('id,name,status,show_oh,max_rounds,repeat_match_action,created_at,count_mode,annual_items_per_job,annual_job_prefix,annual_form_title,annual_form_logo_data_url')
+    .select('id,name,status,show_oh,max_rounds,repeat_match_action,created_at')
     .order('created_at',{ascending:false});
   if (error) { container.innerHTML = errBox(error.message); return; }
 
@@ -13911,37 +14284,40 @@ async function renderManageSessions(container) {
   const SLB = { draft:'Draft', active:'Active', closed:'Closed' };
   let html = sessions?.length ? '' : `<div style="text-align:center;padding:40px"><div style="font-size:54px">📁</div><div style="color:var(--text-muted);font-weight:700;margin-top:16px; font-size:16px;">ยังไม่มี Session</div></div>`;
 
-  _annualSessionLogoDrafts = {};
-  (sessions || []).forEach(session => { _annualSessionLogoDrafts[session.id] = normalizeLogoDataUrl(session.annual_form_logo_data_url); });
-
   for (const s of sessions || []) {
     const ohBadge = s.show_oh ? `<span class="tag tag-green" style="font-size:10px">🔓 เห็น OH</span>` : `<span class="tag tag-gray"  style="font-size:10px">🔒 Blind</span>`;
-    const modeBadge = s.count_mode === 'annual'
-      ? `<span class="tag tag-amber" style="font-size:10px">📦 ค่าเริ่มต้น Annual JOB · ${Number(s.annual_items_per_job)||20} รายการ</span>`
-      : `<span class="tag tag-blue" style="font-size:10px">📍 ค่าเริ่มต้นเลือก Location</span>`;
-    html += `<section class="session-manage-card">
-    <div class="session-manage-main">
-      <div style="flex:1;min-width:220px">
-        ${isAdmin ? `<div style="display:flex;gap:8px;align-items:center">
-          <input id="sess_name_${s.id}" value="${escapeWmsText(s.name)}" maxlength="120"
-            aria-label="ชื่อ Session" style="font-size:15px;font-weight:800;min-width:180px">
-          <button class="btn btn-blue btn-sm" onclick="renameSess('${s.id}')">บันทึกชื่อ</button>
-        </div>` : `<div style="font-size:16px;font-weight:800;color:var(--text-main)">${escapeWmsText(s.name)}</div>`}
-        <div style="font-size:12px;color:var(--text-muted);margin-top:6px;display:flex;gap:8px;flex-wrap:wrap; font-weight:600;">
-          ${new Date(s.created_at).toLocaleDateString('th-TH')} ${ohBadge} ${modeBadge}
+    html += `<details class="session-manage-card">
+    <summary>
+      <div class="session-manage-summary-copy">
+        <strong>${escapeWmsText(s.name)}</strong>
+        <div class="session-manage-summary-meta">
+          <span>${new Date(s.created_at).toLocaleDateString('th-TH')}</span>
+          ${ohBadge}
+          <span class="tag ${SBG[s.status]}">${SLB[s.status]}</span>
         </div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <span class="tag ${SBG[s.status]}">${SLB[s.status]}</span>
-        ${isAdminOrSup && s.status==='draft'  ? `<button class="btn btn-green btn-sm" onclick="activateSess('${s.id}')">เปิด</button>` : ''}
-        ${isAdminOrSup && s.status==='active' ? `<button class="btn btn-ghost btn-sm" onclick="closeSess('${s.id}')">ปิด</button>` : ''}
-        ${isAdminOrSup && s.status==='closed' ? `<button class="btn btn-green btn-sm" onclick="reopenSess('${s.id}')">เปิดใหม่</button>` : ''}
-        ${isAdmin ? `<button class="btn btn-red btn-sm admin-delete-icon"
-          onclick='deleteSess("${s.id}",${inlineJson(s.name)})'>${adminTrashIconSvg()} <span>ลบถาวร</span></button>` : ''}
+      <span class="session-manage-chevron" aria-hidden="true"></span>
+    </summary>
+    <div class="session-manage-content">
+      <div class="session-manage-main">
+        <div style="flex:1;min-width:220px">
+          ${isAdmin ? `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input id="sess_name_${s.id}" value="${escapeWmsText(s.name)}" maxlength="120"
+            aria-label="ชื่อ Session" style="font-size:15px;font-weight:800;min-width:180px;flex:1">
+          <button class="btn btn-blue btn-sm" onclick="renameSess('${s.id}')">บันทึกชื่อ</button>
+          </div>` : `<div style="font-size:12px;font-weight:700;color:var(--text-muted)">เปิดหรือปิด Session นี้ได้จากปุ่มด้านขวา</div>`}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          ${isAdminOrSup && s.status==='draft'  ? `<button class="btn btn-green btn-sm" onclick="activateSess('${s.id}')">เปิด</button>` : ''}
+          ${isAdminOrSup && s.status==='active' ? `<button class="btn btn-ghost btn-sm" onclick="closeSess('${s.id}')">ปิด</button>` : ''}
+          ${isAdminOrSup && s.status==='closed' ? `<button class="btn btn-green btn-sm" onclick="reopenSess('${s.id}')">เปิดใหม่</button>` : ''}
+          ${isAdmin ? `<button class="btn btn-red btn-sm admin-delete-icon"
+            onclick='deleteSess("${s.id}",${inlineJson(s.name)})'>${adminTrashIconSvg()} <span>ลบถาวร</span></button>` : ''}
+        </div>
       </div>
+      ${isAdmin ? countingRuleEditorHtml(s) : ''}
     </div>
-    ${isAdmin ? countingRuleEditorHtml(s) : ''}
-    </section>`;
+    </details>`;
   }
   container.innerHTML = html + `${isAdmin ? `<button class="btn btn-blue" style="margin-top:24px; width: 100%;" onclick="go('ad-new')">＋ สร้าง Session ใหม่</button>` : ''}`;
   if (isAdmin) (sessions || []).forEach(session => refreshCountingRulePreview(session.id));
@@ -14077,15 +14453,16 @@ async function renderManageAssign(container) {
         </div>
       </header>
 
-      <section class="assign-step-section">
-        <div class="assign-step-header">
+      <details class="assign-step-section">
+        <summary class="assign-step-header">
           <span class="assign-step-number">1</span>
           <div class="assign-step-copy">
             <strong>เลือก Session และตั้งค่าการมองเห็น</strong>
             <span>กำหนดชุดงานก่อนเริ่มจ่ายงานให้ User</span>
           </div>
           <span class="assign-step-badge" id="assign-mode-badge">ตั้งค่าพื้นฐาน</span>
-        </div>
+          <span class="assign-section-chevron" aria-hidden="true"></span>
+        </summary>
         <div class="assign-step-body">
           <div class="assign-config-grid">
             <div class="assign-config-card">
@@ -14121,19 +14498,20 @@ async function renderManageAssign(container) {
             <div id="zone-dash-body"><div class="load" style="padding:20px;text-align:center">⏳ กำลังคำนวณ...</div></div>
           </details>
         </div>
-      </section>
+      </details>
 
       <div id="aa"></div>
 
-      <section class="assign-step-section">
-        <div class="assign-step-header">
+      <details class="assign-step-section" open>
+        <summary class="assign-step-header">
           <span class="assign-step-number">2</span>
           <div class="assign-step-copy">
             <strong>จ่ายงานรอบแรก</strong>
             <span>เลือกวิธีจ่ายแบบ Location อิสระ หรือแบ่งเป็น Annual JOB</span>
           </div>
           <span class="assign-step-badge" id="round1-mode-badge">ROUND 1 · NORMAL</span>
-        </div>
+          <span class="assign-section-chevron" aria-hidden="true"></span>
+        </summary>
         <div class="assign-step-body">
           <div class="round1-mode-switch" role="tablist" aria-label="วิธีจ่ายงานรอบแรก">
             <button class="round1-mode-button active" id="round1-mode-normal" type="button"
@@ -14183,17 +14561,18 @@ async function renderManageAssign(container) {
 
           ${annualAssignmentWorkspaceHtml(userOpts)}
         </div>
-      </section>
+      </details>
 
-      ${isAdminOrSup ? `<section class="assign-step-section">
-        <div class="assign-step-header">
+      ${isAdminOrSup ? `<details class="assign-step-section">
+        <summary class="assign-step-header">
           <span class="assign-step-number">3</span>
           <div class="assign-step-copy">
             <strong>จ่ายงานรอบถัดไป</strong>
             <span>เปลี่ยน User ผู้รับงานสำหรับ Count 2, Count 3 หรือรอบ Supervisor</span>
           </div>
           <span class="assign-step-badge">ROUND 2 / 3</span>
-        </div>
+          <span class="assign-section-chevron" aria-hidden="true"></span>
+        </summary>
         <div class="assign-step-body">
           <details class="assign-round-details" open>
             <summary>
@@ -14217,19 +14596,20 @@ async function renderManageAssign(container) {
             </div>
           </details>
         </div>
-      </section>` : ''}
+      </details>` : ''}
 
-      <section class="assign-step-section">
-        <div class="assign-step-header">
+      <details class="assign-step-section">
+        <summary class="assign-step-header">
           <span class="assign-step-number">4</span>
           <div class="assign-step-copy">
             <strong>ตรวจสอบและพิมพ์งาน</strong>
             <span>ดูสถานะ เลือกพิมพ์ราย Location หลาย Location หรือทั้ง Session</span>
           </div>
-          ${locationSortControlHtml(true)}
-        </div>
+          <span class="assign-section-chevron" aria-hidden="true"></span>
+        </summary>
+        <div class="assign-review-controls">${locationSortControlHtml(true)}</div>
         <div class="assign-list-body" id="al" data-location-sort-group><div class="load" style="padding:28px;text-align:center">⏳ กำลังโหลดงานที่จ่ายแล้ว...</div></div>
-      </section>
+      </details>
     </div>`;
 
   handleAssignSessionChange();
@@ -14499,6 +14879,13 @@ async function assignSelectedAnnualJobs() {
   }
   if (button) button.textContent = '✓ จ่าย JOB ที่เลือก';
   await loadAnnualJobWorkspace();
+  showAssignmentSuccessModal({
+    count:jobIds.length,
+    unit:'Annual JOB',
+    userName,
+    detail:'พร้อมพิมพ์ Form Count ของ JOB ที่เพิ่งจ่าย',
+    printAction:() => printAnnualJobForms(jobIds),
+  });
 }
 
 function printSelectedAnnualJobs() {
@@ -14563,33 +14950,48 @@ async function renderManageImport(container) {
 
   container.innerHTML = `
     <div id="ia"></div>
-    <div class="alert alert-blue" style="font-size:13px;margin-bottom:16px; line-height: 1.6;">
-      📁 <strong>Upload Excel (.xlsx)</strong> — ดึงข้อมูลจากระบบ WMS ได้เลย<br>✅ ระบบอ่านหัวตารางอัตโนมัติ<br>🏷️ ดึง LPN / Lot / OH / AL มาแสดงตอนนับ
-    </div>
-    <div class="fg"><label>SESSION</label><select id="is">${sessOpts}</select></div>
-    <div class="fg"><label>กรอง LOCATION (ไม่บังคับ)</label><input id="ilocfilter" placeholder="เช่น B-EA% หรือเว้นว่างเพื่อ import ทั้งหมด" oninput="refreshXlsxPreview()"></div>
-    <div class="fg"><label>เลือกไฟล์ XLSX</label>
-      <input type="file" id="ixlsx" accept=".xlsx,.xls" style="padding:16px;border:none;border-radius:var(--border-radius-lg);cursor:pointer;background:var(--neu-surface);box-shadow: inset 4px 4px 8px var(--neu-shadow-dark), inset -4px -4px 8px var(--neu-shadow-light);width:100%;font-size:14px">
-    </div>
-    <div id="ipreview" style="display:none;margin-bottom:16px"></div>
-    <button class="btn btn-blue" id="ibtn" onclick="doImportXlsx()" style="width:100%" disabled>📥 Import Data</button>
+    <details class="admin-master-group" open>
+      <summary>
+        <span>${navIconSvg('import',20)}</span>
+        <span class="admin-master-group-title">Import ข้อมูล WMS</span>
+        <span class="admin-master-group-hint">เปิด / ปิด</span>
+        <span class="admin-master-group-chevron">⌄</span>
+      </summary>
+      <div class="admin-master-group-body">
+        <div class="alert alert-blue" style="font-size:13px;margin:16px 0;line-height:1.6">
+          📁 <strong>Upload Excel (.xlsx)</strong> — ดึงข้อมูลจากระบบ WMS ได้เลย<br>✅ ระบบอ่านหัวตารางอัตโนมัติ<br>🏷️ ดึง LPN / Lot / OH / AL มาแสดงตอนนับ
+        </div>
+        <div class="fg"><label>SESSION</label><select id="is">${sessOpts}</select></div>
+        <div class="fg"><label>กรอง LOCATION (ไม่บังคับ)</label><input id="ilocfilter" placeholder="เช่น B-EA% หรือเว้นว่างเพื่อ import ทั้งหมด" oninput="refreshXlsxPreview()"></div>
+        <div class="fg"><label>เลือกไฟล์ XLSX</label>
+          <input type="file" id="ixlsx" accept=".xlsx,.xls" style="padding:16px;border:none;border-radius:var(--border-radius-lg);cursor:pointer;background:var(--neu-surface);box-shadow: inset 4px 4px 8px var(--neu-shadow-dark), inset -4px -4px 8px var(--neu-shadow-light);width:100%;font-size:14px">
+        </div>
+        <div id="ipreview" style="display:none;margin-bottom:16px"></div>
+        <button class="btn btn-blue" id="ibtn" onclick="doImportXlsx()" style="width:100%" disabled>📥 Import Data</button>
+      </div>
+    </details>
 
-    <div style="border-top:2px dashed rgba(255,255,255,0.6); margin:30px 0 20px; box-shadow: 0 1px 0 rgba(0,0,0,0.05);"></div>
-
-    <div class="admin-delete-icon" style="font-size:15px;font-weight:800;color:var(--accent-red);margin-bottom:12px">
-      ${adminTrashIconSvg()} <span>ลบ Location ตาม Zone / Row / Session</span>
-    </div>
-    <div class="alert alert-amber" style="font-size:13px; line-height:1.6;">⚠️ เลือก Session = ลบเฉพาะข้อมูลใน Session นั้น<br>เว้น Session ว่าง = ลบ Location ออกจากระบบจริงทุก Session</div>
-    <div class="fg"><label>SESSION (ไม่บังคับ)</label><select id="del-session" onchange="refreshDeleteZonePreview()"><option value="">กำลังโหลด...</option></select></div>
-    <div class="grid-3" style="margin-bottom:14px">
-      <div class="fg" style="margin:0"><label>ZONE</label><select id="del-zone" onchange="refreshDeleteZonePreview()"><option value="">ทั้งหมด</option></select></div>
-      <div class="fg" style="margin:0"><label>ROW</label><select id="del-row" onchange="refreshDeleteZonePreview()"><option value="">ทั้งหมด</option></select></div>
-      <div class="fg" style="margin:0"><label>LOCATION</label><input id="del-code" placeholder="เช่น B-EA-001-A" oninput="refreshDeleteZonePreview()"></div>
-    </div>
-    <div id="del-preview" style="font-size:13px;color:var(--accent-red);margin-bottom:14px;font-weight:800"></div>
-    <div id="del-alert"></div>
-    <button class="btn btn-red admin-delete-icon" id="del-btn" onclick="doDeleteByZoneRow()"
-      style="width:100%" disabled>${adminTrashIconSvg()} <span>ลบทั้งหมดที่เลือก</span></button>`;
+    <details class="admin-master-group">
+      <summary>
+        <span>${adminTrashIconSvg()}</span>
+        <span class="admin-master-group-title">ลบ Location ตาม Zone / Row / Session</span>
+        <span class="admin-master-group-hint">เปิด / ปิด</span>
+        <span class="admin-master-group-chevron">⌄</span>
+      </summary>
+      <div class="admin-master-group-body">
+        <div class="alert alert-amber" style="font-size:13px;line-height:1.6;margin-top:16px">⚠️ เลือก Session = ลบเฉพาะข้อมูลใน Session นั้น<br>เว้น Session ว่าง = ลบ Location ออกจากระบบจริงทุก Session</div>
+        <div class="fg"><label>SESSION (ไม่บังคับ)</label><select id="del-session" onchange="refreshDeleteZonePreview()"><option value="">กำลังโหลด...</option></select></div>
+        <div class="grid-3" style="margin-bottom:14px">
+          <div class="fg" style="margin:0"><label>ZONE</label><select id="del-zone" onchange="refreshDeleteZonePreview()"><option value="">ทั้งหมด</option></select></div>
+          <div class="fg" style="margin:0"><label>ROW</label><select id="del-row" onchange="refreshDeleteZonePreview()"><option value="">ทั้งหมด</option></select></div>
+          <div class="fg" style="margin:0"><label>LOCATION</label><input id="del-code" placeholder="เช่น B-EA-001-A" oninput="refreshDeleteZonePreview()"></div>
+        </div>
+        <div id="del-preview" style="font-size:13px;color:var(--accent-red);margin-bottom:14px;font-weight:800"></div>
+        <div id="del-alert"></div>
+        <button class="btn btn-red admin-delete-icon" id="del-btn" onclick="doDeleteByZoneRow()"
+          style="width:100%" disabled>${adminTrashIconSvg()} <span>ลบทั้งหมดที่เลือก</span></button>
+      </div>
+    </details>`;
 
   Q('ixlsx')?.addEventListener('change', readXlsxFile);
   loadDeleteZoneFilters();
@@ -14659,9 +15061,18 @@ async function doR23Assign() {
       logAudit(a.session_id, a.location_id, null, 'reassign', previousUserMap[a.assigned_to] || 'ไม่ระบุ User', newLabel, a.id);
     }
   }
-  Q('r23-preview').innerHTML = `<span style="color:var(--accent-green);font-weight:800">✅ เปลี่ยน User ผู้รับงานเรียบร้อย ${asgns.length} locations</span>`;
-  invalidateAssignmentWorkspaceCache(Q('as-sess')?.value);
+  const sid = Q('as-sess')?.value;
+  const locationIds = [...new Set(asgns.map(assignment => assignment.location_id).filter(Boolean))];
+  Q('r23-preview').innerHTML = '';
+  invalidateAssignmentWorkspaceCache(sid);
   Q('r23-btn').disabled = false; window._r23Asgns = []; refreshLocs(); refreshBulkFilters();
+  showAssignmentSuccessModal({
+    count:locationIds.length,
+    unit:'Location',
+    userName:newLabel,
+    detail:'เปลี่ยน User ผู้รับงานในรอบถัดไปเรียบร้อยแล้ว',
+    printAction:() => printCountForm(locationIds,sid),
+  });
 }
 
 function refreshNormalFreeDependentFilters() {
@@ -14800,12 +15211,18 @@ async function assignSelectedNormalLocations() {
       return;
     }
   }
-  if (alertBox) alertBox.innerHTML = `<div class="alert alert-green">✅ จ่าย ${locationIds.length.toLocaleString('th-TH')} Location ให้ ${escapeWmsText(userName)} แล้ว</div>
-    <button class="btn btn-blue btn-sm" style="margin-top:10px" onclick='printCountForm(${JSON.stringify(locationIds)},"${sid}")'>🖨️ พิมพ์งานที่เพิ่งจ่าย</button>`;
+  if (alertBox) alertBox.innerHTML = '';
   _normalFreeSelectedLocationIds.clear();
   invalidateAssignmentWorkspaceCache(sid);
   if (button) button.textContent = '✓ จ่าย Location ที่เลือก';
   await Promise.all([refreshLocs(),refreshBulkFilters()]);
+  showAssignmentSuccessModal({
+    count:locationIds.length,
+    unit:'Location',
+    userName,
+    detail:'พร้อมพิมพ์ Form Count ของ Location ที่เพิ่งจ่าย',
+    printAction:() => printCountForm(locationIds,sid),
+  });
 }
 
 async function refreshBulkFilters() {
@@ -14893,10 +15310,19 @@ async function doBulkAssign() {
     const { error } = await sb.from('assignments').upsert(toAssign.slice(i, i+BATCH), { onConflict:'session_id,location_id' });
     if (error) { al.innerHTML = `<div class="alert alert-red">❌ ${error.message}</div>`; btn.disabled=false; return; }
   }
-  al.innerHTML = `<div class="alert alert-green">✅ Assign ${toAssign.length} locations เรียบร้อย!</div>
-    <button class="btn btn-ghost btn-sm" style="margin-top:10px;" onclick='printCountForm(${JSON.stringify(toAssign.map(a=>a.location_id))},"${sid}")'>🖨️ พิมพ์ฟอร์มนับสำหรับ ${toAssign.length} Locations</button>`;
+  const userName = Q('bulk-user')?.options?.[Q('bulk-user').selectedIndex]?.textContent || 'User';
+  const locationIds = toAssign.map(assignment => assignment.location_id);
+  al.innerHTML = '';
   invalidateAssignmentWorkspaceCache(sid);
-  setTimeout(() => { refreshLocs(); refreshBulkFilters(); }, 2000);
+  btn.disabled = false;
+  await Promise.all([refreshLocs(),refreshBulkFilters()]);
+  showAssignmentSuccessModal({
+    count:locationIds.length,
+    unit:'Location',
+    userName,
+    detail:'พร้อมพิมพ์ Form Count ของ Location ที่เพิ่งจ่าย',
+    printAction:() => printCountForm(locationIds,sid),
+  });
 }
 
 async function refreshLocs() {
@@ -15004,12 +15430,17 @@ async function doAssign() {
   if (!sid || !uid || !locId) { al.innerHTML = `<div class="alert alert-amber">กรุณาเลือกให้ครบถ้วน</div>`; return; }
   const { error } = await sb.from('assignments').insert({ session_id: sid, location_id: locId, assigned_to: uid });
   if (error) { al.innerHTML = `<div class="alert alert-red">${error.message}</div>`; return; }
-  al.innerHTML = `<div class="alert alert-green">✅ มอบหมายงานสำเร็จ</div>
-    <div class="assign-success-actions">
-      <button class="btn btn-blue btn-sm" onclick='printCountForm(["${locId}"],"${sid}")'>🖨️ พิมพ์งาน Location นี้</button>
-    </div>`;
+  const userName = Q('as-user')?.options?.[Q('as-user').selectedIndex]?.textContent || 'User';
+  al.innerHTML = '';
   invalidateAssignmentWorkspaceCache(sid);
-  refreshLocs(); refreshBulkFilters();
+  await Promise.all([refreshLocs(),refreshBulkFilters()]);
+  showAssignmentSuccessModal({
+    count:1,
+    unit:'Location',
+    userName,
+    detail:'พร้อมพิมพ์ Form Count ของ Location ที่เพิ่งจ่าย',
+    printAction:() => printCountForm([locId],sid),
+  });
 }
 
 async function deleteAssignment(id, code) {
@@ -15062,11 +15493,11 @@ async function printCountForm(locationIds, sessionId) {
   try {
     const [{ data: sessData, error: sessionError }, snaps, details] = await Promise.all([
       sb.from('count_sessions').select('name,show_oh,annual_form_title,annual_form_logo_data_url').eq('id', sessionId).maybeSingle(),
-      fetchPrintSourceRows('stock_snapshot','location_id,item_id,locations(code),items(code,description)',sessionId,locationIds),
+      fetchPrintSourceRows('stock_snapshot','location_id,item_id,onhand_qty,locations(code),items(code,description)',sessionId,locationIds),
       fetchPrintSourceRows('stock_snapshot_detail','location_id,item_id,license_plate,lot,inventory_status,qty,uom',sessionId,locationIds),
     ]);
     if (sessionError) throw sessionError;
-    const sessionName = sessData?.annual_form_title || sessData?.name || 'Cycle Count';
+    const sessionName = uiBranding.printFormTitle || sessData?.annual_form_title || sessData?.name || 'Cycle Count';
     const detailMap = {};
     (details||[]).forEach(detail => {
       const key = detail.location_id+'|'+detail.item_id;
@@ -15081,6 +15512,8 @@ async function printCountForm(locationIds, sessionId) {
           itemCode:s.items?.code || '',
           desc:s.items?.description || '',
           status:[...new Set(itemDetails.map(detail => detail.inventory_status).filter(Boolean))].join(', '),
+          ohQty:Number(s.onhand_qty) || 0,
+          uom:itemDetails.find(detail => detail.uom)?.uom || '',
           details:itemDetails,
         };
       })
@@ -15093,7 +15526,6 @@ async function printCountForm(locationIds, sessionId) {
     }
     openPrintFormWindow(rows, sessionName, printWindow, {
       showOH:sessData?.show_oh === true,
-      logoDataUrl:sessData?.annual_form_logo_data_url,
     });
   } catch (error) {
     printWindow.document.open();
@@ -15132,27 +15564,12 @@ function printSignatureHtml(className = 'pf-footer') {
   return `<footer class="${className}"><div>คนนับจริง........................................</div><div>เวลาเริ่ม........................</div><div>เวลาจบ........................</div></footer>`;
 }
 
-function paginateDetailedRows(rows, baseItemsPerPage) {
-  const maxWeight = Math.max(2,Math.min(16,Number(baseItemsPerPage) || 3) * 2);
-  const pages = [];
-  let page = [];
-  let weight = 0;
-  (rows || []).forEach(row => {
-    const rowWeight = Math.max(2,1 + Math.ceil(Math.max(1,row.details?.length || 0) / 3));
-    if (page.length && weight + rowWeight > maxWeight) {
-      pages.push(page);
-      page = [];
-      weight = 0;
-    }
-    page.push(row);
-    weight += rowWeight;
-  });
-  if (page.length || !pages.length) pages.push(page);
-  return pages;
-}
-
 function detailedItemHtml(row,showOH) {
   const details = row.details || [];
+  const detailQtyTotal = details.reduce((total,detail) => total + (Number(detail.qty) || 0),0);
+  const ohTotal = details.length
+    ? detailQtyTotal
+    : (Number.isFinite(Number(row.ohQty)) ? Number(row.ohQty) : 0);
   const qtyHeaders = showOH ? '<th class="num">QTY</th><th>UNIT</th>' : '<th>UNIT</th>';
   const detailRows = details.length ? details.map(detail => `<tr>
     <td>${pfEscapeHtml(detail.license_plate || '—')}</td>
@@ -15164,7 +15581,10 @@ function detailedItemHtml(row,showOH) {
   return `<article class="detail-item">
     <div class="detail-item-head">
       <div><strong>${pfEscapeHtml(row.itemCode)}</strong><span>${pfEscapeHtml(row.desc || row.description || '—')}</span></div>
-      <span class="location-chip">${pfEscapeHtml(row.locCode)}</span>
+      <div class="detail-item-summary">
+        ${showOH ? `<span class="oh-total-chip">OH รวม <strong>${pfEscapeHtml(ohTotal)}</strong></span>` : ''}
+        <span class="location-chip">${pfEscapeHtml(row.locCode)}</span>
+      </div>
     </div>
     <table class="detail-table">
       <thead><tr><th>LICENSE PLATE</th><th>LOT</th><th>STATUS</th>${qtyHeaders}</tr></thead>
@@ -15178,31 +15598,37 @@ function detailedItemHtml(row,showOH) {
 
 function openDetailedPrintWindow(rows,title,existingWindow,options = {}) {
   const settings = printPageSettings('detailed');
-  const pages = paginateDetailedRows(rows,uiBranding.printDetailedRows);
-  const totalPages = pages.length;
-  const printLogo = normalizeLogoDataUrl(options.logoDataUrl) || normalizeLogoDataUrl(uiBranding.logoDataUrl) || PF_LOGO_B64;
-  const pagesHtml = pages.map((pageRows,pageIndex) => `<section class="detail-page">
-    <header class="detail-header">
-      ${uiBranding.printShowLogo ? `<img src="${printLogo}" alt="logo">` : '<span></span>'}
-      <div><small>FORM COUNT · DETAILS</small><h1>${pfEscapeHtml(title)}</h1></div>
-      <div class="detail-meta">${options.jobLabel ? `<strong>${pfEscapeHtml(options.jobLabel)}</strong>` : ''}${printMetaHtml(pageIndex,totalPages)}</div>
-    </header>
-    <div class="detail-items">${pageRows.map(row => detailedItemHtml(row,options.showOH === true)).join('')}</div>
-    ${printSignatureHtml('detail-footer')}
-  </section>`).join('');
+  const printLogo = normalizeLogoDataUrl(uiBranding.printLogoDataUrl) || normalizeLogoDataUrl(uiBranding.logoDataUrl) || PF_LOGO_B64;
+  const dateHtml = uiBranding.printShowDate
+    ? `<div>${new Date().toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'})}</div>`
+    : '';
+  const pageHtml = uiBranding.printShowPageNumber ? '<div class="detail-page-number"></div>' : '';
+  const documentHtml = `<table class="detail-document">
+    <thead><tr><td>
+      <header class="detail-header">
+        ${uiBranding.printShowLogo ? `<img src="${printLogo}" alt="logo">` : '<span></span>'}
+        <div><small>FORM COUNT · DETAILS</small><h1>${pfEscapeHtml(title)}</h1></div>
+        <div class="detail-meta">${options.jobLabel ? `<strong>${pfEscapeHtml(options.jobLabel)}</strong>` : ''}${dateHtml}${pageHtml}</div>
+      </header>
+    </td></tr></thead>
+    <tbody>${(rows || []).map(row => `<tr class="detail-item-row"><td>${detailedItemHtml(row,options.showOH === true)}</td></tr>`).join('')}</tbody>
+    ${uiBranding.printShowSignatures ? `<tfoot><tr><td>${printSignatureHtml('detail-footer')}</td></tr></tfoot>` : ''}
+  </table>`;
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${pfEscapeHtml(title)}</title><style>
     @page { size:${settings.paper} ${settings.orientation}; margin:${settings.margin}mm; }
     *{box-sizing:border-box} body{margin:0;color:#17383d;font-family:Arial,'Sarabun','Tahoma',sans-serif}
-    .detail-page{page-break-after:always}.detail-page:last-child{page-break-after:auto}
+    .detail-document{width:100%;border-collapse:collapse}.detail-document>thead{display:table-header-group}.detail-document>tfoot{display:table-footer-group}
+    .detail-document>thead>tr>td,.detail-document>tbody>tr>td,.detail-document>tfoot>tr>td{padding:0;border:0}
+    .detail-item-row{break-inside:avoid;page-break-inside:avoid}.detail-item-row>td{padding-top:9px!important}
     .detail-header{min-height:62px;display:grid;grid-template-columns:150px 1fr 150px;align-items:center;gap:12px;padding:0 0 9px;border-bottom:3px solid ${settings.accent}}
     .detail-header img{max-width:140px;max-height:48px;object-fit:contain;object-position:left center}
     .detail-header h1{margin:2px 0 0;text-align:center;color:#17383d;font-size:22px}
     .detail-header small{display:block;text-align:center;color:${settings.accent};font-size:8px;font-weight:800;letter-spacing:.18em}
-    .detail-meta{text-align:right;font-size:9px;line-height:1.55}.detail-meta strong{display:block;color:${settings.accent};font-size:14px}
-    .detail-items{display:grid;gap:9px;margin-top:10px}
+    .detail-meta{text-align:right;font-size:9px;line-height:1.55}.detail-meta strong{display:block;color:${settings.accent};font-size:14px}.detail-page-number::after{content:"Page " counter(page)}
     .detail-item{break-inside:avoid;overflow:hidden;border:1px solid #cddfe1;border-radius:10px;background:#fff}
     .detail-item-head{min-height:43px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center;gap:12px;background:#f7fbfb}
     .detail-item-head strong{display:block;color:${settings.accent};font-size:15px}.detail-item-head span{display:block;margin-top:2px;color:#587277;font-size:9px}
+    .detail-item-summary{display:flex;align-items:center;gap:7px;flex:0 0 auto}.oh-total-chip{margin:0!important;padding:5px 8px;border:1px solid ${settings.accent};border-radius:999px;color:${settings.accent}!important;background:#fff;font-size:8px!important;font-weight:800}.oh-total-chip strong{display:inline!important;font-size:11px!important}
     .location-chip{flex:0 0 auto!important;margin:0!important;padding:5px 8px;border-radius:999px;color:#fff!important;background:${settings.accent};font-size:9px!important;font-weight:800}
     .detail-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8.5px}
     .detail-table th,.detail-table td{padding:5px 7px;border-top:1px solid #e1ecee;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -15211,10 +15637,10 @@ function openDetailedPrintWindow(rows,title,existingWindow,options = {}) {
     .empty-detail{text-align:center!important;color:#7a9094!important}
     .detail-count-grid{display:grid;grid-template-columns:repeat(3,.7fr) 2fr;gap:6px;padding:7px 9px 9px;background:#f7fbfb}
     .detail-count-grid>div{height:29px;border:1px solid #bcd2d5;border-radius:6px;background:#fff}.detail-count-grid span{display:block;padding:4px 6px;color:#789095;font-size:6px;font-weight:800}
-    .detail-footer{display:flex;justify-content:space-between;gap:14px;margin-top:10px;color:#39575c;font-size:9px}
+    .detail-footer{display:flex;justify-content:space-between;gap:14px;padding-top:9px;color:#39575c;font-size:9px}
     .pf-noprint{padding:9px 12px;background:#fffbe6;border-bottom:1px solid #ccc;font-size:12px}
     @media print{.pf-noprint{display:none}}
-  </style></head><body><div class="pf-noprint">Form Count แบบรายละเอียดเต็มพร้อมพิมพ์${uiBranding.printAutoOpenDialog?'':' · กด Ctrl+P หรือ Cmd+P เมื่อพร้อม'}</div>${pagesHtml}${printWindowScript()}</body></html>`;
+  </style></head><body><div class="pf-noprint">Form Count แบบรายละเอียดเต็ม · ระบบขึ้นหน้าใหม่ตามพื้นที่กระดาษอัตโนมัติ${uiBranding.printAutoOpenDialog?'':' · กด Ctrl+P หรือ Cmd+P เมื่อพร้อม'}</div>${documentHtml}${printWindowScript()}</body></html>`;
   const win = existingWindow || window.open('','_blank');
   if (!win) { alert('เบราว์เซอร์บล็อกป๊อปอัพ'); return; }
   win.document.open(); win.document.write(html); win.document.close();
@@ -15231,8 +15657,11 @@ function openPrintFormWindow(rows,title,existingWindow,options = {}) {
   for (let i=0;i<rows.length;i+=rowsPerPage) pages.push(rows.slice(i,i+rowsPerPage));
   if (!pages.length) pages.push([]);
   const totalPages = pages.length;
-  const printLogo = normalizeLogoDataUrl(options.logoDataUrl) || normalizeLogoDataUrl(uiBranding.logoDataUrl) || PF_LOGO_B64;
-  const pagesHtml = pages.map((pageRows,pageIndex) => `<section class="pf-page"><header class="pf-header">${uiBranding.printShowLogo?`<img class="pf-logo" src="${printLogo}" alt="logo">`:'<span></span>'}<div class="pf-title">${pfEscapeHtml(title)}</div><div class="pf-meta">${printMetaHtml(pageIndex,totalPages)}</div></header><table class="pf-table"><thead><tr><th style="width:11%">Location</th><th style="width:13%">Item</th><th style="width:23%">Description</th><th style="width:9%">Inventory status</th><th style="width:9%">Storage Template</th><th style="width:8%">Count 1</th><th style="width:8%">Count 2</th><th style="width:8%">Count 3</th><th style="width:11%">Remark</th></tr></thead><tbody>${pageRows.length?pageRows.map(row=>`<tr><td>${pfEscapeHtml(row.locCode)}</td><td>${pfEscapeHtml(row.itemCode)}</td><td>${pfEscapeHtml(row.desc)}</td><td>${pfEscapeHtml(row.status)}</td><td></td><td></td><td></td><td></td><td></td></tr>`).join(''):`<tr><td colspan="9" style="text-align:center;color:#888">ไม่มีรายการ</td></tr>`}</tbody></table>${printSignatureHtml()}</section>`).join('');
+  const showOH = options.showOH === true;
+  const printLogo = normalizeLogoDataUrl(uiBranding.printLogoDataUrl) || normalizeLogoDataUrl(uiBranding.logoDataUrl) || PF_LOGO_B64;
+  const columnCount = showOH ? 10 : 9;
+  const qtyHeader = showOH ? '<th style="width:7%;text-align:right">QTY / OH</th>' : '';
+  const pagesHtml = pages.map((pageRows,pageIndex) => `<section class="pf-page"><header class="pf-header">${uiBranding.printShowLogo?`<img class="pf-logo" src="${printLogo}" alt="logo">`:'<span></span>'}<div class="pf-title">${pfEscapeHtml(title)}</div><div class="pf-meta">${printMetaHtml(pageIndex,totalPages)}</div></header><table class="pf-table"><thead><tr><th style="width:10%">Location</th><th style="width:12%">Item</th><th style="width:21%">Description</th><th style="width:9%">Inventory status</th><th style="width:8%">Unit</th>${qtyHeader}<th style="width:8%">Count 1</th><th style="width:8%">Count 2</th><th style="width:8%">Count 3</th><th style="width:9%">Remark</th></tr></thead><tbody>${pageRows.length?pageRows.map(row=>`<tr><td>${pfEscapeHtml(row.locCode)}</td><td>${pfEscapeHtml(row.itemCode)}</td><td>${pfEscapeHtml(row.desc)}</td><td>${pfEscapeHtml(row.status)}</td><td>${pfEscapeHtml(row.uom || '')}</td>${showOH?`<td style="text-align:right;font-weight:bold">${pfEscapeHtml(row.ohQty ?? '')}</td>`:''}<td></td><td></td><td></td><td></td></tr>`).join(''):`<tr><td colspan="${columnCount}" style="text-align:center;color:#888">ไม่มีรายการ</td></tr>`}</tbody></table>${printSignatureHtml()}</section>`).join('');
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${pfEscapeHtml(title)}</title><style>
     @page{size:${settings.paper} ${settings.orientation};margin:${settings.margin}mm}*{box-sizing:border-box}body{margin:0;font-family:Arial,'Sarabun','Tahoma',sans-serif;color:#000}
     .pf-page{page-break-after:always}.pf-page:last-child{page-break-after:auto}.pf-header{min-height:52px;display:grid;grid-template-columns:150px 1fr 150px;align-items:center;gap:14px;border-bottom:3px solid ${settings.accent};padding-bottom:6px;margin-bottom:8px}.pf-logo{max-width:140px;max-height:42px}.pf-title{text-align:center;font-size:24px;font-weight:bold}.pf-meta{font-size:10px;text-align:right;line-height:1.5;white-space:nowrap}.pf-table{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}.pf-table th,.pf-table td{border:1px solid #000;padding:5px 6px;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pf-table th{color:#fff;background:${settings.accent};font-weight:bold;font-size:10px}.pf-table td{height:22px}.pf-footer{display:flex;justify-content:space-between;margin-top:12px;font-size:11px}.pf-noprint{padding:10px;background:#fffbe6;border-bottom:1px solid #ccc;font-family:sans-serif;font-size:13px}@media print{.pf-noprint{display:none}}
@@ -15271,17 +15700,29 @@ async function printAnnualJobForms(jobIds) {
     const validJobIds = new Set(jobs.filter(job => job.session_id === sessionId).map(job => job.id));
     const itemRows = (itemsResult.data || []).filter(row => validJobIds.has(row.job_id));
     const locationIds = [...new Set(itemRows.map(row => row.location_id).filter(Boolean))];
-    const detailRows = await fetchPrintSourceRows(
-      'stock_snapshot_detail',
-      'location_id,item_id,license_plate,lot,inventory_status,qty,uom',
-      sessionId,
-      locationIds,
-    );
+    const [detailRows,snapshotRows] = await Promise.all([
+      fetchPrintSourceRows(
+        'stock_snapshot_detail',
+        'location_id,item_id,license_plate,lot,inventory_status,qty,uom',
+        sessionId,
+        locationIds,
+      ),
+      fetchPrintSourceRows(
+        'stock_snapshot',
+        'location_id,item_id,onhand_qty',
+        sessionId,
+        locationIds,
+      ),
+    ]);
     const detailMap = {};
     (detailRows || []).forEach(detail => {
       const key = `${detail.location_id}|${detail.item_id}`;
       detailMap[key] = detailMap[key] || [];
       detailMap[key].push(detail);
+    });
+    const ohMap = {};
+    (snapshotRows || []).forEach(snapshot => {
+      ohMap[`${snapshot.location_id}|${snapshot.item_id}`] = Number(snapshot.onhand_qty) || 0;
     });
     const itemsByJob = {};
     itemRows.forEach(row => {
@@ -15294,6 +15735,7 @@ async function printAnnualJobForms(jobIds) {
         description:row.items?.description || '',
         uom:details.find(detail => detail.uom)?.uom || '',
         inventoryStatus:[...new Set(details.map(detail => detail.inventory_status).filter(Boolean))].join(', '),
+        ohQty:ohMap[`${row.location_id}|${row.item_id}`] ?? 0,
         details,
       });
     });
@@ -15332,10 +15774,12 @@ function openAnnualJobPrintWindow(jobPacks,existingWindow) {
   const totalPages = pages.length || 1;
   const pagesHtml = pages.map((page,pageIndex) => {
     const session = page.job.count_sessions || {};
-    const title = session.annual_form_title || session.name || 'ANNUAL COUNT';
-    const logo = normalizeLogoDataUrl(session.annual_form_logo_data_url)
+    const showOH = session.show_oh === true;
+    const title = uiBranding.printFormTitle || session.annual_form_title || session.name || 'ANNUAL COUNT';
+    const logo = normalizeLogoDataUrl(uiBranding.printLogoDataUrl)
       || normalizeLogoDataUrl(uiBranding.logoDataUrl)
       || PF_LOGO_B64;
+    const columnCount = showOH ? 10 : 9;
     const jobPageLabel = page.jobPages > 1 ? ` · ${page.jobPage}/${page.jobPages}` : '';
     return `<section class="annual-pf-page">
       <header class="annual-pf-header">
@@ -15345,11 +15789,12 @@ function openAnnualJobPrintWindow(jobPacks,existingWindow) {
       </header>
       <table class="annual-pf-table">
         <thead><tr>
-          <th style="width:12%">Location</th>
-          <th style="width:18%">Item Code</th>
-          <th style="width:24%">Description</th>
-          <th style="width:7%">Storage<br>Template</th>
-          <th style="width:7%">Inventory<br>Status</th>
+          <th style="width:11%">Location</th>
+          <th style="width:16%">Item Code</th>
+          <th style="width:21%">Description</th>
+          <th style="width:7%">Unit</th>
+          <th style="width:8%">Inventory<br>Status</th>
+          ${showOH ? '<th style="width:8%">QTY / OH</th>' : ''}
           <th style="width:8%">Count 1</th>
           <th style="width:8%">Count 2</th>
           <th style="width:8%">Count 3</th>
@@ -15361,8 +15806,9 @@ function openAnnualJobPrintWindow(jobPacks,existingWindow) {
           <td>${pfEscapeHtml(row.description)}</td>
           <td>${pfEscapeHtml(row.uom)}</td>
           <td>${pfEscapeHtml(row.inventoryStatus)}</td>
+          ${showOH ? `<td style="text-align:right;font-weight:bold">${pfEscapeHtml(row.ohQty ?? '')}</td>` : ''}
           <td></td><td></td><td></td><td></td>
-        </tr>`).join('') : `<tr><td colspan="9" style="text-align:center;color:#777">ไม่มีรายการใน JOB นี้</td></tr>`}</tbody>
+        </tr>`).join('') : `<tr><td colspan="${columnCount}" style="text-align:center;color:#777">ไม่มีรายการใน JOB นี้</td></tr>`}</tbody>
       </table>
       ${printSignatureHtml('annual-pf-footer')}
     </section>`;
@@ -15403,47 +15849,46 @@ function openAnnualJobPrintWindow(jobPacks,existingWindow) {
 
 function openAnnualDetailedJobPrintWindow(jobPacks,existingWindow) {
   const settings = printPageSettings('detailed');
-  const pages = [];
-  (jobPacks || []).forEach(pack => {
-    const chunks = paginateDetailedRows(pack.rows || [],uiBranding.printDetailedRows);
-    chunks.forEach((rows,index) => pages.push({
-      job:pack.job,
-      rows,
-      jobPage:index+1,
-      jobPages:chunks.length,
-    }));
-  });
-  const totalPages = pages.length || 1;
-  const pagesHtml = pages.map((page,pageIndex) => {
-    const session = page.job.count_sessions || {};
-    const title = session.annual_form_title || session.name || 'ANNUAL COUNT';
-    const logo = normalizeLogoDataUrl(session.annual_form_logo_data_url)
-      || normalizeLogoDataUrl(uiBranding.logoDataUrl)
-      || PF_LOGO_B64;
-    const jobPageLabel = page.jobPages > 1 ? ` · ${page.jobPage}/${page.jobPages}` : '';
-    return `<section class="detail-page">
-      <header class="detail-header">
-        ${uiBranding.printShowLogo?`<img src="${logo}" alt="logo">`:'<span></span>'}
-        <div><small>ANNUAL FORM COUNT · DETAILS</small><h1>${pfEscapeHtml(title)}</h1></div>
-        <div class="detail-meta"><strong>${pfEscapeHtml(page.job.job_code)}${jobPageLabel}</strong>${printMetaHtml(pageIndex,totalPages)}</div>
-      </header>
-      <div class="detail-items">${page.rows.map(row => detailedItemHtml(row,session.show_oh === true)).join('')}</div>
-      ${printSignatureHtml('detail-footer')}
-    </section>`;
+  const logo = normalizeLogoDataUrl(uiBranding.printLogoDataUrl)
+    || normalizeLogoDataUrl(uiBranding.logoDataUrl)
+    || PF_LOGO_B64;
+  const dateHtml = uiBranding.printShowDate
+    ? `<div>${new Date().toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'})}</div>`
+    : '';
+  const pageHtml = uiBranding.printShowPageNumber ? '<div class="detail-page-number"></div>' : '';
+  const documentsHtml = (jobPacks || []).map((pack,index) => {
+    const session = pack.job.count_sessions || {};
+    const title = uiBranding.printFormTitle || session.annual_form_title || session.name || 'ANNUAL COUNT';
+    return `<table class="detail-document ${index ? 'next-job' : ''}">
+      <thead><tr><td>
+        <header class="detail-header">
+          ${uiBranding.printShowLogo?`<img src="${logo}" alt="logo">`:'<span></span>'}
+          <div><small>ANNUAL FORM COUNT · DETAILS</small><h1>${pfEscapeHtml(title)}</h1></div>
+          <div class="detail-meta"><strong>${pfEscapeHtml(pack.job.job_code)}</strong>${dateHtml}${pageHtml}</div>
+        </header>
+      </td></tr></thead>
+      <tbody>${(pack.rows || []).map(row => `<tr class="detail-item-row"><td>${detailedItemHtml(row,session.show_oh === true)}</td></tr>`).join('')}</tbody>
+      ${uiBranding.printShowSignatures ? `<tfoot><tr><td>${printSignatureHtml('detail-footer')}</td></tr></tfoot>` : ''}
+    </table>`;
   }).join('');
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Annual Form Count · Details</title><style>
     @page{size:${settings.paper} ${settings.orientation};margin:${settings.margin}mm}*{box-sizing:border-box}
-    body{margin:0;color:#17383d;font-family:Arial,'Sarabun','Tahoma',sans-serif}.detail-page{page-break-after:always}.detail-page:last-child{page-break-after:auto}
+    body{margin:0;color:#17383d;font-family:Arial,'Sarabun','Tahoma',sans-serif}
+    .detail-document{width:100%;border-collapse:collapse}.detail-document.next-job{break-before:page;page-break-before:always}
+    .detail-document>thead{display:table-header-group}.detail-document>tfoot{display:table-footer-group}
+    .detail-document>thead>tr>td,.detail-document>tbody>tr>td,.detail-document>tfoot>tr>td{padding:0;border:0}
+    .detail-item-row{break-inside:avoid;page-break-inside:avoid}.detail-item-row>td{padding-top:9px!important}
     .detail-header{min-height:62px;display:grid;grid-template-columns:150px 1fr 150px;align-items:center;gap:12px;padding:0 0 9px;border-bottom:3px solid ${settings.accent}}
     .detail-header img{max-width:140px;max-height:48px;object-fit:contain;object-position:left center}.detail-header h1{margin:2px 0 0;text-align:center;font-size:22px}
-    .detail-header small{display:block;text-align:center;color:${settings.accent};font-size:8px;font-weight:800;letter-spacing:.15em}.detail-meta{text-align:right;font-size:9px;line-height:1.55}.detail-meta strong{display:block;color:${settings.accent};font-size:14px}
-    .detail-items{display:grid;gap:9px;margin-top:10px}.detail-item{break-inside:avoid;overflow:hidden;border:1px solid #cddfe1;border-radius:10px;background:#fff}
+    .detail-header small{display:block;text-align:center;color:${settings.accent};font-size:8px;font-weight:800;letter-spacing:.15em}.detail-meta{text-align:right;font-size:9px;line-height:1.55}.detail-meta strong{display:block;color:${settings.accent};font-size:14px}.detail-page-number::after{content:"Page " counter(page)}
+    .detail-item{break-inside:avoid;overflow:hidden;border:1px solid #cddfe1;border-radius:10px;background:#fff}
     .detail-item-head{min-height:43px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center;gap:12px;background:#f7fbfb}.detail-item-head strong{display:block;color:${settings.accent};font-size:15px}.detail-item-head span{display:block;margin-top:2px;color:#587277;font-size:9px}
+    .detail-item-summary{display:flex;align-items:center;gap:7px;flex:0 0 auto}.oh-total-chip{margin:0!important;padding:5px 8px;border:1px solid ${settings.accent};border-radius:999px;color:${settings.accent}!important;background:#fff;font-size:8px!important;font-weight:800}.oh-total-chip strong{display:inline!important;font-size:11px!important}
     .location-chip{flex:0 0 auto!important;margin:0!important;padding:5px 8px;border-radius:999px;color:#fff!important;background:${settings.accent};font-size:9px!important;font-weight:800}
     .detail-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8.5px}.detail-table th,.detail-table td{padding:5px 7px;border-top:1px solid #e1ecee;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.detail-table th{color:${settings.accent};background:#e7f2f3;font-size:7px}.detail-table th:nth-child(1){width:32%}.detail-table th:nth-child(2){width:23%}.detail-table .num{text-align:right}.status-pill{display:inline-block;padding:3px 7px;border-radius:999px;color:${settings.accent};background:#e6f3f2;font-size:7px;font-weight:800}.empty-detail{text-align:center!important;color:#7a9094!important}
     .detail-count-grid{display:grid;grid-template-columns:repeat(3,.7fr) 2fr;gap:6px;padding:7px 9px 9px;background:#f7fbfb}.detail-count-grid>div{height:29px;border:1px solid #bcd2d5;border-radius:6px;background:#fff}.detail-count-grid span{display:block;padding:4px 6px;color:#789095;font-size:6px;font-weight:800}
-    .detail-footer{display:flex;justify-content:space-between;gap:14px;margin-top:10px;color:#39575c;font-size:9px}.annual-pf-noprint{padding:9px 12px;background:#fffbe6;border-bottom:1px solid #ccc;font-size:12px}@media print{.annual-pf-noprint{display:none}}
-  </style></head><body><div class="annual-pf-noprint">Annual JOB แบบรายละเอียดเต็มพร้อมพิมพ์${uiBranding.printAutoOpenDialog?'':' · กด Ctrl+P หรือ Cmd+P เมื่อพร้อม'}</div>${pagesHtml}${printWindowScript()}</body></html>`;
+    .detail-footer{display:flex;justify-content:space-between;gap:14px;padding-top:9px;color:#39575c;font-size:9px}.annual-pf-noprint{padding:9px 12px;background:#fffbe6;border-bottom:1px solid #ccc;font-size:12px}@media print{.annual-pf-noprint{display:none}}
+  </style></head><body><div class="annual-pf-noprint">Annual JOB แบบรายละเอียดเต็ม · ระบบขึ้นหน้าใหม่ตามพื้นที่กระดาษอัตโนมัติ${uiBranding.printAutoOpenDialog?'':' · กด Ctrl+P หรือ Cmd+P เมื่อพร้อม'}</div>${documentsHtml}${printWindowScript()}</body></html>`;
   const win = existingWindow || window.open('','_blank');
   if (!win) { alert('เบราว์เซอร์บล็อกป๊อปอัพ'); return; }
   win.document.open(); win.document.write(html); win.document.close();
@@ -15605,44 +16050,19 @@ function paintAdNew() {
   cnt().innerHTML = `<div class="card" style="max-width:620px; margin:0 auto">
     <div id="na"></div>
     <div class="fg"><label>ชื่อ Session</label><input id="nn" value="${def}"></div>
-    <div class="fg">
-      <label>ค่าเริ่มต้นการจ่ายงานรอบแรก</label>
-      <select id="new-count-mode" onchange="toggleNewSessionAnnualFields()">
-        <option value="cycle">แบบปกติ — เลือก Location อิสระ</option>
-        <option value="annual">Annual Count — แบ่งและจ่ายงานเป็น JOB</option>
-      </select>
-    </div>
-    <div id="new-annual-fields" hidden>
-      <div class="annual-mode-banner" style="margin-bottom:14px">
-        <span>📦</span><span><strong>Annual Count:</strong> ระบบจะแบ่ง Stock Snapshot เป็น JOB ตาม Location + ITEM หลัง Import ข้อมูลแล้ว</span>
-      </div>
-      <div class="grid-2">
-        <div class="fg"><label>รายการต่อ JOB</label><input id="new-annual-size" type="number" min="1" max="200" value="20"></div>
-        <div class="fg"><label>คำนำหน้า JOB</label><input id="new-annual-prefix" maxlength="20" value="JOB"></div>
-      </div>
-      <div class="admin-user-meta" style="margin:-4px 0 14px">ชื่อหัวฟอร์ม โลโก้ และรูปแบบกระดาษ ตั้งภายหลังที่เมนู ตั้งค่าระบบ → แบบฟอร์มและกระดาษ</div>
+    <div class="alert alert-blue" style="margin-bottom:18px;line-height:1.65">
+      รูปแบบการจ่ายงานไม่ต้องกำหนดตอนสร้าง Session<br>
+      เลือก <strong>แบบปกติ</strong> หรือ <strong>Annual Count</strong> ได้ภายหลังที่หน้าจ่ายงาน
     </div>
     <button class="btn btn-blue" onclick="createSess()" style="width:100%">✓ สร้าง Session</button>
   </div>`;
 }
 
-function toggleNewSessionAnnualFields() {
-  const annual = Q('new-count-mode')?.value === 'annual';
-  const fields = Q('new-annual-fields');
-  if (fields) fields.hidden = !annual;
-}
-
 async function createSess() {
   const name = Q('nn').value.trim(); if (!name) return;
-  const countMode = Q('new-count-mode')?.value === 'annual' ? 'annual' : 'cycle';
-  const annualItemsPerJob = Math.max(1,Math.min(200,Math.floor(Number(Q('new-annual-size')?.value) || 20)));
-  const annualJobPrefix = String(Q('new-annual-prefix')?.value || 'JOB').trim().slice(0,20) || 'JOB';
   const { error } = await sb.from('count_sessions').insert({
     name,
     created_by:me.id,
-    count_mode:countMode,
-    annual_items_per_job:annualItemsPerJob,
-    annual_job_prefix:annualJobPrefix,
   });
   if (error) { Q('na').innerHTML = errBox(error.message); return; }
   Q('na').innerHTML = `<div class="alert alert-green">✅ สร้างเรียบร้อย</div>`; setTimeout(() => go('ad-manage'), 1200);
@@ -15903,8 +16323,14 @@ async function renderManageBackup(container) {
       <span style="font-size:11px">แสดงเฉพาะ Data_Count, Session_Summary และ README · ข้อมูลระบบที่จำเป็นถูกซ่อนไว้เพื่อให้ Restore ได้ · บัญชี User Login และรหัสผ่านไม่อยู่ในไฟล์</span>
     </div>
     <div class="backup-grid">
-      <section class="backup-panel">
-        <div class="backup-panel-title">${navIconSvg('backup',24)} <span>1. สร้างไฟล์ Backup</span></div>
+      <details class="admin-master-group" open>
+        <summary>
+          <span>${navIconSvg('backup',20)}</span>
+          <span class="admin-master-group-title">1. สร้างไฟล์ Backup</span>
+          <span class="admin-master-group-hint">เปิด / ปิด</span>
+          <span class="admin-master-group-chevron">⌄</span>
+        </summary>
+        <div class="admin-master-group-body">
         <div class="fg">
           <label>เลือกข้อมูลที่ต้องการ Backup</label>
           <select id="backup-session" onchange="refreshBackupScopeSummary()">
@@ -15941,10 +16367,17 @@ async function renderManageBackup(container) {
             ${adminTrashIconSvg()} <span>ลบข้อมูลที่ Backup แล้ว</span>
           </button>
         </div>
-      </section>
+        </div>
+      </details>
 
-      <section class="backup-panel">
-        <div class="backup-panel-title">${navIconSvg('import',24)} <span>2. Restore จาก Excel</span></div>
+      <details class="admin-master-group">
+        <summary>
+          <span>${navIconSvg('import',20)}</span>
+          <span class="admin-master-group-title">2. Restore จาก Excel</span>
+          <span class="admin-master-group-hint">เปิด / ปิด</span>
+          <span class="admin-master-group-chevron">⌄</span>
+        </summary>
+        <div class="admin-master-group-body">
         <div class="alert alert-amber" style="font-size:12px;line-height:1.65">
           ใช้ไฟล์ที่สร้างจากเมนู Backup นี้ได้โดยตรง ระบบจะอ่านเฉพาะชีตข้อมูลระบบ
           และตรวจ Manifest, จำนวนแถว และ checksum ก่อน Import
@@ -15966,7 +16399,8 @@ async function renderManageBackup(container) {
           ${navIconSvg('import',18)} ตรวจแล้ว · เริ่ม Restore
         </button>
         <div id="backup-restore-alert" style="margin-top:12px"></div>
-      </section>
+        </div>
+      </details>
     </div>
     <details class="admin-master-group" style="margin-top:18px">
       <summary>
@@ -16703,7 +17137,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'v78' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'v82' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -17030,7 +17464,7 @@ function paperFormPreviewHtml(style) {
     return `<div class="paper-mini-sheet">
       <div class="paper-mini-head"><span class="paper-mini-logo"></span><span class="paper-mini-title">FORM COUNT · DETAILS</span><span style="font-size:6px">JOB-001</span></div>
       <div class="paper-mini-item">
-        <div class="paper-mini-item-top"><strong>CM074909</strong><span>ชุดแม่ปั๊มเบรคขาว</span></div>
+        <div class="paper-mini-item-top"><strong>CM074909</strong><span>OH รวม 7 · ชุดแม่ปั๊มเบรคขาว</span></div>
         <div class="paper-mini-detail">
           <div class="paper-mini-row head"><span>LICENSE PLATE</span><span>LOT</span><span>STATUS</span><span>QTY</span><span>UNIT</span></div>
           <div class="paper-mini-row"><span>C000000177544</span><span>20260608</span><span>GOOD</span><span>5</span><span>—</span></div>
@@ -17043,10 +17477,53 @@ function paperFormPreviewHtml(style) {
   return `<div class="paper-mini-sheet">
     <div class="paper-mini-head"><span class="paper-mini-logo"></span><span class="paper-mini-title">FORM COUNT · COMPACT</span><span style="font-size:6px">PAGE 1/2</span></div>
     <div class="paper-mini-table">
-      <div class="paper-mini-row head"><span>LOCATION</span><span>ITEM</span><span>DESCRIPTION</span><span>COUNT</span><span>REMARK</span></div>
-      ${Array.from({length:6},(_,index) => `<div class="paper-mini-row"><span>A-${index+1}</span><span>CM07490${index}</span><span>รายการสินค้า</span><span></span><span></span></div>`).join('')}
+      <div class="paper-mini-row head"><span>LOCATION</span><span>ITEM</span><span>DESCRIPTION</span><span>QTY/OH</span><span>COUNT</span></div>
+      ${Array.from({length:6},(_,index) => `<div class="paper-mini-row"><span>A-${index+1}</span><span>CM07490${index}</span><span>รายการสินค้า</span><span>${index+2}</span><span></span></div>`).join('')}
     </div>
   </div>`;
+}
+
+function paperFormLogoPreviewHtml() {
+  const formLogo = normalizeLogoDataUrl(_paperFormLogoDraft);
+  const systemLogo = normalizeLogoDataUrl(uiBranding.logoDataUrl);
+  const logo = formLogo || systemLogo;
+  return logo
+    ? `<img src="${logo}" alt="ตัวอย่างโลโก้ Form Count">`
+    : `<span>ยังไม่มีโลโก้ · ระบบจะใช้โลโก้เริ่มต้น</span>`;
+}
+
+async function handlePaperFormLogoFile(input) {
+  const file = input?.files?.[0];
+  if (!file) return;
+  if (!/^image\/(png|jpeg|webp)$/i.test(file.type || '')) {
+    alert('รองรับโลโก้เฉพาะ PNG, JPG และ WEBP');
+    input.value = '';
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    alert('ไฟล์โลโก้ต้องมีขนาดไม่เกิน 5 MB');
+    input.value = '';
+    return;
+  }
+  try {
+    let dataUrl = await resizeBrandLogo(file,700,.9);
+    if (dataUrl.length > 900000) dataUrl = await resizeBrandLogo(file,420,.78);
+    _paperFormLogoDraft = normalizeLogoDataUrl(dataUrl);
+    if (!_paperFormLogoDraft) throw new Error('โลโก้หลังย่อยังมีขนาดใหญ่เกินไป');
+    const preview = Q('paper-form-logo-preview');
+    if (preview) preview.innerHTML = paperFormLogoPreviewHtml();
+  } catch (error) {
+    alert('เตรียมโลโก้ไม่สำเร็จ: ' + (error.message || error));
+    input.value = '';
+  }
+}
+
+function useSystemPaperFormLogo() {
+  _paperFormLogoDraft = '';
+  const preview = Q('paper-form-logo-preview');
+  if (preview) preview.innerHTML = paperFormLogoPreviewHtml();
+  const input = Q('paper-form-logo-file');
+  if (input) input.value = '';
 }
 
 function readPaperSettingsDraft() {
@@ -17057,8 +17534,9 @@ function readPaperSettingsDraft() {
     printOrientation:Q('paper-orientation')?.value || DEFAULT_BRANDING.printOrientation,
     printMarginMm:Number(Q('paper-margin')?.value) || DEFAULT_BRANDING.printMarginMm,
     printCompactRows:Number(Q('paper-compact-rows')?.value) || DEFAULT_BRANDING.printCompactRows,
-    printDetailedRows:Number(Q('paper-detail-rows')?.value) || DEFAULT_BRANDING.printDetailedRows,
     printAccentColor:Q('paper-accent')?.value || DEFAULT_BRANDING.printAccentColor,
+    printFormTitle:String(Q('paper-form-title')?.value || '').trim(),
+    printLogoDataUrl:normalizeLogoDataUrl(_paperFormLogoDraft),
     printShowLogo:Boolean(Q('paper-show-logo')?.checked),
     printShowDate:Boolean(Q('paper-show-date')?.checked),
     printShowPageNumber:Boolean(Q('paper-show-page')?.checked),
@@ -17073,21 +17551,13 @@ function syncPaperSettingsUi() {
     sheet.style.setProperty('--paper-preview-accent',draft.printAccentColor);
   });
   const compactRows = Q('paper-compact-rows-wrap');
-  const detailRows = Q('paper-detail-rows-wrap');
   if (compactRows) compactRows.hidden = draft.printFormStyle !== 'compact';
-  if (detailRows) detailRows.hidden = draft.printFormStyle !== 'detailed';
 }
 
 async function loadAdPaperSettings() {
   if (prof?.role !== 'admin') { go(home()); return; }
-  const { data:sessions,error } = await sb.from('count_sessions')
-    .select('id,name,status,count_mode,annual_form_title,annual_form_logo_data_url')
-    .order('created_at',{ascending:false});
-  _annualSessionLogoDrafts = {};
-  (sessions || []).forEach(session => {
-    _annualSessionLogoDrafts[session.id] = normalizeLogoDataUrl(session.annual_form_logo_data_url);
-  });
   const setting = uiBranding;
+  _paperFormLogoDraft = normalizeLogoDataUrl(setting.printLogoDataUrl);
   cnt().innerHTML = `
     <div class="paper-settings-shell">
       <section class="paper-settings-hero">
@@ -17097,6 +17567,32 @@ async function loadAdPaperSettings() {
           <p>เลือกหน้าตาฟอร์มที่ใช้ทั้งงานแบบ Location ปกติและ Annual JOB การตั้งค่าการแบ่งงาน เช่น จำนวน Location + ITEM ต่อ JOB และคำนำหน้า JOB จะอยู่ที่หน้าจ่ายงานเท่านั้น</p>
         </div>
         <span class="tag tag-blue">ADMIN ONLY</span>
+      </section>
+
+      <section class="admin-settings-card">
+        <div class="admin-settings-head">
+          <div>
+            <h2>ชื่อหัวฟอร์มและโลโก้กลาง</h2>
+            <p>ใช้กับ Form Count ทุกแบบ ทั้งตารางกระชับ รายละเอียดเต็ม งาน Location ปกติ และ Annual JOB</p>
+          </div>
+        </div>
+        <div class="fg">
+          <label>ชื่อกลางหัว Form Count</label>
+          <input id="paper-form-title" maxlength="120" value="${escapeWmsText(setting.printFormTitle || '')}"
+            placeholder="เว้นว่างเพื่อใช้ชื่อ Session">
+        </div>
+        <div class="annual-logo-editor">
+          <div class="annual-logo-preview" id="paper-form-logo-preview">${paperFormLogoPreviewHtml()}</div>
+          <div>
+            <div style="font-size:11px;font-weight:800;color:var(--theme-heading-color);margin-bottom:7px">โลโก้ Form Count ทุกแบบ</div>
+            <div class="annual-logo-actions">
+              <input id="paper-form-logo-file" type="file" accept="image/png,image/jpeg,image/webp"
+                onchange="handlePaperFormLogoFile(this)">
+              <button class="btn btn-ghost btn-sm" type="button" onclick="useSystemPaperFormLogo()">ใช้โลโก้ระบบ</button>
+            </div>
+            <div class="admin-user-meta">รองรับ PNG, JPG, WEBP ไม่เกิน 5 MB · บันทึกพร้อมการตั้งค่ากระดาษด้านล่าง</div>
+          </div>
+        </div>
       </section>
 
       <section class="admin-settings-card">
@@ -17112,7 +17608,7 @@ async function loadAdPaperSettings() {
               ${setting.printFormStyle!=='detailed'?'checked':''} onchange="syncPaperSettingsUi()">
             <span class="paper-style-card">
               <span class="paper-style-title">1 · ตารางกระชับ</span>
-              <span class="paper-style-desc">รูปแบบเดิม · หลายรายการต่อหน้า · เหมาะกับการพิมพ์งานจำนวนมาก</span>
+              <span class="paper-style-desc">รูปแบบเดิม · มีช่อง QTY/OH เมื่อเปิด OH · เหมาะกับการพิมพ์งานจำนวนมาก</span>
               ${paperFormPreviewHtml('compact')}
             </span>
           </label>
@@ -17121,7 +17617,7 @@ async function loadAdPaperSettings() {
               ${setting.printFormStyle==='detailed'?'checked':''} onchange="syncPaperSettingsUi()">
             <span class="paper-style-card">
               <span class="paper-style-title">2 · รายละเอียดเต็ม</span>
-              <span class="paper-style-desc">แยกเป็นการ์ดสินค้า · มี License Plate, Lot, Status และช่องนับครบ · Qty แสดงเมื่อ Session อนุญาต OH</span>
+              <span class="paper-style-desc">แยกเป็นการ์ดสินค้า · มี License Plate, Lot, Status, OH รวม และช่องนับครบ · ขึ้นหน้าใหม่อัตโนมัติ</span>
               ${paperFormPreviewHtml('detailed')}
             </span>
           </label>
@@ -17149,26 +17645,14 @@ async function loadAdPaperSettings() {
           <div class="fg"><label>ระยะขอบ (มม.)</label><input id="paper-margin" type="number" min="3" max="20" value="${setting.printMarginMm}"></div>
           <div class="fg"><label>สีหัวฟอร์ม</label><input id="paper-accent" type="color" value="${setting.printAccentColor}" oninput="syncPaperSettingsUi()"></div>
           <div class="fg" id="paper-compact-rows-wrap"><label>แถวต่อหน้า · แบบกระชับ</label><input id="paper-compact-rows" type="number" min="8" max="60" value="${setting.printCompactRows}"></div>
-          <div class="fg" id="paper-detail-rows-wrap"><label>สินค้าเริ่มต้นต่อหน้า · แบบละเอียด</label><input id="paper-detail-rows" type="number" min="1" max="8" value="${setting.printDetailedRows}"></div>
         </div>
+        <div class="alert alert-blue" style="margin-top:13px">แบบรายละเอียดเต็มจะคำนวณพื้นที่ตามขนาดกระดาษจริง และขึ้นหน้าใหม่อัตโนมัติโดยไม่ตัดการ์ดสินค้ากลางคัน</div>
         <div class="paper-check-grid">
           <label class="paper-check"><input id="paper-show-logo" type="checkbox" ${paperChecked(setting.printShowLogo)}> แสดงโลโก้</label>
           <label class="paper-check"><input id="paper-show-date" type="checkbox" ${paperChecked(setting.printShowDate)}> แสดงวันที่พิมพ์</label>
           <label class="paper-check"><input id="paper-show-page" type="checkbox" ${paperChecked(setting.printShowPageNumber)}> แสดงเลขหน้า</label>
           <label class="paper-check"><input id="paper-show-signatures" type="checkbox" ${paperChecked(setting.printShowSignatures)}> แสดงช่องผู้ตรวจนับและเวลา</label>
           <label class="paper-check"><input id="paper-auto-print" type="checkbox" ${paperChecked(setting.printAutoOpenDialog)}> เปิดกล่อง Print อัตโนมัติ</label>
-        </div>
-      </section>
-
-      <section class="admin-settings-card">
-        <div class="admin-settings-head">
-          <div>
-            <h2>หัวฟอร์มแยกตาม Session</h2>
-            <p>กำหนดชื่อกลางหัวฟอร์มและโลโก้เฉพาะ Session ได้ โดยไม่ปะปนกับค่าการแบ่ง Annual JOB</p>
-          </div>
-        </div>
-        <div class="paper-session-list">
-          ${error ? errBox(error.message) : (sessions || []).map(annualSessionSettingsHtml).join('') || '<div class="load">ยังไม่มี Session</div>'}
         </div>
       </section>
 
@@ -17188,8 +17672,11 @@ function resetPaperSettings() {
   if (Q('paper-orientation')) Q('paper-orientation').value = DEFAULT_BRANDING.printOrientation;
   if (Q('paper-margin')) Q('paper-margin').value = DEFAULT_BRANDING.printMarginMm;
   if (Q('paper-compact-rows')) Q('paper-compact-rows').value = DEFAULT_BRANDING.printCompactRows;
-  if (Q('paper-detail-rows')) Q('paper-detail-rows').value = DEFAULT_BRANDING.printDetailedRows;
   if (Q('paper-accent')) Q('paper-accent').value = DEFAULT_BRANDING.printAccentColor;
+  if (Q('paper-form-title')) Q('paper-form-title').value = DEFAULT_BRANDING.printFormTitle;
+  _paperFormLogoDraft = DEFAULT_BRANDING.printLogoDataUrl;
+  const formLogoPreview = Q('paper-form-logo-preview');
+  if (formLogoPreview) formLogoPreview.innerHTML = paperFormLogoPreviewHtml();
   ['Logo','Date','PageNumber','Signatures','AutoOpenDialog'].forEach(suffix => {
     const idMap = { Logo:'paper-show-logo',Date:'paper-show-date',PageNumber:'paper-show-page',Signatures:'paper-show-signatures',AutoOpenDialog:'paper-auto-print' };
     const input = Q(idMap[suffix]);
@@ -17214,8 +17701,9 @@ async function savePaperSettings() {
       printOrientation:settings.printOrientation,
       printMarginMm:settings.printMarginMm,
       printCompactRows:settings.printCompactRows,
-      printDetailedRows:settings.printDetailedRows,
       printAccentColor:settings.printAccentColor,
+      printFormTitle:settings.printFormTitle,
+      printLogoDataUrl:settings.printLogoDataUrl,
       printShowLogo:settings.printShowLogo,
       printShowDate:settings.printShowDate,
       printShowPageNumber:settings.printShowPageNumber,
@@ -18027,6 +18515,7 @@ async function deleteRemarkOption(id) {
 window.addEventListener('DOMContentLoaded', () => {
   syncViewportSize();
   applyBrandingSettings(readLocalBrandingSettings(), false);
+  startStableUiIconGuard();
   boot();
 });
 </script>
