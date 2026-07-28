@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cycle Count v83 - Annual JOB Permission Fallback</title>
+<title>Cycle Count v84 - WMS Workflow & Stock Accuracy</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -3565,19 +3565,23 @@ details summary { box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px 
 .summary-wms-column-percent {
   padding: 4px 8px;
   border-radius: 999px;
-  color: #8b8489;
-  background: #f5f1f2;
+  color: var(--theme-wms-body-text);
+  background: var(--theme-wms-progress-track);
   font-family: 'Fredoka','Mitr',sans-serif;
   font-size: 10px;
   font-weight: 700;
 }
 .summary-wms-column-item.fixed .summary-wms-column-percent {
-  color: #2aa8ba;
-  background: #eaf9fa;
+  color: var(--theme-wms-done-text);
+  background: color-mix(in srgb,var(--theme-wms-done-bar) 16%,white);
 }
 .summary-wms-column-item.unfixed .summary-wms-column-percent {
-  color: #c46a76;
-  background: #f9ecee;
+  color: var(--theme-wms-pending-text);
+  background: color-mix(in srgb,var(--theme-wms-pending-bar) 16%,white);
+}
+.summary-wms-column-item.pending .summary-wms-column-percent {
+  color: var(--theme-wms-pending-confirm-text);
+  background: color-mix(in srgb,var(--theme-wms-pending-confirm-bar) 16%,white);
 }
 
 @media (max-width: 768px) {
@@ -7317,6 +7321,7 @@ tbody tr, .table-row {
 #dash-content .summary-wms-linear-progress span,
 #dash-content .summary-wms-column-item.fixed .summary-wms-column-track span { background:var(--theme-wms-done-bar) !important; }
 #dash-content .summary-wms-column-item.unfixed .summary-wms-column-track span { background:var(--theme-wms-pending-bar) !important; }
+#dash-content .summary-wms-column-item.pending .summary-wms-column-label { color:var(--theme-wms-pending-confirm-text) !important; }
 #dash-content .summary-wms-column-item.unfixed .summary-wms-column-label { color:var(--theme-wms-pending-text) !important; }
 #dash-content .summary-wms-column-item.fixed .summary-wms-column-label { color:var(--theme-wms-done-text) !important; }
 
@@ -7409,6 +7414,7 @@ tbody tr, .table-row {
 .brand-preview-wms { background:var(--theme-wms-card-bg) !important; color:var(--theme-wms-heading-text) !important; }
 .brand-preview-wms-bars { height:80px; display:flex; align-items:flex-end; justify-content:center; gap:18px; margin-top:8px; }
 .brand-preview-wms-bars i { width:24px; border-radius:8px 8px 4px 4px; background:var(--theme-wms-progress-track); }
+.brand-preview-wms-bars .confirm { background:var(--theme-wms-pending-confirm-bar); }
 .brand-preview-wms-bars .pending { background:var(--theme-wms-pending-bar); }
 .brand-preview-wms-bars .done { background:var(--theme-wms-done-bar); }
 .brand-preview-zone { background:var(--theme-zone-card-bg) !important; color:var(--theme-zone-heading-text) !important; }
@@ -9290,7 +9296,7 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
   padding:32px;
   border:1px solid color-mix(in srgb,var(--theme-primary-color) 26%,transparent);
   border-radius:28px;
-  color:var(--theme-text-color);
+  color:var(--theme-body-text-color);
   background:var(--theme-card-bg);
   box-shadow:0 28px 80px rgba(8,42,48,.34);
   text-align:center;
@@ -9374,6 +9380,490 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
   .assignment-success-buttons { grid-template-columns:1fr; }
 }
 
+/* v84 — WMS workspace, separated workflow states and 3-part stock accuracy */
+#dash-content .summary-accuracy-breakdown {
+  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  gap:6px !important;
+}
+#dash-content .summary-accuracy-breakdown .summary-gain-loss {
+  min-width:0;
+  padding:10px 5px !important;
+}
+#dash-content .summary-accuracy-breakdown .summary-gain-loss span {
+  font-size:9px !important;
+}
+#dash-content .summary-accuracy-breakdown .summary-gain-loss strong {
+  font-size:14px !important;
+  white-space:nowrap;
+}
+#dash-content .summary-accuracy-breakdown .summary-gain-loss small {
+  font-size:8px !important;
+  white-space:nowrap;
+}
+.summary-gain-loss.ok strong,
+.summary-gain-loss.ok small {
+  color:var(--theme-accuracy-ok-text) !important;
+}
+
+.summary-wms-columns.is-three {
+  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  gap:8px !important;
+}
+.summary-wms-column-item.pending .summary-wms-column-value {
+  color:var(--theme-wms-pending-confirm-text) !important;
+}
+.summary-wms-column-item.pending .summary-wms-column-track span {
+  background:var(--theme-wms-pending-confirm-bar) !important;
+}
+
+.wms-workspace {
+  display:grid;
+  gap:18px;
+}
+.wms-overview-shell,
+.wms-filter-panel,
+.wms-list-shell {
+  border:1px solid var(--theme-wms-workspace-border);
+  border-radius:26px;
+  background:var(--theme-wms-workspace-bg);
+  box-shadow:0 16px 34px rgba(0,109,119,.08);
+}
+.wms-overview-shell { padding:22px; }
+.wms-overview-head {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  margin-bottom:18px;
+}
+.wms-overview-title {
+  display:flex;
+  align-items:center;
+  gap:13px;
+}
+.wms-overview-icon {
+  width:48px;
+  height:48px;
+  display:grid;
+  place-items:center;
+  flex:0 0 auto;
+  border-radius:16px;
+  color:var(--theme-primary-color);
+  background:var(--theme-secondary-bg);
+}
+.wms-overview-icon svg { width:25px;height:25px; }
+.wms-overview-copy strong {
+  display:block;
+  color:var(--theme-heading-color);
+  font-size:17px;
+  font-weight:900;
+}
+.wms-overview-copy span {
+  display:block;
+  margin-top:3px;
+  color:var(--theme-muted-text-color);
+  font-size:11px;
+  font-weight:700;
+}
+.wms-overview-total {
+  text-align:right;
+}
+.wms-overview-total strong {
+  display:block;
+  color:var(--theme-wms-value-text);
+  font-family:'Fredoka','Mitr',sans-serif;
+  font-size:35px;
+  font-weight:800;
+  line-height:1;
+}
+.wms-overview-total span {
+  color:var(--theme-muted-text-color);
+  font-size:10px;
+  font-weight:800;
+}
+.wms-progress-row {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:12px;
+  margin-bottom:7px;
+  color:var(--theme-muted-text-color);
+  font-size:11px;
+  font-weight:800;
+}
+.wms-progress-row strong { color:var(--theme-wms-done-text);font-size:13px; }
+.wms-progress-track {
+  height:9px;
+  overflow:hidden;
+  border-radius:999px;
+  background:var(--theme-wms-progress-track);
+}
+.wms-progress-track span {
+  display:block;
+  height:100%;
+  border-radius:inherit;
+  background:linear-gradient(90deg,var(--theme-progress-start),var(--theme-progress-end));
+  transition:width .3s ease;
+}
+.wms-kpi-grid {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;
+  margin-top:18px;
+}
+.wms-kpi-card {
+  min-height:104px;
+  display:grid;
+  grid-template-columns:40px minmax(0,1fr);
+  align-items:center;
+  gap:11px;
+  padding:15px;
+  border:1px solid transparent;
+  border-radius:20px;
+  background:var(--theme-wms-workspace-bg);
+  color:inherit;
+  text-align:left;
+  cursor:pointer;
+  box-shadow:none !important;
+}
+.wms-kpi-card:hover,
+.wms-kpi-card.active {
+  border-color:var(--theme-wms-workspace-border);
+  transform:translateY(-1px);
+}
+.wms-kpi-card > .wms-kpi-icon {
+  width:40px;
+  height:40px;
+  display:grid;
+  place-items:center;
+  margin:0;
+  border-radius:13px;
+  background:var(--theme-card-bg);
+  color:currentColor;
+  line-height:1;
+}
+.wms-kpi-card > .wms-kpi-icon svg {
+  width:21px;
+  height:21px;
+  display:block;
+  margin:auto;
+}
+.wms-kpi-card.pending { color:var(--theme-wms-pending-confirm-text); background:var(--theme-wms-pending-confirm-bg); }
+.wms-kpi-card.unfixed { color:var(--theme-wms-unchecked-text); background:var(--theme-wms-unchecked-bg); }
+.wms-kpi-card.fixed { color:var(--theme-wms-checked-text); background:var(--theme-wms-checked-bg); }
+.wms-kpi-copy { min-width:0; }
+.wms-kpi-copy strong {
+  display:block;
+  color:currentColor;
+  font-family:'Fredoka','Mitr',sans-serif;
+  font-size:30px;
+  font-weight:800;
+  line-height:1;
+}
+.wms-kpi-copy span {
+  display:block;
+  margin-top:5px;
+  color:var(--theme-muted-text-color);
+  font-size:10px;
+  font-weight:800;
+}
+.wms-filter-panel { padding:18px; }
+.wms-filter-heading {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:13px;
+}
+.wms-filter-heading strong {
+  color:var(--theme-heading-color);
+  font-size:14px;
+  font-weight:900;
+}
+.wms-filter-heading span {
+  color:var(--theme-muted-text-color);
+  font-size:10px;
+  font-weight:700;
+}
+.wms-filter-grid {
+  display:grid;
+  grid-template-columns:repeat(6,minmax(120px,1fr));
+  gap:11px;
+  align-items:end;
+}
+.wms-filter-field { min-width:0; }
+.wms-filter-field label {
+  display:block;
+  margin-bottom:6px;
+  font-size:9px !important;
+  font-weight:900;
+  letter-spacing:.04em;
+}
+.wms-filter-field select,
+.wms-filter-field input {
+  width:100%;
+  min-height:44px;
+  padding:9px 11px;
+  border-radius:13px;
+  font-size:11px;
+}
+.wms-filter-field.search { grid-column:span 2; }
+.wms-feedback {
+  margin-top:12px;
+  padding:10px 12px;
+  border-radius:13px;
+  background:color-mix(in srgb,var(--theme-success-color) 10%,white);
+  color:var(--theme-success-color);
+  font-size:11px;
+  font-weight:800;
+}
+.wms-feedback.error { background:color-mix(in srgb,var(--theme-danger-color) 12%,white);color:var(--theme-danger-color); }
+.wms-feedback[hidden] { display:none; }
+.wms-list-shell { padding:6px 18px 10px; }
+.wms-list-heading {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:16px 2px 10px;
+}
+.wms-list-heading strong {
+  color:var(--theme-heading-color);
+  font-size:14px;
+  font-weight:900;
+}
+.wms-list-count {
+  padding:5px 10px;
+  border-radius:999px;
+  background:var(--theme-secondary-bg);
+  color:var(--theme-secondary-text);
+  font-size:10px;
+  font-weight:900;
+}
+.wms-row {
+  grid-template-columns:minmax(230px,1.35fr) minmax(280px,.9fr) minmax(230px,auto) !important;
+  gap:16px !important;
+  margin:10px 0;
+  padding:16px !important;
+  border:1px solid var(--theme-wms-workspace-border) !important;
+  border-radius:20px;
+  background:var(--theme-wms-row-bg);
+}
+.wms-row.is-checked { background:var(--theme-wms-row-checked-bg); }
+.wms-row.is-pending { background:var(--theme-wms-row-pending-bg); }
+.wms-row-main .wms-item-description {
+  overflow:hidden;
+  color:var(--theme-muted-text-color);
+  font-size:11px;
+  font-weight:600;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.wms-row-meta {
+  margin-top:5px;
+  color:var(--theme-muted-text-color);
+  font-size:10px;
+  font-weight:700;
+}
+.wms-count-strip {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(52px,1fr));
+  gap:7px;
+}
+.wms-count-cell {
+  min-height:56px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:7px 4px;
+  border-radius:13px;
+  background:var(--theme-wms-count-bg);
+}
+.wms-count-cell.oh { background:var(--theme-wms-oh-bg); }
+.wms-count-cell span {
+  color:var(--theme-muted-text-color);
+  font-size:8px;
+  font-weight:900;
+  letter-spacing:.04em;
+}
+.wms-count-cell strong {
+  margin-top:3px;
+  color:var(--theme-heading-color);
+  font-family:'Fredoka','Mitr',sans-serif;
+  font-size:17px;
+  font-weight:800;
+}
+.wms-row-side {
+  min-width:0 !important;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  align-items:center;
+  gap:12px;
+}
+.wms-variance-value {
+  min-width:58px;
+  text-align:center;
+}
+.wms-variance-value strong {
+  display:block;
+  font-family:'Fredoka','Mitr',sans-serif;
+  font-size:23px;
+  font-weight:800;
+  line-height:1;
+}
+.wms-variance-value span {
+  display:block;
+  margin-top:5px;
+  color:var(--theme-muted-text-color);
+  font-size:8px;
+  font-weight:800;
+}
+.wms-actions { min-width:0; }
+.wms-note-chips {
+  grid-column:1 / -1;
+  width:100%;
+  max-width:none !important;
+  justify-content:flex-start !important;
+  margin:2px 0 0 !important;
+}
+.wms-note-chip {
+  max-width:240px !important;
+  padding:5px 9px !important;
+  font-size:9px !important;
+}
+.wms-note-selection {
+  min-height:30px;
+  margin-top:9px;
+  padding:7px 9px;
+  border-radius:11px;
+  background:var(--theme-wms-count-bg);
+  color:var(--theme-muted-text-color);
+  font-size:10px;
+  font-weight:700;
+  line-height:1.45;
+}
+.wms-note-selection.has-selection { color:var(--theme-wms-note-text);background:var(--theme-wms-note-bg); }
+.wms-note-inline {
+  grid-column:1 / -1;
+  width:100%;
+  margin-top:3px;
+  padding:10px 12px;
+  border:1px solid var(--theme-wms-workspace-border);
+  border-radius:13px;
+  background:var(--theme-wms-note-bg);
+  color:var(--theme-wms-note-text);
+  text-align:left;
+}
+.wms-note-inline.is-draft {
+  border-color:var(--theme-warning-color);
+  background:var(--theme-wms-pending-confirm-bg);
+  color:var(--theme-wms-pending-confirm-text);
+}
+.wms-note-inline[hidden] { display:none; }
+.wms-note-inline span {
+  display:block;
+  margin-bottom:3px;
+  font-size:8px;
+  font-weight:900;
+  letter-spacing:.05em;
+}
+.wms-note-inline strong {
+  display:block;
+  font-size:10px;
+  font-weight:800;
+  line-height:1.5;
+}
+.wms-action-btn.is-saving { opacity:.68;pointer-events:none; }
+.wms-return-confirm-backdrop {
+  position:fixed;
+  inset:0;
+  z-index:3600;
+  display:grid;
+  place-items:center;
+  padding:20px;
+  background:rgba(11,44,50,.58);
+  backdrop-filter:blur(8px);
+}
+.wms-return-confirm-modal {
+  width:min(480px,100%);
+  padding:28px;
+  border:1px solid var(--theme-wms-workspace-border);
+  border-radius:26px;
+  background:var(--theme-card-bg,#fff);
+  box-shadow:0 28px 76px rgba(8,42,48,.34);
+  text-align:center;
+}
+.wms-return-confirm-icon {
+  width:70px;
+  height:70px;
+  margin:0 auto 16px;
+  display:grid;
+  place-items:center;
+  border-radius:22px;
+  color:var(--theme-wms-pending-confirm-text);
+  background:var(--theme-wms-pending-confirm-bg);
+}
+.wms-return-confirm-icon svg { width:34px;height:34px; }
+.wms-return-confirm-modal h2 {
+  margin:0;
+  color:var(--theme-heading-color);
+  font-size:22px;
+  font-weight:900;
+}
+.wms-return-confirm-modal p {
+  margin:12px 0 0;
+  color:var(--theme-muted-text-color);
+  font-size:12px;
+  font-weight:700;
+  line-height:1.7;
+}
+.wms-return-confirm-location {
+  margin:16px 0 20px;
+  padding:12px;
+  border-radius:15px;
+  background:var(--theme-wms-note-bg);
+  color:var(--theme-wms-note-text);
+  font-family:'Fredoka','Mitr',sans-serif;
+  font-size:18px;
+  font-weight:900;
+}
+.wms-return-confirm-actions {
+  display:grid;
+  grid-template-columns:1fr 1.25fr;
+  gap:10px;
+}
+.wms-return-confirm-actions .btn {
+  width:100%;
+  min-height:46px;
+}
+
+@media (max-width:1280px) {
+  .wms-filter-grid { grid-template-columns:repeat(3,minmax(140px,1fr)); }
+  .wms-filter-field.search { grid-column:span 2; }
+  .wms-row {
+    grid-template-columns:minmax(220px,1fr) minmax(260px,1fr) !important;
+  }
+  .wms-row-side { grid-column:1 / -1; }
+}
+@media (max-width:760px) {
+  .wms-overview-head { align-items:flex-start; }
+  .wms-kpi-grid { grid-template-columns:1fr; }
+  .wms-kpi-card { min-height:82px; }
+  .wms-filter-grid { grid-template-columns:1fr 1fr; }
+  .wms-filter-field.search { grid-column:1 / -1; }
+  .wms-row { grid-template-columns:1fr !important; }
+  .wms-row-side { grid-column:auto; }
+}
+@media (max-width:480px) {
+  .wms-filter-grid { grid-template-columns:1fr; }
+  .wms-filter-field.search { grid-column:auto; }
+  .wms-count-strip { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .wms-row-side { grid-template-columns:1fr; }
+  .wms-return-confirm-modal { padding:24px 18px; }
+  .wms-return-confirm-actions { grid-template-columns:1fr; }
+}
+
 </style>
 </head>
 <body>
@@ -9443,7 +9933,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v83';
+window.__CYCLE_COUNT_BUILD__ = 'v84-theme3';
 
 let _viewportSyncFrame = 0;
 function syncViewportSize() {
@@ -9516,8 +10006,8 @@ async function supabaseFetchWithTimeout(input, init = {}) {
   }
 }
 
-const BRANDING_STORAGE_KEY = 'cycle_count_ui_branding_v68';
-const LEGACY_BRANDING_STORAGE_KEYS = ['cycle_count_ui_branding_v67', 'cycle_count_ui_branding_v66', 'cycle_count_ui_branding_v65', 'cycle_count_ui_branding_v64', 'cycle_count_ui_branding_v63'];
+const BRANDING_STORAGE_KEY = 'cycle_count_ui_branding_v69';
+const LEGACY_BRANDING_STORAGE_KEYS = ['cycle_count_ui_branding_v68', 'cycle_count_ui_branding_v67', 'cycle_count_ui_branding_v66', 'cycle_count_ui_branding_v65', 'cycle_count_ui_branding_v64', 'cycle_count_ui_branding_v63'];
 const DEFAULT_BRANDING = Object.freeze({
   systemName: 'Cycle Count',
   systemSubtitle: 'Warehouse v1.0',
@@ -9543,6 +10033,7 @@ const DEFAULT_BRANDING = Object.freeze({
   accuracyRingDiff: '#FFD9CF',
   accuracyHeadingText: '#FFFFFF',
   accuracyBodyText: '#FFFFFF',
+  accuracyOkText: '#087F77',
   accuracyGainText: '#007B83',
   accuracyLostText: '#E29578',
   wmsCardBg: '#FFFFFF',
@@ -9550,10 +10041,26 @@ const DEFAULT_BRANDING = Object.freeze({
   wmsBodyText: '#638083',
   wmsValueText: '#17121A',
   wmsProgressTrack: '#EAE7E9',
+  wmsPendingConfirmBar: '#E6A23C',
   wmsPendingBar: '#EF91A2',
   wmsDoneBar: '#58CADC',
+  wmsPendingConfirmText: '#C77B19',
   wmsPendingText: '#4F484D',
   wmsDoneText: '#007B83',
+  wmsWorkspaceBg: '#FFFFFF',
+  wmsWorkspaceBorder: '#D9ECEE',
+  wmsPendingConfirmBg: '#FFF8EA',
+  wmsUncheckedBg: '#FFF3EE',
+  wmsCheckedBg: '#EDF8F7',
+  wmsUncheckedText: '#D46D4C',
+  wmsCheckedText: '#007B83',
+  wmsRowBg: '#FBFDFD',
+  wmsRowCheckedBg: '#F2FAF8',
+  wmsRowPendingBg: '#FFFAF0',
+  wmsCountBg: '#EEF6F6',
+  wmsOhBg: '#E2F2F0',
+  wmsNoteBg: '#EAF6F5',
+  wmsNoteText: '#006D77',
   hourlyCardBg: '#FFFFFF',
   hourlyHeadingText: '#006D77',
   hourlyText: '#638083',
@@ -9634,7 +10141,7 @@ const DEFAULT_BRANDING = Object.freeze({
   logoDataUrl: '',
 });
 const BRANDING_THEME_AREAS = Object.freeze([
-  { key:'dashboard', title:'1. Dashboard และกราฟ', description:'แยกสีทุกการ์ด ตัวอักษร และกราฟในหน้า Dashboard', sections:[
+  { key:'dashboard', title:'1. Dashboard และ WMS', description:'สีการ์ด ตัวอักษร กราฟ และพื้นที่ทำงานปรับยอด WMS', sections:[
     { title:'ภาพรวม Dashboard', fields:[
       { key:'dashboardBg', label:'พื้นหลัง Dashboard' }, { key:'dashboardCardBg', label:'พื้นหลังการ์ด' },
       { key:'dashboardBorder', label:'เส้นขอบการ์ด' }, { key:'dashboardHeading', label:'หัวข้อ Dashboard' },
@@ -9651,14 +10158,25 @@ const BRANDING_THEME_AREAS = Object.freeze([
       { key:'accuracyLayerBack', label:'แผ่นซ้อนด้านหลัง' }, { key:'accuracyLayerBottom', label:'แผ่นซ้อนด้านล่าง' },
       { key:'accuracyRingMain', label:'วงแหวนหลัก' }, { key:'accuracyRingDiff', label:'วงแหวนส่วนต่าง' },
       { key:'accuracyHeadingText', label:'สีหัวข้อ' }, { key:'accuracyBodyText', label:'ตัวเลข/รายละเอียด' },
-      { key:'accuracyGainText', label:'ข้อความ Gain' }, { key:'accuracyLostText', label:'ข้อความ Lost' },
+      { key:'accuracyOkText', label:'ข้อความ OK' }, { key:'accuracyGainText', label:'ข้อความ Gain' },
+      { key:'accuracyLostText', label:'ข้อความ Lost' },
     ]},
-    { title:'การปรับยอด WMS', fields:[
+    { title:'สรุปการปรับยอด WMS บน Dashboard', fields:[
       { key:'wmsCardBg', label:'พื้นหลังการ์ด' }, { key:'wmsHeadingText', label:'สีหัวข้อ' },
       { key:'wmsBodyText', label:'สีรายละเอียด' }, { key:'wmsValueText', label:'สีตัวเลขหลัก' },
-      { key:'wmsProgressTrack', label:'พื้นราง Progress' }, { key:'wmsPendingBar', label:'แท่งยังไม่ตรวจ' },
-      { key:'wmsDoneBar', label:'แท่งตรวจแล้ว' }, { key:'wmsPendingText', label:'ข้อความยังไม่ตรวจ' },
+      { key:'wmsProgressTrack', label:'พื้นราง Progress' }, { key:'wmsPendingConfirmBar', label:'แท่งรอคอนเฟิร์ม' },
+      { key:'wmsPendingBar', label:'แท่งยังไม่ตรวจ' }, { key:'wmsDoneBar', label:'แท่งตรวจแล้ว' },
+      { key:'wmsPendingConfirmText', label:'ข้อความรอคอนเฟิร์ม' }, { key:'wmsPendingText', label:'ข้อความยังไม่ตรวจ' },
       { key:'wmsDoneText', label:'ข้อความตรวจแล้ว' },
+    ]},
+    { title:'พื้นที่ทำงานปรับยอด WMS', fields:[
+      { key:'wmsWorkspaceBg', label:'พื้นกล่อง WMS' }, { key:'wmsWorkspaceBorder', label:'เส้นขอบกล่อง WMS' },
+      { key:'wmsPendingConfirmBg', label:'พื้นกล่องรอคอนเฟิร์ม' }, { key:'wmsUncheckedBg', label:'พื้นกล่องยังไม่ตรวจ' },
+      { key:'wmsCheckedBg', label:'พื้นกล่องตรวจแล้ว' }, { key:'wmsUncheckedText', label:'ตัวเลขยังไม่ตรวจ' },
+      { key:'wmsCheckedText', label:'ตัวเลขตรวจแล้ว' }, { key:'wmsRowBg', label:'พื้นรายการปกติ' },
+      { key:'wmsRowCheckedBg', label:'พื้นรายการตรวจแล้ว' }, { key:'wmsRowPendingBg', label:'พื้นรายการรอคอนเฟิร์ม' },
+      { key:'wmsCountBg', label:'พื้นช่อง COUNT' }, { key:'wmsOhBg', label:'พื้นช่อง OH' },
+      { key:'wmsNoteBg', label:'พื้นหมายเหตุ' }, { key:'wmsNoteText', label:'ข้อความหมายเหตุ' },
     ]},
     { title:'ความคืบหน้ารายชั่วโมง', fields:[
       { key:'hourlyCardBg', label:'พื้นหลังการ์ด' }, { key:'hourlyHeadingText', label:'สีหัวข้อ' },
@@ -9682,7 +10200,7 @@ const BRANDING_THEME_AREAS = Object.freeze([
       { key:'sessionActiveText', label:'ข้อความแถวที่เน้น' },
     ]},
   ]},
-  { key:'sidebar', title:'2. Sidebar ด้านข้าง', description:'ควบคุมพื้นหลัง โลโก้ เมนูหลัก เมนูย่อย และ Scrollbar', sections:[
+  { key:'sidebar', title:'2. Sidebar และเมนูนำทาง', description:'ควบคุมพื้นหลัง โลโก้ เมนูหลัก เมนูย่อย และ Scrollbar', sections:[
     { title:'พื้นและโลโก้', fields:[
       { key:'sidebarStart', label:'พื้น Sidebar — สีบน' }, { key:'sidebarEnd', label:'พื้น Sidebar — สีล่าง' },
       { key:'sidebarLogoBg', label:'พื้นหลังโลโก้' }, { key:'sidebarTitleText', label:'ชื่อระบบ' },
@@ -9695,7 +10213,7 @@ const BRANDING_THEME_AREAS = Object.freeze([
       { key:'menuActiveText', label:'ข้อความเมนูที่เลือก' },
     ]},
   ]},
-  { key:'menus', title:'3. เมนูใช้งานทุกหน้า', description:'ใช้เป็นมาตรฐานเดียวกันกับหน้ารับงาน นับงาน Variance WMS รายงาน และ Admin', sections:[
+  { key:'menus', title:'3. หน้าทำงานและแบบฟอร์ม', description:'มาตรฐานร่วมของหน้ารับงาน นับงาน Variance รายงาน Admin และฟอร์มทุกหน้า', sections:[
     { title:'พื้นหลัง การ์ด และตัวอักษร', fields:[
       { key:'pageBg', label:'พื้นหลังทุกหน้า' }, { key:'appFrameBg', label:'พื้นกรอบระบบ' },
       { key:'cardBg', label:'พื้นหลังการ์ด/Panel' }, { key:'borderColor', label:'เส้นขอบและกรอบ' },
@@ -9839,7 +10357,7 @@ function applyBrandingSettings(settings, persistLocal = true) {
     const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
     root.setProperty(`--theme-${cssKey}`, uiBranding[key]);
   });
-  document.title = `${uiBranding.systemName} v83`;
+  document.title = `${uiBranding.systemName} v84`;
   if (persistLocal) {
     try { localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(uiBranding)); } catch (_) {}
   }
@@ -9881,6 +10399,25 @@ let _dashboardLoadInFlight = null;
 const DASHBOARD_CACHE_TTL_MS = 60000;
 const NAV_DETAIL_PAGES = new Set(['c-count','sv-detail','ad-txlog','ad-new']);
 const BACK_BUTTON_PAGES = new Set(['c-count','sv-detail','sv-list','ad-txlog','ad-new']);
+const DASHBOARD_TAB_TITLES = {
+  summary: 'สรุป',
+  variance: 'Variance',
+  wms: 'ปรับยอด WMS',
+  log: 'รายงานผลต่างล่าสุด (Variance Log)',
+  team: 'ความคืบหน้าการทำงาน (Team Progress)',
+};
+const MANAGE_TAB_TITLES = {
+  sessions: 'Session',
+  assign: 'จ่ายงาน',
+  import: 'Import WMS',
+  backup: 'Backup / Restore',
+};
+
+function currentPageTitle(page) {
+  if (page === 'sv-dash') return DASHBOARD_TAB_TITLES[S._dashTab || _dashTab || 'summary'];
+  if (page === 'ad-manage') return MANAGE_TAB_TITLES[S._manageTab || _manageTab || 'sessions'];
+  return '';
+}
 
 function invalidateDashboardCache() {
   _dashboardViewCache = null;
@@ -10118,6 +10655,8 @@ function updateDashboardNavigationUi(tab) {
     button.classList.toggle('active', button.dataset.navId === `dash-${tab}`);
   });
   document.querySelector('.main-wrapper')?.classList.toggle('summary-view', tab === 'summary');
+  const title = document.querySelector('.topbar-title');
+  if (title) title.textContent = DASHBOARD_TAB_TITLES[tab] || 'สรุปภาพรวม';
 }
 
 function paintDashboardView(tab, cache = _dashboardViewCache) {
@@ -10128,6 +10667,7 @@ function paintDashboardView(tab, cache = _dashboardViewCache) {
   updateDashboardNavigationUi(tab);
   if (tab === 'wms') {
     if (Q('wms-zone')) Q('wms-zone').value = S._wmsZone || '';
+    if (Q('wms-row')) Q('wms-row').value = S._wmsRow || '';
     if (Q('wms-level')) Q('wms-level').value = S._wmsLevel || '';
     if (Q('wms-user')) Q('wms-user').value = S._wmsUser || '';
     if (Q('wms-status')) Q('wms-status').value = S._wmsFilter || 'unfixed';
@@ -10818,7 +11358,7 @@ function renderResponsivePreviewContent() {
     <div class="summary-page-header">
       <div class="summary-greeting-wrap">
         <div class="summary-greeting">Hello, AuD</div>
-        <div class="summary-greeting-sub">${escapeWmsText(uiBranding.systemName)} Dashboard · v83</div>
+        <div class="summary-greeting-sub">${escapeWmsText(uiBranding.systemName)} Dashboard · v84</div>
       </div>
       <div class="summary-header-actions">${dashboardFiltersHtml('<option>Cycle Count ก.ค. 2569</option>', false)}</div>
     </div>
@@ -10838,7 +11378,8 @@ function renderResponsivePreviewContent() {
                 <div class="summary-accuracy-ring-inner"><strong>96.8%</strong></div>
               </div>
             </div>
-            <div class="summary-gain-loss-grid summary-gain-loss-grid-tight">
+            <div class="summary-gain-loss-grid summary-gain-loss-grid-tight summary-accuracy-breakdown">
+              <div class="summary-gain-loss ok"><span>OK</span><strong>● 1,240</strong><small>34 ITEM</small></div>
               <div class="summary-gain-loss gain"><span>GAIN</span><strong>▲ +4</strong><small>2 ITEM</small></div>
               <div class="summary-gain-loss loss"><span>LOST</span><strong>▼ -3</strong><small>1 ITEM</small></div>
             </div>
@@ -10851,7 +11392,11 @@ function renderResponsivePreviewContent() {
           <div class="summary-wms-total-block"><strong>15</strong><span>DIFF ทั้งหมด</span></div>
           <div class="summary-wms-progress-head"><span>ความคืบหน้าการตรวจสอบ</span><strong>67%</strong></div>
           <div class="summary-wms-linear-progress"><span style="width:67%"></span></div>
-          <div class="summary-wms-columns" aria-label="ตัวอย่างสถานะการปรับยอด WMS">
+          <div class="summary-wms-columns is-three" aria-label="ตัวอย่างสถานะการปรับยอด WMS">
+            <div class="summary-wms-column-item pending">
+              <div class="summary-wms-column-value">3</div><div class="summary-wms-column-track"><span style="height:20%"></span></div>
+              <div class="summary-wms-column-label">รอคอนเฟิร์ม</div>
+            </div>
             <div class="summary-wms-column-item unfixed">
               <div class="summary-wms-column-value">5</div><div class="summary-wms-column-track"><span style="height:33%"></span></div>
               <div class="summary-wms-column-label">ยังไม่ได้ตรวจสอบ</div>
@@ -10921,10 +11466,10 @@ function render() {
     'sv-list':    'รายการผันผวน',
     'sv-detail':  'ตรวจสอบ Variance',
     'ad-manage':  'จัดการงาน / Sessions',
-    'ad-sessions':'จัดการงาน / Sessions',
+    'ad-sessions':'Session',
     'ad-new':      'สร้างรายการนับ',
-    'ad-assign':  'จัดการงาน / Sessions',
-    'ad-import':  'จัดการงาน / Sessions',
+    'ad-assign':  'จ่ายงาน',
+    'ad-import':  'Import WMS',
     'ad-history': 'ประวัติการนับ',
     'ad-txlog':   'Transaction Log',
     'ad-users':   'จัดการ User และข้อมูลระบบ',
@@ -10933,7 +11478,7 @@ function render() {
   };
 
   const currentRole = prof?.role || 'counter';
-  const pageTitle = PAGE_TITLES[page] || uiBranding.systemName;
+  const pageTitle = currentPageTitle(page) || PAGE_TITLES[page] || uiBranding.systemName;
 
   const navMenus = {
     counter: [
@@ -11382,6 +11927,7 @@ function wmsIconSvg(name, size=18) {
     reviewed: `<path d="M12 2.5 19 5v5.8c0 4.35-2.87 8.3-7 9.7-4.13-1.4-7-5.35-7-9.7V5l7-2.5Z"/><path d="m8.6 11.4 2.15 2.15 4.65-4.7"/>`,
     pending: `<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M9 3.5h6M8 8h8M8 12h5"/><circle cx="16.5" cy="16.5" r="2.5"/>`,
     search: `<circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.3 15.3 4.2 4.2"/>`,
+    review: `<path d="M9 7H5v-4"/><path d="M5.4 7A8 8 0 1 1 4 14.5"/><path d="M9 12h6M9 16h4"/>`,
     plus: `<path d="M12 5v14M5 12h14"/>`,
     close: `<path d="m6 6 12 12M18 6 6 18"/>`,
   };
@@ -12666,14 +13212,16 @@ async function loadSvDash() {
       vaError = vaErr;
       wmsRows = [];
     } else {
-      wmsRows = (vaData || []).map(v => ({
-        ...v,
-        wms_fixed: v.wms_fixed ?? false,
-        wms_fixed_at: v.wms_fixed_at ?? null,
-        wms_fixed_by: v.wms_fixed_by ?? null,
-        created_at: v.created_at ?? null,
-        _fromVA: true
-      }));
+      wmsRows = (vaData || [])
+        .filter(v => Number(v.variance) !== 0)
+        .map(v => ({
+          ...v,
+          wms_fixed: v.wms_fixed ?? false,
+          wms_fixed_at: v.wms_fixed_at ?? null,
+          wms_fixed_by: v.wms_fixed_by ?? null,
+          created_at: v.created_at ?? null,
+          _fromVA: true
+        }));
     }
   } catch (e) {
     vaError = e;
@@ -12707,13 +13255,17 @@ async function loadSvDash() {
     v.wms_notes = wmsNoteMap[`${v.assignment_id}|${v.item_id}`] || [];
   });
 
-  const approvedAsgnIds = new Set(wmsRows.filter(v => v.wms_fixed).map(v => v.assignment_id));
+  // An approved item must never be recreated as "รอคอนเฟิร์ม".
+  // Use the assignment + item key because one assignment can contain several items.
+  const approvedItemKeys = new Set(
+    wmsRows.map(v => `${v.assignment_id || ''}|${v.item_id || ''}`)
+  );
   const pendingWmsRows = [];
   for (const a of diffAssignments) {
-    if (approvedAsgnIds.has(a.id)) continue;
     const itemCounts = countByAsgn[a.id] || {};
     const locId = a.location_id;
     for (const [itemId, rounds] of Object.entries(itemCounts)) {
+      if (approvedItemKeys.has(`${a.id}|${itemId}`)) continue;
       const oh = ohMap[locId + '|' + itemId];
       if (oh === undefined) continue;
       const st = computeItemStatus(oh, rounds[1], rounds[2], rounds[3], rules);
@@ -12721,6 +13273,7 @@ async function loadSvDash() {
       const latestRound = rounds[3] !== undefined ? 3 : rounds[2] !== undefined ? 2 : 1;
       const countQty = rounds[latestRound];
       const variance = countQty - oh;
+      if (Number(variance) === 0) continue;
       pendingWmsRows.push({
         _isPending: true,
         assignment_id: a.id,
@@ -12754,6 +13307,15 @@ async function loadSvDash() {
   if (isStaleLoad()) return;
 
   const allWmsRows = [...wmsRows, ...pendingWmsRows];
+  allWmsRows.forEach(v => {
+    const assignment = asgnInfoMap[v.assignment_id];
+    const rounds = countByAsgn[v.assignment_id]?.[v.item_id] || {};
+    const ohKey = `${assignment?.location_id || ''}|${v.item_id || ''}`;
+    v._oh = ohMap[ohKey];
+    v._count1 = rounds[1];
+    v._count2 = rounds[2];
+    v._count3 = rounds[3];
+  });
   window._wmsRows = allWmsRows;
   window._wmsAsgnInfoMap = asgnInfoMap;
   window._actualCountersByAssignment = actualCountersByAssignment;
@@ -12769,6 +13331,23 @@ async function loadSvDash() {
   });
   const gainItemCount = gainItemKeys.size;
   const lostItemCount = lostItemKeys.size;
+  const okItemKeys = new Set();
+  let okQty = 0;
+  Object.entries(countByAsgn).forEach(([assignmentId, itemRows]) => {
+    const assignment = asgnInfoMap[assignmentId];
+    if (!assignment) return;
+    Object.entries(itemRows || {}).forEach(([itemId, rounds]) => {
+      const oh = ohMap[`${assignment.location_id}|${itemId}`];
+      if (oh === undefined) return;
+      if (computeItemStatus(oh, rounds[1], rounds[2], rounds[3], rules) !== 'OK') return;
+      const key = `${assignmentId}|${itemId}`;
+      if (okItemKeys.has(key)) return;
+      okItemKeys.add(key);
+      const finalCount = rounds[3] ?? rounds[2] ?? rounds[1] ?? oh;
+      okQty += Number(finalCount) || 0;
+    });
+  });
+  const okItemCount = okItemKeys.size;
 
   let totalOHQty = 0;
   Object.values(ohMap).forEach(qty => totalOHQty += qty);
@@ -13106,10 +13685,17 @@ async function loadSvDash() {
   }
 
   const summaryWmsTotalCount = allWmsRows.length;
-  const summaryWmsFixedCount = allWmsRows.filter(v => v.wms_fixed).length;
-  const summaryWmsUnfixedCount = summaryWmsTotalCount - summaryWmsFixedCount;
-  const summaryWmsFixedPercent = summaryWmsTotalCount > 0 ? Math.round((summaryWmsFixedCount / summaryWmsTotalCount) * 100) : 0;
-  const summaryWmsUnfixedPercent = summaryWmsTotalCount > 0 ? 100 - summaryWmsFixedPercent : 0;
+  const summaryWmsPendingCount = allWmsRows.filter(v => v._isPending).length;
+  const summaryWmsConfirmedRows = allWmsRows.filter(v => !v._isPending);
+  const summaryWmsFixedCount = summaryWmsConfirmedRows.filter(v => v.wms_fixed).length;
+  const summaryWmsUnfixedCount = summaryWmsConfirmedRows.length - summaryWmsFixedCount;
+  const summaryWmsFixedPercent = summaryWmsConfirmedRows.length > 0
+    ? Math.round((summaryWmsFixedCount / summaryWmsConfirmedRows.length) * 100)
+    : 0;
+  const summaryWmsUnfixedPercent = summaryWmsConfirmedRows.length > 0 ? 100 - summaryWmsFixedPercent : 0;
+  const summaryWmsPendingPercent = summaryWmsTotalCount > 0
+    ? Math.round((summaryWmsPendingCount / summaryWmsTotalCount) * 100)
+    : 0;
 
   const summaryTabHtml = `
     <section class="summary-dashboard-grid">
@@ -13132,7 +13718,10 @@ async function loadSvDash() {
               </div>
             </div>
           </div>
-          <div class="summary-gain-loss-grid summary-gain-loss-grid-tight">
+          <div class="summary-gain-loss-grid summary-gain-loss-grid-tight summary-accuracy-breakdown">
+            <div class="summary-gain-loss ok">
+              <span>OK</span><strong>● ${okQty.toLocaleString('th-TH')}</strong><small>${okItemCount.toLocaleString('th-TH')} ITEM</small>
+            </div>
             <div class="summary-gain-loss gain">
               <span>GAIN</span><strong>▲ +${diffPlus.toLocaleString('th-TH')}</strong><small>${gainItemCount.toLocaleString('th-TH')} ITEM</small>
             </div>
@@ -13160,7 +13749,14 @@ async function loadSvDash() {
           <span style="width:${summaryWmsFixedPercent}%"></span>
         </div>
 
-        <div class="summary-wms-columns" aria-label="กราฟสถานะการปรับยอด WMS">
+        <div class="summary-wms-columns is-three" aria-label="กราฟสถานะการปรับยอด WMS">
+          <div class="summary-wms-column-item pending">
+            <div class="summary-wms-column-value">${summaryWmsPendingCount}</div>
+            <div class="summary-wms-column-track">
+              <span style="height:${summaryWmsPendingCount ? Math.max(12, summaryWmsPendingPercent) : 4}%"></span>
+            </div>
+            <div class="summary-wms-column-label">รอคอนเฟิร์ม</div>
+          </div>
           <div class="summary-wms-column-item unfixed">
             <div class="summary-wms-column-value">${summaryWmsUnfixedCount}</div>
             <div class="summary-wms-column-track">
@@ -13301,24 +13897,30 @@ async function loadSvDash() {
 
   const wmsFilter = S._wmsFilter || 'unfixed';
   const wmsZone = S._wmsZone || '';
+  const wmsRow = S._wmsRow || '';
   const wmsLevel = S._wmsLevel || '';
   const wmsUser = S._wmsUser || '';
   const wmsLocSearch = S._wmsLocSearch || '';
 
-  const wmsZones = new Set(), wmsLevels = new Set();
+  const wmsZones = new Set(), wmsRowsNo = new Set(), wmsLevels = new Set();
   const wmsUsersMap = {};
   allWmsRows.forEach(v => {
     const loc = asgnInfoMap[v.assignment_id]?.locations;
     if (loc?.zone) wmsZones.add(loc.zone);
+    if (loc?.row_no) wmsRowsNo.add(loc.row_no);
     if (loc?.level) wmsLevels.add(loc.level);
     if (v.approved_by) wmsUsersMap[v.approved_by] = v.profiles?.name || '?';
     else if (v._isPending) wmsUsersMap['_pending'] = '(รอคอนเฟิร์ม)';
   });
 
   const wmsTotalCount = allWmsRows.length;
-  const wmsFixedCount = allWmsRows.filter(v => v.wms_fixed).length;
-  const wmsUnfixedCount = wmsTotalCount - wmsFixedCount;
-  const wmsFixedPercent = wmsTotalCount > 0 ? Math.round((wmsFixedCount / wmsTotalCount) * 100) : 0;
+  const wmsPendingCount = allWmsRows.filter(v => v._isPending).length;
+  const wmsConfirmedRows = allWmsRows.filter(v => !v._isPending);
+  const wmsFixedCount = wmsConfirmedRows.filter(v => v.wms_fixed).length;
+  const wmsUnfixedCount = wmsConfirmedRows.length - wmsFixedCount;
+  const wmsFixedPercent = wmsConfirmedRows.length > 0
+    ? Math.round((wmsFixedCount / wmsConfirmedRows.length) * 100)
+    : 0;
 
   const errorBanner = vaError 
     ? `<div class="alert alert-red" style="margin-bottom:14px;font-size:13px">⚠️ ไม่สามารถดึงข้อมูลคอนเฟิร์มแล้วได้</div>`
@@ -13326,65 +13928,100 @@ async function loadSvDash() {
 
   const wmsTabHtml = `
     ${errorBanner}
-    <div class="wms-summary-card">
-      <div>
-        <div style="font-size:13px;font-weight:800;color:var(--text-muted);text-transform:uppercase">ทั้งหมด</div>
-        <div class="wms-summary-number">${wmsTotalCount}</div>
-        <div class="wms-summary-percent">${wmsFixedPercent}% ตรวจสอบแล้ว</div>
-      </div>
-      <div class="wms-summary-ring">
-        <svg viewBox="0 0 100 100" class="wms-ring-svg">
-          <circle class="wms-ring-bg" cx="50" cy="50" r="42"/>
-          <circle class="wms-ring-progress" cx="50" cy="50" r="42" 
-            stroke-dasharray="${2 * Math.PI * 42}" 
-            stroke-dashoffset="${2 * Math.PI * 42 * (1 - wmsFixedPercent / 100)}"/>
-        </svg>
-        <div class="wms-ring-text">${wmsFixedPercent}%</div>
-      </div>
-    </div>
-    <div class="status-badge-grid">
-      <div class="status-badge-card unfixed">
-        <div class="wms-status-card-icon">${wmsIconSvg('pending', 25)}</div>
-        <div class="status-badge-number">${wmsUnfixedCount}</div>
-        <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-top:6px">ยังไม่ได้ตรวจสอบ</div>
-      </div>
-      <div class="status-badge-card fixed">
-        <div class="wms-status-card-icon">${wmsIconSvg('reviewed', 25)}</div>
-        <div class="status-badge-number">${wmsFixedCount}</div>
-        <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-top:6px">ตรวจสอบแล้ว</div>
-      </div>
-    </div>
-    <div class="grid-3" style="margin-bottom:14px">
-      <div><label style="font-size:11px">ZONE</label>
-        <select id="wms-zone" onchange="updateWmsFilter('Zone',this.value)">
-          <option value="">ทั้งหมด</option>
-          ${[...wmsZones].sort().map(z=>`<option value="${z}" ${wmsZone===z?'selected':''}>${z}</option>`).join('')}
-        </select></div>
-      <div><label style="font-size:11px">LEVEL</label>
-        <select id="wms-level" onchange="updateWmsFilter('Level',this.value)">
-          <option value="">ทั้งหมด</option>
-          ${[...wmsLevels].sort().map(l=>`<option value="${l}" ${wmsLevel===l?'selected':''}>${l}</option>`).join('')}
-        </select></div>
-      <div><label style="font-size:11px">USER ผู้คอนเฟิร์ม</label>
-        <select id="wms-user" onchange="updateWmsFilter('User',this.value)">
-          <option value="">ทั้งหมด</option>
-          <option value="_pending" ${wmsUser==='_pending'?'selected':''}>⏳ รอคอนเฟิร์ม</option>
-          ${Object.entries(wmsUsersMap).filter(([k]) => k !== '_pending').sort((a,b)=>a[1].localeCompare(b[1])).map(([id,name])=>`<option value="${id}" ${wmsUser===id?'selected':''}>${name}</option>`).join('')}
-        </select></div>
-    </div>
-    <div class="fg" style="margin-bottom:14px">
-      <label style="font-size:11px">ค้นหา Location</label>
-      <input id="wms-loc-search" value="${wmsLocSearch}" placeholder="เช่น B-29-001-A" oninput="updateWmsFilter('LocSearch',this.value)">
-    </div>
-    <div class="fg" style="margin-bottom:16px">
-      <select id="wms-status" onchange="updateWmsFilter('Filter',this.value)">
-        <option value="unfixed" ${wmsFilter==='unfixed'?'selected':''}>ยังไม่ได้ตรวจสอบ</option>
-        <option value="fixed" ${wmsFilter==='fixed'?'selected':''}>ตรวจสอบแล้ว</option>
-        <option value="pending" ${wmsFilter==='pending'?'selected':''}>⏳ รอคอนเฟิร์ม</option>
-        <option value="all" ${wmsFilter==='all'?'selected':''}>ทั้งหมด</option>
-      </select>
-    </div>
-    <div id="wms-list" data-location-sort-group></div>`;
+    <div class="wms-workspace">
+      <section class="wms-overview-shell">
+        <div class="wms-overview-head">
+          <div class="wms-overview-title">
+            <div class="wms-overview-icon">${wmsIconSvg('reviewed',25)}</div>
+            <div class="wms-overview-copy">
+              <strong>ศูนย์ควบคุมการปรับยอด WMS</strong>
+              <span>แยกงานรอคอนเฟิร์มออกจากงานที่พร้อมตรวจสอบแล้ว</span>
+            </div>
+          </div>
+          <div class="wms-overview-total">
+            <strong id="wms-total-count">${wmsTotalCount}</strong>
+            <span>DIFF ทั้งหมด</span>
+          </div>
+        </div>
+        <div class="wms-progress-row">
+          <span>ความคืบหน้าจากรายการที่คอนเฟิร์มแล้ว</span>
+          <strong id="wms-fixed-percent">${wmsFixedPercent}%</strong>
+        </div>
+        <div class="wms-progress-track"><span id="wms-fixed-progress" style="width:${wmsFixedPercent}%"></span></div>
+        <div class="wms-kpi-grid">
+          <button type="button" class="wms-kpi-card pending ${wmsFilter==='pending'?'active':''}" data-wms-kpi="pending"
+            onclick="setWmsStatusFilter('pending')">
+            <div class="wms-kpi-icon">${wmsIconSvg('search',21)}</div>
+            <div class="wms-kpi-copy"><strong id="wms-pending-count">${wmsPendingCount}</strong><span>รอคอนเฟิร์ม</span></div>
+          </button>
+          <button type="button" class="wms-kpi-card unfixed ${wmsFilter==='unfixed'?'active':''}" data-wms-kpi="unfixed"
+            onclick="setWmsStatusFilter('unfixed')">
+            <div class="wms-kpi-icon">${wmsIconSvg('pending',21)}</div>
+            <div class="wms-kpi-copy"><strong id="wms-unfixed-count">${wmsUnfixedCount}</strong><span>ยังไม่ได้ตรวจสอบ</span></div>
+          </button>
+          <button type="button" class="wms-kpi-card fixed ${wmsFilter==='fixed'?'active':''}" data-wms-kpi="fixed"
+            onclick="setWmsStatusFilter('fixed')">
+            <div class="wms-kpi-icon">${wmsIconSvg('reviewed',21)}</div>
+            <div class="wms-kpi-copy"><strong id="wms-fixed-count">${wmsFixedCount}</strong><span>ตรวจสอบแล้ว</span></div>
+          </button>
+        </div>
+      </section>
+
+      <section class="wms-filter-panel">
+        <div class="wms-filter-heading">
+          <strong>ตัวกรองรายการ</strong>
+          <span>เลือกหลายตัวกรองร่วมกันได้</span>
+        </div>
+        <div class="wms-filter-grid">
+          <div class="wms-filter-field"><label>ZONE</label>
+            <select id="wms-zone" onchange="updateWmsFilter('Zone',this.value)">
+              <option value="">ทั้งหมด</option>
+              ${[...wmsZones].sort().map(z=>`<option value="${z}" ${wmsZone===z?'selected':''}>${z}</option>`).join('')}
+            </select>
+          </div>
+          <div class="wms-filter-field"><label>ROW</label>
+            <select id="wms-row" onchange="updateWmsFilter('Row',this.value)">
+              <option value="">ทั้งหมด</option>
+              ${[...wmsRowsNo].sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true})).map(row=>`<option value="${row}" ${String(wmsRow)===String(row)?'selected':''}>${row}</option>`).join('')}
+            </select>
+          </div>
+          <div class="wms-filter-field"><label>LEVEL</label>
+            <select id="wms-level" onchange="updateWmsFilter('Level',this.value)">
+              <option value="">ทั้งหมด</option>
+              ${[...wmsLevels].sort().map(l=>`<option value="${l}" ${wmsLevel===l?'selected':''}>${l}</option>`).join('')}
+            </select>
+          </div>
+          <div class="wms-filter-field"><label>USER ผู้คอนเฟิร์ม</label>
+            <select id="wms-user" onchange="updateWmsFilter('User',this.value)">
+              <option value="">ทั้งหมด</option>
+              <option value="_pending" ${wmsUser==='_pending'?'selected':''}>รอคอนเฟิร์ม</option>
+              ${Object.entries(wmsUsersMap).filter(([k]) => k !== '_pending').sort((a,b)=>a[1].localeCompare(b[1])).map(([id,name])=>`<option value="${id}" ${wmsUser===id?'selected':''}>${name}</option>`).join('')}
+            </select>
+          </div>
+          <div class="wms-filter-field"><label>สถานะ</label>
+            <select id="wms-status" onchange="updateWmsFilter('Filter',this.value)">
+              <option value="unfixed" ${wmsFilter==='unfixed'?'selected':''}>ยังไม่ได้ตรวจสอบ</option>
+              <option value="fixed" ${wmsFilter==='fixed'?'selected':''}>ตรวจสอบแล้ว</option>
+              <option value="pending" ${wmsFilter==='pending'?'selected':''}>รอคอนเฟิร์ม</option>
+              <option value="all" ${wmsFilter==='all'?'selected':''}>ทั้งหมด</option>
+            </select>
+          </div>
+          <div class="wms-filter-field search"><label>ค้นหา LOCATION / ITEM</label>
+            <input id="wms-loc-search" value="${escapeWmsText(wmsLocSearch)}" placeholder="เช่น B-29-001-A หรือรหัส Item"
+              oninput="updateWmsFilter('LocSearch',this.value)">
+          </div>
+        </div>
+        <div class="wms-feedback" id="wms-feedback" role="status" aria-live="polite" hidden></div>
+      </section>
+
+      <section class="wms-list-shell">
+        <div class="wms-list-heading">
+          <strong>รายการปรับยอด</strong>
+          <span class="wms-list-count" id="wms-visible-count">0 รายการ</span>
+        </div>
+        <div id="wms-list" data-location-sort-group></div>
+      </section>
+    </div>`;
 
   const dashboardViews = {
     summary: summaryTabHtml,
@@ -13412,18 +14049,199 @@ function toggleCounterDetail(idx) {
   if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
-async function toggleWmsFixed(vaId, checked) {
+function showWmsFeedback(message, type='success') {
+  const box = Q('wms-feedback');
+  if (!box) return;
+  box.textContent = message;
+  box.classList.toggle('error', type === 'error');
+  box.hidden = false;
+  clearTimeout(window._wmsFeedbackTimer);
+  window._wmsFeedbackTimer = setTimeout(() => {
+    if (box) box.hidden = true;
+  }, 4500);
+}
+
+function updateWmsOverview() {
+  const rows = (window._wmsRows || []).filter(v => Number(v.variance) !== 0);
+  const pendingCount = rows.filter(v => v._isPending).length;
+  const confirmedRows = rows.filter(v => !v._isPending);
+  const fixedCount = confirmedRows.filter(v => v.wms_fixed).length;
+  const unfixedCount = confirmedRows.length - fixedCount;
+  const percent = confirmedRows.length ? Math.round((fixedCount / confirmedRows.length) * 100) : 0;
+  const values = {
+    'wms-total-count': rows.length,
+    'wms-pending-count': pendingCount,
+    'wms-unfixed-count': unfixedCount,
+    'wms-fixed-count': fixedCount,
+    'wms-fixed-percent': `${percent}%`,
+  };
+  Object.entries(values).forEach(([id, value]) => {
+    const element = Q(id);
+    if (element) element.textContent = value;
+  });
+  const progress = Q('wms-fixed-progress');
+  if (progress) progress.style.width = `${percent}%`;
+}
+
+function setWmsStatusFilter(status) {
+  S._wmsFilter = status;
+  const select = Q('wms-status');
+  if (select) select.value = status;
+  document.querySelectorAll('[data-wms-kpi]').forEach(card => {
+    card.classList.toggle('active', card.dataset.wmsKpi === status);
+  });
+  renderWmsList();
+}
+
+async function toggleWmsFixed(vaId, checked, button) {
+  const target = (window._wmsRows || []).find(row => row.id === vaId);
+  const previous = target ? {
+    wms_fixed: !!target.wms_fixed,
+    wms_fixed_at: target.wms_fixed_at,
+    wms_fixed_by: target.wms_fixed_by,
+  } : null;
   try {
-    if (!vaId || vaId === 'undefined') { alert('ไม่พบ ID รายการ'); return; }
+    if (!vaId || vaId === 'undefined') {
+      showWmsFeedback('ไม่พบ ID รายการ กรุณารีเฟรชแล้วลองใหม่', 'error');
+      return;
+    }
+    if (button) {
+      button.disabled = true;
+      button.classList.add('is-saving');
+      button.querySelector('span')?.replaceChildren(document.createTextNode('กำลังบันทึก...'));
+    }
+    showWmsFeedback('กำลังบันทึกสถานะการตรวจสอบ...');
     const updates = { wms_fixed: checked };
     if (checked) { updates.wms_fixed_at = new Date().toISOString(); updates.wms_fixed_by = me.id; } 
     else { updates.wms_fixed_at = null; updates.wms_fixed_by = null; }
     const { data, error } = await sb.from('variance_approvals').update(updates).eq('id', vaId).select('id,wms_fixed');
-    if (error) { alert('Error: ' + error.message); return; }
-    if (!data || data.length === 0) { alert('Update ไม่สำเร็จ'); return; }
+    if (error) throw error;
+    if (!data || data.length === 0) throw new Error('ไม่พบรายการที่ต้องการอัปเดต');
+    if (target) Object.assign(target, updates);
+    updateWmsOverview();
+    renderWmsList();
+    showWmsFeedback(checked
+      ? 'บันทึกแล้ว: ตรวจสอบรายการเรียบร้อย — เปิดกล่อง “ตรวจสอบแล้ว” เพื่อแก้ไขอีกครั้งได้'
+      : 'เปิดแก้ไขอีกครั้งแล้ว: รายการย้ายกลับไปที่ “ยังไม่ได้ตรวจสอบ”');
+    invalidateDashboardCache();
     refreshDashboardData();
   } catch (e) {
-    console.error(e); alert('Error: ' + e.message);
+    if (target && previous) Object.assign(target, previous);
+    updateWmsOverview();
+    renderWmsList();
+    console.error(e);
+    showWmsFeedback('บันทึกสถานะไม่สำเร็จ: ' + (e.message || e), 'error');
+  }
+}
+
+function openWmsReturnConfirm(locationCode) {
+  return new Promise(resolve => {
+    document.querySelector('.wms-return-confirm-backdrop')?.remove();
+    const previousOverflow = document.body.style.overflow;
+    const backdrop = document.createElement('div');
+    backdrop.className = 'wms-return-confirm-backdrop';
+    backdrop.setAttribute('role', 'dialog');
+    backdrop.setAttribute('aria-modal', 'true');
+    backdrop.setAttribute('aria-labelledby', 'wms-return-confirm-title');
+    backdrop.innerHTML = `
+      <div class="wms-return-confirm-modal">
+        <div class="wms-return-confirm-icon">${wmsIconSvg('review',34)}</div>
+        <h2 id="wms-return-confirm-title">ส่งกลับให้หัวหน้าตรวจใหม่?</h2>
+        <p>รายการนี้จะออกจากขั้นตอนปรับยอด WMS<br>และกลับไปหน้า Variance เพื่อคอนเฟิร์มยอดอีกครั้ง</p>
+        <div class="wms-return-confirm-location">${escapeWmsText(locationCode || 'รายการที่เลือก')}</div>
+        <div class="wms-return-confirm-actions">
+          <button type="button" class="btn btn-ghost" data-action="cancel">ยกเลิก</button>
+          <button type="button" class="btn btn-amber" data-action="confirm">ส่งตรวจใหม่</button>
+        </div>
+      </div>`;
+
+    let settled = false;
+    const finish = result => {
+      if (settled) return;
+      settled = true;
+      document.removeEventListener('keydown', onKeyDown);
+      backdrop.remove();
+      document.body.style.overflow = previousOverflow;
+      resolve(result);
+    };
+    const onKeyDown = event => {
+      if (event.key === 'Escape') finish(false);
+    };
+
+    backdrop.querySelector('[data-action="cancel"]')?.addEventListener('click', () => finish(false));
+    backdrop.querySelector('[data-action="confirm"]')?.addEventListener('click', () => finish(true));
+    backdrop.addEventListener('click', event => {
+      if (event.target === backdrop) finish(false);
+    });
+    document.addEventListener('keydown', onKeyDown);
+    document.body.appendChild(backdrop);
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => backdrop.querySelector('[data-action="confirm"]')?.focus(), 30);
+  });
+}
+
+async function returnWmsForReview(vaId, assignmentId, itemId, button) {
+  const target = (window._wmsRows || []).find(row => row.id === vaId);
+  const assignment = window._wmsAsgnInfoMap?.[assignmentId];
+  const locationCode = assignment?.locations?.code || 'รายการนี้';
+  const previousStatus = assignment?.status || 'approved';
+
+  if (!vaId || !assignmentId) {
+    showWmsFeedback('ไม่พบข้อมูลรายการสำหรับส่งตรวจใหม่ กรุณารีเฟรชแล้วลองอีกครั้ง', 'error');
+    return;
+  }
+  if (button?.dataset.wmsReturnConfirmOpen === '1') return;
+  if (button) button.dataset.wmsReturnConfirmOpen = '1';
+  const confirmed = await openWmsReturnConfirm(locationCode);
+  if (button) delete button.dataset.wmsReturnConfirmOpen;
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    if (button) {
+      button.disabled = true;
+      button.classList.add('is-saving');
+      button.querySelector('span')?.replaceChildren(document.createTextNode('กำลังส่ง...'));
+    }
+    showWmsFeedback('กำลังส่งรายการกลับให้หัวหน้าตรวจสอบใหม่...');
+
+    const { data: assignmentRows, error: assignmentError } = await sb.from('assignments')
+      .update({ status:'round3_done' })
+      .eq('id', assignmentId)
+      .select('id,status');
+    if (assignmentError) throw assignmentError;
+    if (!assignmentRows?.length) throw new Error('อัปเดตสถานะงานไม่สำเร็จ');
+
+    const { data: deletedRows, error: deleteError } = await sb.from('variance_approvals')
+      .delete()
+      .eq('id', vaId)
+      .select('id');
+    if (deleteError || !deletedRows?.length) {
+      await sb.from('assignments').update({ status:previousStatus }).eq('id', assignmentId);
+      throw deleteError || new Error('นำรายการออกจากขั้นตอน WMS ไม่สำเร็จ');
+    }
+
+    if (assignment) assignment.status = 'round3_done';
+    window._wmsRows = (window._wmsRows || []).filter(row => row.id !== vaId);
+    logAudit(
+      S._dashSid || assignment?.session_id,
+      assignment?.location_id,
+      itemId,
+      'wms_return_review',
+      'WMS Adjust',
+      'Variance Review',
+      assignmentId,
+    );
+    updateWmsOverview();
+    renderWmsList();
+    showWmsFeedback(`ส่ง ${locationCode} กลับให้หัวหน้าตรวจสอบใหม่แล้ว`);
+    invalidateDashboardCache();
+    refreshDashboardData();
+  } catch (error) {
+    console.error(error);
+    renderWmsList();
+    showWmsFeedback('ส่งตรวจใหม่ไม่สำเร็จ: ' + (error.message || error), 'error');
   }
 }
 
@@ -13448,7 +14266,32 @@ function toggleWmsNoteMenu(event, key) {
   const willOpen = menu.hidden;
   closeWmsNoteMenus(key);
   menu.hidden = !willOpen;
-  if (willOpen) setTimeout(() => Q(`wms_note_custom_${key}`)?.focus(), 30);
+  if (willOpen) {
+    updateWmsNoteSelectionPreview(key);
+    setTimeout(() => Q(`wms_note_custom_${key}`)?.focus(), 30);
+  }
+}
+
+function updateWmsNoteSelectionPreview(key) {
+  const menu = Q(`wms_note_menu_${key}`);
+  const preview = Q(`wms_note_selection_${key}`);
+  const inline = Q(`wms_note_inline_${key}`);
+  if (!menu || !preview) return;
+  const selected = [...menu.querySelectorAll('.wms-note-option input[type="checkbox"]:checked')]
+    .map(box => box.value.trim())
+    .filter(Boolean);
+  preview.textContent = selected.length
+    ? `เลือกแล้ว: ${selected.join(' · ')}`
+    : 'ยังไม่ได้เลือกหมายเหตุ';
+  preview.classList.toggle('has-selection', selected.length > 0);
+  if (inline) {
+    inline.hidden = selected.length === 0;
+    inline.classList.add('is-draft');
+    const label = inline.querySelector('span');
+    const value = inline.querySelector('strong');
+    if (label) label.textContent = 'หมายเหตุที่กำลังเลือก (ยังไม่บันทึก)';
+    if (value) value.textContent = selected.join(' · ');
+  }
 }
 
 async function addCustomWmsNoteOption(event, key) {
@@ -13476,12 +14319,14 @@ async function addCustomWmsNoteOption(event, key) {
       checkbox.type = 'checkbox';
       checkbox.value = result.row.label;
       checkbox.checked = true;
+      checkbox.addEventListener('change', () => updateWmsNoteSelectionPreview(key));
       const span = document.createElement('span');
       span.textContent = result.row.label;
       label.append(checkbox, span);
       list.appendChild(label);
     }
     input.value = '';
+    updateWmsNoteSelectionPreview(key);
     input.focus();
   } catch (error) {
     alert('เพิ่มหมายเหตุไม่สำเร็จ: ' + error.message);
@@ -13504,7 +14349,18 @@ async function saveWmsNotes(assignmentId, itemId, key) {
   }
 
   const assignment = window._wmsAsgnInfoMap?.[assignmentId];
-  const rows = notes.map(note => ({
+  const target = (window._wmsRows || [])
+    .find(v => v.assignment_id === assignmentId && v.item_id === itemId);
+  const existingNoteTexts = new Set(
+    (target?.wms_notes || []).map(note => String(note.text || note.new_value || '').trim()).filter(Boolean)
+  );
+  const newNotes = notes.filter(note => !existingNoteTexts.has(note));
+  if (!newNotes.length) {
+    showWmsFeedback('หมายเหตุที่เลือกแสดงอยู่ในรายการแล้ว');
+    renderWmsList();
+    return;
+  }
+  const rows = newNotes.map(note => ({
     session_id: S._dashSid || assignment?.session_id || null,
     location_id: assignment?.location_id || null,
     item_id: itemId || null,
@@ -13523,8 +14379,6 @@ async function saveWmsNotes(assignmentId, itemId, key) {
     const { error } = await sb.from('audit_log').insert(rows);
     if (error) throw error;
 
-    const target = (window._wmsRows || [])
-      .find(v => v.assignment_id === assignmentId && v.item_id === itemId);
     if (target) {
       target.wms_notes = [
         ...(target.wms_notes || []),
@@ -13536,9 +14390,10 @@ async function saveWmsNotes(assignmentId, itemId, key) {
       ];
     }
     renderWmsList();
+    showWmsFeedback(`บันทึกหมายเหตุแล้ว ${newNotes.length} รายการ`);
   } catch (error) {
     console.error(error);
-    alert('บันทึกหมายเหตุไม่สำเร็จ: ' + (error.message || error));
+    showWmsFeedback('บันทึกหมายเหตุไม่สำเร็จ: ' + (error.message || error), 'error');
     if (saveBtn) {
       saveBtn.disabled = false;
       saveBtn.innerHTML = `${wmsIconSvg('reviewed', 17)} บันทึกหมายเหตุ`;
@@ -13551,30 +14406,51 @@ document.addEventListener('click', event => {
 });
 
 function refreshWmsDependentFilters() {
-  const rows = window._wmsRows || [];
+  const rows = (window._wmsRows || []).filter(v => Number(v.variance) !== 0);
   const asgnInfoMap = window._wmsAsgnInfoMap || {};
   const zone = Q('wms-zone')?.value || S._wmsZone || '';
-  const levels = rows
+  const rowValues = rows
     .map(row => asgnInfoMap[row.assignment_id]?.locations)
     .filter(location => location && (!zone || location.zone === zone))
+    .map(location => location.row_no);
+  const selectedRow = fillDependentSelect('wms-row', rowValues, 'ทั้งหมด', S._wmsRow);
+  S._wmsRow = selectedRow;
+  const levels = rows
+    .map(row => asgnInfoMap[row.assignment_id]?.locations)
+    .filter(location => location
+      && (!zone || location.zone === zone)
+      && (!selectedRow || String(location.row_no ?? '') === String(selectedRow)))
     .map(location => location.level);
-  const selectedLevel = fillDependentSelect('wms-level', levels);
+  const selectedLevel = fillDependentSelect('wms-level', levels, 'ทั้งหมด', S._wmsLevel);
   S._wmsLevel = selectedLevel;
 }
 
 function updateWmsFilter(key, value) {
   S['_wms'+key] = value;
-  if (key === 'Zone') refreshWmsDependentFilters();
+  if (key === 'Zone') {
+    S._wmsRow = '';
+    S._wmsLevel = '';
+    refreshWmsDependentFilters();
+  } else if (key === 'Row') {
+    S._wmsLevel = '';
+    refreshWmsDependentFilters();
+  }
+  if (key === 'Filter') {
+    document.querySelectorAll('[data-wms-kpi]').forEach(card => {
+      card.classList.toggle('active', card.dataset.wmsKpi === value);
+    });
+  }
   renderWmsList();
 }
 
 function renderWmsList() {
   const container = Q('wms-list');
   if (!container) return;
-  const wmsRows = window._wmsRows || [];
+  const wmsRows = (window._wmsRows || []).filter(v => Number(v.variance) !== 0);
   const asgnInfoMap = window._wmsAsgnInfoMap || {};
   const filterStatus = S._wmsFilter || 'unfixed';
   const filterZone = S._wmsZone || '';
+  const filterRow = S._wmsRow || '';
   const filterLevel = S._wmsLevel || '';
   const filterUser = S._wmsUser || '';
   const searchLoc = (S._wmsLocSearch || '').trim().toLowerCase();
@@ -13586,13 +14462,20 @@ function renderWmsList() {
     if (filterStatus !== 'all' && filterStatus !== 'pending' && v._isPending) return false;
     const loc = asgnInfoMap[v.assignment_id]?.locations;
     if (filterZone && loc?.zone !== filterZone) return false;
+    if (filterRow && String(loc?.row_no ?? '') !== String(filterRow)) return false;
     if (filterLevel && loc?.level !== filterLevel) return false;
     if (filterUser === '_pending' && !v._isPending) return false;
     if (filterUser && filterUser !== '_pending' && v.approved_by !== filterUser) return false;
-    if (searchLoc && !(loc?.code||'').toLowerCase().includes(searchLoc)) return false;
+    if (searchLoc) {
+      const haystack = [loc?.code, v.items?.code, v.items?.description]
+        .filter(Boolean).join(' ').toLowerCase();
+      if (!haystack.includes(searchLoc)) return false;
+    }
     return true;
   }), row => asgnInfoMap[row.assignment_id]?.locations?.code);
 
+  const visibleCount = Q('wms-visible-count');
+  if (visibleCount) visibleCount.textContent = `${filtered.length.toLocaleString('th-TH')} รายการ`;
   if (!filtered.length) {
     const msg = filterStatus==='unfixed' ? '🎉 ไม่มีรายการที่ยังไม่ได้ตรวจสอบ' 
       : filterStatus==='fixed' ? 'ยังไม่มีรายการที่ตรวจสอบแล้ว' 
@@ -13615,12 +14498,25 @@ function renderWmsList() {
     const assignmentArg = JSON.stringify(v.assignment_id || '');
     const itemArg = JSON.stringify(v.item_id || '');
     const statusBadge = isPending ? `<span class="tag tag-amber" style="font-size:10px">⏳ รอคอนเฟิร์ม</span>` : `<span class="tag tag-blue" style="font-size:10px">✅ คอนเฟิร์มแล้ว</span>`;
+    const returnReviewButton = isPending ? '' : `
+      <button class="btn btn-sm btn-amber wms-action-btn wms-return-review-btn"
+        onclick='returnWmsForReview(${JSON.stringify(v.id || '')},${assignmentArg},${itemArg},this)'
+        title="ส่ง Location นี้กลับไปหน้า Variance ให้หัวหน้าตรวจสอบและคอนเฟิร์มใหม่">
+        ${wmsIconSvg('review')}<span>ส่งตรวจใหม่</span>
+      </button>`;
     const wmsButton = isPending
-      ? `<button class="btn btn-sm btn-amber wms-action-btn" onclick="go('sv-detail',{aid:${assignmentArg}})">${wmsIconSvg('search')}<span>ไปคอนเฟิร์ม</span></button>`
-      : `<button class="btn btn-sm ${isFixed?'btn-green':'btn-ghost'} wms-action-btn" onclick="toggleWmsFixed(${JSON.stringify(v.id || '')},${!isFixed})">${wmsIconSvg(isFixed?'reviewed':'pending')}<span>${isFixed?'ตรวจสอบแล้ว':'ยังไม่ได้ตรวจสอบ'}</span></button>`;
+      ? `<button class="btn btn-sm btn-amber wms-action-btn" onclick='go("sv-detail",{aid:${assignmentArg}})'>${wmsIconSvg('search')}<span>ไปคอนเฟิร์ม</span></button>`
+      : `<button class="btn btn-sm ${isFixed?'btn-blue':'btn-ghost'} wms-action-btn"
+          onclick='toggleWmsFixed(${JSON.stringify(v.id || '')},${!isFixed},this)'
+          title="${isFixed?'เปลี่ยนกลับเป็นยังไม่ได้ตรวจสอบเพื่อแก้ไขใหม่':'ยืนยันว่าตรวจสอบรายการแล้ว'}">
+          ${wmsIconSvg(isFixed?'reviewed':'pending')}<span>${isFixed?'แก้ไขอีกครั้ง':'ยืนยันตรวจสอบแล้ว'}</span>
+        </button>`;
+    const savedNoteTexts = new Set(notes.map(note => String(note.text || note.new_value || '').trim()));
     const noteOptions = (window._wmsNoteOptions || WMS_NOTE_PRESETS.map(label => ({ label }))).map(option => `
       <label class="wms-note-option">
-        <input type="checkbox" value="${escapeWmsText(option.label)}">
+        <input type="checkbox" value="${escapeWmsText(option.label)}"
+          ${savedNoteTexts.has(String(option.label || '').trim()) ? 'checked' : ''}
+          onchange="updateWmsNoteSelectionPreview('${noteKey}')">
         <span>${escapeWmsText(option.label)}</span>
       </label>`).join('');
     const noteButton = `
@@ -13629,7 +14525,7 @@ function renderWmsList() {
           onclick="toggleWmsNoteMenu(event,'${noteKey}')" aria-haspopup="true"
           aria-controls="wms_note_menu_${noteKey}">
           ${wmsIconSvg('note')}
-          <span>เพิ่มหมายเหตุ</span>
+          <span>${notes.length ? `หมายเหตุ ${notes.length}` : 'เพิ่มหมายเหตุ'}</span>
           ${notes.length ? `<span class="wms-note-count">${notes.length}</span>` : ''}
         </button>
         <div class="wms-note-menu" id="wms_note_menu_${noteKey}" hidden onclick="event.stopPropagation()">
@@ -13639,6 +14535,9 @@ function renderWmsList() {
               onclick="toggleWmsNoteMenu(event,'${noteKey}')" aria-label="ปิด">${wmsIconSvg('close',16)}</button>
           </div>
           <div class="wms-note-option-list" id="wms_note_options_${noteKey}">${noteOptions}</div>
+          <div class="wms-note-selection ${notes.length?'has-selection':''}" id="wms_note_selection_${noteKey}">
+            ${notes.length ? `แสดงแล้ว: ${notes.map(note => escapeWmsText(note.text || note.new_value || '')).join(' · ')}` : 'ยังไม่ได้เลือกหมายเหตุ'}
+          </div>
           ${prof?.role === 'admin' ? `<div class="wms-note-add-row">
             <input id="wms_note_custom_${noteKey}" type="text" maxlength="120"
               placeholder="พิมพ์หมายเหตุใหม่..."
@@ -13655,32 +14554,44 @@ function renderWmsList() {
           </button>
         </div>
       </div>`;
-    const noteChips = notes.length ? `
-      <div class="wms-note-chips" title="หมายเหตุที่บันทึกแล้ว">
-        ${notes.map(note => `<span class="wms-note-chip">${escapeWmsText(note.text || note.new_value || '')}</span>`).join('')}
-      </div>` : '';
+    const noteInline = `
+      <div class="wms-note-inline" id="wms_note_inline_${noteKey}" ${notes.length ? '' : 'hidden'}>
+        <span>หมายเหตุที่บันทึกแล้ว</span>
+        <strong>${notes.map(note => escapeWmsText(note.text || note.new_value || '')).join(' · ')}</strong>
+      </div>`;
 
-    return `<div class="wms-row ${isFixed?'is-checked':''}" data-location-sort-code="${escapeWmsText(loc?.code || '')}">
+    const countCell = (label, value, extraClass='') => `<div class="wms-count-cell ${extraClass}">
+      <span>${label}</span><strong>${value === undefined || value === null ? '—' : Number(value).toLocaleString('th-TH')}</strong>
+    </div>`;
+
+    return `<div class="wms-row ${isFixed?'is-checked':''} ${isPending?'is-pending':''}" data-location-sort-code="${escapeWmsText(loc?.code || '')}">
       <div class="wms-row-main">
         <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap">
           <span class="mono" style="font-size:15px;font-weight:800;color:var(--text-main)">${loc?.code||'?'}</span>
           ${statusBadge}
         </div>
-        <div style="font-size:13px;color:var(--text-muted);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v.items?.code||''}${v.items?.description?' · '+v.items.description:''}</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:4px; font-weight:600;">
+        <div class="wms-item-description">${escapeWmsText(v.items?.code||'')}${v.items?.description?' · '+escapeWmsText(v.items.description):''}</div>
+        <div class="wms-row-meta">
+          Zone ${escapeWmsText(loc?.zone || '—')} · ROW ${escapeWmsText(loc?.row_no ?? '—')} · Level ${escapeWmsText(loc?.level ?? '—')}<br>
           ${isPending 
-            ? `นับได้: ${v.final_qty} · OH: ${v.final_qty - varAmt} · คนนับจริง: ${actualCounterText}`
+            ? `คนนับจริง: ${actualCounterText}`
             : `ยืนยันโดย User: ${escapeWmsText(v.profiles?.name||'?')}`
           }
         </div>
       </div>
+      <div class="wms-count-strip" aria-label="ยอด OH และยอดนับแต่ละรอบ">
+        ${countCell('OH', v._oh, 'oh')}
+        ${countCell('COUNT 1', v._count1)}
+        ${countCell('COUNT 2', v._count2)}
+        ${countCell('COUNT 3', v._count3)}
+      </div>
       <div class="wms-row-side">
-        <div>
-        <div style="font-size:22px;font-weight:800;font-family:'Fredoka';color:${varAmt>0?'var(--accent-green)':'var(--accent-red)'}">${varAmt>0?'+':''}${varAmt}</div>
-        <div style="font-size:10px;color:var(--text-muted);font-weight:600;">${isPending ? 'ยอดนับ' : 'ยืนยัน ' + v.final_qty}</div>
+        <div class="wms-variance-value">
+          <strong style="color:${varAmt>0?'var(--accent-green)':varAmt<0?'var(--accent-red)':'var(--primary-blue)'}">${varAmt>0?'+':''}${Number(varAmt).toLocaleString('th-TH')}</strong>
+          <span>Variance · ยืนยัน ${Number(v.final_qty ?? 0).toLocaleString('th-TH')}</span>
         </div>
-        <div class="wms-actions">${wmsButton}${noteButton}</div>
-        ${noteChips}
+        <div class="wms-actions">${returnReviewButton}${wmsButton}${noteButton}</div>
+        ${noteInline}
       </div>
     </div>`;
   }).join('');
@@ -17936,7 +18847,7 @@ async function loadAdBranding() {
         <div class="admin-settings-head">
           <div>
             <h2>กำหนดธีมด้วยโค้ดสี HEX — แบ่ง 3 ส่วนหลัก</h2>
-            <p>Dashboard และกราฟ · Sidebar ด้านข้าง · เมนูใช้งานทุกหน้า แยกสีกราฟออกจากตัวอักษร</p>
+            <p>Dashboard และ WMS · Sidebar และเมนูนำทาง · หน้าทำงานและแบบฟอร์ม</p>
           </div>
           <div class="theme-settings-toolbar">
             <button class="btn btn-ghost btn-sm" type="button" onclick="toggleThemeGroups(true)">เปิดทั้งหมด</button>
@@ -17996,7 +18907,7 @@ async function loadAdBranding() {
                 <div class="brand-preview-wms">
                   <strong>WMS Adjust</strong>
                   <div class="brand-preview-wms-bars">
-                    <i class="pending" style="height:38%"></i><i class="done" style="height:82%"></i>
+                    <i class="confirm" style="height:32%"></i><i class="pending" style="height:52%"></i><i class="done" style="height:82%"></i>
                   </div>
                 </div>
                 <div class="brand-preview-zone">
