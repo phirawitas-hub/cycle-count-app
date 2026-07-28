@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cycle Count v82 - Collapsible Management and Fresh Login</title>
+<title>Cycle Count v83 - Annual JOB Permission Fallback</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -9443,7 +9443,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v82';
+window.__CYCLE_COUNT_BUILD__ = 'v83';
 
 let _viewportSyncFrame = 0;
 function syncViewportSize() {
@@ -9839,7 +9839,7 @@ function applyBrandingSettings(settings, persistLocal = true) {
     const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
     root.setProperty(`--theme-${cssKey}`, uiBranding[key]);
   });
-  document.title = `${uiBranding.systemName} v82`;
+  document.title = `${uiBranding.systemName} v83`;
   if (persistLocal) {
     try { localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(uiBranding)); } catch (_) {}
   }
@@ -10275,7 +10275,7 @@ async function protectedFunctionHeaders() {
   return {
     Authorization: `Bearer ${session.access_token}`,
     apikey: SUPA_KEY,
-    'x-client-info': 'cycle-count-v82',
+    'x-client-info': 'cycle-count-v83',
   };
 }
 
@@ -10818,7 +10818,7 @@ function renderResponsivePreviewContent() {
     <div class="summary-page-header">
       <div class="summary-greeting-wrap">
         <div class="summary-greeting">Hello, AuD</div>
-        <div class="summary-greeting-sub">${escapeWmsText(uiBranding.systemName)} Dashboard · v82</div>
+        <div class="summary-greeting-sub">${escapeWmsText(uiBranding.systemName)} Dashboard · v83</div>
       </div>
       <div class="summary-header-actions">${dashboardFiltersHtml('<option>Cycle Count ก.ค. 2569</option>', false)}</div>
     </div>
@@ -14825,35 +14825,163 @@ function selectAnnualJobs(mode) {
   syncAnnualJobSelection();
 }
 
+function annualJobUuid() {
+  if (typeof crypto?.randomUUID === 'function') return crypto.randomUUID();
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = [...bytes].map(value => value.toString(16).padStart(2,'0')).join('');
+  return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+}
+
+function isAnnualJobPermissionError(error) {
+  const code = String(error?.code || '');
+  const message = String(error?.message || error || '');
+  return code === '42501' || /permission denied|row-level security/i.test(message);
+}
+
+function setAnnualJobGenerationProgress(alertBox,message) {
+  if (!alertBox) return;
+  alertBox.innerHTML = `<div class="alert alert-blue" style="margin-top:12px">⏳ ${escapeWmsText(message)}</div>`;
+}
+
+async function writeAnnualJobGenerationRows(table,rows) {
+  if (!rows.length) return;
+  const { error } = await sb.from(table).insert(rows);
+  if (!error) return;
+  if (prof?.role === 'admin' && isAnnualJobPermissionError(error)) {
+    await invokeAdminBackup('restore_batch',{ table,rows });
+    return;
+  }
+  throw error;
+}
+
+async function generateAnnualJobsClientSide({ sessionId,size,prefix,alertBox }) {
+  setAnnualJobGenerationProgress(alertBox,'กำลังอ่านและเรียง Stock Snapshot...');
+  const snapshotResult = await fetchPagedSupabaseRows(
+    'stock_snapshot',
+    'id,location_id,item_id,locations(code),items(code)',
+    query => query.eq('session_id',sessionId).order('id'),
+  );
+  if (snapshotResult.error) throw snapshotResult.error;
+  const snapshots = snapshotResult.data || [];
+  if (!snapshots.length) throw new Error('Session นี้ยังไม่มี Stock Snapshot สำหรับสร้าง JOB');
+
+  const collator = new Intl.Collator('en',{ numeric:true,sensitivity:'base' });
+  snapshots.sort((left,right) =>
+    collator.compare(String(left.locations?.code || ''),String(right.locations?.code || ''))
+    || collator.compare(String(left.items?.code || ''),String(right.items?.code || ''))
+    || collator.compare(String(left.id || ''),String(right.id || ''))
+  );
+
+  if ((_annualWorkspaceJobs || []).length) {
+    setAnnualJobGenerationProgress(alertBox,'กำลังล้าง Annual JOB เดิม...');
+    const itemDelete = await sb.from('annual_count_job_items').delete().eq('session_id',sessionId);
+    if (itemDelete.error) throw new Error(`ล้างรายการ JOB เดิมไม่สำเร็จ: ${itemDelete.error.message}`);
+    const jobDelete = await sb.from('annual_count_jobs').delete().eq('session_id',sessionId);
+    if (jobDelete.error) throw new Error(`ล้าง JOB เดิมไม่สำเร็จ: ${jobDelete.error.message}`);
+  }
+
+  const jobCount = Math.ceil(snapshots.length / size);
+  const jobRows = Array.from({ length:jobCount },(_,index) => ({
+    id:annualJobUuid(),
+    session_id:sessionId,
+    job_no:index + 1,
+    job_code:`${prefix}-${String(index + 1).padStart(4,'0')}`,
+    assigned_to:null,
+    status:'pending',
+    created_by:me?.id || null,
+  }));
+  const writeBatchSize = 200;
+  for (let start=0; start<jobRows.length; start+=writeBatchSize) {
+    setAnnualJobGenerationProgress(
+      alertBox,
+      `กำลังสร้าง JOB ${Math.min(start + writeBatchSize,jobRows.length).toLocaleString('th-TH')} / ${jobRows.length.toLocaleString('th-TH')}`,
+    );
+    await writeAnnualJobGenerationRows('annual_count_jobs',jobRows.slice(start,start+writeBatchSize));
+  }
+
+  const itemRows = snapshots.map((snapshot,index) => {
+    const jobIndex = Math.floor(index / size);
+    return {
+      id:annualJobUuid(),
+      job_id:jobRows[jobIndex].id,
+      session_id:sessionId,
+      stock_snapshot_id:snapshot.id,
+      location_id:snapshot.location_id,
+      item_id:snapshot.item_id,
+      sort_order:(index % size) + 1,
+    };
+  });
+  for (let start=0; start<itemRows.length; start+=writeBatchSize) {
+    if (start === 0 || start % 1000 === 0 || start + writeBatchSize >= itemRows.length) {
+      setAnnualJobGenerationProgress(
+        alertBox,
+        `กำลังบันทึกรายการ ${Math.min(start + writeBatchSize,itemRows.length).toLocaleString('th-TH')} / ${itemRows.length.toLocaleString('th-TH')}`,
+      );
+    }
+    await writeAnnualJobGenerationRows('annual_count_job_items',itemRows.slice(start,start+writeBatchSize));
+  }
+  return { job_count:jobRows.length,item_count:itemRows.length,permission_fallback:true };
+}
+
 async function generateAnnualJobs() {
   const config = selectedAssignSessionConfig();
   const size = Math.max(1,Math.min(200,Math.floor(Number(Q('annual-build-size')?.value) || config.itemsPerJob || 20)));
   const prefix = String(Q('annual-build-prefix')?.value || config.prefix || 'JOB').trim().slice(0,20) || 'JOB';
   const alertBox = Q('annual-generate-alert');
   const button = Q('annual-generate-btn');
-  if (_annualWorkspaceJobs.length && !confirm(`สร้าง JOB ใหม่ทั้งหมด?\n\nJOB เดิม ${_annualWorkspaceJobs.length} งานและ User ที่เคยได้รับมอบหมายจะถูกล้าง แล้วแบ่งใหม่เป็น ${size} รายการต่อ JOB`)) return;
-  if (button) button.disabled = true;
-  if (alertBox) alertBox.innerHTML = `<div class="alert alert-blue" style="margin-top:12px">⏳ กำลังเรียงและแบ่ง Stock Snapshot เป็น JOB...</div>`;
-  const { data,error } = await sb.rpc('generate_annual_count_jobs',{
-    p_session_id:config.sessionId,
-    p_items_per_job:size,
-    p_prefix:prefix,
-  });
-  if (error) {
-    if (alertBox) alertBox.innerHTML = `<div class="alert alert-red" style="margin-top:12px">❌ ${escapeWmsText(error.message)}</div>`;
-    if (button) button.disabled = false;
+  if (!config.sessionId) {
+    if (alertBox) alertBox.innerHTML = `<div class="alert alert-amber" style="margin-top:12px">กรุณาเลือก Session ก่อนสร้าง JOB</div>`;
     return;
   }
-  const summary = Array.isArray(data) ? data[0] : data;
-  const option = Q('as-sess')?.options?.[Q('as-sess').selectedIndex];
-  if (option) {
-    option.dataset.countMode = 'annual';
-    option.dataset.annualSize = String(size);
-    option.dataset.annualPrefix = prefix;
+  if (_annualWorkspaceJobs.length && !confirm(`สร้าง JOB ใหม่ทั้งหมด?\n\nJOB เดิม ${_annualWorkspaceJobs.length} งานและ User ที่เคยได้รับมอบหมายจะถูกล้าง แล้วแบ่งใหม่เป็น ${size} รายการต่อ JOB`)) return;
+  if (button) { button.disabled = true; button.textContent = '⏳ กำลังสร้าง Annual JOB...'; }
+  setAnnualJobGenerationProgress(alertBox,'กำลังเรียงและแบ่ง Stock Snapshot เป็น JOB...');
+  try {
+    const rpcResult = await sb.rpc('generate_annual_count_jobs',{
+      p_session_id:config.sessionId,
+      p_items_per_job:size,
+      p_prefix:prefix,
+    });
+    let summary;
+    if (rpcResult.error) {
+      const deniedSessionTable = /permission denied for table count_sessions/i.test(String(rpcResult.error.message || ''));
+      if (!deniedSessionTable) throw rpcResult.error;
+      setAnnualJobGenerationProgress(alertBox,'สิทธิ์แก้ Session ถูกปฏิเสธ กำลังสร้าง JOB ด้วยวิธีสำรอง...');
+      summary = await generateAnnualJobsClientSide({
+        sessionId:config.sessionId,
+        size,
+        prefix,
+        alertBox,
+      });
+    } else {
+      summary = Array.isArray(rpcResult.data) ? rpcResult.data[0] : rpcResult.data;
+    }
+
+    const option = Q('as-sess')?.options?.[Q('as-sess').selectedIndex];
+    if (option) {
+      option.dataset.countMode = 'annual';
+      option.dataset.annualSize = String(size);
+      option.dataset.annualPrefix = prefix;
+    }
+    if (alertBox) {
+      const fallbackNote = summary?.permission_fallback ? '<br><span style="font-size:10px">ใช้โหมดสำรองโดยไม่แก้ตาราง Session</span>' : '';
+      alertBox.innerHTML = `<div class="alert alert-green" style="margin-top:12px">✅ สร้าง ${Number(summary?.job_count||0).toLocaleString('th-TH')} JOB จาก ${Number(summary?.item_count||0).toLocaleString('th-TH')} รายการแล้ว${fallbackNote}</div>`;
+    }
+    await loadAnnualJobWorkspace();
+  } catch (error) {
+    console.error('Annual JOB generation failed:',error);
+    if (alertBox) {
+      const permissionHelp = isAnnualJobPermissionError(error)
+        ? '<br><span style="font-size:10px">บัญชีนี้ยังไม่มีสิทธิ์เขียนตาราง Annual JOB กรุณาใช้บัญชี Admin หรือตรวจสิทธิ์ฐานข้อมูล</span>'
+        : '';
+      alertBox.innerHTML = `<div class="alert alert-red" style="margin-top:12px">❌ สร้าง Annual JOB ไม่สำเร็จ: ${escapeWmsText(error.message || error)}${permissionHelp}</div>`;
+    }
+  } finally {
+    if (button) { button.disabled = false; button.textContent = '⚙️ สร้าง / แบ่ง Annual JOB'; }
   }
-  if (alertBox) alertBox.innerHTML = `<div class="alert alert-green" style="margin-top:12px">✅ สร้าง ${Number(summary?.job_count||0).toLocaleString('th-TH')} JOB จาก ${Number(summary?.item_count||0).toLocaleString('th-TH')} รายการแล้ว</div>`;
-  if (button) button.disabled = false;
-  await loadAnnualJobWorkspace();
 }
 
 async function assignSelectedAnnualJobs() {
@@ -17137,7 +17265,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'v82' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'v83' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
