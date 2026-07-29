@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cycle Count v84 - WMS Workflow & Stock Accuracy</title>
+<title>Cycle Count v93 - Item Master & Fast Scan</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -650,6 +650,18 @@ select { appearance: none; background-image: url('data:image/svg+xml;charset=US-
 }
 #scanReader { flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px; }
 #scanReader video { border-radius: 30px; box-shadow: 10px 10px 20px var(--neu-shadow-dark), -10px -10px 20px var(--neu-shadow-light); }
+.scanner-unavailable {
+  width:min(560px,100%);
+  padding:28px 22px;
+  border-radius:22px;
+  background:var(--theme-card-bg);
+  border:1px solid var(--theme-border-color);
+  color:var(--theme-body-text-color);
+  text-align:center;
+  line-height:1.65;
+}
+.scanner-unavailable strong { display:block; color:var(--theme-heading-color); font-size:17px; margin-bottom:6px; }
+.scanner-unavailable span { display:block; color:var(--theme-muted-text-color); font-size:12px; }
 
 /* WMS Summary Card */
 .wms-summary-card { 
@@ -10057,6 +10069,163 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
   .wms-return-confirm-actions { grid-template-columns:1fr; }
 }
 
+/* ── v93: Item Master / งานพบเพิ่ม / universal barcode scanner ── */
+.task-filter-head {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-bottom:14px;
+}
+.task-filter-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.found-work-button {
+  min-height:40px;
+  padding:9px 16px;
+  border:0;
+  border-radius:999px;
+  background:var(--primary-grad);
+  color:#fff;
+  font:800 13px/1 'Mitr',sans-serif;
+  cursor:pointer;
+  box-shadow:6px 7px 14px rgba(0,109,119,.18),-4px -4px 10px rgba(255,255,255,.72);
+}
+.found-work-button:hover { transform:translateY(-1px); }
+.scan-input-row { display:grid; grid-template-columns:minmax(0,1fr) 48px; gap:10px; align-items:stretch; }
+.scan-input-row input { min-width:0; }
+.scan-field-button {
+  width:48px;
+  min-height:48px;
+  padding:0;
+  display:grid;
+  place-items:center;
+  border:0;
+  border-radius:14px;
+  background:var(--theme-secondary-bg);
+  color:var(--theme-secondary-text);
+  cursor:pointer;
+  box-shadow:5px 6px 12px var(--neu-shadow-dark),-4px -4px 10px var(--neu-shadow-light);
+}
+.scan-field-button svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:2; }
+.scan-field-button:active { box-shadow:inset 3px 3px 7px var(--neu-shadow-dark),inset -3px -3px 7px var(--neu-shadow-light); }
+.found-form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.found-form-grid .span-2 { grid-column:1 / -1; }
+.info-match-card {
+  min-height:86px;
+  padding:16px 18px;
+  border-radius:18px;
+  background:var(--theme-secondary-bg);
+  color:var(--theme-body-text-color);
+  border:1px solid var(--theme-border-color);
+}
+.info-match-card strong { display:block; color:var(--theme-heading-color); font-size:15px; overflow-wrap:anywhere; }
+.info-match-card span { display:block; margin-top:6px; color:var(--theme-muted-text-color); font-size:12px; line-height:1.5; }
+.info-match-card.is-missing { background:var(--theme-input-bg); }
+.found-photo-preview { width:min(100%,260px); max-height:210px; object-fit:cover; border-radius:16px; margin-top:12px; display:none; }
+.found-review-row { position:relative; }
+.found-review-source {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  margin-top:6px;
+  padding:5px 10px;
+  border-radius:999px;
+  background:var(--theme-secondary-bg);
+  color:var(--theme-secondary-text);
+  font-size:10px;
+  font-weight:800;
+}
+.found-review-detail-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.found-review-detail {
+  padding:13px 14px;
+  border-radius:16px;
+  background:var(--theme-input-bg);
+  min-width:0;
+}
+.found-review-detail small { display:block; color:var(--theme-muted-text-color); font-size:10px; font-weight:800; }
+.found-review-detail strong { display:block; margin-top:5px; color:var(--theme-body-text-color); overflow-wrap:anywhere; }
+.data-info-summary-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:14px 0; }
+.data-info-stat { padding:14px; text-align:center; border-radius:18px; background:var(--theme-input-bg); }
+.data-info-stat strong { display:block; font:800 24px/1 'Fredoka','Mitr',sans-serif; color:var(--theme-heading-color); }
+.data-info-stat span { display:block; margin-top:7px; font-size:10px; font-weight:800; color:var(--theme-muted-text-color); }
+.data-info-sample { overflow:auto; max-height:340px; border-radius:16px; border:1px solid var(--theme-border-color); }
+.data-info-sample table { width:100%; border-collapse:collapse; min-width:620px; }
+.data-info-sample th,.data-info-sample td { padding:10px 12px; text-align:left; border-bottom:1px solid var(--theme-border-color); font-size:11px; }
+.data-info-sample th { position:sticky; top:0; z-index:1; background:var(--theme-table-header-bg); color:var(--theme-table-header-text); }
+.scanner-manual {
+  padding:12px 20px 18px;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:10px;
+  background:var(--main-bg);
+}
+.scanner-manual input { min-width:0; }
+.scanner-fallback {
+  padding:0 20px 12px;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:10px;
+  align-items:center;
+  background:var(--main-bg);
+}
+.scanner-fallback-message {
+  min-height:42px;
+  display:flex;
+  align-items:center;
+  color:var(--theme-muted-text-color);
+  font-size:12px;
+  font-weight:600;
+  line-height:1.55;
+}
+.scanner-file-button {
+  min-height:42px;
+  white-space:nowrap;
+}
+
+/* ปุ่ม Sidebar แบบ ChatGPT: ปุ่มเดียวใช้ทั้ง Desktop และ Mobile */
+.sidebar-collapse-fab { display:none !important; }
+.toggle-sidebar-btn.gpt-sidebar-toggle {
+  width:38px !important;
+  height:38px !important;
+  min-width:38px !important;
+  padding:0 !important;
+  display:grid !important;
+  place-items:center;
+  border:0 !important;
+  border-radius:10px !important;
+  background:transparent !important;
+  color:var(--theme-heading-color) !important;
+  box-shadow:none !important;
+  cursor:pointer;
+  transition:background-color .16s ease,color .16s ease;
+}
+.toggle-sidebar-btn.gpt-sidebar-toggle:hover,
+.toggle-sidebar-btn.gpt-sidebar-toggle:focus-visible {
+  background:rgba(0,0,0,.08) !important;
+  outline:none;
+}
+.toggle-sidebar-btn.gpt-sidebar-toggle:active {
+  background:rgba(0,0,0,.13) !important;
+}
+.gpt-sidebar-toggle svg {
+  width:21px;
+  height:21px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.7;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+@media (max-width:720px) {
+  .found-form-grid,.found-review-detail-grid { grid-template-columns:1fr; }
+  .found-form-grid .span-2 { grid-column:auto; }
+  .data-info-summary-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .task-filter-actions { width:100%; justify-content:space-between; }
+  .found-work-button { flex:1; }
+  .scanner-fallback { grid-template-columns:1fr; }
+  .scanner-file-button { width:100%; }
+}
+
 </style>
 </head>
 <body>
@@ -10126,7 +10295,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v91-empty-location-import';
+window.__CYCLE_COUNT_BUILD__ = 'v93-item-master-fast-scan';
 
 let _viewportSyncFrame = 0;
 function syncViewportSize() {
@@ -10151,6 +10320,7 @@ const SUPA_KEY = 'sb_publishable_EuJ-IUiXWBLSNvQsG0CJ5w_C2LHJXAL';
 const AUTH_STORAGE_KEY = 'cycle_count_auth_session_v2';
 const LEGACY_AUTH_STORAGE_KEYS = ['sb-uiuaboxsfepyftqjlwil-auth-token'];
 const SUPABASE_REQUEST_TIMEOUT_MS = 15000;
+const PAGE_LOAD_TIMEOUT_MS = 22000;
 
 let sb, me, prof;
 let S = {};
@@ -10550,7 +10720,7 @@ function applyBrandingSettings(settings, persistLocal = true) {
     const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
     root.setProperty(`--theme-${cssKey}`, uiBranding[key]);
   });
-  document.title = `${uiBranding.systemName} v84`;
+  document.title = `${uiBranding.systemName} v93`;
   if (persistLocal) {
     try { localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(uiBranding)); } catch (_) {}
   }
@@ -10580,10 +10750,14 @@ function brandLogoHtml(context = 'sidebar') {
 }
 
 let _html5Qr = null;   
+let _html5QrCameraRunning = false;
 let _xlsxRawRows = null;   
 let _xlsxParsed  = null;   
 let _xlsxImportAnalysis = null;
 let _xlsxWorksheetName = '';
+let _infoRawRows = null;
+let _infoImportAnalysis = null;
+let _infoWorksheetName = '';
 let _backupParsed = null;
 let _lastBackupExport = null;
 let _backupScopeRequestSerial = 0;
@@ -10594,8 +10768,8 @@ let _navStack = [];
 let _dashboardViewCache = null;
 let _dashboardLoadInFlight = null;
 const DASHBOARD_CACHE_TTL_MS = 60000;
-const NAV_DETAIL_PAGES = new Set(['c-count','sv-detail','ad-txlog','ad-new']);
-const BACK_BUTTON_PAGES = new Set(['c-count','sv-detail','sv-list','ad-txlog','ad-new']);
+const NAV_DETAIL_PAGES = new Set(['c-count','c-found','sv-detail','sv-found','ad-txlog','ad-new']);
+const BACK_BUTTON_PAGES = new Set(['c-count','c-found','sv-detail','sv-found','sv-list','ad-txlog','ad-new']);
 const DASHBOARD_TAB_TITLES = {
   summary: 'สรุป',
   variance: 'Variance',
@@ -10607,6 +10781,7 @@ const MANAGE_TAB_TITLES = {
   sessions: 'Session',
   assign: 'จ่ายงาน',
   import: 'Import WMS',
+  info: 'Item Master',
   backup: 'Backup / Restore',
 };
 
@@ -10899,7 +11074,7 @@ function renderPageLoadError(error) {
   if (error?.name === 'AbortError') return;
   console.error('Page Load Error:', error);
   const message = String(error?.message || error || 'ไม่ทราบสาเหตุ');
-  const networkProblem = /failed to fetch|network|name_not_resolved|เกิน 15 วินาที|เชื่อมต่อ/i.test(message);
+  const networkProblem = /failed to fetch|network|name_not_resolved|เกิน (?:15|22) วินาที|เชื่อมต่อ/i.test(message);
   const friendly = networkProblem
     ? 'เชื่อมต่อฐานข้อมูลไม่สำเร็จ กรุณาตรวจอินเทอร์เน็ตหรือ VPN แล้วลองใหม่'
     : `เกิดข้อผิดพลาดในการโหลดข้อมูล: ${escapeWmsText(message)}`;
@@ -10909,6 +11084,23 @@ function renderPageLoadError(error) {
       <div class="alert alert-red">${friendly}</div>
       <button class="btn btn-blue" style="margin-top:14px" onclick="render()">ลองโหลดอีกครั้ง</button>
     </div>`;
+  }
+}
+
+async function runPageLoaderWithTimeout(loader,pageRequestScope) {
+  let timeoutId;
+  const timeout = new Promise((_,reject) => {
+    timeoutId = setTimeout(() => {
+      pageRequestScope?.abort();
+      const error = new Error('หน้าใช้เวลาโหลดเกิน 22 วินาที กรุณาลองใหม่');
+      error.code = 'PAGE_LOAD_TIMEOUT';
+      reject(error);
+    },PAGE_LOAD_TIMEOUT_MS);
+  });
+  try {
+    return await Promise.race([Promise.resolve().then(loader),timeout]);
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -11018,7 +11210,7 @@ async function protectedFunctionHeaders() {
   return {
     Authorization: `Bearer ${session.access_token}`,
     apikey: SUPA_KEY,
-    'x-client-info': 'cycle-count-v83',
+    'x-client-info': 'cycle-count-v93',
   };
 }
 
@@ -11080,8 +11272,8 @@ function adminOnlyMessage() {
 }
 
 const BACKUP_FORMAT = 'CYCLE_COUNT_BACKUP';
-const BACKUP_FORMAT_VERSION = '4';
-const BACKUP_SUPPORTED_VERSIONS = new Set(['1','2','3','4']);
+const BACKUP_FORMAT_VERSION = '5';
+const BACKUP_SUPPORTED_VERSIONS = new Set(['1','2','3','4','5']);
 const BACKUP_BATCH_SIZE = 500;
 const BACKUP_EXCEL_CELL_LIMIT = 32767;
 const BACKUP_EXCEL_CHUNK_SIZE = 30000;
@@ -11089,7 +11281,8 @@ const BACKUP_CHUNK_MARKER = '__cc_part_';
 const BACKUP_SHEET_SPECS = [
   { sheet:'Sessions', table:'count_sessions', scope:'session', columns:['id','name','status','created_by','created_at','closed_at','show_oh','max_rounds','repeat_match_action','count_mode','annual_items_per_job','annual_job_prefix','annual_form_title','annual_form_logo_data_url'], restore:true },
   { sheet:'Locations', table:'locations', scope:'master', columns:['id','code','zone','area','row_no','level','type','category'], restore:true },
-  { sheet:'Items', table:'items', scope:'master', columns:['id','code','description','inventory_type','category'], restore:true },
+  { sheet:'Data_Info', table:'data_info_items', scope:'reference', columns:['item_code','description','uom','barcode','attributes','source_file','source_sheet','updated_by','updated_at'], restore:true },
+  { sheet:'Items', table:'items', scope:'master', columns:['id','code','description','inventory_type','category','uom'], restore:true },
   { sheet:'Assignments', table:'assignments', scope:'session', columns:['id','session_id','location_id','assigned_to','status','created_at','counter_r2_id','counter_r3_id'], restore:true },
   { sheet:'Annual_Jobs', table:'annual_count_jobs', scope:'session', columns:['id','session_id','job_no','job_code','assigned_to','status','assigned_at','created_by','created_at'], restore:true },
   { sheet:'Annual_Job_Items', table:'annual_count_job_items', scope:'session', columns:['id','job_id','session_id','stock_snapshot_id','location_id','item_id','sort_order','created_at'], restore:true },
@@ -11097,12 +11290,13 @@ const BACKUP_SHEET_SPECS = [
   { sheet:'Stock_Detail', table:'stock_snapshot_detail', scope:'session', columns:['id','session_id','location_id','item_id','license_plate','lot','inventory_status','qty','created_at','uom'], restore:true },
   { sheet:'Counts', table:'count_records', scope:'assignment', columns:['id','assignment_id','item_id','round','count_qty','counted_by','counted_at','actual_counter_id','remark','photo_url','actual_counter_name'], restore:true },
   { sheet:'Approvals', table:'variance_approvals', scope:'assignment', columns:['id','assignment_id','item_id','final_qty','variance','resolution','supervisor_note','approved_by','approved_at','wms_fixed','wms_fixed_at','wms_fixed_by'], restore:true },
+  { sheet:'Found_Items', table:'found_items', scope:'session', columns:['id','session_id','assignment_id','location_id','location_code','license_plate','item_id','item_code','description','uom','qty','remark','photo_url','actual_counter_name','source_type','status','discovered_by','discovered_at','reviewed_by','reviewed_at','supervisor_note','promoted_assignment_id','promoted_item_id'], restore:true },
   { sheet:'Audit', table:'audit_log', scope:'session', columns:['id','created_at','session_id','location_id','assignment_id','item_id','action','old_value','new_value','performed_by'], restore:true },
   { sheet:'Profiles', table:'profiles', scope:'reference', columns:['id','name','role','created_at'], restore:false },
   { sheet:'Counters', table:'counter_names', scope:'reference', columns:['id','name','created_by','created_at'], restore:true },
   { sheet:'Remarks', table:'remark_options', scope:'reference', columns:['id','context','label','created_by','created_at'], restore:true },
 ];
-const BACKUP_RESTORE_ORDER = ['Locations','Items','Counters','Remarks','Sessions','Assignments','Stock','Stock_Detail','Annual_Jobs','Annual_Job_Items','Counts','Approvals','Audit'];
+const BACKUP_RESTORE_ORDER = ['Data_Info','Locations','Items','Counters','Remarks','Sessions','Assignments','Stock','Stock_Detail','Annual_Jobs','Annual_Job_Items','Counts','Approvals','Found_Items','Audit'];
 
 async function boot() {
   try {
@@ -11252,7 +11446,9 @@ function goBack() {
 
   const currentPage = S?.page;
   if (currentPage === 'c-count') return go('c-tasks', {}, { replace:true });
+  if (currentPage === 'c-found') return go('c-tasks', {}, { replace:true });
   if (currentPage === 'sv-detail') return go('sv-list', {}, { replace:true });
+  if (currentPage === 'sv-found') return go('sv-list', {}, { replace:true });
   if (currentPage === 'sv-list') {
     return go('sv-dash', { _dashTab:'variance', _dashSid:S._dashSid }, { replace:true });
   }
@@ -11323,6 +11519,7 @@ function navIconSvg(type, size=20) {
     session: `<svg ${common}><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>`,
     assign: `<svg ${common}><circle cx="8" cy="8" r="3"/><path d="M2 20a6 6 0 0 1 12 0"/><path d="M16 8h6M19 5v6"/></svg>`,
     import: `<svg ${common}><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/></svg>`,
+    items: `<svg ${common}><path d="m4 7 8-4 8 4v10l-8 4-8-4V7Z"/><path d="m4 7 8 4 8-4M12 11v10"/><path d="M8 5.2 16 9"/></svg>`,
     backup: `<svg ${common}><ellipse cx="12" cy="5" rx="7" ry="3"/><path d="M5 5v6c0 1.7 3.1 3 7 3s7-1.3 7-3V5"/><path d="M5 11v6c0 1.7 3.1 3 7 3 1.2 0 2.4-.13 3.4-.37"/><path d="m17 15 2 2 3-4"/></svg>`,
     users: `<svg ${common}><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="3"/><path d="M19 8v6M16 11h6"/></svg>`,
     warehouse: `<svg ${common}><path d="M3 9.5 12 4l9 5.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5Z"/><path d="M9 21v-6h6v6"/></svg>`,
@@ -11561,7 +11758,7 @@ function renderResponsivePreviewContent() {
     <div class="summary-page-header">
       <div class="summary-greeting-wrap">
         <div class="summary-greeting">Hello, AuD</div>
-        <div class="summary-greeting-sub">${escapeWmsText(uiBranding.systemName)} Dashboard · v84</div>
+        <div class="summary-greeting-sub">${escapeWmsText(uiBranding.systemName)} Dashboard · v93</div>
       </div>
       <div class="summary-header-actions">${dashboardFiltersHtml('<option>Cycle Count ก.ค. 2569</option>', false)}</div>
     </div>
@@ -11657,7 +11854,7 @@ function renderResponsivePreviewContent() {
 
 function render() {
   const { page } = S;
-  beginPageRequestScope();
+  const pageRequestScope = beginPageRequestScope();
   document.body.classList.toggle('app-shell-mode', !['login','reset-password'].includes(page));
   if (page === 'login') { paintLogin(); return; }
   if (page === 'reset-password') { paintResetPassword(); return; }
@@ -11665,9 +11862,11 @@ function render() {
   const PAGE_TITLES = {
     'c-tasks':    'งานของฉัน',
     'c-count':    'บันทึกการนับ',
+    'c-found':    'เจองานเพิ่ม',
     'sv-dash':    'สรุปภาพรวมระบบ',
     'sv-list':    'รายการผันผวน',
     'sv-detail':  'ตรวจสอบ Variance',
+    'sv-found':   'ตรวจสอบงานพบเพิ่ม',
     'ad-manage':  'จัดการงาน / Sessions',
     'ad-sessions':'Session',
     'ad-new':      'สร้างรายการนับ',
@@ -11711,6 +11910,7 @@ function render() {
         { id:'manage-sessions', name:'Session', icon:navIconSvg('session'), action:"openManageMenu('sessions')" },
         { id:'manage-assign', name:'จ่ายงาน', icon:navIconSvg('assign'), action:"openManageMenu('assign')" },
         { id:'manage-import', name:'Import WMS', icon:navIconSvg('import'), action:"openManageMenu('import')" },
+        { id:'manage-info', name:'Item Master', icon:navIconSvg('items'), action:"openManageMenu('info')" },
         { id:'manage-backup', name:'Backup / Restore', icon:navIconSvg('backup'), action:"openManageMenu('backup')" }
       ]},
       { id: 'ad-history', name: 'ประวัติการนับ', icon: navIconSvg('history') },
@@ -11723,7 +11923,7 @@ function render() {
   };
 
   const userNavs = navMenus[currentRole] || navMenus.counter;
-  const dashboardActive = page === 'sv-dash' || page === 'sv-list' || page === 'sv-detail';
+  const dashboardActive = page === 'sv-dash' || page === 'sv-list' || page === 'sv-detail' || page === 'sv-found';
   const manageActive = ['ad-manage','ad-new','ad-sessions','ad-assign','ad-import'].includes(page);
   const systemActive = ['ad-branding','ad-paper','ad-users'].includes(page);
 
@@ -11766,12 +11966,6 @@ function render() {
   Q('app').innerHTML = `
     <div class="app-container">
       <aside class="sidebar ${isCollapsed ? 'collapsed' : ''}" id="mainSidebar">
-        <button class="sidebar-collapse-fab sidebar-panel-toggle" type="button" onclick="handleSidebarToggle()" aria-label="พับหรือขยายเมนู">
-  <svg class="sidebar-panel-icon" viewBox="0 0 24 24" aria-hidden="true">
-    <rect x="4" y="5" width="16" height="14" rx="1.5"></rect>
-    <path d="M9 5v14"></path>
-  </svg>
-        </button>
         <div class="sidebar-header">
           <div class="sidebar-logo-icon ${uiBranding.logoDataUrl ? 'has-custom-logo' : ''}">${brandLogoHtml('sidebar')}</div>
           <div>
@@ -11791,7 +11985,13 @@ function render() {
       <div class="main-wrapper ${isSummaryView ? 'summary-view' : ''}">
         <header class="topbar">
           <div class="topbar-left">
-            <button class="toggle-sidebar-btn mobile-menu-trigger" type="button" onclick="handleSidebarToggle()" aria-label="เปิดหรือปิดเมนู"><span></span></button>
+            <button class="toggle-sidebar-btn gpt-sidebar-toggle" type="button" onclick="handleSidebarToggle()"
+              aria-label="เปิดหรือปิดเมนู" title="เปิดหรือปิดเมนู">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="3.5" y="4.5" width="17" height="15" rx="2.5"></rect>
+                <path d="M9 4.5v15"></path>
+              </svg>
+            </button>
             ${pageBackButtonHtml(page)}
             <h1 class="topbar-title">${pageTitle}</h1>
           </div>
@@ -11818,9 +12018,11 @@ function render() {
   const L = {
     'c-tasks':    loadCTasks,
     'c-count':    loadCCount,
+    'c-found':    loadCFound,
     'sv-dash':    loadSvDash,
     'sv-list':    loadSvList,
     'sv-detail':  loadSvDetail,
+    'sv-found':   loadSvFound,
     'ad-manage':  loadAdManage,
     'ad-sessions':loadAdManage,
     'ad-assign':  loadAdManage,
@@ -11834,7 +12036,7 @@ function render() {
   };
   
   if (L[page]) {
-     const pending = Promise.resolve().then(() => L[page]());
+     const pending = runPageLoaderWithTimeout(L[page],pageRequestScope);
      if (page === 'sv-dash') _dashboardLoadInFlight = pending;
      pending
        .catch(err => {
@@ -12553,18 +12755,31 @@ function setMyTaskFilter(field,value) {
 }
 
 async function loadCTasks() {
-  const [normalResult,annualResult] = await Promise.all([
-    fetchPagedSupabaseRows(
-      'assignments',
-      'id,status,location_id,session_id,locations(code,zone,area,row_no,level),count_sessions(name,status)',
-      query => query.eq('assigned_to',me.id).order('created_at'),
-    ),
-    fetchPagedSupabaseRows(
-      'annual_count_jobs',
-      'id,job_no,job_code,status,session_id,count_sessions(name,status)',
-      query => query.eq('assigned_to',me.id).order('job_no'),
-    ),
-  ]);
+  let workspace = null;
+  const workspaceResult = await sb.rpc('get_my_tasks_workspace');
+  if (!workspaceResult.error && workspaceResult.data && typeof workspaceResult.data === 'object') {
+    workspace = workspaceResult.data;
+  } else if (workspaceResult.error) {
+    console.warn('Fast My Tasks workspace unavailable; using compatible fallback:',workspaceResult.error.message);
+  }
+
+  const [normalResult,annualResult] = workspace
+    ? [
+        { data:workspace.assignments || [],error:null },
+        { data:workspace.annual_jobs || [],error:null },
+      ]
+    : await Promise.all([
+        fetchPagedSupabaseRows(
+          'assignments',
+          'id,status,location_id,session_id,locations(code,zone,area,row_no,level),count_sessions(name,status)',
+          query => query.eq('assigned_to',me.id).order('created_at'),
+        ),
+        fetchPagedSupabaseRows(
+          'annual_count_jobs',
+          'id,job_no,job_code,status,session_id,count_sessions(name,status)',
+          query => query.eq('assigned_to',me.id).order('job_no'),
+        ),
+      ]);
 
   if (normalResult.error || annualResult.error) {
     cnt().innerHTML = errBox((normalResult.error || annualResult.error).message);
@@ -12573,7 +12788,9 @@ async function loadCTasks() {
 
   let asgns = normalResult.data || [];
   const annualJobs = annualResult.data || [];
-  const annualItemsResult = annualJobs.length
+  const annualItemsResult = workspace
+    ? { data:workspace.annual_items || [],error:null }
+    : annualJobs.length
     ? await fetchSupabaseRowsByValues(
         'annual_count_job_items',
         'id,job_id,session_id,location_id,item_id,sort_order,locations(code,zone,area,row_no,level),items(code,description)',
@@ -12590,21 +12807,28 @@ async function loadCTasks() {
   if (asgns.length) {
     const assignmentIds = asgns.map(assignment => assignment.id);
     const sessionIds = [...new Set(asgns.map(assignment => assignment.session_id).filter(Boolean))];
-    const [countResult,snapshotResult,sessionRules] = await Promise.all([
-      fetchSupabaseRowsByValues(
-        'count_records',
-        'assignment_id,item_id,round,count_qty',
-        'assignment_id',
-        assignmentIds,
-      ),
-      fetchSupabaseRowsByValues(
-        'stock_snapshot',
-        'session_id,location_id,item_id,onhand_qty',
-        'session_id',
-        sessionIds,
-      ),
-      Promise.all(sessionIds.map(async sessionId => [sessionId,await getSessionRules(sessionId)])),
-    ]);
+    const [countResult,snapshotResult,sessionRules] = workspace
+      ? [
+          { data:workspace.counts || [],error:null },
+          { data:workspace.snapshots || [],error:null },
+          (workspace.session_rules || []).map(row => [
+            row.id,
+            {
+              maxRounds:row.max_rounds || 3,
+              repeatMatchAction:row.repeat_match_action || 'recount',
+            },
+          ]),
+        ]
+      : await Promise.all([
+          fetchSupabaseRowsByValues(
+            'count_records',
+            'assignment_id,item_id,round,count_qty',
+            'assignment_id',
+            assignmentIds,
+          ),
+          fetchSnapshotsForAssignmentScopes(asgns,'session_id,location_id,item_id,onhand_qty'),
+          Promise.all(sessionIds.map(async sessionId => [sessionId,await getSessionRules(sessionId)])),
+        ]);
     if (countResult.error || snapshotResult.error) {
       cnt().innerHTML = errBox((countResult.error || snapshotResult.error).message);
       return;
@@ -12676,6 +12900,8 @@ async function loadCTasks() {
     cnt().innerHTML = `<div class="card" style="text-align:center;padding:60px 40px">
       <div style="font-size:60px">📋</div>
       <div style="margin-top:20px;color:var(--text-muted);font-weight:600;font-size:16px">ยังไม่มีงานที่ได้รับมอบหมาย</div>
+      <button class="found-work-button" style="margin-top:22px" type="button"
+        onclick="go('c-found')">＋ เจองานเพิ่ม</button>
     </div>`; return;
   }
 
@@ -12697,9 +12923,13 @@ async function loadCTasks() {
   </div>` : '';
   const normalHtml = (asgns.length || annualJobs.length) ? `
     <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+      <div class="task-filter-head">
         <div style="font-size:13px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em">🔍 กรองงาน Cycle Count</div>
-        ${locationSortControlHtml(true)}
+        <div class="task-filter-actions">
+          <button class="found-work-button" type="button"
+            onclick="go('c-found',{sid:Q('mt-session')?.value||''})">＋ เจองานเพิ่ม</button>
+          ${locationSortControlHtml(true)}
+        </div>
       </div>
       <div class="grid-3">
         ${jobFilterHtml}
@@ -13058,45 +13288,206 @@ function renderMyTasks() {
   list.innerHTML = html;
 }
 
-function openScanner() {
-  if (typeof Html5Qrcode === 'undefined') { alert('ตัวสแกนยังโหลดไม่เสร็จ ลองใหม่อีกครั้ง'); return; }
+let _scannerCallback = null;
+let _scannerLocked = false;
+let _scannerPreviousOverflow = '';
+
+function barcodeScanIconSvg() {
+  return `<svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3"/>
+    <path d="M7 9v6M10 8v8M13 9v6M16 8v8"/>
+  </svg>`;
+}
+
+function allHtml5BarcodeFormats() {
+  if (typeof Html5QrcodeSupportedFormats === 'undefined') return undefined;
+  return [
+    'QR_CODE','AZTEC','CODABAR','CODE_39','CODE_93','CODE_128','DATA_MATRIX',
+    'MAXICODE','ITF','EAN_13','EAN_8','PDF_417','RSS_14','RSS_EXPANDED',
+    'UPC_A','UPC_E','UPC_EAN_EXTENSION',
+  ].map(name => Html5QrcodeSupportedFormats[name]).filter(value => Number.isInteger(value));
+}
+
+function scannerPolicyAllowsCamera() {
+  const policy = document.permissionsPolicy || document.featurePolicy;
+  if (!policy || typeof policy.allowsFeature !== 'function') return true;
+  try {
+    return policy.allowsFeature('camera');
+  } catch (_) {
+    return true;
+  }
+}
+
+function scannerFallbackMessage(message) {
+  const target = Q('scannerFallbackMessage');
+  if (target) target.textContent = message;
+}
+
+function scannerUnavailablePanel(title,message) {
+  const reader = Q('scanReader');
+  if (!reader) return;
+  reader.innerHTML = `<div class="scanner-unavailable">
+    <strong>${escapeWmsText(title)}</strong>
+    <span>${escapeWmsText(message)}</span>
+  </div>`;
+}
+
+function openScannerImagePicker() {
+  Q('scannerImageInput')?.click();
+}
+
+async function scanBarcodeImageFile(input) {
+  const file = input?.files?.[0];
+  if (!file || !_html5Qr || _scannerLocked) return;
+  const scanner = _html5Qr;
+  try {
+    if (_html5QrCameraRunning) {
+      await scanner.stop();
+      _html5QrCameraRunning = false;
+    }
+    const reader = Q('scanReader');
+    if (reader) reader.innerHTML = '';
+    scannerFallbackMessage('กำลังอ่าน Barcode จากรูป...');
+    const decodedText = await scanner.scanFile(file,true);
+    await finishBarcodeScan(decodedText);
+  } catch (error) {
+    scannerFallbackMessage(`ยังอ่าน Barcode จากรูปไม่ได้: ${error?.message || error} · ลองถ่ายให้ชัดขึ้น หรือกรอกด้วย Scanner ด้านล่าง`);
+    Q('scannerManualValue')?.focus();
+  } finally {
+    if (input) input.value = '';
+  }
+}
+
+async function openBarcodeScanner({ title='สแกน Barcode', onDetected=null }={}) {
+  if (typeof Html5Qrcode === 'undefined') {
+    alert('ตัวสแกนยังโหลดไม่เสร็จ กรุณาลองใหม่อีกครั้ง');
+    return;
+  }
+  await closeScanner();
+  _scannerCallback = typeof onDetected === 'function' ? onDetected : null;
+  _scannerLocked = false;
 
   const overlay = document.createElement('div');
   overlay.className = 'scan-overlay';
   overlay.id = 'scanOverlay';
   overlay.innerHTML = `
     <div class="scan-header">
-      <span>📷 สแกน Location</span>
-      <button onclick="closeScanner()">✕</button>
+      <span>📷 ${escapeWmsText(title)}</span>
+      <button type="button" onclick="closeScanner()" aria-label="ปิดกล้อง">✕</button>
     </div>
-    <div id="scanReader"></div>`;
+    <div id="scanReader"></div>
+    <div class="scanner-fallback">
+      <div class="scanner-fallback-message" id="scannerFallbackMessage">กำลังตรวจสอบสิทธิ์กล้อง...</div>
+      <button class="btn btn-ghost btn-sm scanner-file-button" type="button" onclick="openScannerImagePicker()">📷 ถ่ายรูป / เลือกรูปเพื่อสแกน</button>
+      <input id="scannerImageInput" type="file" accept="image/*" capture="environment" hidden
+        onchange="scanBarcodeImageFile(this)">
+    </div>
+    <div class="scanner-manual">
+      <input id="scannerManualValue" autocomplete="off" placeholder="หรือพิมพ์ / ยิง Scanner แล้วกดยืนยัน"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();commitManualScan();}">
+      <button class="btn btn-blue btn-sm" type="button" onclick="commitManualScan()">ยืนยัน</button>
+    </div>`;
   document.body.appendChild(overlay);
+  _scannerPreviousOverflow = document.body.style.overflow;
+  document.body.style.overflow = 'hidden';
 
-  _html5Qr = new Html5Qrcode('scanReader');
-  _html5Qr.start(
-    { facingMode: 'environment' },
-    { fps: 10, qrbox: 240 },
-    (decodedText) => onScanSuccess(decodedText),
-    () => {}
-  ).catch(err => {
-    alert('เปิดกล้องไม่ได้: ' + (err?.message || err));
-    closeScanner();
+  const formatsToSupport = allHtml5BarcodeFormats();
+  _html5Qr = new Html5Qrcode('scanReader', {
+    ...(formatsToSupport?.length ? { formatsToSupport } : {}),
+    useBarCodeDetectorIfSupported:true,
+    verbose:false,
+  });
+  const policyAllowsCamera = scannerPolicyAllowsCamera();
+  const secureCameraContext = window.isSecureContext || ['localhost','127.0.0.1'].includes(location.hostname);
+  if (!policyAllowsCamera) {
+    scannerUnavailablePanel('Host ปิดสิทธิ์กล้องสด','ยังสแกนได้ด้วยการถ่ายรูป/เลือกรูป หรือยิง Scanner ในช่องด้านล่าง');
+    scannerFallbackMessage('หน้าที่เปิดอยู่ถูก Host ปิดสิทธิ์กล้องสดไว้ · ใช้ “ถ่ายรูป / เลือกรูปเพื่อสแกน” หรือเครื่องสแกนด้านล่างได้ทันที');
+    Q('scannerManualValue')?.focus();
+    return;
+  }
+  if (!secureCameraContext) {
+    scannerUnavailablePanel('หน้านี้ไม่ได้เปิดผ่าน HTTPS','กล้องสดต้องใช้ HTTPS แต่ยังสแกนจากรูปหรือเครื่องสแกนได้');
+    scannerFallbackMessage('กล้องสดต้องเปิดผ่าน HTTPS · ใช้ “ถ่ายรูป / เลือกรูปเพื่อสแกน” หรือเครื่องสแกนด้านล่าง');
+    Q('scannerManualValue')?.focus();
+    return;
+  }
+  scannerFallbackMessage('กำลังเปิดกล้อง...');
+  const scanner = _html5Qr;
+  scanner.start(
+    { facingMode:{ ideal:'environment' } },
+    { fps:12, qrbox:{ width:260, height:180 }, aspectRatio:1.333334, disableFlip:false },
+    decodedText => finishBarcodeScan(decodedText),
+    () => {},
+  ).then(() => {
+    if (_html5Qr !== scanner) {
+      scanner.stop().catch(() => {});
+      return;
+    }
+    _html5QrCameraRunning = true;
+    scannerFallbackMessage('เล็ง Barcode ให้อยู่กลางกรอบ หรือใช้รูปภาพ/Scanner ด้านล่าง');
+  }).catch(error => {
+    _html5QrCameraRunning = false;
+    scannerUnavailablePanel('เปิดกล้องสดไม่ได้','กรุณาตรวจสิทธิ์ Camera แล้วลองใหม่ หรือใช้รูปภาพ/Scanner ด้านล่าง');
+    scannerFallbackMessage(`เปิดกล้องสดไม่ได้: ${error?.message || error} · ใช้ “ถ่ายรูป / เลือกรูปเพื่อสแกน” หรือเครื่องสแกนด้านล่าง`);
+    Q('scannerManualValue')?.focus();
   });
 }
 
-function closeScanner() {
-  if (_html5Qr) {
-    _html5Qr.stop().catch(() => {}).finally(() => { try { _html5Qr.clear(); } catch(e){} _html5Qr = null; });
+async function closeScanner() {
+  const scanner = _html5Qr;
+  const hadOverlay = Boolean(Q('scanOverlay'));
+  _html5Qr = null;
+  if (scanner) {
+    if (_html5QrCameraRunning) {
+      try { await scanner.stop(); } catch (_) {}
+    }
+    _html5QrCameraRunning = false;
+    try { scanner.clear(); } catch (_) {}
   }
-  const overlay = Q('scanOverlay');
-  if (overlay) overlay.remove();
+  Q('scanOverlay')?.remove();
+  if (hadOverlay) {
+    document.body.style.overflow = _scannerPreviousOverflow;
+    _scannerPreviousOverflow = '';
+  }
+  _scannerLocked = false;
 }
 
-function onScanSuccess(text) {
+async function finishBarcodeScan(text) {
+  const value = String(text || '').trim();
+  if (!value || _scannerLocked) return;
+  _scannerLocked = true;
+  const callback = _scannerCallback;
+  _scannerCallback = null;
+  await closeScanner();
+  if (callback) callback(value);
+}
+
+function commitManualScan() {
+  finishBarcodeScan(Q('scannerManualValue')?.value || '');
+}
+
+function scanIntoField(targetId, label='ข้อมูล') {
+  openBarcodeScanner({
+    title:`สแกน ${label}`,
+    onDetected:value => {
+      const input = Q(targetId);
+      if (!input) return;
+      input.value = value.trim();
+      input.dispatchEvent(new Event('input',{ bubbles:true }));
+      input.dispatchEvent(new Event('change',{ bubbles:true }));
+      input.focus();
+    },
+  });
+}
+
+function openScanner() {
+  openBarcodeScanner({ title:'สแกน Location', onDetected:onTaskLocationScanned });
+}
+
+function onTaskLocationScanned(text) {
   const code = (text || '').trim().toUpperCase();
   const tasks = window._myTasks || [];
   const match = tasks.find(a => a.locations?.code?.toUpperCase() === code);
-  closeScanner();
   if (match) {
     if (['completed','approved'].includes(match.status)) { alert(`Location "${code}" นับเสร็จแล้ว`); return; }
     go('c-count', { aid: match.id });
@@ -13128,6 +13519,344 @@ function parseCountRemarks(value='') {
       .map(text => text.trim())
       .filter(Boolean)
   )];
+}
+
+const _dataInfoMatchCache = new Map();
+const _dataInfoMatchCacheTime = new Map();
+const _dataInfoMatchTimers = new Map();
+const DATA_INFO_CACHE_TTL_MS = 5 * 60 * 1000;
+
+async function findDataInfo(rawCode) {
+  const code = importCodeKey(rawCode);
+  if (!code) return null;
+  if (_dataInfoMatchCache.has(code)
+      && Date.now() - Number(_dataInfoMatchCacheTime.get(code) || 0) < DATA_INFO_CACHE_TTL_MS) {
+    return _dataInfoMatchCache.get(code);
+  }
+  _dataInfoMatchCache.delete(code);
+  _dataInfoMatchCacheTime.delete(code);
+
+  let row = null;
+  const byItem = await sb.from('data_info_items')
+    .select('item_code,description,uom,barcode,attributes')
+    .eq('item_code',code)
+    .maybeSingle();
+  if (!byItem.error) row = byItem.data;
+
+  if (!row) {
+    const byBarcode = await sb.from('data_info_items')
+      .select('item_code,description,uom,barcode,attributes')
+      .eq('barcode',code)
+      .limit(1)
+      .maybeSingle();
+    if (!byBarcode.error) row = byBarcode.data;
+  }
+
+  if (!row) {
+    const itemResult = await sb.from('items')
+      .select('code,description,uom')
+      .eq('code',code)
+      .maybeSingle();
+    if (!itemResult.error && itemResult.data) {
+      row = {
+        item_code:itemResult.data.code,
+        description:itemResult.data.description,
+        uom:itemResult.data.uom,
+        barcode:null,
+        attributes:{ source:'items' },
+      };
+    }
+  }
+  if (row) {
+    const cacheKeys = [
+      code,
+      row.item_code ? importCodeKey(row.item_code) : '',
+      row.barcode ? importCodeKey(row.barcode) : '',
+    ].filter(Boolean);
+    cacheKeys.forEach(cacheKey => {
+      _dataInfoMatchCache.set(cacheKey,row);
+      _dataInfoMatchCacheTime.set(cacheKey,Date.now());
+    });
+  }
+  return row || null;
+}
+
+async function matchDataInfoForFields(itemInputId,descriptionInputId,uomInputId,cardId) {
+  const itemInput = Q(itemInputId);
+  const descriptionInput = Q(descriptionInputId);
+  const uomInput = Q(uomInputId);
+  const card = Q(cardId);
+  const rawCode = itemInput?.value || '';
+  const requestKey = importCodeKey(rawCode);
+  if (!requestKey) {
+    if (descriptionInput) descriptionInput.value = '';
+    if (uomInput) uomInput.value = '';
+    if (card) {
+      card.classList.add('is-missing');
+      card.innerHTML = '<strong>รอสแกนหรือกรอก Item</strong><span>Description และ UOM จะดึงจาก Item Master อัตโนมัติ</span>';
+    }
+    return null;
+  }
+
+  if (card) {
+    card.classList.remove('is-missing');
+    card.innerHTML = '<strong>กำลัง Match Item Master...</strong><span>ตรวจ Item Code และ Barcode</span>';
+  }
+  const info = await findDataInfo(requestKey);
+  if (importCodeKey(itemInput?.value) !== requestKey) return null;
+  if (info) {
+    if (itemInput) itemInput.value = info.item_code || requestKey;
+    if (descriptionInput) descriptionInput.value = info.description || '';
+    if (uomInput) uomInput.value = info.uom || '';
+    if (card) {
+      card.classList.remove('is-missing');
+      card.innerHTML = `<strong>${escapeWmsText(info.description || 'ไม่ระบุ Description')}</strong>
+        <span>UOM: <b>${escapeWmsText(info.uom || '—')}</b>${info.barcode ? ` · Barcode: ${escapeWmsText(info.barcode)}` : ''}</span>`;
+    }
+    return info;
+  }
+  if (descriptionInput) descriptionInput.value = '';
+  if (uomInput) uomInput.value = '';
+  if (card) {
+    card.classList.add('is-missing');
+    card.innerHTML = `<strong>ไม่พบ ${escapeWmsText(requestKey)} ใน Item Master</strong>
+      <span>ยังส่งงานให้ Supervisor ตรวจสอบได้ แต่ Description / UOM จะว่าง</span>`;
+  }
+  return null;
+}
+
+function scheduleDataInfoMatch(itemInputId,descriptionInputId,uomInputId,cardId) {
+  const key = `${itemInputId}|${cardId}`;
+  clearTimeout(_dataInfoMatchTimers.get(key));
+  _dataInfoMatchTimers.set(key,setTimeout(
+    () => matchDataInfoForFields(itemInputId,descriptionInputId,uomInputId,cardId),
+    280,
+  ));
+}
+
+async function createFoundItemRecord(payload) {
+  const licensePlate = normalizeImportText(payload?.license_plate);
+  if (!licensePlate) throw new Error('กรุณากรอก LPN ให้ครบ');
+  payload.license_plate = licensePlate;
+  if (payload.assignment_id && payload.source_type === 'empty_location') {
+    let existingQuery = sb.from('found_items')
+      .select('id,status')
+      .eq('assignment_id',payload.assignment_id)
+      .eq('item_code',payload.item_code)
+      .eq('source_type','empty_location')
+      .eq('status','pending_review');
+    existingQuery = existingQuery.eq('license_plate',payload.license_plate);
+    const existing = await existingQuery
+      .limit(1)
+      .maybeSingle();
+    if (!existing.error && existing.data) return existing.data;
+  }
+  const { data,error } = await sb.from('found_items').insert(payload).select('id,status').single();
+  if (error?.code === '23505') {
+    throw new Error('รายการ Location / LPN / Item นี้อยู่ในคิวตรวจของ Supervisor แล้ว');
+  }
+  if (error) throw error;
+  return data;
+}
+
+function foundRemarkOptionsHtml(selectedRemarks=[]) {
+  const choices = [...(window._countRemarkOptions || [])];
+  selectedRemarks.forEach(label => {
+    if (!choices.some(option => option.label === label)) choices.push({ id:null,label });
+  });
+  return choices.map(option => `
+    <label class="count-remark-option">
+      <input type="checkbox" value="${escapeWmsText(option.label)}"
+        ${selectedRemarks.includes(option.label)?'checked':''}
+        onchange="refreshCountRemarkSummary('found')">
+      <span>${escapeWmsText(option.label)}</span>
+    </label>`).join('');
+}
+
+async function loadCFound() {
+  const [sessionResult,counterResult,remarkResult] = await Promise.all([
+    sb.from('count_sessions').select('id,name,status').in('status',['draft','active']).order('created_at',{ascending:false}),
+    sb.from('counter_names').select('id,name').order('name'),
+    sb.from('remark_options').select('id,label').eq('context','count').order('label'),
+  ]);
+  if (sessionResult.error || counterResult.error || remarkResult.error) {
+    cnt().innerHTML = errBox((sessionResult.error || counterResult.error || remarkResult.error).message);
+    return;
+  }
+  const sessions = sessionResult.data || [];
+  if (!sessions.length) {
+    cnt().innerHTML = '<div class="card"><div class="alert alert-amber">ไม่มี Session ที่ Draft หรือ Active สำหรับรับงานพบเพิ่ม</div></div>';
+    return;
+  }
+  window._counterNames = counterResult.data || [];
+  window._countRemarkOptions = remarkResult.data?.length
+    ? remarkResult.data
+    : COUNT_REMARK_PRESETS.map(label => ({ id:null,label }));
+  window._photoMap = {};
+  const preferredSession = sessions.some(session => session.id === S.sid) ? S.sid : sessions[0].id;
+
+  cnt().innerHTML = `
+    <div class="card">
+      <div style="font-size:20px;font-weight:800;color:var(--theme-heading-color)">＋ เจองานเพิ่ม</div>
+      <div style="margin-top:6px;color:var(--theme-muted-text-color);font-size:13px;line-height:1.6">
+        ใช้เมื่อพบสินค้านอกงานที่ได้รับมอบหมาย · เมื่อบันทึกแล้วจะเข้าคิว Supervisor ทันที
+      </div>
+    </div>
+    <div class="card">
+      <div class="found-form-grid">
+        <div class="fg span-2">
+          <label>SESSION <span style="color:var(--accent-red)">*</span></label>
+          <select id="found_session">${sessions.map(session =>
+            `<option value="${session.id}" ${session.id===preferredSession?'selected':''}>${escapeWmsText(session.name)} · ${escapeWmsText(session.status)}</option>`
+          ).join('')}</select>
+        </div>
+        <div class="fg">
+          <label>LOCATION <span style="color:var(--accent-red)">*</span></label>
+          <div class="scan-input-row">
+            <input id="found_location" autocomplete="off" placeholder="สแกนหรือกรอก Location"
+              oninput="this.value=this.value.toUpperCase()">
+            <button type="button" class="scan-field-button" onclick="scanIntoField('found_location','Location')" title="สแกน Location">${barcodeScanIconSvg()}</button>
+          </div>
+        </div>
+        <div class="fg">
+          <label>LPN <span style="color:var(--accent-red)">*</span></label>
+          <div class="scan-input-row">
+            <input id="found_lpn" autocomplete="off" placeholder="สแกนหรือกรอก LPN">
+            <button type="button" class="scan-field-button" onclick="scanIntoField('found_lpn','LPN')" title="สแกน LPN">${barcodeScanIconSvg()}</button>
+          </div>
+        </div>
+        <div class="fg">
+          <label>ITEM <span style="color:var(--accent-red)">*</span></label>
+          <div class="scan-input-row">
+            <input id="found_item" autocomplete="off" placeholder="สแกนหรือกรอก Item / Barcode"
+              oninput="this.value=this.value.toUpperCase();scheduleDataInfoMatch('found_item','found_description','found_uom','found_info_card')">
+            <button type="button" class="scan-field-button" onclick="scanIntoField('found_item','Item')" title="สแกน Item">${barcodeScanIconSvg()}</button>
+          </div>
+        </div>
+        <div class="fg">
+          <label>QTY <span style="color:var(--accent-red)">*</span></label>
+          <input id="found_qty" type="number" min="0.000001" step="any" inputmode="decimal" placeholder="จำนวนที่พบจริง">
+        </div>
+        <div class="span-2">
+          <input id="found_description" type="hidden">
+          <input id="found_uom" type="hidden">
+          <div class="info-match-card is-missing" id="found_info_card">
+            <strong>รอสแกนหรือกรอก Item</strong>
+            <span>Description และ UOM จะดึงจาก Item Master อัตโนมัติ</span>
+          </div>
+        </div>
+        <div class="fg span-2">
+          <label>ผู้นับจริง (ทีมนับ) <span style="color:var(--accent-red)">*</span></label>
+          <div class="counter-picker" id="counterPicker">
+            <button type="button" class="counter-picker-trigger" id="counterPickerTrigger"
+              aria-haspopup="true" aria-expanded="false" onclick="toggleCounterDropdown(event)">
+              <span class="counter-picker-trigger-copy"><small>เลือกได้หลายคน</small><strong id="counterPickerSummary">เลือกผู้นับจริง</strong></span>
+              <span class="counter-picker-chevron">⌄</span>
+            </button>
+            <div class="counter-picker-menu" id="counterPickerMenu" hidden onclick="event.stopPropagation()">
+              <div class="counter-picker-title">รายชื่อผู้นับ <span>แตะเพื่อเลือก / ยกเลิก</span></div>
+              <div id="counterNameOptions" class="counter-option-list"></div>
+            </div>
+          </div>
+          <div id="counterSelectedChips" class="counter-selected-chips"></div>
+        </div>
+        <div class="fg span-2">
+          <label>REMARK (ไม่บังคับ) — เลือกได้หลายข้อ</label>
+          <div class="count-remark-picker" id="count_remark_picker_found">
+            <button type="button" class="count-remark-trigger" id="count_remark_trigger_found"
+              aria-haspopup="true" aria-expanded="false" onclick="toggleCountRemarkDropdown(event,'found')">
+              <strong id="count_remark_summary_found">เลือกหมายเหตุ</strong>
+              <span class="counter-picker-chevron">⌄</span>
+            </button>
+            <div class="count-remark-menu" id="count_remark_menu_found" hidden onclick="event.stopPropagation()">
+              <div class="count-remark-menu-head"><span>เลือกหมายเหตุได้หลายข้อ</span>
+                <button type="button" onclick="toggleCountRemarkDropdown(event,'found')" aria-label="ปิด">✕</button>
+              </div>
+              <div class="count-remark-options" id="count_remark_options_found">${foundRemarkOptionsHtml()}</div>
+            </div>
+          </div>
+        </div>
+        <div class="fg span-2">
+          <label>ถ่ายภาพ / แนบภาพ (ไม่บังคับ)</label>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="openCameraFor('found')">📷 กล้อง</button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="openGalleryFor('found')">🖼 เลือกรูป</button>
+          </div>
+          <input type="file" accept="image/*" capture="environment" id="cam_found" style="display:none" onchange="handlePhoto('found',this)">
+          <input type="file" accept="image/*" id="gal_found" style="display:none" onchange="handlePhoto('found',this)">
+          <img id="thumb_found" class="found-photo-preview" alt="รูปงานพบเพิ่ม">
+        </div>
+      </div>
+      <div id="found_alert" style="margin-top:16px"></div>
+      <button class="btn btn-green" id="found_submit" type="button" style="width:100%;margin-top:14px"
+        onclick="submitFoundWork()">✅ บันทึกและส่ง Supervisor ตรวจสอบ</button>
+    </div>`;
+
+  window._selectedCounters = new Set(
+    (window._lastPickedCounterNames || []).filter(name =>
+      (window._counterNames || []).some(counter => counter.name === name)
+    )
+  );
+  renderCounterPicker();
+}
+
+async function submitFoundWork() {
+  const alertBox = Q('found_alert');
+  const button = Q('found_submit');
+  const sessionId = Q('found_session')?.value || '';
+  const locationCode = importCodeKey(Q('found_location')?.value);
+  const licensePlate = normalizeImportText(Q('found_lpn')?.value) || null;
+  const rawItemCode = importCodeKey(Q('found_item')?.value);
+  const qty = Number(Q('found_qty')?.value);
+  const selectedCounters = [...(window._selectedCounters || [])];
+
+  if (!sessionId || !locationCode || !licensePlate || !rawItemCode || !Number.isFinite(qty) || qty <= 0) {
+    alertBox.innerHTML = '<div class="alert alert-red">กรอก Session, Location, LPN, Item และ QTY มากกว่า 0 ให้ครบ</div>';
+    return;
+  }
+  if (!selectedCounters.length) {
+    alertBox.innerHTML = '<div class="alert alert-red">กรุณาเลือกผู้นับจริงอย่างน้อย 1 คน</div>';
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = 'กำลังส่งให้ Supervisor...';
+  alertBox.innerHTML = '<div class="alert alert-blue">⏳ กำลังตรวจสอบ Item Master และบันทึกงาน...</div>';
+  try {
+    const info = await findDataInfo(rawItemCode);
+    const itemCode = importCodeKey(info?.item_code || rawItemCode);
+    const [locationResult,itemResult] = await Promise.all([
+      sb.from('locations').select('id,code').eq('code',locationCode).maybeSingle(),
+      sb.from('items').select('id,code,description,uom').eq('code',itemCode).maybeSingle(),
+    ]);
+    if (locationResult.error) throw locationResult.error;
+    if (itemResult.error) throw itemResult.error;
+
+    await createFoundItemRecord({
+      session_id:sessionId,
+      assignment_id:null,
+      location_id:locationResult.data?.id || null,
+      location_code:locationCode,
+      license_plate:licensePlate,
+      item_id:itemResult.data?.id || null,
+      item_code:itemCode,
+      description:info?.description || itemResult.data?.description || Q('found_description')?.value || null,
+      uom:info?.uom || itemResult.data?.uom || Q('found_uom')?.value || null,
+      qty,
+      remark:getSelectedCountRemarks('found').join('\n') || null,
+      photo_url:window._photoMap?.found || null,
+      actual_counter_name:selectedCounters.join(', '),
+      source_type:'ad_hoc',
+      status:'pending_review',
+      discovered_by:me.id,
+    });
+    alertBox.innerHTML = '<div class="alert alert-green">✅ บันทึกแล้ว · งานเข้าคิว Supervisor ทันที</div>';
+    setTimeout(() => go('c-tasks'),900);
+  } catch (error) {
+    alertBox.innerHTML = errBox(error.message || error);
+    button.disabled = false;
+    button.textContent = '✅ บันทึกและส่ง Supervisor ตรวจสอบ';
+  }
 }
 
 async function loadCCount() {
@@ -13296,11 +14025,19 @@ async function loadCCount() {
   allPhotoRecs?.forEach(r => { window._prevPhotoMap[r.item_id] = r.photo_url; });
 
   window._photoMap = {};
+  window._emptyCountItemIds = new Set();
+  window._countFoundContext = {
+    assignmentId:aid,
+    sessionId:asgn.session_id,
+    locationId:asgn.location_id,
+    locationCode:l.code,
+  };
 
   let items = '';
   for (const s of snaps) {
     const it   = s.items;
     const emptyLocation = isEmptyLocationItem(it?.code);
+    if (emptyLocation) window._emptyCountItemIds.add(String(it.id));
     const pr   = prevMap[it.id];
     const v    = pr?.count_qty;
     const dets = detailByItem[it.id] || [];
@@ -13361,7 +14098,43 @@ async function loadCCount() {
         <div class="citem-info">
           ${emptyLocation
             ? `<div class="citem-code"><span class="tag tag-blue">Location ว่าง</span></div>
-               <div class="citem-desc">Item ว่างจาก WMS · กรอกจำนวนที่ตรวจพบจริง หรือกรอก 0 หากยังว่าง</div>`
+               <div class="citem-desc">ถ้ายังว่างให้กรอก QTY = 0 · ถ้าพบสินค้าจริงให้สแกน Location / LPN / Item แล้วกรอก QTY</div>
+               <div class="found-form-grid" style="margin-top:14px">
+                 <div class="fg" style="margin:0">
+                   <label>LOCATION</label>
+                   <div class="scan-input-row">
+                     <input id="empty_location_${it.id}" value="${escapeWmsText(l.code)}"
+                       autocomplete="off" oninput="this.value=this.value.toUpperCase()">
+                     <button type="button" class="scan-field-button"
+                       onclick="scanIntoField('empty_location_${it.id}','Location')" title="สแกน Location">${barcodeScanIconSvg()}</button>
+                   </div>
+                 </div>
+                 <div class="fg" style="margin:0">
+                   <label>LPN <span style="color:var(--accent-red)">*</span></label>
+                   <div class="scan-input-row">
+                     <input id="empty_lpn_${it.id}" autocomplete="off" placeholder="สแกนหรือกรอก LPN">
+                     <button type="button" class="scan-field-button"
+                       onclick="scanIntoField('empty_lpn_${it.id}','LPN')" title="สแกน LPN">${barcodeScanIconSvg()}</button>
+                   </div>
+                 </div>
+                 <div class="fg span-2" style="margin:0">
+                   <label>ITEM</label>
+                   <div class="scan-input-row">
+                     <input id="empty_item_${it.id}" autocomplete="off" placeholder="สแกนหรือกรอก Item / Barcode"
+                       oninput="this.value=this.value.toUpperCase();scheduleDataInfoMatch('empty_item_${it.id}','empty_desc_${it.id}','empty_uom_${it.id}','empty_info_${it.id}')">
+                     <button type="button" class="scan-field-button"
+                       onclick="scanIntoField('empty_item_${it.id}','Item')" title="สแกน Item">${barcodeScanIconSvg()}</button>
+                   </div>
+                 </div>
+                 <div class="span-2">
+                   <input id="empty_desc_${it.id}" type="hidden">
+                   <input id="empty_uom_${it.id}" type="hidden">
+                   <div class="info-match-card is-missing" id="empty_info_${it.id}">
+                     <strong>รอสแกนหรือกรอก Item</strong>
+                     <span>Description และ UOM จะดึงจาก Item Master อัตโนมัติ</span>
+                   </div>
+                 </div>
+               </div>`
             : `<div class="citem-code">${escapeWmsText(it?.code || '')}</div>
                <div class="citem-desc">${escapeWmsText(it?.description || '')}</div>`}
           ${detHtml}
@@ -13737,17 +14510,70 @@ async function submitCount(aid, round, idsStr, annualJobId='') {
   const actualCounterName = selectedNames.join(', ');
 
   const recs = [];
+  const foundPayloads = [];
   for (const iid of ids) {
     const v = Q('q_'+iid)?.value;
     if (v === '' || v === undefined || v === null) {
       al.innerHTML = `<div class="alert alert-red">กรอกจำนวนให้ครบทุกรายการ (ถ้าไม่มีสินค้าให้กรอก 0)</div>`;
       return;
     }
+    const numericQty = Number(v);
+    if (!Number.isFinite(numericQty) || numericQty < 0) {
+      al.innerHTML = '<div class="alert alert-red">QTY ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป</div>';
+      return;
+    }
     const remark   = getSelectedCountRemarks(iid).join('\n') || null;
     const photoUrl = (window._photoMap && window._photoMap[iid]) || null;
+    const isEmptyRow = window._emptyCountItemIds?.has(String(iid));
+
+    if (isEmptyRow) {
+      const expectedLocation = importCodeKey(window._countFoundContext?.locationCode);
+      const locationCode = importCodeKey(Q(`empty_location_${iid}`)?.value);
+      const rawItemCode = importCodeKey(Q(`empty_item_${iid}`)?.value);
+      if (locationCode !== expectedLocation) {
+        al.innerHTML = `<div class="alert alert-red">Location ที่สแกน (${escapeWmsText(locationCode || 'ว่าง')}) ไม่ตรงกับงานที่เปิด (${escapeWmsText(expectedLocation)})</div>`;
+        return;
+      }
+      const emptyLpn = normalizeImportText(Q(`empty_lpn_${iid}`)?.value);
+      if (numericQty > 0 && (!emptyLpn || !rawItemCode)) {
+        al.innerHTML = '<div class="alert alert-red">พบสินค้าและ QTY มากกว่า 0 กรุณาสแกนหรือกรอก LPN และ Item ให้ครบ</div>';
+        return;
+      }
+      if (numericQty === 0 && rawItemCode) {
+        al.innerHTML = '<div class="alert alert-red">กรอก Item แล้ว กรุณากรอก QTY มากกว่า 0 หรือเคลียร์ Item หาก Location ยังว่าง</div>';
+        return;
+      }
+      if (numericQty > 0) {
+        const info = await findDataInfo(rawItemCode);
+        const itemCode = importCodeKey(info?.item_code || rawItemCode);
+        const itemResult = await sb.from('items').select('id,code,description,uom').eq('code',itemCode).maybeSingle();
+        if (itemResult.error) {
+          al.innerHTML = errBox(itemResult.error.message);
+          return;
+        }
+        foundPayloads.push({
+          session_id:window._countFoundContext.sessionId,
+          assignment_id:aid,
+          location_id:window._countFoundContext.locationId,
+          location_code:expectedLocation,
+          license_plate:emptyLpn,
+          item_id:itemResult.data?.id || null,
+          item_code:itemCode,
+          description:info?.description || itemResult.data?.description || Q(`empty_desc_${iid}`)?.value || null,
+          uom:info?.uom || itemResult.data?.uom || Q(`empty_uom_${iid}`)?.value || null,
+          qty:numericQty,
+          remark,
+          photo_url:photoUrl,
+          actual_counter_name:actualCounterName,
+          source_type:'empty_location',
+          status:'pending_review',
+          discovered_by:me.id,
+        });
+      }
+    }
     recs.push({
       assignment_id: aid, item_id: iid, round,
-      count_qty: parseFloat(v), counted_by: me.id,
+      count_qty: isEmptyRow ? 0 : numericQty, counted_by: me.id,
       actual_counter_name: actualCounterName,
       remark, photo_url: photoUrl,
     });
@@ -13761,6 +14587,15 @@ async function submitCount(aid, round, idsStr, annualJobId='') {
   if (error) {
     al.innerHTML = errBox(error.message);
     btn.disabled = false; btn.textContent = `✅ ยืนยันรอบที่ ${round}`; return;
+  }
+
+  try {
+    for (const payload of foundPayloads) await createFoundItemRecord(payload);
+  } catch (foundError) {
+    al.innerHTML = errBox(`บันทึกยอดว่างแล้ว แต่ส่งงานที่พบเพิ่มไม่สำเร็จ: ${foundError.message || foundError}`);
+    btn.disabled = false;
+    btn.textContent = `✅ ยืนยันรอบที่ ${round}`;
+    return;
   }
 
   const { data: asgn, error:assignmentReadError } = await sb.from('assignments')
@@ -13832,7 +14667,9 @@ async function submitCount(aid, round, idsStr, annualJobId='') {
   window._photoMap = {};
 
   if (!needsMore) {
-    alert('✅ ยอดตรงทุกรายการ! บันทึกสำเร็จ');
+    alert(foundPayloads.length
+      ? '✅ บันทึกสำเร็จ · งานที่พบเพิ่มถูกส่งให้ Supervisor ตรวจสอบแล้ว'
+      : '✅ ยอดตรงทุกรายการ! บันทึกสำเร็จ');
     go('c-tasks');
   } else if (anyPending) {
     alert(`⚠️ ยอดไม่ตรงกับระบบ — กรุณานับรอบที่ ${round+1} อีกครั้งอย่างระมัดระวัง`);
@@ -14022,6 +14859,32 @@ async function fetchSupabaseRowsByValues(table, columns, filterColumn, values) {
     rows.push(...(result.data || []));
   }
   return { data: rows, error: null };
+}
+
+async function fetchSnapshotsForAssignmentScopes(assignments,columns='session_id,location_id,item_id,onhand_qty') {
+  const locationsBySession = new Map();
+  (assignments || []).forEach(row => {
+    if (!row?.session_id || !row?.location_id) return;
+    if (!locationsBySession.has(row.session_id)) locationsBySession.set(row.session_id,new Set());
+    locationsBySession.get(row.session_id).add(row.location_id);
+  });
+  if (!locationsBySession.size) return { data:[],error:null };
+
+  const rows = [];
+  for (const [sessionId,locationSet] of locationsBySession) {
+    const locationIds = [...locationSet];
+    for (let start=0; start<locationIds.length; start+=SUPABASE_IN_BATCH_SIZE) {
+      const locationBatch = locationIds.slice(start,start+SUPABASE_IN_BATCH_SIZE);
+      const result = await fetchPagedSupabaseRows(
+        'stock_snapshot',
+        columns,
+        query => query.eq('session_id',sessionId).in('location_id',locationBatch),
+      );
+      if (result.error) return result;
+      rows.push(...(result.data || []));
+    }
+  }
+  return { data:rows,error:null };
 }
 
 async function loadSvDash() {
@@ -15835,13 +16698,31 @@ async function doReassignUser(aid, idx, targetRound) {
 }
 
 async function loadSvList() {
-  const { data: sess } = await sb.from('count_sessions').select('id').eq('status','active');
-  if (!sess?.length) { cnt().innerHTML = `<div class="card"><div class="alert alert-blue">ไม่มี Session ที่ Active</div></div>`; return; }
+  const [sessionResult,foundResult] = await Promise.all([
+    sb.from('count_sessions').select('id').eq('status','active'),
+    sb.from('found_items')
+      .select('id,status,source_type,location_code,item_code,description,uom,qty,actual_counter_name,discovered_at,count_sessions(name),profiles!found_items_discovered_by_fkey(name)')
+      .eq('status','pending_review')
+      .order('discovered_at',{ ascending:true }),
+  ]);
+  if (sessionResult.error || foundResult.error) {
+    cnt().innerHTML = errBox((sessionResult.error || foundResult.error).message);
+    return;
+  }
+  const sess = sessionResult.data || [];
+  const pendingFound = foundResult.data || [];
+  if (!sess.length && !pendingFound.length) {
+    cnt().innerHTML = `<div class="card"><div class="alert alert-blue">ไม่มี Session ที่ Active และไม่มีงานพบเพิ่มรอตรวจสอบ</div></div>`;
+    return;
+  }
 
-  const { data:rawAssignments,error:assignmentError } = await sb.from('assignments')
-    .select('id,status,session_id,location_id,locations(code,zone,area)')
-    .in('session_id', sess.map(s => s.id))
-    .order('status');
+  const assignmentQuery = sess.length
+    ? await sb.from('assignments')
+        .select('id,status,session_id,location_id,locations(code,zone,area)')
+        .in('session_id', sess.map(s => s.id))
+        .order('status')
+    : { data:[],error:null };
+  const { data:rawAssignments,error:assignmentError } = assignmentQuery;
   if (assignmentError) { cnt().innerHTML = errBox(assignmentError.message); return; }
 
   const assignmentIds = (rawAssignments || []).map(assignment => assignment.id);
@@ -15853,11 +16734,9 @@ async function loadSvList() {
       'assignment_id',
       assignmentIds,
     ),
-    fetchSupabaseRowsByValues(
-      'stock_snapshot',
+    fetchSnapshotsForAssignmentScopes(
+      rawAssignments || [],
       'session_id,location_id,item_id,onhand_qty',
-      'session_id',
-      sessionIds,
     ),
     Promise.all(sessionIds.map(async sessionId => [sessionId,await getSessionRules(sessionId)])),
   ]);
@@ -15889,17 +16768,38 @@ async function loadSvList() {
     return { ...assignment, status:workflow.effectiveStatus, _workflow:workflow };
   }).filter(assignment => ['round1_done','round2_done','round3_done'].includes(assignment.status));
 
-  if (!asgns.length) {
+  if (!asgns.length && !pendingFound.length) {
     cnt().innerHTML = `<div class="card" style="text-align:center;padding:60px 40px">
       <div style="font-size:60px">✅</div>
-      <div style="margin-top:20px;color:var(--text-muted);font-weight:700;font-size:16px;">ไม่มี Variance ที่ต้องตรวจสอบ</div>
+      <div style="margin-top:20px;color:var(--text-muted);font-weight:700;font-size:16px;">ไม่มี Variance หรืองานพบเพิ่มที่ต้องตรวจสอบ</div>
     </div>`; return;
   }
 
   const counterMap = buildActualCounterMap(countResult.data || []);
 
-  let html = `<div style="display:flex;justify-content:flex-end;margin-bottom:12px">${locationSortControlHtml()}</div>
-    <div class="card card-flush" data-location-sort-group>`;
+  const foundHtml = pendingFound.length ? `
+    <section style="margin-bottom:18px">
+      <div class="sec" style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+        <span>＋ งานที่พบเพิ่ม รอ Supervisor</span>
+        <span class="tag tag-amber">${pendingFound.length.toLocaleString('th-TH')} รายการ</span>
+      </div>
+      <div class="card card-flush" data-location-sort-group>
+        ${sortRowsByLocation(pendingFound,row=>row.location_code).map(row => `
+          <div class="row click found-review-row" data-location-sort-code="${escapeWmsText(row.location_code)}"
+            onclick="go('sv-found',{fid:'${row.id}'})">
+            <div class="row-body">
+              <div class="row-title mono">${escapeWmsText(row.location_code)} · ${escapeWmsText(row.item_code)}</div>
+              <div class="row-sub">${escapeWmsText(row.description || 'ไม่ระบุ Description')} · QTY ${Number(row.qty).toLocaleString('th-TH')} ${escapeWmsText(row.uom || '')}</div>
+              <div class="found-review-source">${row.source_type==='empty_location'?'Location ว่าง':'＋ เจองานเพิ่ม'} · ${escapeWmsText(row.count_sessions?.name || 'ไม่ระบุ Session')} · ${escapeWmsText(row.actual_counter_name || row.profiles?.name || 'ไม่ระบุคนนับ')}</div>
+            </div>
+            <span class="tag tag-amber">รอตรวจสอบ</span>
+            <span class="caret">›</span>
+          </div>`).join('')}
+      </div>
+    </section>` : '';
+
+  let html = `${foundHtml}<div style="display:flex;justify-content:flex-end;margin-bottom:12px">${locationSortControlHtml()}</div>
+    ${asgns.length ? '<div class="sec">Variance จากงาน Cycle Count</div><div class="card card-flush" data-location-sort-group>' : ''}`;
   for (const a of sortRowsByLocation(asgns, row => row.locations?.code)) {
     const l = a.locations, si = tagInfo(a.status);
     html += `<div class="row click" data-location-sort-code="${escapeWmsText(l?.code || '')}" onclick="go('sv-detail',{aid:'${a.id}'})">
@@ -15911,7 +16811,170 @@ async function loadSvList() {
       <span class="caret">›</span>
     </div>`;
   }
-  cnt().innerHTML = html + '</div>';
+  cnt().innerHTML = html + (asgns.length ? '</div>' : '');
+}
+
+async function loadSvFound() {
+  const foundId = S.fid;
+  const foundResult = await sb.from('found_items')
+    .select('*,count_sessions(name,status),profiles!found_items_discovered_by_fkey(name)')
+    .eq('id',foundId)
+    .maybeSingle();
+  if (foundResult.error || !foundResult.data) {
+    cnt().innerHTML = foundResult.error ? errBox(foundResult.error.message) : '<div class="card"><div class="alert alert-red">ไม่พบงานพบเพิ่มรายการนี้</div></div>';
+    return;
+  }
+  const row = foundResult.data;
+  const info = await findDataInfo(row.item_code);
+  const attributeEntries = Object.entries(info?.attributes || {}).slice(0,12);
+  const pending = row.status === 'pending_review';
+  cnt().innerHTML = `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:20px;font-weight:800;color:var(--theme-heading-color)">ตรวจสอบงานพบเพิ่ม</div>
+          <div class="found-review-source">${row.source_type==='empty_location'?'พบจาก Location ว่าง':'＋ เจองานเพิ่ม'} · ${escapeWmsText(row.count_sessions?.name || 'ไม่ระบุ Session')}</div>
+        </div>
+        <span class="tag ${pending?'tag-amber':row.status==='approved'?'tag-green':'tag-red'}">${
+          pending?'รอตรวจสอบ':row.status==='approved'?'อนุมัติแล้ว':'ไม่อนุมัติ'
+        }</span>
+      </div>
+      <div style="margin-top:12px;font-size:12px;color:var(--theme-muted-text-color)">
+        ผู้บันทึก: ${escapeWmsText(row.profiles?.name || 'ไม่ระบุ User')} · ผู้นับจริง: ${escapeWmsText(row.actual_counter_name || 'ไม่ระบุ')}
+        · ${backupDateForTeam(row.discovered_at)}
+      </div>
+    </div>
+    <div class="card">
+      <div class="found-review-detail-grid">
+        <div class="fg" style="margin:0">
+          <label>LOCATION</label>
+          <input id="found_review_location" value="${escapeWmsText(row.location_code || '')}" ${pending?'':'disabled'}
+            oninput="this.value=this.value.toUpperCase()">
+        </div>
+        <div class="fg" style="margin:0">
+          <label>LPN <span style="color:var(--accent-red)">*</span></label>
+          <input id="found_review_lpn" value="${escapeWmsText(row.license_plate || '')}" ${pending?'':'disabled'}>
+        </div>
+        <div class="fg" style="margin:0">
+          <label>ITEM</label>
+          <input id="found_review_item" value="${escapeWmsText(row.item_code || '')}" ${pending?'':'disabled'}
+            oninput="this.value=this.value.toUpperCase();scheduleDataInfoMatch('found_review_item','found_review_description','found_review_uom','found_review_info')">
+        </div>
+        <div class="fg" style="margin:0">
+          <label>QTY</label>
+          <input id="found_review_qty" type="number" min="0.000001" step="any" value="${Number(row.qty)}" ${pending?'':'disabled'}>
+        </div>
+        <div class="fg" style="margin:0">
+          <label>DESCRIPTION</label>
+          <input id="found_review_description" value="${escapeWmsText(row.description || info?.description || '')}" ${pending?'':'disabled'}>
+        </div>
+        <div class="fg" style="margin:0">
+          <label>UOM</label>
+          <input id="found_review_uom" value="${escapeWmsText(row.uom || info?.uom || '')}" ${pending?'':'disabled'}>
+        </div>
+      </div>
+      <div class="info-match-card ${info?'':'is-missing'}" id="found_review_info" style="margin-top:14px">
+        <strong>${info ? escapeWmsText(info.description || 'พบ Item ใน Item Master') : 'ไม่พบ Item ใน Item Master'}</strong>
+        <span>${info ? `UOM: <b>${escapeWmsText(info.uom || '—')}</b>${info.barcode?` · Barcode: ${escapeWmsText(info.barcode)}`:''}` : 'Supervisor ยังอนุมัติได้ แต่ควรตรวจสอบ Item ให้ชัดเจน'}</span>
+      </div>
+      ${attributeEntries.length ? `<details class="admin-master-group" style="margin-top:14px">
+        <summary><span>📚</span><span class="admin-master-group-title">ข้อมูลอื่นจาก Item Master</span><span class="admin-master-group-chevron">⌄</span></summary>
+        <div class="admin-master-group-body"><div class="found-review-detail-grid">
+          ${attributeEntries.map(([key,value]) => `<div class="found-review-detail"><small>${escapeWmsText(key)}</small><strong>${escapeWmsText(Array.isArray(value)?value.join(' | '):value)}</strong></div>`).join('')}
+        </div></div>
+      </details>` : ''}
+      <div style="margin-top:16px">
+        <label style="font-size:12px;font-weight:800">REMARK จากคนนับ</label>
+        <div class="found-review-detail" style="margin-top:7px"><strong>${escapeWmsText(row.remark || '—').replace(/\n/g,'<br>')}</strong></div>
+      </div>
+      ${row.photo_url ? `<div style="margin-top:16px">
+        <a href="${escapeWmsText(row.photo_url)}" target="_blank" rel="noopener">
+          <img src="${escapeWmsText(row.photo_url)}" alt="รูปงานพบเพิ่ม" style="width:min(100%,420px);max-height:320px;object-fit:cover;border-radius:18px">
+        </a>
+      </div>` : ''}
+      <div class="fg" style="margin-top:16px;margin-bottom:0">
+        <label>หมายเหตุ Supervisor</label>
+        <textarea id="found_review_note" rows="3" ${pending?'':'disabled'} placeholder="ระบุเหตุผลหรือรายละเอียดการตรวจสอบ">${escapeWmsText(row.supervisor_note || '')}</textarea>
+      </div>
+      <div id="found_review_alert" style="margin-top:14px"></div>
+      ${pending ? `<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-top:14px">
+        <button class="btn btn-green" id="found_approve_btn" type="button" onclick="approveFoundWork('${row.id}')">✅ อนุมัติและส่งต่อ WMS</button>
+        <button class="btn btn-red" id="found_reject_btn" type="button" onclick="rejectFoundWork('${row.id}')">✕ ไม่อนุมัติ</button>
+      </div>` : ''}
+    </div>`;
+}
+
+async function approveFoundWork(foundId) {
+  const alertBox = Q('found_review_alert');
+  const approveButton = Q('found_approve_btn');
+  const rejectButton = Q('found_reject_btn');
+  const locationCode = importCodeKey(Q('found_review_location')?.value);
+  const itemCode = importCodeKey(Q('found_review_item')?.value);
+  const licensePlate = normalizeImportText(Q('found_review_lpn')?.value);
+  const qty = Number(Q('found_review_qty')?.value);
+  if (!locationCode || !licensePlate || !itemCode || !Number.isFinite(qty) || qty <= 0) {
+    alertBox.innerHTML = '<div class="alert alert-red">Location, LPN, Item และ QTY มากกว่า 0 ต้องครบก่อนอนุมัติ</div>';
+    return;
+  }
+  approveButton.disabled = true;
+  if (rejectButton) rejectButton.disabled = true;
+  alertBox.innerHTML = '<div class="alert alert-blue">⏳ กำลังอนุมัติและเชื่อมเข้าระบบ Count / Variance...</div>';
+  try {
+    const updates = {
+      location_code:locationCode,
+      license_plate:licensePlate,
+      item_code:itemCode,
+      qty,
+      description:normalizeImportText(Q('found_review_description')?.value) || null,
+      uom:normalizeImportText(Q('found_review_uom')?.value) || null,
+    };
+    const { data:updated,error:updateError } = await sb.from('found_items')
+      .update(updates).eq('id',foundId).eq('status','pending_review').select('id');
+    if (updateError) throw updateError;
+    if (!updated?.length) throw new Error('รายการถูกตรวจสอบโดยคนอื่นแล้ว กรุณาโหลดใหม่');
+
+    const { data,error } = await sb.rpc('approve_found_item',{
+      p_found_id:foundId,
+      p_supervisor_note:normalizeImportText(Q('found_review_note')?.value) || null,
+    });
+    if (error) throw error;
+    if (!data?.ok) throw new Error('ระบบอนุมัติงานพบเพิ่มไม่สำเร็จ');
+    invalidateDashboardCache();
+    alertBox.innerHTML = `<div class="alert alert-green">✅ อนุมัติแล้ว · Variance ${Number(data.variance || 0).toLocaleString('th-TH')} ส่งต่อไปเมนู WMS</div>`;
+    setTimeout(() => go('sv-list'),1100);
+  } catch (error) {
+    alertBox.innerHTML = errBox(error.message || error);
+    approveButton.disabled = false;
+    if (rejectButton) rejectButton.disabled = false;
+  }
+}
+
+async function rejectFoundWork(foundId) {
+  if (!confirm('ยืนยันไม่อนุมัติงานพบเพิ่มรายการนี้?')) return;
+  const alertBox = Q('found_review_alert');
+  const note = normalizeImportText(Q('found_review_note')?.value);
+  if (!note) {
+    alertBox.innerHTML = '<div class="alert alert-red">กรุณาระบุเหตุผลในหมายเหตุ Supervisor ก่อน</div>';
+    return;
+  }
+  Q('found_approve_btn').disabled = true;
+  Q('found_reject_btn').disabled = true;
+  try {
+    const { data,error } = await sb.from('found_items').update({
+      status:'rejected',
+      supervisor_note:note,
+      reviewed_by:me.id,
+      reviewed_at:new Date().toISOString(),
+    }).eq('id',foundId).eq('status','pending_review').select('id');
+    if (error) throw error;
+    if (!data?.length) throw new Error('รายการถูกตรวจสอบโดยคนอื่นแล้ว กรุณาโหลดใหม่');
+    alertBox.innerHTML = '<div class="alert alert-green">บันทึกผลไม่อนุมัติแล้ว</div>';
+    setTimeout(() => go('sv-list'),900);
+  } catch (error) {
+    alertBox.innerHTML = errBox(error.message || error);
+    Q('found_approve_btn').disabled = false;
+    Q('found_reject_btn').disabled = false;
+  }
 }
 
 async function loadSvDetail() {
@@ -16090,6 +17153,7 @@ async function loadAdManage() {
   const mc = Q('manage-content'); if (!mc) return;
   if (tab === 'sessions') await renderManageSessions(mc);
   else if (tab === 'assign') await renderManageAssign(mc);
+  else if (tab === 'info') await renderManageDataInfo(mc);
   else if (tab === 'backup') await renderManageBackup(mc);
   else await renderManageImport(mc);
 }
@@ -17175,6 +18239,350 @@ async function refreshZoneDashboard() {
       ${userList ? `<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px">${userList}</div>` : ''}
     </div>`;
   }).join('');
+}
+
+const XLSX_INFO_COLUMN_RULES = Object.freeze({
+  item:{
+    label:'Item',
+    exact:['ITEM','ITEMCODE','ITEMNUMBER','SKU','ARTICLE','MATERIAL','MATERIALNUMBER','PRODUCTNUMBER'],
+    contains:['ITEMCODE','ITEMNUMBER','MATERIALNUMBER','PRODUCTNUMBER'],
+  },
+  description:{
+    label:'Description',
+    exact:['ITEMDESC','ITEMDESCRIPTION','DESCRIPTION','PRODUCTNAME','ITEMNAME','NAME'],
+    contains:['ITEMDESCRIPTION','DESCRIPTION','PRODUCTNAME'],
+  },
+  uom:{
+    label:'UOM',
+    exact:['UOM','OUM','UNIT','UNITOFMEASURE','STOCKUNIT','INVENTORYUNIT'],
+    contains:['UNITOFMEASURE','INVENTORYUNIT'],
+  },
+  barcode:{
+    label:'Barcode',
+    exact:['BARCODE','BARCODENO','EAN','EAN13','UPC','GTIN','ITEMBARCODE'],
+    contains:['BARCODE','GTIN'],
+  },
+});
+
+let _infoSourceFileName = '';
+
+function mergeDataInfoAttribute(target,key,value) {
+  const text = normalizeImportText(value);
+  if (!text) return;
+  const current = target[key];
+  if (current === undefined) {
+    target[key] = text;
+    return;
+  }
+  const values = Array.isArray(current) ? current : [current];
+  if (!values.includes(text)) values.push(text);
+  target[key] = values.length === 1 ? values[0] : values;
+}
+
+function analyzeDataInfoRows(rows) {
+  const headers = [...new Set((rows || []).flatMap(row => Object.keys(row || {})))];
+  const columns = Object.fromEntries(
+    Object.entries(XLSX_INFO_COLUMN_RULES).map(([key,rule]) => [key,resolveImportColumn(headers,rule)])
+  );
+  const errors = columns.item ? [] : ['ไม่พบคอลัมน์ Item / Item Code'];
+  const grouped = new Map();
+  const rejected = [];
+
+  (rows || []).forEach((row,index) => {
+    const itemCode = columns.item ? importCodeKey(row?.[columns.item]) : '';
+    const hasAnyValue = headers.some(header => normalizeImportText(row?.[header]));
+    if (!hasAnyValue) return;
+    if (!itemCode) {
+      rejected.push({ rowNumber:index + 2, reason:'Item ว่าง' });
+      return;
+    }
+    if (!grouped.has(itemCode)) {
+      grouped.set(itemCode,{
+        item_code:itemCode,
+        description:'',
+        uom:'',
+        barcode:'',
+        attributes:{},
+        sourceRows:[],
+      });
+    }
+    const info = grouped.get(itemCode);
+    info.sourceRows.push(index + 2);
+    const value = key => columns[key] ? normalizeImportText(row?.[columns[key]]) : '';
+    if (!info.description && value('description')) info.description = value('description');
+    if (!info.uom && value('uom')) info.uom = value('uom');
+    if (!info.barcode && value('barcode')) info.barcode = importCodeKey(value('barcode'));
+    headers.forEach(header => mergeDataInfoAttribute(info.attributes,header,row?.[header]));
+  });
+
+  const parsed = [...grouped.values()];
+  const barcodeOwners = new Map();
+  parsed.forEach(info => {
+    if (!info.barcode) return;
+    if (!barcodeOwners.has(info.barcode)) barcodeOwners.set(info.barcode,[]);
+    barcodeOwners.get(info.barcode).push(info.item_code);
+  });
+  const duplicateBarcodes = [...barcodeOwners.entries()]
+    .filter(([,itemCodes]) => itemCodes.length > 1);
+  if (duplicateBarcodes.length) {
+    errors.push(`พบ Barcode ซ้ำข้าม Item ${duplicateBarcodes.length} ค่า เช่น ${
+      duplicateBarcodes.slice(0,5).map(([barcode,itemCodes]) =>
+        `${barcode} (${itemCodes.join(', ')})`
+      ).join(' · ')
+    }`);
+  }
+  const mappedHeaders = new Set(Object.values(columns).filter(Boolean));
+  return {
+    headers,
+    columns,
+    errors,
+    rejected,
+    parsed,
+    duplicateBarcodes,
+    unknownHeaders:headers.filter(header => !mappedHeaders.has(header)),
+    metrics:{
+      rows:(rows || []).length,
+      items:parsed.length,
+      duplicates:parsed.reduce((sum,row) => sum + Math.max(0,row.sourceRows.length - 1),0),
+      descriptions:parsed.filter(row => row.description).length,
+      uoms:parsed.filter(row => row.uom).length,
+      barcodes:parsed.filter(row => row.barcode).length,
+    },
+  };
+}
+
+function renderDataInfoPreview(analysis) {
+  const metric = value => Number(value || 0).toLocaleString('th-TH');
+  const hasProblem = analysis.errors.length || analysis.rejected.length;
+  const sampleRows = analysis.parsed.slice(0,10).map(row => `
+    <tr>
+      <td class="mono">${escapeWmsText(row.item_code)}</td>
+      <td>${escapeWmsText(row.description || '—')}</td>
+      <td>${escapeWmsText(row.uom || '—')}</td>
+      <td>${escapeWmsText(row.barcode || '—')}</td>
+      <td>${row.sourceRows.length.toLocaleString('th-TH')}</td>
+    </tr>`).join('');
+  return `
+    <div class="alert ${hasProblem?'alert-red':'alert-green'}" style="line-height:1.65">
+      <strong>${hasProblem?'❌ ไฟล์ยังไม่พร้อม':'✅ พร้อมอัปโหลด Item Master'}</strong>
+      <br>ไฟล์ ${escapeWmsText(_infoSourceFileName)} · ชีต ${escapeWmsText(_infoWorksheetName)}
+    </div>
+    <div class="data-info-summary-grid">
+      <div class="data-info-stat"><strong>${metric(analysis.metrics.items)}</strong><span>DISTINCT ITEM</span></div>
+      <div class="data-info-stat"><strong>${metric(analysis.metrics.descriptions)}</strong><span>มี DESCRIPTION</span></div>
+      <div class="data-info-stat"><strong>${metric(analysis.metrics.uoms)}</strong><span>มี UOM</span></div>
+      <div class="data-info-stat"><strong>${metric(analysis.metrics.barcodes)}</strong><span>มี BARCODE</span></div>
+    </div>
+    <div style="font-size:11px;color:var(--theme-muted-text-color);line-height:1.6;margin-bottom:10px">
+      รวม ${metric(analysis.metrics.rows)} แถว · Item ซ้ำถูกรวม ${metric(analysis.metrics.duplicates)} แถว ·
+      เก็บคอลัมน์อื่นสำหรับ Match ในอนาคต ${metric(analysis.unknownHeaders.length)} คอลัมน์
+    </div>
+    ${analysis.errors.length ? `<div class="alert alert-red">${analysis.errors.map(escapeWmsText).join('<br>')}</div>` : ''}
+    ${analysis.rejected.length ? `<div class="alert alert-red">พบแถว Item ว่าง ${metric(analysis.rejected.length)} แถว เช่น ${analysis.rejected.slice(0,8).map(row=>row.rowNumber).join(', ')}</div>` : ''}
+    ${sampleRows ? `<div class="data-info-sample"><table>
+      <thead><tr><th>ITEM</th><th>DESCRIPTION</th><th>UOM</th><th>BARCODE</th><th>SOURCE ROWS</th></tr></thead>
+      <tbody>${sampleRows}</tbody>
+    </table></div>` : ''}`;
+}
+
+function readDataInfoFile(event) {
+  const file = event.target.files?.[0];
+  _infoSourceFileName = file?.name || '';
+  _infoRawRows = null;
+  _infoImportAnalysis = null;
+  _infoWorksheetName = '';
+  const preview = Q('data-info-preview');
+  const button = Q('data-info-import-btn');
+  if (button) button.disabled = true;
+  if (!file) {
+    if (preview) preview.innerHTML = '';
+    return;
+  }
+  if (file.size > 80 * 1024 * 1024) {
+    if (preview) preview.innerHTML = errBox('ไฟล์ Item Master ต้องมีขนาดไม่เกิน 80 MB');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = loaded => {
+    try {
+      const workbook = XLSX.read(new Uint8Array(loaded.target.result),{ type:'array',cellDates:false });
+      const candidates = workbook.SheetNames.map((sheetName,index) => {
+        const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName],{
+          defval:'',raw:false,blankrows:false,
+        });
+        const analysis = analyzeDataInfoRows(rows);
+        const score = (analysis.errors.length ? -1000000 : 0) + analysis.parsed.length;
+        return { sheetName,rows,analysis,score,index };
+      }).sort((left,right) => right.score-left.score || left.index-right.index);
+      const selected = candidates[0];
+      if (!selected?.rows?.length) throw new Error('ไม่พบข้อมูลในไฟล์');
+      _infoWorksheetName = selected.sheetName;
+      _infoRawRows = selected.rows;
+      _infoImportAnalysis = selected.analysis;
+      if (preview) preview.innerHTML = renderDataInfoPreview(selected.analysis);
+      if (button) {
+        button.disabled = !selected.analysis.parsed.length
+          || Boolean(selected.analysis.errors.length)
+          || Boolean(selected.analysis.rejected.length);
+      }
+    } catch (error) {
+      if (preview) preview.innerHTML = errBox(error.message || 'อ่านไฟล์ Item Master ไม่สำเร็จ');
+    }
+  };
+  reader.onerror = () => {
+    if (preview) preview.innerHTML = errBox('อ่านไฟล์ Item Master ไม่สำเร็จ');
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+async function loadDataInfoSummary() {
+  const host = Q('data-info-current');
+  if (!host) return;
+  const [{ count,error },sampleResult] = await Promise.all([
+    sb.from('data_info_items').select('item_code',{ count:'exact',head:true }),
+    sb.from('data_info_items').select('item_code,description,uom,barcode,updated_at')
+      .order('updated_at',{ ascending:false }).limit(8),
+  ]);
+  if (error || sampleResult.error) {
+    host.innerHTML = errBox((error || sampleResult.error).message);
+    return;
+  }
+  host.innerHTML = `
+    <div class="alert alert-blue"><strong>Item Master ปัจจุบัน ${Number(count || 0).toLocaleString('th-TH')} Item</strong>
+      <br>ใช้ Match Description / UOM / Barcode ในงานนับและ Import WMS</div>
+    ${(sampleResult.data || []).length ? `<div class="data-info-sample" style="margin-top:12px"><table>
+      <thead><tr><th>ITEM</th><th>DESCRIPTION</th><th>UOM</th><th>BARCODE</th></tr></thead>
+      <tbody>${sampleResult.data.map(row => `<tr>
+        <td class="mono">${escapeWmsText(row.item_code)}</td>
+        <td>${escapeWmsText(row.description || '—')}</td>
+        <td>${escapeWmsText(row.uom || '—')}</td>
+        <td>${escapeWmsText(row.barcode || '—')}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>` : ''}`;
+}
+
+function downloadDataInfoTemplate() {
+  const workbook = XLSX.utils.book_new();
+  const rows = [
+    { 'Item Code':'ITEM-001', Description:'ตัวอย่างสินค้า', UOM:'PCS', Barcode:'885000000001', Brand:'', Category:'' },
+  ];
+  const sheet = XLSX.utils.json_to_sheet(rows);
+  sheet['!cols'] = [{wch:22},{wch:42},{wch:12},{wch:24},{wch:18},{wch:18}];
+  XLSX.utils.book_append_sheet(workbook,sheet,'Item_Master');
+  XLSX.writeFile(workbook,'Item_Master_Template.xlsx');
+}
+
+async function importDataInfoFile() {
+  if (prof?.role !== 'admin') { adminOnlyMessage(); return; }
+  const analysis = _infoImportAnalysis;
+  const button = Q('data-info-import-btn');
+  const alertBox = Q('data-info-alert');
+  if (!analysis?.parsed?.length || analysis.errors.length || analysis.rejected.length) {
+    alert('ไฟล์ Item Master ยังไม่ผ่านการตรวจ');
+    return;
+  }
+  const replaceAll = Q('data-info-replace')?.checked === true;
+  if (replaceAll && !confirm('ยืนยันแทนที่ Item Master เดิมทั้งหมดด้วยไฟล์นี้?')) return;
+
+  button.disabled = true;
+  alertBox.innerHTML = `<div class="alert alert-blue">⏳ กำลังบันทึก ${analysis.parsed.length.toLocaleString('th-TH')} Item...</div>`;
+  try {
+    const rows = analysis.parsed.map(row => ({
+      item_code:row.item_code,
+      description:row.description || null,
+      uom:row.uom || null,
+      barcode:row.barcode || null,
+      attributes:row.attributes || {},
+      source_file:_infoSourceFileName || null,
+      source_sheet:_infoWorksheetName || null,
+      updated_by:me.id,
+      updated_at:new Date().toISOString(),
+    }));
+    if (!replaceAll) {
+      const incomingByBarcode = new Map(
+        rows.filter(row => row.barcode).map(row => [importCodeKey(row.barcode),row.item_code])
+      );
+      const barcodeResult = await fetchSupabaseRowsByValues(
+        'data_info_items','item_code,barcode','barcode',[...incomingByBarcode.keys()]
+      );
+      if (barcodeResult.error) throw barcodeResult.error;
+      const barcodeConflict = (barcodeResult.data || []).find(existing =>
+        incomingByBarcode.has(importCodeKey(existing.barcode))
+        && incomingByBarcode.get(importCodeKey(existing.barcode)) !== existing.item_code
+      );
+      if (barcodeConflict) {
+        throw new Error(
+          `Barcode ${barcodeConflict.barcode} ถูกใช้กับ Item ${barcodeConflict.item_code} อยู่แล้ว`
+        );
+      }
+    }
+    if (replaceAll) {
+      const { error } = await sb.from('data_info_items').delete().neq('item_code','');
+      if (error) throw error;
+    }
+    const batchSize = 200;
+    for (let start=0; start<rows.length; start+=batchSize) {
+      const { error } = await sb.from('data_info_items')
+        .upsert(rows.slice(start,start+batchSize),{ onConflict:'item_code' });
+      if (error) throw error;
+    }
+    const verifyResult = await fetchSupabaseRowsByValues(
+      'data_info_items','item_code','item_code',rows.map(row => row.item_code)
+    );
+    if (verifyResult.error) throw verifyResult.error;
+    if (new Set((verifyResult.data || []).map(row => row.item_code)).size !== rows.length) {
+      throw new Error('ตรวจสอบหลังอัปโหลดไม่ผ่าน: จำนวน Item ไม่ครบ');
+    }
+    _dataInfoMatchCache.clear();
+    _dataInfoMatchCacheTime.clear();
+    alertBox.innerHTML = `<div class="alert alert-green">✅ อัปโหลด Item Master สำเร็จ ${rows.length.toLocaleString('th-TH')} Item</div>`;
+    _infoRawRows = null;
+    _infoImportAnalysis = null;
+    _infoWorksheetName = '';
+    _infoSourceFileName = '';
+    if (Q('data-info-file')) Q('data-info-file').value = '';
+    if (Q('data-info-preview')) Q('data-info-preview').innerHTML = '';
+    await loadDataInfoSummary();
+  } catch (error) {
+    alertBox.innerHTML = errBox(error.message || error);
+    button.disabled = false;
+  }
+}
+
+async function renderManageDataInfo(container) {
+  container.innerHTML = `
+    <div id="data-info-alert"></div>
+    <details class="admin-master-group" open>
+      <summary>
+        <span>${navIconSvg('items',20)}</span>
+        <span class="admin-master-group-title">Upload Item Master</span>
+        <span class="admin-master-group-hint">Item Master สำหรับ Match</span>
+        <span class="admin-master-group-chevron">⌄</span>
+      </summary>
+      <div class="admin-master-group-body">
+        <div class="alert alert-blue" style="font-size:13px;line-height:1.7;margin:16px 0">
+          📚 เก็บ <strong>Item / Description / UOM / Barcode</strong> และคอลัมน์อื่นทั้งหมดไว้ใช้ Match ในอนาคต<br>
+          ระบบจับชื่อคอลัมน์อัตโนมัติ และรวมแถว Item ซ้ำโดยไม่ทิ้งข้อมูลคอลัมน์อื่น
+        </div>
+        <div id="data-info-current"><div class="load">⏳ กำลังโหลด...</div></div>
+        <div class="fg" style="margin-top:18px">
+          <label>เลือกไฟล์ Item Master</label>
+          <input type="file" id="data-info-file" accept=".xlsx,.xls,.csv"
+            style="padding:16px;border:none;border-radius:var(--border-radius-lg);cursor:pointer;background:var(--neu-surface);box-shadow:inset 4px 4px 8px var(--neu-shadow-dark),inset -4px -4px 8px var(--neu-shadow-light);width:100%;font-size:14px">
+        </div>
+        <label style="display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700;margin:4px 0 14px">
+          <input type="checkbox" id="data-info-replace" style="width:18px;height:18px">
+          แทนที่ Item Master เดิมทั้งหมด (ถ้าไม่เลือก = เพิ่ม/อัปเดตตาม Item)
+        </label>
+        <div id="data-info-preview"></div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;margin-top:14px">
+          <button class="btn btn-blue" id="data-info-import-btn" type="button" onclick="importDataInfoFile()" disabled>📥 Upload Item Master</button>
+          <button class="btn btn-ghost" type="button" onclick="downloadDataInfoTemplate()">ดาวน์โหลด Template</button>
+        </div>
+      </div>
+    </details>`;
+  Q('data-info-file')?.addEventListener('change',readDataInfoFile);
+  await loadDataInfoSummary();
 }
 
 async function renderManageImport(container) {
@@ -19128,6 +20536,7 @@ function renderXlsxImportPreview(analysis) {
     </div>
     <div style="font-size:11px;color:var(--text-muted);line-height:1.55;overflow-wrap:anywhere">
       หัวคอลัมน์ที่จับคู่: ${escapeWmsText(mappedColumns || 'ไม่พบ')}
+      <br>ช่อง Description / UOM ที่ว่าง จะ Match จาก Item Master ตอน Import
     </div>
     ${analysis.errors.length ? `<div class="alert alert-red" style="font-size:12px;margin-top:10px">${analysis.errors.map(escapeWmsText).join('<br>')}</div>` : ''}
     ${analysis.metrics.emptyLocationRows ? `<div class="alert alert-blue" style="font-size:12px;margin-top:10px;line-height:1.6">
@@ -19248,6 +20657,24 @@ async function doImportXlsx() {
   al.innerHTML = `<div class="alert alert-blue">⏳ กำลังประมวลผล ${analysis.parsed.length.toLocaleString()} แถว...</div>`;
   try {
     const parsedRows = analysis.parsed;
+    const itemCodesForInfo = [...new Set(parsedRows.map(row => importCodeKey(row.itemCode)).filter(Boolean))];
+    const infoResult = await fetchSupabaseRowsByValues(
+      'data_info_items',
+      'item_code,description,uom',
+      'item_code',
+      itemCodesForInfo,
+    );
+    if (infoResult.error) throw infoResult.error;
+    const infoByItem = new Map(
+      (infoResult.data || []).map(row => [importCodeKey(row.item_code),row])
+    );
+    parsedRows.forEach(row => {
+      const info = infoByItem.get(importCodeKey(row.itemCode));
+      if (!info) return;
+      if (!row.itemDesc) row.itemDesc = info.description || '';
+      if (!row.uom) row.uom = info.uom || '';
+    });
+
     const uniqueLocsMap = new Map();
     const uniqueItemsMap = new Map();
     parsedRows.forEach(row => {
@@ -19257,7 +20684,11 @@ async function doImportXlsx() {
         uniqueLocsMap.set(locKey,{ code:row.locCode, zone:computeZone(row.locCode,row.itemDesc) });
       }
       if (!uniqueItemsMap.has(itemKey)) {
-        uniqueItemsMap.set(itemKey,{ code:row.itemCode, description:row.itemDesc });
+        uniqueItemsMap.set(itemKey,{ code:row.itemCode, description:row.itemDesc, uom:row.uom || null });
+      } else {
+        const master = uniqueItemsMap.get(itemKey);
+        if (!master.description && row.itemDesc) master.description = row.itemDesc;
+        if (!master.uom && row.uom) master.uom = row.uom;
       }
     });
 
@@ -19401,6 +20832,7 @@ function backupCountCards(counts={}) {
   const labels = {
     Sessions:'Session', Assignments:'งานที่จ่าย', Annual_Jobs:'Annual JOB', Annual_Job_Items:'รายการใน JOB', Items:'ITEM', Locations:'Location', Stock:'Stock',
     Stock_Detail:'LPN / Lot', Counts:'ผลการนับ', Approvals:'ผลอนุมัติ',
+    Found_Items:'งานที่พบเพิ่ม', Data_Info:'Item Master',
     Audit:'Audit Log', Photos:'รูปถ่าย',
   };
   return `<div class="backup-count-grid">${Object.entries(labels).map(([key,label]) => `
@@ -19624,8 +21056,9 @@ async function refreshBackupScopeSummary() {
 
 async function fetchAllBackupRows(table, columns, applyFilter) {
   const output = [];
+  const orderColumn = table === 'data_info_items' ? 'item_code' : 'id';
   for (let from = 0; ; from += 1000) {
-    let query = sb.from(table).select(columns.join(',')).order('id').range(from, from + 999);
+    let query = sb.from(table).select(columns.join(',')).order(orderColumn).range(from, from + 999);
     if (applyFilter) query = applyFilter(query);
     const { data, error } = await query;
     if (error) throw new Error(`อ่าน ${table} ไม่สำเร็จ: ${error.message}`);
@@ -19665,15 +21098,23 @@ async function fetchBackupExactCountByValues(table, filterColumn, values) {
   return total;
 }
 
+async function fetchBackupExactCount(table, selectColumn='id') {
+  const { count, error } = await sb.from(table).select(selectColumn,{ count:'exact',head:true });
+  if (error) throw new Error(`ตรวจจำนวน ${table} ไม่สำเร็จ: ${error.message}`);
+  return Number(count || 0);
+}
+
 async function backupScopeCountsWithItemLocation(sessionIds) {
   const cleanSessionIds = [...new Set((sessionIds || []).filter(Boolean))];
-  const [sessionCount,assignmentRows,stockRows,annualJobs,annualJobItems,stockDetailRows,auditCount] = await Promise.all([
+  const [sessionCount,assignmentRows,stockRows,annualJobs,annualJobItems,stockDetailRows,foundRows,dataInfoCount,auditCount] = await Promise.all([
     fetchBackupExactCountByValues('count_sessions','id',cleanSessionIds),
     fetchBackupRowsByValues('assignments',['id','location_id'],'session_id',cleanSessionIds),
     fetchBackupRowsByValues('stock_snapshot',['id','item_id','location_id','onhand_qty','items(code)'],'session_id',cleanSessionIds),
     fetchBackupExactCountByValues('annual_count_jobs','session_id',cleanSessionIds),
     fetchBackupExactCountByValues('annual_count_job_items','session_id',cleanSessionIds),
     fetchBackupRowsByValues('stock_snapshot_detail',['id','license_plate'],'session_id',cleanSessionIds),
+    fetchBackupRowsByValues('found_items',['id','location_id','item_id','photo_url'],'session_id',cleanSessionIds),
+    fetchBackupExactCount('data_info_items','item_code'),
     fetchBackupExactCountByValues('audit_log','session_id',cleanSessionIds),
   ]);
   const assignmentIds = assignmentRows.map(row => row.id).filter(Boolean);
@@ -19691,10 +21132,12 @@ async function backupScopeCountsWithItemLocation(sessionIds) {
         .filter(row => !isEmptyLocationItem(row.items?.code))
         .map(row => row.item_id)
         .filter(Boolean)
+        .concat(foundRows.map(row => row.item_id).filter(Boolean))
     ).size,
     Locations:new Set([
       ...stockRows.map(row => row.location_id),
       ...assignmentRows.map(row => row.location_id),
+      ...foundRows.map(row => row.location_id),
     ].filter(Boolean)).size,
     Stock:stockRows.length,
     Stock_Qty:stockRows.reduce((sum,row) => sum + (Number(row.onhand_qty) || 0),0),
@@ -19705,8 +21148,13 @@ async function backupScopeCountsWithItemLocation(sessionIds) {
     ).size,
     Counts:countRows.length,
     Approvals:approvalCount,
+    Found_Items:foundRows.length,
+    Data_Info:dataInfoCount,
     Audit:auditCount,
-    Photos:new Set(countRows.map(row => String(row.photo_url || '').trim()).filter(Boolean)).size,
+    Photos:new Set([
+      ...countRows.map(row => String(row.photo_url || '').trim()),
+      ...foundRows.map(row => String(row.photo_url || '').trim()),
+    ].filter(Boolean)).size,
   };
 }
 
@@ -19716,6 +21164,10 @@ function backupCanonicalValue(value) {
   if (value === false) return 'B:0;';
   if (typeof value === 'number') {
     return Number.isFinite(value) ? `D:${String(value)};` : 'D:INVALID;';
+  }
+  if (typeof value === 'object') {
+    try { value = JSON.stringify(value); }
+    catch (_) { value = String(value); }
   }
   const source = String(value).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   return `S:${source.length}:${source};`;
@@ -19784,7 +21236,11 @@ function backupRowsForExcel(rows, columns, formatVersion=BACKUP_FORMAT_VERSION) 
   const preparedRows = (rows || []).map(row => {
     const output = {};
     columns.forEach(column => {
-      const value = row?.[column];
+      let value = row?.[column];
+      if (value && typeof value === 'object' && !(value instanceof Date)) {
+        try { value = JSON.stringify(value); }
+        catch (_) { value = String(value); }
+      }
       if (typeof value !== 'string' || value.length <= BACKUP_EXCEL_CHUNK_SIZE) {
         output[column] = value;
         return;
@@ -19865,7 +21321,7 @@ function sanitizeBackupDataForSessions(dataBySheet, sessionIds) {
   const inSelectedSession = row => selectedSessionIds.has(String(row?.session_id || ''));
 
   output.Sessions = output.Sessions.filter(row => selectedSessionIds.has(String(row?.id || '')));
-  ['Assignments','Annual_Jobs','Annual_Job_Items','Stock','Stock_Detail','Audit']
+  ['Assignments','Annual_Jobs','Annual_Job_Items','Stock','Stock_Detail','Found_Items','Audit']
     .forEach(sheet => { output[sheet] = output[sheet].filter(inSelectedSession); });
 
   const assignmentIds = backupScopeSet(output.Assignments.map(row => row.id));
@@ -19881,6 +21337,7 @@ function sanitizeBackupDataForSessions(dataBySheet, sessionIds) {
     ...output.Annual_Job_Items.map(row => row.location_id),
     ...output.Stock.map(row => row.location_id),
     ...output.Stock_Detail.map(row => row.location_id),
+    ...output.Found_Items.map(row => row.location_id),
     ...output.Audit.map(row => row.location_id),
   ]);
   const itemIds = backupScopeSet([
@@ -19889,6 +21346,7 @@ function sanitizeBackupDataForSessions(dataBySheet, sessionIds) {
     ...output.Stock_Detail.map(row => row.item_id),
     ...output.Counts.map(row => row.item_id),
     ...output.Approvals.map(row => row.item_id),
+    ...output.Found_Items.flatMap(row => [row.item_id,row.promoted_item_id]),
     ...output.Audit.map(row => row.item_id),
   ]);
   output.Locations = output.Locations.filter(row => locationIds.has(String(row?.id || '')));
@@ -19900,6 +21358,7 @@ function sanitizeBackupDataForSessions(dataBySheet, sessionIds) {
     ...output.Annual_Jobs.flatMap(row => [row.assigned_to,row.created_by]),
     ...output.Counts.map(row => row.counted_by),
     ...output.Approvals.flatMap(row => [row.approved_by,row.wms_fixed_by]),
+    ...output.Found_Items.flatMap(row => [row.discovered_by,row.reviewed_by]),
     ...output.Audit.map(row => row.performed_by),
   ]);
   const counterIds = backupScopeSet([
@@ -19922,7 +21381,7 @@ function validateBackupDataScope(dataBySheet, sessionIds) {
   if (missingSessionIds.length) problems.push(`ไม่พบ Session ที่เลือก ${missingSessionIds.length} รายการ`);
   if (extraSessionIds.length) problems.push(`พบ Session นอกขอบเขต ${extraSessionIds.length} รายการ`);
 
-  ['Assignments','Annual_Jobs','Annual_Job_Items','Stock','Stock_Detail','Audit'].forEach(sheet => {
+  ['Assignments','Annual_Jobs','Annual_Job_Items','Stock','Stock_Detail','Found_Items','Audit'].forEach(sheet => {
     const invalid = (dataBySheet[sheet] || []).filter(row =>
       !selectedSessionIds.has(String(row?.session_id || ''))).length;
     if (invalid) problems.push(`${sheet} ข้าม Session ${invalid} แถว`);
@@ -19934,6 +21393,12 @@ function validateBackupDataScope(dataBySheet, sessionIds) {
       !assignmentIds.has(String(row?.assignment_id || ''))).length;
     if (invalid) problems.push(`${sheet} ไม่ตรงกับงานที่เลือก ${invalid} แถว`);
   });
+  const invalidFoundAssignments = (dataBySheet.Found_Items || []).filter(row =>
+    (row?.assignment_id && !assignmentIds.has(String(row.assignment_id)))
+    || (row?.promoted_assignment_id && !assignmentIds.has(String(row.promoted_assignment_id)))).length;
+  if (invalidFoundAssignments) {
+    problems.push(`Found_Items ไม่ตรงกับงานที่เลือก ${invalidFoundAssignments} แถว`);
+  }
 
   const annualJobIds = backupScopeSet((dataBySheet.Annual_Jobs || []).map(row => row.id));
   const invalidJobItems = (dataBySheet.Annual_Job_Items || []).filter(row =>
@@ -20095,6 +21560,23 @@ function backupTeamSheetColumns() {
       col('wmsFixedBy','WMS Fixed By',20), col('wmsFixedAt','WMS Fixed At (Bangkok)',22),
       col('assignedUser','Assigned User',20),
     ],
+    Found_Work: [
+      col('session','Session',28), col('sourceType','แหล่งที่พบ',18),
+      col('location','Location',18), col('lpn','LPN',30),
+      col('item','Item',24), col('description','Description',44), col('uom','UOM',10),
+      col('qty','QTY',14,'number'), col('remark','Remark',34),
+      col('status','สถานะตรวจสอบ',18), col('actualCounter','ผู้พบ/ผู้ตรวจนับ',22),
+      col('discoveredBy','ผู้บันทึก',20), col('discoveredAt','เวลาที่พบ (Bangkok)',22),
+      col('reviewedBy','หัวหน้างาน',20), col('reviewedAt','เวลาตรวจ (Bangkok)',22),
+      col('supervisorNote','Supervisor Note',34), col('photoUrl','Photo URL',58,'url'),
+    ],
+    Info_Master: [
+      col('item','Item',24), col('barcode','Barcode',28),
+      col('description','Description',48), col('uom','UOM',12),
+      col('sourceFile','Source File',32), col('sourceSheet','Source Sheet',24),
+      col('attributes','ข้อมูลเพิ่มเติม (JSON)',70),
+      col('updatedBy','Updated By',20), col('updatedAt','Updated At (Bangkok)',22),
+    ],
     Transaction_History: [
       col('createdAt','Transaction Time (Bangkok)',22), col('action','Action',26),
       col('session','Session',28), col('location','Location',18), col('zone','Zone',16),
@@ -20130,6 +21612,8 @@ function buildTeamBackupData(dataBySheet) {
   const stockDetails = dataBySheet.Stock_Detail || [];
   const counts = dataBySheet.Counts || [];
   const approvals = dataBySheet.Approvals || [];
+  const foundItems = dataBySheet.Found_Items || [];
+  const dataInfoItems = dataBySheet.Data_Info || [];
   const audits = dataBySheet.Audit || [];
   const profiles = dataBySheet.Profiles || [];
   const counters = dataBySheet.Counters || [];
@@ -20396,6 +21880,49 @@ function buildTeamBackupData(dataBySheet) {
     };
   }).sort((a,b) => String(a.createdAt).localeCompare(String(b.createdAt)));
 
+  const foundItemRows = foundItems.map(found => {
+    const session = sessionById.get(String(found.session_id || '')) || {};
+    const location = locationById.get(String(found.location_id || '')) || {};
+    const item = itemById.get(String(found.item_id || found.promoted_item_id || '')) || {};
+    return {
+      session:session.name || '',
+      sourceType:found.source_type === 'empty_location' ? 'พบใน Location ว่าง' : 'เจองานเพิ่ม',
+      location:found.location_code || location.code || '',
+      lpn:found.license_plate || '',
+      item:found.item_code || item.code || '',
+      description:found.description || item.description || '',
+      uom:found.uom || item.uom || '',
+      qty:backupNumber(found.qty),
+      remark:found.remark || '',
+      status:found.status || '',
+      actualCounter:found.actual_counter_name || '',
+      discoveredBy:profileName(found.discovered_by),
+      discoveredAt:backupDateForTeam(found.discovered_at),
+      reviewedBy:profileName(found.reviewed_by),
+      reviewedAt:backupDateForTeam(found.reviewed_at),
+      supervisorNote:found.supervisor_note || '',
+      photoUrl:found.photo_url || '',
+    };
+  }).sort((a,b) =>
+    String(a.session).localeCompare(String(b.session),'th')
+    || String(a.status).localeCompare(String(b.status),'en')
+    || String(a.location).localeCompare(String(b.location),'en',{numeric:true})
+    || String(a.item).localeCompare(String(b.item),'en',{numeric:true}));
+
+  const dataInfoRows = dataInfoItems.map(info => ({
+    item:info.item_code || '',
+    barcode:info.barcode || '',
+    description:info.description || '',
+    uom:info.uom || '',
+    sourceFile:info.source_file || '',
+    sourceSheet:info.source_sheet || '',
+    attributes:typeof info.attributes === 'string'
+      ? info.attributes
+      : JSON.stringify(info.attributes || {}),
+    updatedBy:profileName(info.updated_by),
+    updatedAt:backupDateForTeam(info.updated_at),
+  })).sort((a,b) => String(a.item).localeCompare(String(b.item),'en',{numeric:true}));
+
   const sessionSummary = sessions.map(session => {
     const sessionAssignments = assignments.filter(row => String(row.session_id) === String(session.id));
     const sessionData = dataRows.filter(row => String(row.sessionId) === String(session.id));
@@ -20429,6 +21956,8 @@ function buildTeamBackupData(dataBySheet) {
 
   return {
     Data_Count:dataCountRows,
+    Found_Work:foundItemRows,
+    Info_Master:dataInfoRows,
     Session_Summary:sessionSummary,
   };
 }
@@ -20483,7 +22012,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'v83' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'v93' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -20506,7 +22035,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
   workbook.Workbook = { Views:[{ activeTab:0 }] };
   const teamData = buildTeamBackupData(dataBySheet);
   const teamColumns = backupTeamSheetColumns();
-  ['Data_Count','Session_Summary']
+  ['Data_Count','Found_Work','Info_Master','Session_Summary']
     .forEach(sheetName => appendTeamBackupSheet(workbook,sheetName,teamData[sheetName],teamColumns[sheetName]));
 
   const readme = [
@@ -20515,12 +22044,14 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     ['เลข JOB','เชื่อมจาก Annual JOB ตาม Session + Location + Item; รายการที่ไม่ได้อยู่ใน Annual JOB จะแสดงว่าง'],
     ['Count 1–3','แสดง Actual Counter และเวลานับแยกครบทั้ง 3 รอบ'],
     ['Photo URL','ใช้ URL รูปล่าสุดที่มีจริงของงาน แม้ผลนับรอบสุดท้ายจะไม่ได้แนบรูป'],
+    ['Found_Work','งานที่พนักงานพบเพิ่มหรือพบใน Location ว่าง พร้อมสถานะการตรวจ QTY หมายเหตุ และรูปถ่าย'],
+    ['Info_Master','ข้อมูล Item, Barcode, Description, UOM และฟิลด์เสริมจาก Item Master ที่ใช้ Match ในระบบ'],
     ['Session_Summary','สรุป Unique ITEM, Stock Lines, LPN/Lot Rows, จำนวนแถว Data_Count, รูปถ่าย, ผลการนับ, Stock Accuracy และสถานะ WMS แยก Session'],
-    ['การใช้งานต่อ','ทีมสามารถกรอง คัดลอก หรือแก้ไข Data_Count และ Session_Summary ได้ เพราะ Restore จะไม่อ่าน 2 ชีตนี้'],
-    ['ข้อความยาว','Backup Format v3 จะแบ่งข้อความที่ยาวเกินข้อจำกัด Excel เป็นคอลัมน์ __cc_part_2, 3... และประกอบกลับอัตโนมัติเมื่อ Restore'],
+    ['การใช้งานต่อ','ทีมสามารถกรอง คัดลอก หรือแก้ไข Data_Count, Found_Work, Info_Master และ Session_Summary ได้ เพราะ Restore จะอ่านเฉพาะชีตระบบที่ซ่อนไว้'],
+    ['ข้อความยาว','Backup Format v5 จะแบ่งข้อความที่ยาวเกินข้อจำกัด Excel เป็นคอลัมน์ __cc_part_2, 3... และประกอบกลับอัตโนมัติเมื่อ Restore'],
     ['คำเตือน Restore','ชีตข้อมูลระบบที่จำเป็นต่อ Restore ถูกซ่อนไว้ ห้ามเปิด แก้ชื่อ หรือลบชีตเหล่านั้น'],
     ['รูปถ่าย','เก็บเป็น URL และระบบจะรักษาไฟล์รูปใน Storage เมื่อลบผ่านเมนู Backup'],
-    ['ข้อมูลระบบ','ข้อมูล Restore ยังอยู่ครบ แต่ซ่อนชีต Manifest, Sessions, Locations, Items, Assignments, Stock, Stock_Detail, Counts, Approvals, Audit, Profiles, Counters และ Remarks'],
+    ['ข้อมูลระบบ','ข้อมูล Restore ยังอยู่ครบ แต่ซ่อนชีต Manifest, Data_Info, Sessions, Locations, Items, Assignments, Stock, Stock_Detail, Counts, Approvals, Found_Items, Audit, Profiles, Counters และ Remarks'],
     ['รหัสระบบ','Session ID, Assignment ID, Location ID และ Item ID ถูกนำออกจากชีตที่ทีมใช้งาน แต่ยังอยู่ครบในชีตระบบที่ซ่อนสำหรับ Restore'],
     ['User Login','ไฟล์นี้ไม่เก็บรหัสผ่านและไม่สร้างบัญชี Auth ใหม่; Profiles ใช้เป็นข้อมูลอ้างอิง'],
     ['วิธี Restore','เมนู จัดการงาน / Sessions → Backup / Restore → เลือกไฟล์นี้'],
