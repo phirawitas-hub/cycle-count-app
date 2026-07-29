@@ -10126,7 +10126,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v90-cascading-filters';
+window.__CYCLE_COUNT_BUILD__ = 'v91-empty-location-import';
 
 let _viewportSyncFrame = 0;
 function syncViewportSize() {
@@ -13300,6 +13300,7 @@ async function loadCCount() {
   let items = '';
   for (const s of snaps) {
     const it   = s.items;
+    const emptyLocation = isEmptyLocationItem(it?.code);
     const pr   = prevMap[it.id];
     const v    = pr?.count_qty;
     const dets = detailByItem[it.id] || [];
@@ -13358,8 +13359,11 @@ async function loadCCount() {
     items += `<div class="citem-wrap">
       <div class="citem">
         <div class="citem-info">
-          <div class="citem-code">${it.code}</div>
-          <div class="citem-desc">${it.description || '—'}</div>
+          ${emptyLocation
+            ? `<div class="citem-code"><span class="tag tag-blue">Location ว่าง</span></div>
+               <div class="citem-desc">Item ว่างจาก WMS · กรอกจำนวนที่ตรวจพบจริง หรือกรอก 0 หากยังว่าง</div>`
+            : `<div class="citem-code">${escapeWmsText(it?.code || '')}</div>
+               <div class="citem-desc">${escapeWmsText(it?.description || '')}</div>`}
           ${detHtml}
         </div>
         <button class="item-toggle ${hasExtra?'has':''}" id="tg_${it.id}" onclick="toggleExtra('${it.id}')" title="หมายเหตุ/รูป">📝</button>
@@ -13455,7 +13459,7 @@ async function loadCCount() {
         <div id="counterSelectedChips" class="counter-selected-chips"></div>
       </div>
     </div>
-    <div class="sec">📦 ${snaps.length} รายการ — กรอกจำนวนที่นับได้จริง</div>
+      <div class="sec">📦 ${snaps.length} รายการ — กรอกจำนวนที่นับได้จริง (Location ว่างให้กรอก 0)</div>
     <div class="card card-flush count-items-card">${items}</div>
     <div style="padding:16px 20px">
       <div id="ca"></div>
@@ -14093,7 +14097,7 @@ async function loadSvDash() {
     ),
     fetchPagedSupabaseRows(
       'stock_snapshot',
-      'location_id,item_id,onhand_qty',
+      'location_id,item_id,onhand_qty,items(code)',
       query => query.eq('session_id', curSid),
     ),
     getSessionRules(curSid),
@@ -14117,6 +14121,12 @@ async function loadSvDash() {
     pct = total ? Math.round((done / total) * 100) : 0;
   }
   const allSnapshots = snapshotResult.data || [];
+  const emptyLocationItemIds = new Set(
+    allSnapshots
+      .filter(snapshot => isEmptyLocationItem(snapshot.items?.code))
+      .map(snapshot => snapshot.item_id)
+      .filter(Boolean)
+  );
 
   const ohMap = {};
   (allSnapshots||[]).forEach(s => { ohMap[s.location_id + '|' + s.item_id] = +s.onhand_qty; });
@@ -14297,8 +14307,13 @@ async function loadSvDash() {
   allWmsRows.forEach(v => {
     const d = +v.variance;
     const itemKey = `${v.assignment_id || ''}|${v.item_id || ''}`;
-    if (d > 0) { diffPlus += d; gainItemKeys.add(itemKey); }
-    else if (d < 0) { diffMinus += Math.abs(d); lostItemKeys.add(itemKey); }
+    if (d > 0) {
+      diffPlus += d;
+      if (!emptyLocationItemIds.has(v.item_id)) gainItemKeys.add(itemKey);
+    } else if (d < 0) {
+      diffMinus += Math.abs(d);
+      if (!emptyLocationItemIds.has(v.item_id)) lostItemKeys.add(itemKey);
+    }
   });
   const gainItemCount = gainItemKeys.size;
   const lostItemCount = lostItemKeys.size;
@@ -14308,6 +14323,7 @@ async function loadSvDash() {
     const assignment = asgnInfoMap[assignmentId];
     if (!assignment) return;
     Object.entries(itemRows || {}).forEach(([itemId, rounds]) => {
+      if (emptyLocationItemIds.has(itemId)) return;
       const oh = ohMap[`${assignment.location_id}|${itemId}`];
       if (oh === undefined) return;
       if (computeItemStatus(oh, rounds[1], rounds[2], rounds[3], rules) !== 'OK') return;
@@ -14326,7 +14342,7 @@ async function loadSvDash() {
   let uniqueSKUs = new Set();
   let uniqueLocations = new Set();
   (allSnapshots||[]).forEach(s => {
-    uniqueSKUs.add(s.item_id);
+    if (!emptyLocationItemIds.has(s.item_id)) uniqueSKUs.add(s.item_id);
     uniqueLocations.add(s.location_id);
   });
   let totalSKUs = uniqueSKUs.size;
@@ -14344,7 +14360,7 @@ async function loadSvDash() {
   varianceRowsOnly.forEach(v => {
     const locKey = asgnInfoMap[v.assignment_id]?.location_id || asgnInfoMap[v.assignment_id]?.locations?.code || v.assignment_id;
     if (locKey) diffLocationSet.add(locKey);
-    if (v.item_id) diffItemSet.add(v.item_id);
+    if (v.item_id && !emptyLocationItemIds.has(v.item_id)) diffItemSet.add(v.item_id);
   });
   const diffLocationPct = totalLocations > 0 ? ((diffLocationSet.size / totalLocations) * 100).toFixed(2) : '0.00';
   const diffItemPct = totalSKUs > 0 ? ((diffItemSet.size / totalSKUs) * 100).toFixed(2) : '0.00';
@@ -14365,7 +14381,7 @@ async function loadSvDash() {
   (allCounts || []).forEach(c => {
     const asgn = asgnInfoMap[c.assignment_id];
     if (!asgn) return;
-    if (c.item_id) countedItemSet.add(c.item_id);
+    if (c.item_id && !emptyLocationItemIds.has(c.item_id)) countedItemSet.add(c.item_id);
     const locKey = asgn.location_id || asgn.locations?.code;
     if (locKey && c.item_id) countedOhKeys.add(locKey + '|' + c.item_id);
   });
@@ -14402,14 +14418,16 @@ async function loadSvDash() {
     if (!asgn) return;
     const zone = asgn.locations?.zone || 'ไม่ระบุ Zone';
     if (!zoneAccuracyMap[zone]) zoneAccuracyMap[zone] = { countedItems: new Set(), diffItems: new Set() };
-    if (c.item_id) zoneAccuracyMap[zone].countedItems.add(`${c.assignment_id}|${c.item_id}`);
+    if (c.item_id && !emptyLocationItemIds.has(c.item_id)) {
+      zoneAccuracyMap[zone].countedItems.add(`${c.assignment_id}|${c.item_id}`);
+    }
   });
   (allWmsRows || []).forEach(v => {
     const asgn = asgnInfoMap[v.assignment_id];
     if (!asgn) return;
     const zone = asgn.locations?.zone || 'ไม่ระบุ Zone';
     if (!zoneAccuracyMap[zone]) zoneAccuracyMap[zone] = { countedItems: new Set(), diffItems: new Set() };
-    if (v.item_id) {
+    if (v.item_id && !emptyLocationItemIds.has(v.item_id)) {
       const itemKey = `${v.assignment_id}|${v.item_id}`;
       zoneAccuracyMap[zone].countedItems.add(itemKey);
       zoneAccuracyMap[zone].diffItems.add(itemKey);
@@ -14638,11 +14656,14 @@ async function loadSvDash() {
       const color = d > 0 ? 'var(--accent-green)' : 'var(--accent-red)';
       const sign = d > 0 ? '+' : '';
       const loc = asgnInfoMap[v.assignment_id]?.locations?.code || '?';
+      const varianceItemLabel = isEmptyLocationItem(v.items?.code)
+        ? 'Location ว่าง'
+        : escapeWmsText(v.items?.code || '');
       return `
         <div class="row" data-location-sort-code="${escapeWmsText(loc)}" style="padding: 14px 20px;">
           <div class="row-body">
             <div class="row-title mono" style="font-size: 14px; color: var(--text-main);">${loc}</div>
-            <div class="row-sub" style="font-size: 12px;">${v.items?.code||'?'} · 👤 User ผู้อนุมัติ: ${escapeWmsText(v.profiles?.name||'?')}</div>
+            <div class="row-sub" style="font-size: 12px;">${varianceItemLabel} · 👤 User ผู้อนุมัติ: ${escapeWmsText(v.profiles?.name||'?')}</div>
           </div>
           <div style="text-align:right;">
             <div style="font-size: 18px; font-weight: 800; font-family: 'Fredoka'; color: ${color};">${sign}${d}</div>
@@ -15604,7 +15625,11 @@ function renderWmsList() {
           <span class="mono" style="font-size:15px;font-weight:800;color:var(--text-main)">${loc?.code||'?'}</span>
           ${statusBadge}
         </div>
-        <div class="wms-item-description">${escapeWmsText(v.items?.code||'')}${v.items?.description?' · '+escapeWmsText(v.items.description):''}</div>
+        <div class="wms-item-description">${
+          isEmptyLocationItem(v.items?.code)
+            ? 'Location ว่าง'
+            : `${escapeWmsText(v.items?.code||'')}${v.items?.description?' · '+escapeWmsText(v.items.description):''}`
+        }</div>
         <div class="wms-row-meta">
           Zone ${escapeWmsText(loc?.zone || '—')} · ROW ${escapeWmsText(loc?.row_no ?? '—')} · Level ${escapeWmsText(loc?.level ?? '—')}<br>
           ${isPending 
@@ -15679,6 +15704,7 @@ async function renderVarianceItemDetail(aid, container, idx) {
   let varRows = '';
   for (const s of snaps || []) {
     const it = s.items;
+    const emptyLocation = isEmptyLocationItem(it?.code);
     const v  = byItem[it.id] || {};
     const r1 = v[1]?.count_qty, r2 = v[2]?.count_qty, r3 = v[3]?.count_qty;
     const stKey = computeItemStatus(+s.onhand_qty, r1, r2, r3, rules);
@@ -15689,8 +15715,12 @@ async function renderVarianceItemDetail(aid, container, idx) {
     varRows += `<div class="vrow ${st.row}" style="flex-direction:column;align-items:stretch;padding:16px 20px;gap:8px">
       <div style="display:flex;align-items:flex-start;gap:12px">
         <div style="flex:1;min-width:0">
-          <div class="mono" style="font-size:15px;font-weight:800; color:var(--text-main);">${it.code}</div>
-          <div style="font-size:12px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; margin-top:4px;">${it.description||''}</div>
+          <div class="mono" style="font-size:15px;font-weight:800; color:var(--text-main);">${
+            emptyLocation ? '<span class="tag tag-blue">Location ว่าง</span>' : escapeWmsText(it?.code || '')
+          }</div>
+          <div style="font-size:12px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; margin-top:4px;">${
+            emptyLocation ? 'Item ว่างจาก WMS' : escapeWmsText(it?.description || '')
+          }</div>
           <div style="font-size:11px;color:var(--text-muted);margin-top:4px; font-weight:600;">R1: ${fmt(v[1])} · R2: ${fmt(v[2])} · R3: ${fmt(v[3])}</div>
           <div class="oh-chip">OH: <input type="number" id="oh_${it.id}" value="${s.onhand_qty}"
             onchange="updateOH('${asgn.session_id}','${asgn.location_id}','${it.id}',this.value)">
@@ -15918,6 +15948,7 @@ async function loadSvDetail() {
 
   for (const s of snaps || []) {
     const it = s.items; const v = byItem[it.id] || {};
+    const emptyLocation = isEmptyLocationItem(it?.code);
     const r1 = v[1]?.count_qty, r2 = v[2]?.count_qty, r3 = v[3]?.count_qty;
     const stKey = computeItemStatus(+s.onhand_qty, r1, r2, r3, rules);
     const st = VS[stKey] || { cls:'tag-gray', lbl:stKey, row:'' };
@@ -15941,8 +15972,12 @@ async function loadSvDetail() {
     varRows += `<div class="vrow ${st.row}" style="flex-direction:column;align-items:stretch;padding:20px 24px;gap:10px">
       <div style="display:flex;align-items:flex-start;gap:14px">
         <div style="flex:1;min-width:0">
-          <div class="mono" style="font-size:16px;font-weight:800;color:var(--text-main)">${it.code}</div>
-          <div style="font-size:13px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; margin-top:4px;">${it.description||''}</div>
+          <div class="mono" style="font-size:16px;font-weight:800;color:var(--text-main)">${
+            emptyLocation ? '<span class="tag tag-blue">Location ว่าง</span>' : escapeWmsText(it?.code || '')
+          }</div>
+          <div style="font-size:13px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; margin-top:4px;">${
+            emptyLocation ? 'Item ว่างจาก WMS' : escapeWmsText(it?.description || '')
+          }</div>
           <div style="font-size:11px;color:var(--text-muted);margin-top:6px; font-weight:600;">R1: ${fmt(v[1])} · R2: ${fmt(v[2])} · R3: ${fmt(v[3])}</div>
           ${ohCell}
           ${notes}
@@ -18580,10 +18615,12 @@ async function loadAdTxLog() {
   for (const ev of events) {
     if (ev.type === 'count') {
       const r = ev.data; const ohInfo = ohMap[r.item_id];
-      rows += `<div class="row" style="cursor:default;flex-wrap:wrap"><div class="row-body"><div class="row-title mono" style="font-size:14px">${r.items?.code||'?'}</div><div class="row-sub">${r.items?.description||''}</div><div class="row-sub">รอบ ${r.round} · คนนับจริง: ${escapeWmsText(r.actual_counter_name || 'ไม่ระบุคนนับ')}</div><div class="row-sub">${r.counted_at ? new Date(r.counted_at).toLocaleString('th-TH') : ''}</div>${r.remark ? `<div class="row-sub" style="color:var(--primary-blue); font-weight:600;">📝 ${escapeWmsText(r.remark)}</div>` : ''}${r.photo_url ? `<a href="${r.photo_url}" target="_blank" style="font-size:12px;font-weight:700;color:var(--accent-red)">📷 ดูรูป</a>` : ''}</div><div style="text-align:right;flex-shrink:0"><div style="font-size:32px;font-weight:800;font-family:'Fredoka';color:var(--text-main)">${r.count_qty}</div><span class="tag tag-blue" style="font-size:10px">R${r.round}</span>${ohInfo ? `<div class="oh-chip" style="margin-top:8px;font-size:12px;padding:4px 10px">OH: ${ohInfo.oh}${ohInfo.al!=null?` <span class="al-part">· AL ${ohInfo.al}</span>`:''}</div>` : ''}</div></div>`;
+      const itemLabel = isEmptyLocationItem(r.items?.code) ? 'Location ว่าง' : escapeWmsText(r.items?.code || '');
+      rows += `<div class="row" style="cursor:default;flex-wrap:wrap"><div class="row-body"><div class="row-title mono" style="font-size:14px">${itemLabel}</div><div class="row-sub">${escapeWmsText(r.items?.description||'')}</div><div class="row-sub">รอบ ${r.round} · คนนับจริง: ${escapeWmsText(r.actual_counter_name || 'ไม่ระบุคนนับ')}</div><div class="row-sub">${r.counted_at ? new Date(r.counted_at).toLocaleString('th-TH') : ''}</div>${r.remark ? `<div class="row-sub" style="color:var(--primary-blue); font-weight:600;">📝 ${escapeWmsText(r.remark)}</div>` : ''}${r.photo_url ? `<a href="${r.photo_url}" target="_blank" style="color:var(--accent-red)">📷 ดูรูป</a>` : ''}</div><div style="text-align:right;flex-shrink:0"><div style="font-size:32px;font-weight:800;font-family:'Fredoka';color:var(--text-main)">${r.count_qty}</div><span class="tag tag-blue" style="font-size:10px">R${r.round}</span>${ohInfo ? `<div class="oh-chip" style="margin-top:8px;font-size:12px;padding:4px 10px">OH: ${ohInfo.oh}${ohInfo.al!=null?` <span class="al-part">· AL ${ohInfo.al}</span>`:''}</div>` : ''}</div></div>`;
     } else if (ev.type === 'approval') {
       const a = ev.data; const isOk = a.resolution === 'ok';
-      rows += `<div class="row" style="cursor:default;flex-wrap:wrap;background:${isOk?'rgba(74, 222, 128, 0.08)':'rgba(251, 113, 133, 0.08)'}"><div class="row-body"><div class="row-title mono" style="font-size:14px">${a.items?.code||'?'}</div><div class="row-sub">${a.items?.description||''}</div><div class="row-sub">${isOk?'✅':'❌'} คอนเฟิร์มยอดโดย User: <span style="font-weight:700;">${escapeWmsText(a.profiles?.name||'?')}</span></div><div class="row-sub">${a.created_at ? new Date(a.created_at).toLocaleString('th-TH') : ''}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:32px;font-weight:800;font-family:'Fredoka';color:var(--text-main)">${a.final_qty}</div><span class="tag ${isOk?'tag-green':'tag-red'}" style="font-size:10px">${a.variance>0?'+':''}${a.variance}</span></div></div>`;
+      const itemLabel = isEmptyLocationItem(a.items?.code) ? 'Location ว่าง' : escapeWmsText(a.items?.code || '');
+      rows += `<div class="row" style="cursor:default;flex-wrap:wrap;background:${isOk?'rgba(74, 222, 128, 0.08)':'rgba(251, 113, 133, 0.08)'}"><div class="row-body"><div class="row-title mono" style="font-size:14px">${itemLabel}</div><div class="row-sub">${escapeWmsText(a.items?.description||'')}</div><div class="row-sub">${isOk?'✅':'❌'} คอนเฟิร์มยอดโดย User: <span style="font-weight:700;">${escapeWmsText(a.profiles?.name||'?')}</span></div><div class="row-sub">${a.created_at ? new Date(a.created_at).toLocaleString('th-TH') : ''}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:32px;font-weight:800;font-family:'Fredoka';color:var(--text-main)">${a.final_qty}</div><span class="tag ${isOk?'tag-green':'tag-red'}" style="font-size:10px">${a.variance>0?'+':''}${a.variance}</span></div></div>`;
     } else {
       const a = ev.data; const meta = ACTION_META[a.action] || { icon:'📝', label: a.action };
       rows += `<div class="row" style="cursor:default;flex-wrap:wrap;background:rgba(114, 213, 246, 0.1)"><div class="row-body"><div class="row-title mono" style="font-size:14px">${a.items?.code || meta.label}</div>${a.items?.code ? `<div class="row-sub" style="font-weight:700; color:var(--primary-blue);">${meta.icon} ${meta.label}</div>` : ''}<div class="row-sub">ดำเนินการโดย User: ${escapeWmsText(a.profiles?.name||'?')}</div><div class="row-sub">${a.created_at ? new Date(a.created_at).toLocaleString('th-TH') : ''}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:16px;font-weight:800;color:var(--text-main)">${a.old_value ?? '—'} → ${a.new_value ?? '—'}</div><span class="tag tag-blue" style="font-size:10px; margin-top:6px;">${meta.icon} ${meta.label}</span></div></div>`;
@@ -18970,6 +19007,10 @@ function importCodeKey(value) {
   return normalizeImportText(value).toLocaleUpperCase('en-US');
 }
 
+function isEmptyLocationItem(value) {
+  return normalizeImportText(value) === '';
+}
+
 function resolveImportColumn(headers, rule) {
   const normalizedHeaders = headers.map(header => ({ header, normalized:normalizeImportHeader(header) }));
   for (const term of rule.exact || []) {
@@ -19024,7 +19065,6 @@ function analyzeXlsxImportRows(rows, locFilter='') {
     const onhandValue = parseImportNumber(onhandRaw);
     const reasons = [];
     if (!locCode) reasons.push('Location ว่าง');
-    if (!itemCode) reasons.push('Item ว่าง');
     if (onhandRaw && onhandValue === null) reasons.push(`OH ไม่ใช่ตัวเลข (${onhandRaw})`);
     if (reasons.length) {
       rejected.push({ rowNumber:index + 2, reasons, locCode, itemCode, onhandRaw });
@@ -19035,7 +19075,8 @@ function analyzeXlsxImportRows(rows, locFilter='') {
       sourceRow:index + 2,
       locCode,
       itemCode,
-      itemDesc:value('description'),
+      itemDesc:itemCode ? value('description') : '',
+      isEmptyLocation:isEmptyLocationItem(itemCode),
       onhand:onhandValue ?? 0,
       alQty:parseImportNumber(allocatedRaw),
       lpn:value('licensePlate'),
@@ -19047,12 +19088,16 @@ function analyzeXlsxImportRows(rows, locFilter='') {
 
   const metrics = {
     rows:parsed.length,
-    items:new Set(parsed.map(row => importCodeKey(row.itemCode))).size,
+    items:new Set(parsed.map(row => importCodeKey(row.itemCode)).filter(Boolean)).size,
     locations:new Set(parsed.map(row => importCodeKey(row.locCode))).size,
     licensePlates:columns.licensePlate
-      ? new Set(parsed.map(row => importCodeKey(row.lpn))).size
+      ? new Set(parsed.map(row => importCodeKey(row.lpn)).filter(Boolean)).size
       : 0,
     sumOH:parsed.reduce((sum,row) => sum + (Number(row.onhand) || 0),0),
+    emptyLocations:new Set(
+      parsed.filter(row => row.isEmptyLocation).map(row => importCodeKey(row.locCode))
+    ).size,
+    emptyLocationRows:parsed.filter(row => row.isEmptyLocation).length,
   };
   return { headers, columns, errors, parsed, rejected, ignoredByFilter, metrics };
 }
@@ -19085,6 +19130,11 @@ function renderXlsxImportPreview(analysis) {
       หัวคอลัมน์ที่จับคู่: ${escapeWmsText(mappedColumns || 'ไม่พบ')}
     </div>
     ${analysis.errors.length ? `<div class="alert alert-red" style="font-size:12px;margin-top:10px">${analysis.errors.map(escapeWmsText).join('<br>')}</div>` : ''}
+    ${analysis.metrics.emptyLocationRows ? `<div class="alert alert-blue" style="font-size:12px;margin-top:10px;line-height:1.6">
+      พบ Location ว่าง ${metric(analysis.metrics.emptyLocations)} Location
+      (${metric(analysis.metrics.emptyLocationRows)} แถว) — ระบบจะนำเข้าและสร้างงานนับตามปกติ
+      โดยคง Item และ Description เป็นค่าว่าง
+    </div>` : ''}
     ${analysis.rejected.length ? `<div class="alert alert-red" style="font-size:12px;margin-top:10px">
       พบแถวผิดปกติ ${metric(analysis.rejected.length)} แถว ระบบหยุดไว้เพื่อไม่ให้ยอดหาย<br>
       ${rejectionRows.map(escapeWmsText).join('<br>')}
@@ -19246,7 +19296,7 @@ async function doImportXlsx() {
         });
       }
       snapMap.get(key).onhand_qty += Number(row.onhand) || 0;
-      if (row.lpn || row.lot || row.invStatus || row.uom) {
+      if (!row.isEmptyLocation && (row.lpn || row.lot || row.invStatus || row.uom)) {
         detailsList.push({
           session_id:sid,
           location_id:locId,
@@ -19328,6 +19378,7 @@ async function doImportXlsx() {
       ✅ Import และตรวจยอดสำเร็จ<br>
       Item ${metrics.items.toLocaleString()} · Location ${metrics.locations.toLocaleString()} ·
       License Plate ${metrics.licensePlates.toLocaleString()} · SUM OH ${Number(metrics.sumOH).toLocaleString('th-TH',{ maximumFractionDigits:2 })}
+      ${metrics.emptyLocations ? `<br>Location ว่างที่สร้างงานนับได้ ${metrics.emptyLocations.toLocaleString()} Location` : ''}
     </div>`;
     _xlsxRawRows = null;
     _xlsxParsed = null;
@@ -19619,7 +19670,7 @@ async function backupScopeCountsWithItemLocation(sessionIds) {
   const [sessionCount,assignmentRows,stockRows,annualJobs,annualJobItems,stockDetailRows,auditCount] = await Promise.all([
     fetchBackupExactCountByValues('count_sessions','id',cleanSessionIds),
     fetchBackupRowsByValues('assignments',['id','location_id'],'session_id',cleanSessionIds),
-    fetchBackupRowsByValues('stock_snapshot',['id','item_id','location_id','onhand_qty'],'session_id',cleanSessionIds),
+    fetchBackupRowsByValues('stock_snapshot',['id','item_id','location_id','onhand_qty','items(code)'],'session_id',cleanSessionIds),
     fetchBackupExactCountByValues('annual_count_jobs','session_id',cleanSessionIds),
     fetchBackupExactCountByValues('annual_count_job_items','session_id',cleanSessionIds),
     fetchBackupRowsByValues('stock_snapshot_detail',['id','license_plate'],'session_id',cleanSessionIds),
@@ -19635,7 +19686,12 @@ async function backupScopeCountsWithItemLocation(sessionIds) {
     Assignments:assignmentRows.length,
     Annual_Jobs:annualJobs,
     Annual_Job_Items:annualJobItems,
-    Items:new Set(stockRows.map(row => row.item_id).filter(Boolean)).size,
+    Items:new Set(
+      stockRows
+        .filter(row => !isEmptyLocationItem(row.items?.code))
+        .map(row => row.item_id)
+        .filter(Boolean)
+    ).size,
     Locations:new Set([
       ...stockRows.map(row => row.location_id),
       ...assignmentRows.map(row => row.location_id),
@@ -19645,6 +19701,7 @@ async function backupScopeCountsWithItemLocation(sessionIds) {
     Stock_Detail:stockDetailRows.length,
     Stock_Detail_Distinct:new Set(
       stockDetailRows.map(row => importCodeKey(row.license_plate))
+        .filter(Boolean)
     ).size,
     Counts:countRows.length,
     Approvals:approvalCount,
