@@ -10126,7 +10126,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v84-my-tasks13';
+window.__CYCLE_COUNT_BUILD__ = 'v85-print-recovery';
 
 let _viewportSyncFrame = 0;
 function syncViewportSize() {
@@ -17428,9 +17428,57 @@ function printPageSettings(style = uiBranding.printFormStyle) {
 }
 
 function printWindowScript() {
-  return uiBranding.printAutoOpenDialog
-    ? `<script>window.addEventListener('load',function(){var images=Array.from(document.images||[]);Promise.all(images.map(function(img){return img.complete?Promise.resolve():new Promise(function(done){img.addEventListener('load',done,{once:true});img.addEventListener('error',done,{once:true});});})).then(function(){setTimeout(function(){window.print();},250);});},{once:true});<\/script>`
-    : '';
+  const autoPrint = uiBranding.printAutoOpenDialog === true;
+  return `<script>(function(){
+    var printRequested=false;
+    var printMediaEntered=false;
+    var cleanupStarted=false;
+    function finishPrint(){
+      if(cleanupStarted)return;
+      cleanupStarted=true;
+      try{
+        if(window.opener&&!window.opener.closed){
+          window.opener.focus();
+        }
+      }catch(_){}
+      setTimeout(function(){try{window.close();}catch(_){}},80);
+    }
+    function finishSoon(){setTimeout(finishPrint,180);}
+    window.addEventListener('afterprint',finishSoon,{once:true});
+    try{
+      var printMedia=window.matchMedia('print');
+      var onPrintMediaChange=function(event){
+        if(event.matches){
+          printMediaEntered=true;
+        }else if(printMediaEntered){
+          finishSoon();
+        }
+      };
+      if(printMedia.addEventListener)printMedia.addEventListener('change',onPrintMediaChange);
+      else if(printMedia.addListener)printMedia.addListener(onPrintMediaChange);
+    }catch(_){}
+    window.addEventListener('focus',function(){
+      if(printRequested){
+        setTimeout(function(){
+          if(!printMediaEntered)finishPrint();
+        },700);
+      }
+    });
+    window.addEventListener('load',function(){
+      ${autoPrint ? `var images=Array.from(document.images||[]);
+      Promise.all(images.map(function(img){
+        return img.complete?Promise.resolve():new Promise(function(done){
+          img.addEventListener('load',done,{once:true});
+          img.addEventListener('error',done,{once:true});
+        });
+      })).then(function(){
+        setTimeout(function(){
+          printRequested=true;
+          window.print();
+        },250);
+      });` : ''}
+    },{once:true});
+  })();<\/script>`;
 }
 
 function printMetaHtml(pageIndex,totalPages) {
@@ -17477,7 +17525,21 @@ function detailedItemHtml(row,showOH) {
   </article>`;
 }
 
-function paginateDetailedRows(rows,maxPageHeight = 560) {
+function detailedPageContentHeight() {
+  const settings = printPageSettings('detailed');
+  const paperDimensions = {
+    A4:[210,297],
+    A3:[297,420],
+    Letter:[215.9,279.4],
+  };
+  const dimensions = paperDimensions[settings.paper] || paperDimensions.A4;
+  const pageHeightMm = settings.orientation === 'landscape' ? dimensions[0] : dimensions[1];
+  const printableHeightPx = Math.max(0,pageHeightMm-(settings.margin*2)) * (96/25.4);
+  const headerAndSafetyPx = uiBranding.printShowSignatures ? 132 : 100;
+  return Math.max(500,Math.floor(printableHeightPx-headerAndSafetyPx));
+}
+
+function paginateDetailedRows(rows,maxPageHeight = detailedPageContentHeight()) {
   const pages = [];
   let page = [];
   let usedHeight = 0;
@@ -17690,12 +17752,11 @@ function openAnnualJobPrintWindow(jobPacks,existingWindow) {
       || normalizeLogoDataUrl(uiBranding.logoDataUrl)
       || PF_LOGO_B64;
     const columnCount = showOH ? 10 : 9;
-    const jobPageLabel = page.jobPages > 1 ? ` · ${page.jobPage}/${page.jobPages}` : '';
     return `<section class="annual-pf-page">
       <header class="annual-pf-header">
         <div class="annual-pf-brand">${uiBranding.printShowLogo?`<img src="${logo}" alt="logo">`:''}</div>
         <div class="annual-pf-title">${pfEscapeHtml(title)}</div>
-        <div class="annual-pf-job">${pfEscapeHtml(page.job.job_code)}${jobPageLabel}<small>${printMetaHtml(pageIndex,totalPages)}</small></div>
+        <div class="annual-pf-job">${pfEscapeHtml(page.job.job_code)}<small>${printMetaHtml(pageIndex,totalPages)}</small></div>
       </header>
       <table class="annual-pf-table">
         <thead><tr>
@@ -17782,12 +17843,11 @@ function openAnnualDetailedJobPrintWindow(jobPacks,existingWindow) {
     const pack = { job:page.job,rows:page.rows };
     const session = pack.job.count_sessions || {};
     const title = uiBranding.printFormTitle || session.annual_form_title || session.name || 'ANNUAL COUNT';
-    const jobPageLabel = page.jobPages > 1 ? ` · ${page.jobPage}/${page.jobPages}` : '';
     return `<section class="detail-page">
         <header class="detail-header">
           ${uiBranding.printShowLogo?`<img src="${logo}" alt="logo">`:'<span></span>'}
           <div><small>ANNUAL FORM COUNT · DETAILS</small><h1>${pfEscapeHtml(title)}</h1></div>
-          <div class="detail-meta"><strong>${pfEscapeHtml(pack.job.job_code)}${jobPageLabel}</strong>${dateHtml}${uiBranding.printShowPageNumber?`<div>Page ${pageIndex+1}/${totalPages}</div>`:''}</div>
+          <div class="detail-meta"><strong>${pfEscapeHtml(pack.job.job_code)}</strong>${dateHtml}${uiBranding.printShowPageNumber?`<div>Page ${pageIndex+1}/${totalPages}</div>`:''}</div>
         </header>
         <div class="detail-items">${(pack.rows || []).map(row => detailedItemHtml(row,session.show_oh === true)).join('')}</div>
         ${uiBranding.printShowSignatures ? printSignatureHtml('detail-footer') : ''}
