@@ -10126,7 +10126,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v85-print-recovery';
+window.__CYCLE_COUNT_BUILD__ = 'v86-backup-session-scope';
 
 let _viewportSyncFrame = 0;
 function syncViewportSize() {
@@ -10584,6 +10584,8 @@ let _xlsxRawRows = null;
 let _xlsxParsed  = null;   
 let _backupParsed = null;
 let _lastBackupExport = null;
+let _backupScopeRequestSerial = 0;
+let _backupExportRunning = false;
 let _svDashOpenVarianceIdx = null;   
 let _dashTab = 'summary';
 let _navStack = [];
@@ -18302,6 +18304,22 @@ function backupSelectedSessionIds() {
   return value ? [value] : [];
 }
 
+function backupSessionScopeKey(sessionIds=backupSelectedSessionIds()) {
+  return [...new Set((sessionIds || []).map(value => String(value || '').trim()).filter(Boolean))]
+    .sort()
+    .join('|');
+}
+
+function handleBackupSessionChange() {
+  _backupScopeRequestSerial++;
+  _lastBackupExport = null;
+  const deleteArea = Q('backup-delete-area');
+  const alertBox = Q('backup-export-alert');
+  if (deleteArea) deleteArea.hidden = true;
+  if (alertBox) alertBox.innerHTML = '';
+  refreshBackupScopeSummary();
+}
+
 async function renderManageBackup(container) {
   if (prof?.role !== 'admin') {
     container.innerHTML = `<div class="alert alert-red">ระบบ Backup/Restore ใช้ได้เฉพาะ Admin เท่านั้น</div>`;
@@ -18360,9 +18378,9 @@ async function renderManageBackup(container) {
         <div class="admin-master-group-body">
         <div class="fg">
           <label>เลือกข้อมูลที่ต้องการ Backup</label>
-          <select id="backup-session" onchange="refreshBackupScopeSummary()">
-            ${(sessions || []).length > 1 ? `<option value="ALL">ทุก Session (${sessions.length})</option>` : ''}
+          <select id="backup-session" onchange="handleBackupSessionChange()">
             ${sessionOptions}
+            ${(sessions || []).length > 1 ? `<option value="ALL">ทุก Session (${sessions.length})</option>` : ''}
           </select>
         </div>
         <div class="fg">
@@ -18446,6 +18464,8 @@ async function renderManageBackup(container) {
 
 async function refreshBackupScopeSummary() {
   const sessionIds = backupSelectedSessionIds();
+  const scopeKey = backupSessionScopeKey(sessionIds);
+  const requestSerial = ++_backupScopeRequestSerial;
   const container = Q('backup-scope-summary');
   const button = Q('backup-export-btn');
   if (!container || !button || !sessionIds.length) return;
@@ -18453,16 +18473,20 @@ async function refreshBackupScopeSummary() {
   container.innerHTML = `<div class="load" style="padding:15px">กำลังตรวจจำนวนข้อมูล...</div>`;
   let ready = false;
   try {
-    const result = await invokeAdminBackup('scope_summary', { session_ids: sessionIds });
-    const counts = await backupScopeCountsWithItemLocation(sessionIds,result.counts || {});
+    const counts = await backupScopeCountsWithItemLocation(sessionIds);
+    if (requestSerial !== _backupScopeRequestSerial || scopeKey !== backupSessionScopeKey()) return;
     window._backupScopeCounts = counts;
+    window._backupScopeKey = scopeKey;
     container.innerHTML = backupCountCards(counts);
     ready = Number(counts.Sessions || 0) === sessionIds.length;
     if (!ready) throw new Error('ตรวจพบ Session ไม่ครบ กรุณาโหลดหน้าใหม่ก่อน Backup');
   } catch (error) {
+    if (requestSerial !== _backupScopeRequestSerial || scopeKey !== backupSessionScopeKey()) return;
     container.innerHTML = errBox(error.message);
   } finally {
-    button.disabled = !ready;
+    if (requestSerial === _backupScopeRequestSerial && scopeKey === backupSessionScopeKey()) {
+      button.disabled = !ready;
+    }
   }
 }
 
@@ -18485,26 +18509,63 @@ async function fetchBackupRowsByValues(table, columns, filterColumn, values) {
   const output = [];
   for (let start = 0; start < cleanValues.length; start += 50) {
     const batch = cleanValues.slice(start, start + 50);
-    const rows = await fetchAllBackupRows(table, columns, query => query.in(filterColumn, batch));
+    const rows = await fetchAllBackupRows(table, columns, query =>
+      batch.length === 1 ? query.eq(filterColumn,batch[0]) : query.in(filterColumn,batch));
     output.push(...rows);
   }
   return output;
 }
 
-async function backupScopeCountsWithItemLocation(sessionIds, counts={}) {
-  const output = { ...(counts || {}) };
-  const hasItems = Object.prototype.hasOwnProperty.call(output,'Items');
-  const hasLocations = Object.prototype.hasOwnProperty.call(output,'Locations');
-  if (hasItems && hasLocations) return output;
-  const [stockRows,assignmentRows] = await Promise.all([
-    hasItems ? Promise.resolve([]) :
-      fetchBackupRowsByValues('stock_snapshot',['id','item_id'],'session_id',sessionIds),
-    hasLocations ? Promise.resolve([]) :
-      fetchBackupRowsByValues('assignments',['id','location_id'],'session_id',sessionIds),
+async function fetchBackupExactCountByValues(table, filterColumn, values) {
+  const cleanValues = [...new Set((values || []).filter(Boolean))];
+  if (!cleanValues.length) return 0;
+  let total = 0;
+  for (let start = 0; start < cleanValues.length; start += 50) {
+    const batch = cleanValues.slice(start,start+50);
+    let query = sb.from(table).select('id',{ count:'exact',head:true });
+    query = batch.length === 1
+      ? query.eq(filterColumn,batch[0])
+      : query.in(filterColumn,batch);
+    const { count, error } = await query;
+    if (error) throw new Error(`ตรวจจำนวน ${table} ไม่สำเร็จ: ${error.message}`);
+    total += Number(count || 0);
+  }
+  return total;
+}
+
+async function backupScopeCountsWithItemLocation(sessionIds) {
+  const cleanSessionIds = [...new Set((sessionIds || []).filter(Boolean))];
+  const [sessionCount,assignmentRows,stockRows,annualJobs,annualJobItems,stockDetailCount,auditCount] = await Promise.all([
+    fetchBackupExactCountByValues('count_sessions','id',cleanSessionIds),
+    fetchBackupRowsByValues('assignments',['id','location_id'],'session_id',cleanSessionIds),
+    fetchBackupRowsByValues('stock_snapshot',['id','item_id','location_id'],'session_id',cleanSessionIds),
+    fetchBackupExactCountByValues('annual_count_jobs','session_id',cleanSessionIds),
+    fetchBackupExactCountByValues('annual_count_job_items','session_id',cleanSessionIds),
+    fetchBackupExactCountByValues('stock_snapshot_detail','session_id',cleanSessionIds),
+    fetchBackupExactCountByValues('audit_log','session_id',cleanSessionIds),
   ]);
-  if (!hasItems) output.Items = new Set(stockRows.map(row => row.item_id).filter(Boolean)).size;
-  if (!hasLocations) output.Locations = new Set(assignmentRows.map(row => row.location_id).filter(Boolean)).size;
-  return output;
+  const assignmentIds = assignmentRows.map(row => row.id).filter(Boolean);
+  const [countRows,approvalCount] = await Promise.all([
+    fetchBackupRowsByValues('count_records',['id','photo_url'],'assignment_id',assignmentIds),
+    fetchBackupExactCountByValues('variance_approvals','assignment_id',assignmentIds),
+  ]);
+  return {
+    Sessions:sessionCount,
+    Assignments:assignmentRows.length,
+    Annual_Jobs:annualJobs,
+    Annual_Job_Items:annualJobItems,
+    Items:new Set(stockRows.map(row => row.item_id).filter(Boolean)).size,
+    Locations:new Set([
+      ...stockRows.map(row => row.location_id),
+      ...assignmentRows.map(row => row.location_id),
+    ].filter(Boolean)).size,
+    Stock:stockRows.length,
+    Stock_Detail:stockDetailCount,
+    Counts:countRows.length,
+    Approvals:approvalCount,
+    Audit:auditCount,
+    Photos:new Set(countRows.map(row => String(row.photo_url || '').trim()).filter(Boolean)).size,
+  };
 }
 
 function backupCanonicalValue(value) {
@@ -18576,7 +18637,7 @@ function backupTeamCellValue(value) {
 }
 
 function backupRowsForExcel(rows, columns, formatVersion=BACKUP_FORMAT_VERSION) {
-  if (String(formatVersion) !== '3') return { rows:rows || [], columns:[...columns] };
+  if (Number(formatVersion) < 3) return { rows:rows || [], columns:[...columns] };
   const maxParts = Object.fromEntries(columns.map(column => [column,1]));
   const preparedRows = (rows || []).map(row => {
     const output = {};
@@ -18606,7 +18667,7 @@ function backupRowsForExcel(rows, columns, formatVersion=BACKUP_FORMAT_VERSION) 
 }
 
 function backupRowsFromExcel(rows, columns, formatVersion) {
-  if (String(formatVersion) !== '3') {
+  if (Number(formatVersion) < 3) {
     return (rows || []).map(row => Object.fromEntries(columns.map(column => [column,row?.[column] ?? null])));
   }
   return (rows || []).map(row => Object.fromEntries(columns.map(column => {
@@ -18624,7 +18685,7 @@ function backupRowsFromExcel(rows, columns, formatVersion) {
 }
 
 function backupManifestRowsForExcel(entries, formatVersion) {
-  if (String(formatVersion) !== '3') return entries;
+  if (Number(formatVersion) < 3) return entries;
   return (entries || []).flatMap(entry => {
     const parts = backupSplitExcelText(entry.value);
     return parts.map((value,index) => ({
@@ -18635,7 +18696,7 @@ function backupManifestRowsForExcel(entries, formatVersion) {
 }
 
 function backupManifestRowsFromExcel(entries, formatVersion) {
-  if (String(formatVersion) !== '3') return entries;
+  if (Number(formatVersion) < 3) return entries;
   const entryMap = new Map((entries || []).map(entry => [entry.key,entry.value]));
   return (entries || [])
     .filter(entry => !entry.key.includes(BACKUP_CHUNK_MARKER))
@@ -18650,7 +18711,102 @@ function backupManifestRowsFromExcel(entries, formatVersion) {
     });
 }
 
+function backupScopeSet(values) {
+  return new Set((values || []).map(value => String(value || '').trim()).filter(Boolean));
+}
+
+function sanitizeBackupDataForSessions(dataBySheet, sessionIds) {
+  const selectedSessionIds = backupScopeSet(sessionIds);
+  if (!selectedSessionIds.size) throw new Error('ไม่พบ Session ที่เลือกสำหรับ Backup');
+  const output = Object.fromEntries(BACKUP_SHEET_SPECS.map(spec =>
+    [spec.sheet,[...(dataBySheet?.[spec.sheet] || [])]]));
+  const inSelectedSession = row => selectedSessionIds.has(String(row?.session_id || ''));
+
+  output.Sessions = output.Sessions.filter(row => selectedSessionIds.has(String(row?.id || '')));
+  ['Assignments','Annual_Jobs','Annual_Job_Items','Stock','Stock_Detail','Audit']
+    .forEach(sheet => { output[sheet] = output[sheet].filter(inSelectedSession); });
+
+  const assignmentIds = backupScopeSet(output.Assignments.map(row => row.id));
+  output.Counts = output.Counts.filter(row => assignmentIds.has(String(row?.assignment_id || '')));
+  output.Approvals = output.Approvals.filter(row => assignmentIds.has(String(row?.assignment_id || '')));
+
+  const annualJobIds = backupScopeSet(output.Annual_Jobs.map(row => row.id));
+  output.Annual_Job_Items = output.Annual_Job_Items.filter(row =>
+    inSelectedSession(row) && annualJobIds.has(String(row?.job_id || '')));
+
+  const locationIds = backupScopeSet([
+    ...output.Assignments.map(row => row.location_id),
+    ...output.Annual_Job_Items.map(row => row.location_id),
+    ...output.Stock.map(row => row.location_id),
+    ...output.Stock_Detail.map(row => row.location_id),
+    ...output.Audit.map(row => row.location_id),
+  ]);
+  const itemIds = backupScopeSet([
+    ...output.Annual_Job_Items.map(row => row.item_id),
+    ...output.Stock.map(row => row.item_id),
+    ...output.Stock_Detail.map(row => row.item_id),
+    ...output.Counts.map(row => row.item_id),
+    ...output.Approvals.map(row => row.item_id),
+    ...output.Audit.map(row => row.item_id),
+  ]);
+  output.Locations = output.Locations.filter(row => locationIds.has(String(row?.id || '')));
+  output.Items = output.Items.filter(row => itemIds.has(String(row?.id || '')));
+
+  const profileIds = backupScopeSet([
+    ...output.Sessions.map(row => row.created_by),
+    ...output.Assignments.flatMap(row => [row.assigned_to]),
+    ...output.Annual_Jobs.flatMap(row => [row.assigned_to,row.created_by]),
+    ...output.Counts.map(row => row.counted_by),
+    ...output.Approvals.flatMap(row => [row.approved_by,row.wms_fixed_by]),
+    ...output.Audit.map(row => row.performed_by),
+  ]);
+  const counterIds = backupScopeSet([
+    ...output.Assignments.flatMap(row => [row.counter_r2_id,row.counter_r3_id]),
+    ...output.Counts.map(row => row.actual_counter_id),
+  ]);
+  output.Profiles = output.Profiles.filter(row => profileIds.has(String(row?.id || '')));
+  output.Counters = output.Counters.filter(row => counterIds.has(String(row?.id || '')));
+
+  validateBackupDataScope(output,[...selectedSessionIds]);
+  return output;
+}
+
+function validateBackupDataScope(dataBySheet, sessionIds) {
+  const selectedSessionIds = backupScopeSet(sessionIds);
+  const actualSessionIds = backupScopeSet((dataBySheet.Sessions || []).map(row => row.id));
+  const missingSessionIds = [...selectedSessionIds].filter(id => !actualSessionIds.has(id));
+  const extraSessionIds = [...actualSessionIds].filter(id => !selectedSessionIds.has(id));
+  const problems = [];
+  if (missingSessionIds.length) problems.push(`ไม่พบ Session ที่เลือก ${missingSessionIds.length} รายการ`);
+  if (extraSessionIds.length) problems.push(`พบ Session นอกขอบเขต ${extraSessionIds.length} รายการ`);
+
+  ['Assignments','Annual_Jobs','Annual_Job_Items','Stock','Stock_Detail','Audit'].forEach(sheet => {
+    const invalid = (dataBySheet[sheet] || []).filter(row =>
+      !selectedSessionIds.has(String(row?.session_id || ''))).length;
+    if (invalid) problems.push(`${sheet} ข้าม Session ${invalid} แถว`);
+  });
+
+  const assignmentIds = backupScopeSet((dataBySheet.Assignments || []).map(row => row.id));
+  ['Counts','Approvals'].forEach(sheet => {
+    const invalid = (dataBySheet[sheet] || []).filter(row =>
+      !assignmentIds.has(String(row?.assignment_id || ''))).length;
+    if (invalid) problems.push(`${sheet} ไม่ตรงกับงานที่เลือก ${invalid} แถว`);
+  });
+
+  const annualJobIds = backupScopeSet((dataBySheet.Annual_Jobs || []).map(row => row.id));
+  const invalidJobItems = (dataBySheet.Annual_Job_Items || []).filter(row =>
+    !annualJobIds.has(String(row?.job_id || ''))).length;
+  if (invalidJobItems) problems.push(`Annual_Job_Items ไม่ตรงกับ JOB ที่เลือก ${invalidJobItems} แถว`);
+
+  if (problems.length) {
+    throw new Error(`หยุดสร้างไฟล์เพื่อป้องกันข้อมูลข้าม Session: ${problems.join(' · ')}`);
+  }
+  return true;
+}
+
 async function collectBackupData(sessionIds) {
+  const cleanSessionIds = [...backupScopeSet(sessionIds)];
+  if (!cleanSessionIds.length) throw new Error('กรุณาเลือก Session ก่อน Backup');
   const dataBySheet = {};
   for (let index = 0; index < BACKUP_SHEET_SPECS.length; index++) {
     const spec = BACKUP_SHEET_SPECS[index];
@@ -18661,7 +18817,7 @@ async function collectBackupData(sessionIds) {
       rows = await fetchAllBackupRows(spec.table, spec.columns);
     } else if (spec.scope === 'session') {
       const filterColumn = spec.table === 'count_sessions' ? 'id' : 'session_id';
-      rows = await fetchBackupRowsByValues(spec.table, spec.columns, filterColumn, sessionIds);
+      rows = await fetchBackupRowsByValues(spec.table, spec.columns, filterColumn, cleanSessionIds);
     } else {
       const assignmentIds = (dataBySheet.Assignments || []).map(row => row.id);
       rows = await fetchBackupRowsByValues(spec.table, spec.columns, 'assignment_id', assignmentIds);
@@ -18671,7 +18827,7 @@ async function collectBackupData(sessionIds) {
     }
     dataBySheet[spec.sheet] = rows;
   }
-  return dataBySheet;
+  return sanitizeBackupDataForSessions(dataBySheet,cleanSessionIds);
 }
 
 function backupSafeFilePart(value) {
@@ -19150,6 +19306,7 @@ function appendTeamBackupSheet(workbook, sheetName, rows, columns) {
 function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BACKUP_FORMAT_VERSION) {
   if (typeof XLSX === 'undefined') throw new Error('ไม่พบระบบอ่าน/เขียน Excel');
   if (!BACKUP_SUPPORTED_VERSIONS.has(String(formatVersion))) throw new Error('Backup Format ไม่ถูกต้อง');
+  validateBackupDataScope(dataBySheet,sessionIds);
   formatVersion = String(formatVersion);
   const createdAt = new Date().toISOString();
   const rowCounts = {};
@@ -19247,18 +19404,32 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
 
 async function exportBackupExcel() {
   if (prof?.role !== 'admin') { adminOnlyMessage(); return; }
+  if (_backupExportRunning) {
+    alert('ระบบกำลังสร้าง Backup อยู่ กรุณารอให้เสร็จก่อน');
+    return;
+  }
   const sessionIds = backupSelectedSessionIds();
   if (!sessionIds.length) { alert('กรุณาเลือก Session'); return; }
+  const scopeKey = backupSessionScopeKey(sessionIds);
   const button = Q('backup-export-btn');
+  const sessionSelect = Q('backup-session');
+  const afterMode = Q('backup-after-mode');
   const alertBox = Q('backup-export-alert');
   const deleteArea = Q('backup-delete-area');
+  _backupExportRunning = true;
   if (button) button.disabled = true;
+  if (sessionSelect) sessionSelect.disabled = true;
+  if (afterMode) afterMode.disabled = true;
   if (deleteArea) deleteArea.hidden = true;
   _lastBackupExport = null;
   try {
     if (alertBox) alertBox.innerHTML = `<div class="alert alert-blue">กำลังรวบรวมข้อมูล กรุณาอย่าปิดหน้านี้...</div>`;
     setBackupProgress(1,'เริ่มสร้าง Backup...','export');
     const dataBySheet = await collectBackupData(sessionIds);
+    if (scopeKey !== backupSessionScopeKey()) {
+      throw new Error('ขอบเขต Session เปลี่ยนระหว่างสร้าง Backup กรุณาลองใหม่');
+    }
+    validateBackupDataScope(dataBySheet,sessionIds);
     const sessions = dataBySheet.Sessions || [];
     const scopeName = sessions.length === 1 ? sessions[0].name : `${sessions.length}_Sessions`;
     const fileName = `CycleCount_Backup_${backupTimestampForFile()}_${backupSafeFilePart(scopeName)}.xlsx`;
@@ -19293,7 +19464,10 @@ async function exportBackupExcel() {
     setBackupProgress(0,'Backup ไม่สำเร็จ','export');
     if (alertBox) alertBox.innerHTML = errBox(error.message || error);
   } finally {
-    if (button) button.disabled = false;
+    _backupExportRunning = false;
+    if (sessionSelect) sessionSelect.disabled = false;
+    if (afterMode) afterMode.disabled = false;
+    if (button) button.disabled = !backupSelectedSessionIds().length;
   }
 }
 
