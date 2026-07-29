@@ -10126,7 +10126,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v86-backup-session-scope';
+window.__CYCLE_COUNT_BUILD__ = 'v88-import-source-validation';
 
 let _viewportSyncFrame = 0;
 function syncViewportSize() {
@@ -10582,6 +10582,8 @@ function brandLogoHtml(context = 'sidebar') {
 let _html5Qr = null;   
 let _xlsxRawRows = null;   
 let _xlsxParsed  = null;   
+let _xlsxImportAnalysis = null;
+let _xlsxWorksheetName = '';
 let _backupParsed = null;
 let _lastBackupExport = null;
 let _backupScopeRequestSerial = 0;
@@ -16722,7 +16724,7 @@ async function refreshZoneDashboard() {
 }
 
 async function renderManageImport(container) {
-  const { data: sessions } = await sb.from('count_sessions').select('id,name').in('status',['draft','active']);
+  const { data: sessions } = await sb.from('count_sessions').select('id,name,status').in('status',['draft','active']);
   const sessOpts = sessions?.length ? sessions.map(s=>`<option value="${s.id}">${s.name} · ${s.status}</option>`).join('') : '<option value="">ไม่มี Session</option>';
 
   container.innerHTML = `
@@ -18156,128 +18158,443 @@ async function doDeleteByZoneRow() {
   } catch (err) { al.innerHTML = errBox(err.message || 'เกิดข้อผิดพลาดในการลบ'); } finally { btn.disabled = false; }
 }
 
+const XLSX_IMPORT_COLUMN_RULES = Object.freeze({
+  location:{
+    label:'Location',
+    exact:['LOCATION','LOCATIONCODE','LOCCODE','LOC','WAREHOUSELOCATION'],
+    contains:['LOCATIONCODE','WAREHOUSELOCATION'],
+  },
+  item:{
+    label:'Item',
+    exact:['ITEM','ITEMCODE','ITEMNUMBER','SKU','ARTICLE','MATERIAL','MATERIALNUMBER','PRODUCTNUMBER'],
+    contains:['ITEMCODE','ITEMNUMBER','MATERIALNUMBER','PRODUCTNUMBER'],
+  },
+  description:{
+    label:'Description',
+    exact:['ITEMDESC','ITEMDESCRIPTION','DESCRIPTION','PRODUCTNAME','ITEMNAME','NAME'],
+    contains:['ITEMDESCRIPTION','DESCRIPTION','PRODUCTNAME'],
+  },
+  onhand:{
+    label:'OH',
+    exact:['OH','SUMOFOH','ONHAND','ONHANDQTY','ONHANDQUANTITY','QTY','QUANTITY','PHYSICALINVENTORY','AVAILABLEPHYSICAL','AVAILABLEQUANTITY','STOCKONHAND','STOCK'],
+    contains:['SUMOFOH','ONHANDQTY','ONHANDQUANTITY','PHYSICALINVENTORY','AVAILABLEPHYSICAL','STOCKONHAND'],
+  },
+  allocated:{
+    label:'AL',
+    exact:['AL','SUMOFAL','ALQTY','ALLOCATED','ALLOCATEDQTY','ALLOCATEDQUANTITY'],
+    contains:['SUMOFAL','ALLOCATEDQTY','ALLOCATEDQUANTITY'],
+  },
+  licensePlate:{
+    label:'License Plate',
+    exact:['LICENSEPLATE','LPN','LICENSEPLATENUMBER','LPNNO','PALLET','PALLETID','HANDLINGUNIT','HANDLINGUNITID'],
+    contains:['LICENSEPLATE','HANDLINGUNIT'],
+  },
+  lot:{
+    label:'Lot',
+    exact:['LOT','LOTNUMBER','BATCH','BATCHNUMBER'],
+    contains:['LOTNUMBER','BATCHNUMBER'],
+  },
+  status:{
+    label:'Status',
+    exact:['STATUS','INVSTATUS','INVENTORYSTATUS','INVENTORYSTATUSCODE'],
+    contains:['INVENTORYSTATUS'],
+  },
+  uom:{
+    label:'UOM',
+    exact:['UOM','UNIT','UNITOFMEASURE','STOCKUNIT','INVENTORYUNIT'],
+    contains:['UNITOFMEASURE','INVENTORYUNIT'],
+  },
+});
+
+function normalizeImportHeader(value) {
+  return String(value || '').trim().toUpperCase().replace(/[^A-Z0-9ก-๙]+/g,'');
+}
+
+function normalizeImportText(value) {
+  return String(value ?? '').replace(/\u00a0/g,' ').trim();
+}
+
+function importCodeKey(value) {
+  return normalizeImportText(value).toLocaleUpperCase('en-US');
+}
+
+function resolveImportColumn(headers, rule) {
+  const normalizedHeaders = headers.map(header => ({ header, normalized:normalizeImportHeader(header) }));
+  for (const term of rule.exact || []) {
+    const normalizedTerm = normalizeImportHeader(term);
+    const match = normalizedHeaders.find(entry => entry.normalized === normalizedTerm);
+    if (match) return match.header;
+  }
+  for (const term of rule.contains || []) {
+    const normalizedTerm = normalizeImportHeader(term);
+    const match = normalizedHeaders.find(entry => normalizedTerm && entry.normalized.includes(normalizedTerm));
+    if (match) return match.header;
+  }
+  return '';
+}
+
+function parseImportNumber(value) {
+  const normalized = normalizeImportText(value).replace(/,/g,'');
+  if (!normalized) return null;
+  const negative = /^\(.+\)$/.test(normalized);
+  const parsedValue = Number.parseFloat(normalized.replace(/[()]/g,''));
+  return Number.isFinite(parsedValue) ? (negative ? -parsedValue : parsedValue) : null;
+}
+
+function importLocationFilterRegex(value) {
+  const source = normalizeImportText(value);
+  if (!source) return null;
+  const escaped = source.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/%/g,'.*');
+  return new RegExp(`^${escaped}`,'i');
+}
+
+function analyzeXlsxImportRows(rows, locFilter='') {
+  const headers = [...new Set((rows || []).flatMap(row => Object.keys(row || {})))];
+  const columns = Object.fromEntries(
+    Object.entries(XLSX_IMPORT_COLUMN_RULES).map(([key,rule]) => [key,resolveImportColumn(headers,rule)])
+  );
+  const missingRequired = ['location','item','onhand'].filter(key => !columns[key]);
+  const errors = missingRequired.map(key => `ไม่พบคอลัมน์ ${XLSX_IMPORT_COLUMN_RULES[key].label}`);
+  const parsed = [];
+  const rejected = [];
+  let ignoredByFilter = 0;
+  const locationRegex = importLocationFilterRegex(locFilter);
+
+  (rows || []).forEach((row,index) => {
+    const value = key => columns[key] ? normalizeImportText(row?.[columns[key]]) : '';
+    const locCode = value('location');
+    if (locationRegex && locCode && !locationRegex.test(locCode)) {
+      ignoredByFilter++;
+      return;
+    }
+    const itemCode = value('item');
+    const onhandRaw = value('onhand');
+    const onhandValue = parseImportNumber(onhandRaw);
+    const reasons = [];
+    if (!locCode) reasons.push('Location ว่าง');
+    if (!itemCode) reasons.push('Item ว่าง');
+    if (onhandRaw && onhandValue === null) reasons.push(`OH ไม่ใช่ตัวเลข (${onhandRaw})`);
+    if (reasons.length) {
+      rejected.push({ rowNumber:index + 2, reasons, locCode, itemCode, onhandRaw });
+      return;
+    }
+    const allocatedRaw = value('allocated');
+    parsed.push({
+      sourceRow:index + 2,
+      locCode,
+      itemCode,
+      itemDesc:value('description'),
+      onhand:onhandValue ?? 0,
+      alQty:parseImportNumber(allocatedRaw),
+      lpn:value('licensePlate'),
+      lot:value('lot'),
+      invStatus:value('status'),
+      uom:value('uom'),
+    });
+  });
+
+  const metrics = {
+    rows:parsed.length,
+    items:new Set(parsed.map(row => importCodeKey(row.itemCode))).size,
+    locations:new Set(parsed.map(row => importCodeKey(row.locCode))).size,
+    licensePlates:columns.licensePlate
+      ? new Set(parsed.map(row => importCodeKey(row.lpn))).size
+      : 0,
+    sumOH:parsed.reduce((sum,row) => sum + (Number(row.onhand) || 0),0),
+  };
+  return { headers, columns, errors, parsed, rejected, ignoredByFilter, metrics };
+}
+
+function renderXlsxImportPreview(analysis) {
+  const mappedColumns = Object.entries(analysis.columns)
+    .filter(([,column]) => column)
+    .map(([key,column]) => `${XLSX_IMPORT_COLUMN_RULES[key].label}: ${column}`)
+    .join(' · ');
+  const metric = (value,maximumFractionDigits=0) =>
+    Number(value || 0).toLocaleString('th-TH',{ maximumFractionDigits });
+  const rejectionRows = analysis.rejected.slice(0,6).map(row =>
+    `แถว ${row.rowNumber}: ${row.reasons.join(', ')}`
+  );
+  const hasBlockingProblem = analysis.errors.length || analysis.rejected.length;
+  return `
+    <div class="alert ${hasBlockingProblem ? 'alert-red' : 'alert-green'}" style="font-size:13px;line-height:1.6">
+      <strong>${hasBlockingProblem ? '❌ ไฟล์ยังไม่พร้อม Import' : '✅ ตรวจข้อมูลก่อน Import ผ่าน'}</strong>
+      ${_xlsxWorksheetName ? `<br>ชีตที่อ่าน: <strong>${escapeWmsText(_xlsxWorksheetName)}</strong>` : ''}
+      <br>แถวพร้อม Import ${metric(analysis.metrics.rows)} จาก ${metric(_xlsxRawRows?.length || 0)} แถว
+      ${analysis.ignoredByFilter ? ` · ไม่อยู่ใน Filter ${metric(analysis.ignoredByFilter)} แถว` : ''}
+    </div>
+    <div class="backup-count-grid" style="margin:12px 0">
+      <div class="backup-count-chip"><strong>${metric(analysis.metrics.items)}</strong><span>Distinct Item</span></div>
+      <div class="backup-count-chip"><strong>${metric(analysis.metrics.locations)}</strong><span>Distinct Location</span></div>
+      <div class="backup-count-chip"><strong>${metric(analysis.metrics.licensePlates)}</strong><span>Distinct License Plate</span></div>
+      <div class="backup-count-chip"><strong>${metric(analysis.metrics.sumOH,2)}</strong><span>SUM OH</span></div>
+    </div>
+    <div style="font-size:11px;color:var(--text-muted);line-height:1.55;overflow-wrap:anywhere">
+      หัวคอลัมน์ที่จับคู่: ${escapeWmsText(mappedColumns || 'ไม่พบ')}
+    </div>
+    ${analysis.errors.length ? `<div class="alert alert-red" style="font-size:12px;margin-top:10px">${analysis.errors.map(escapeWmsText).join('<br>')}</div>` : ''}
+    ${analysis.rejected.length ? `<div class="alert alert-red" style="font-size:12px;margin-top:10px">
+      พบแถวผิดปกติ ${metric(analysis.rejected.length)} แถว ระบบหยุดไว้เพื่อไม่ให้ยอดหาย<br>
+      ${rejectionRows.map(escapeWmsText).join('<br>')}
+      ${analysis.rejected.length > rejectionRows.length ? '<br>… และแถวอื่นอีก' : ''}
+    </div>` : ''}`;
+}
+
 function readXlsxFile(e) {
-  const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
+  const file = e.target.files[0];
+  const btn = Q('ibtn');
+  const prev = Q('ipreview');
+  _xlsxRawRows = null;
+  _xlsxParsed = null;
+  _xlsxImportAnalysis = null;
+  _xlsxWorksheetName = '';
+  if (btn) btn.disabled = true;
+  if (!file) {
+    if (prev) prev.style.display = 'none';
+    return;
+  }
+  const reader = new FileReader();
   reader.onload = function(evt) {
-    const data = new Uint8Array(evt.target.result); const workbook = XLSX.read(data, { type: 'array' });
-    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-    _xlsxRawRows = XLSX.utils.sheet_to_json(worksheet, { defval: '' }); refreshXlsxPreview();
+    try {
+      const data = new Uint8Array(evt.target.result);
+      const workbook = XLSX.read(data, { type:'array', cellDates:false });
+      const filterValue = Q('ilocfilter')?.value || '';
+      const candidates = workbook.SheetNames.map((sheetName,index) => {
+        const worksheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(worksheet, {
+          defval:'',
+          raw:false,
+          blankrows:false,
+        });
+        const analysis = analyzeXlsxImportRows(rows,filterValue);
+        const score = (analysis.errors.length ? -1000000 : 0) + analysis.parsed.length;
+        return { sheetName, rows, analysis, score, index };
+      }).sort((a,b) => b.score - a.score || a.index - b.index);
+      const selected = candidates[0];
+      if (!selected?.rows?.length) throw new Error('ไม่พบข้อมูลในไฟล์ Excel');
+      _xlsxWorksheetName = selected.sheetName;
+      _xlsxRawRows = selected.rows;
+      _xlsxImportAnalysis = selected.analysis;
+      refreshXlsxPreview();
+    } catch (error) {
+      if (prev) {
+        prev.style.display = 'block';
+        prev.innerHTML = errBox(error.message || 'อ่านไฟล์ Excel ไม่สำเร็จ');
+      }
+    }
+  };
+  reader.onerror = function() {
+    if (prev) {
+      prev.style.display = 'block';
+      prev.innerHTML = errBox('อ่านไฟล์ Excel ไม่สำเร็จ');
+    }
   };
   reader.readAsArrayBuffer(file);
 }
 
 function refreshXlsxPreview() {
-  const btn = Q('ibtn'); const prev = Q('ipreview');
-  if (!_xlsxRawRows || !_xlsxRawRows.length) { if (prev) prev.style.display = 'none'; if (btn) btn.disabled = true; return; }
-  const locFilter = (Q('ilocfilter')?.value || '').trim().toUpperCase(); const parsed = [];
-  for (const row of _xlsxRawRows) {
-    const keys = Object.keys(row);
-    const normalizeHeader = value => String(value || '').trim().toUpperCase().replace(/[^A-Z0-9ก-๙]+/g,'');
-    const normalizedKeys = keys.map(key => ({ key,normalized:normalizeHeader(key) }));
-    const findField = (exactTerms,containsTerms=[]) => {
-      const exact = exactTerms.map(normalizeHeader);
-      const contains = containsTerms.map(normalizeHeader);
-      const match = normalizedKeys.find(entry => exact.includes(entry.normalized))
-        || normalizedKeys.find(entry => contains.some(term => term && entry.normalized.includes(term)));
-      return match ? String(row[match.key] ?? '').trim() : '';
-    };
-    const parseImportNumber = value => {
-      const normalized = String(value ?? '').trim().replace(/,/g,'');
-      if (!normalized) return null;
-      const negative = /^\(.+\)$/.test(normalized);
-      const parsedValue = Number.parseFloat(normalized.replace(/[()]/g,''));
-      return Number.isFinite(parsedValue) ? (negative ? -parsedValue : parsedValue) : null;
-    };
-    const locCode = findField(
-      ['LOCATION','LOCATIONCODE','LOCCODE','WAREHOUSELOCATION'],
-      ['LOCATIONCODE','LOCATION'],
-    );
-    const itemCode = findField(
-      ['ITEM','ITEMCODE','ITEMNUMBER','SKU','ARTICLE','MATERIAL','MATERIALNUMBER','PRODUCTNUMBER'],
-      ['ITEMCODE','ITEMNUMBER','MATERIALNUMBER'],
-    );
-    const itemDesc = findField(
-      ['ITEMDESC','ITEMDESCRIPTION','DESCRIPTION','PRODUCTNAME','ITEMNAME','NAME'],
-      ['DESCRIPTION','PRODUCTNAME'],
-    );
-    const onhandRaw = findField(
-      ['ONHAND','ONHANDQTY','ONHANDQUANTITY','QTY','QUANTITY','PHYSICALINVENTORY','AVAILABLEPHYSICAL','AVAILABLEQUANTITY','STOCKONHAND'],
-      ['ONHANDQTY','ONHANDQUANTITY','PHYSICALINVENTORY','AVAILABLEPHYSICAL'],
-    );
-    const allocatedRaw = findField(
-      ['AL','ALQTY','ALLOCATED','ALLOCATEDQTY','ALLOCATEDQUANTITY'],
-      ['ALLOCATEDQTY','ALLOCATEDQUANTITY'],
-    );
-    const onhand = parseImportNumber(onhandRaw) ?? 0;
-    const alQty = parseImportNumber(allocatedRaw);
-    const lpn = findField(
-      ['LPN','LICENSEPLATE','LICENSEPLATENUMBER','PALLET','PALLETID','HANDLINGUNIT','HANDLINGUNITID'],
-      ['LICENSEPLATE','HANDLINGUNIT'],
-    );
-    const lot = findField(['LOT','LOTNUMBER','BATCH','BATCHNUMBER'],['LOTNUMBER','BATCHNUMBER']);
-    const invStatus = findField(
-      ['STATUS','INVSTATUS','INVENTORYSTATUS','INVENTORYSTATUSCODE'],
-      ['INVENTORYSTATUS'],
-    );
-    const uom = findField(
-      ['UOM','UNIT','UNITOFMEASURE','STOCKUNIT','INVENTORYUNIT'],
-      ['UNITOFMEASURE','INVENTORYUNIT'],
-    );
-    if (!locCode || !itemCode) continue;
-    if (locFilter) { const regex = new RegExp('^' + locFilter.replace(/%/g, '.*'), 'i'); if (!regex.test(locCode)) continue; }
-    parsed.push({ locCode, itemCode, itemDesc, onhand, alQty, lpn, lot, invStatus, uom });
+  const btn = Q('ibtn');
+  const prev = Q('ipreview');
+  if (!_xlsxRawRows || !_xlsxRawRows.length) {
+    if (prev) prev.style.display = 'none';
+    if (btn) btn.disabled = true;
+    return;
   }
-  _xlsxParsed = parsed;
-  if (prev) { prev.style.display = 'block'; prev.innerHTML = `<div class="alert alert-blue" style="font-size:13px;margin-bottom:0">📊 พบ <strong>${parsed.length}</strong> รายการที่พร้อม Import (จากทั้งหมด ${_xlsxRawRows.length} แถว)</div>`; }
-  if (btn) btn.disabled = parsed.length === 0;
+  const analysis = analyzeXlsxImportRows(_xlsxRawRows,Q('ilocfilter')?.value || '');
+  _xlsxImportAnalysis = analysis;
+  _xlsxParsed = analysis.parsed;
+  if (prev) {
+    prev.style.display = 'block';
+    prev.innerHTML = renderXlsxImportPreview(analysis);
+  }
+  if (btn) {
+    btn.disabled = !analysis.parsed.length || Boolean(analysis.errors.length) || Boolean(analysis.rejected.length);
+  }
+}
+
+async function fetchImportedScopeRows(table,columns,sessionId,locationIds) {
+  const output = [];
+  const cleanLocationIds = [...new Set((locationIds || []).filter(Boolean))];
+  for (let locationStart = 0; locationStart < cleanLocationIds.length; locationStart += 50) {
+    const locationBatch = cleanLocationIds.slice(locationStart,locationStart + 50);
+    for (let from = 0; ; from += 1000) {
+      const { data,error } = await sb.from(table)
+        .select(columns.join(','))
+        .eq('session_id',sessionId)
+        .in('location_id',locationBatch)
+        .range(from,from + 999);
+      if (error) throw error;
+      output.push(...(data || []));
+      if (!data || data.length < 1000) break;
+    }
+  }
+  return output;
 }
 
 async function doImportXlsx() {
-  const sid = Q('is')?.value; const al = Q('ia'); const btn = Q('ibtn');
+  const sid = Q('is')?.value;
+  const al = Q('ia');
+  const btn = Q('ibtn');
+  const analysis = _xlsxImportAnalysis;
   if (!sid) { alert('กรุณาเลือก Session ก่อน'); return; }
-  if (!_xlsxParsed || !_xlsxParsed.length) { alert('ไม่มีข้อมูลที่พร้อม Import'); return; }
-  btn.disabled = true; al.innerHTML = `<div class="alert alert-blue">⏳ กำลังประมวลผล ${_xlsxParsed.length} รายการ...</div>`;
+  if (!analysis?.parsed?.length) { alert('ไม่มีข้อมูลที่พร้อม Import'); return; }
+  if (analysis.errors.length || analysis.rejected.length) {
+    alert('ไฟล์ยังไม่ผ่านการตรวจ กรุณาแก้แถวหรือหัวคอลัมน์ที่แจ้งก่อน Import');
+    return;
+  }
+  btn.disabled = true;
+  al.innerHTML = `<div class="alert alert-blue">⏳ กำลังประมวลผล ${analysis.parsed.length.toLocaleString()} แถว...</div>`;
   try {
-    const uniqueLocsMap = new Map(); const uniqueItemsMap = new Map();
-    _xlsxParsed.forEach(r => {
-      if (!uniqueLocsMap.has(r.locCode)) uniqueLocsMap.set(r.locCode, { code: r.locCode, zone: computeZone(r.locCode, r.itemDesc) });
-      if (!uniqueItemsMap.has(r.itemCode)) uniqueItemsMap.set(r.itemCode, { code: r.itemCode, description: r.itemDesc });
-    });
-    const { data: dbLocs, error: eLoc } = await sb.from('locations').upsert(Array.from(uniqueLocsMap.values()), { onConflict: 'code' }).select('id,code');
-    if (eLoc) throw eLoc; const locIdMap = new Map(dbLocs.map(l => [l.code, l.id]));
-    const { data: dbItems, error: eItem } = await sb.from('items').upsert(Array.from(uniqueItemsMap.values()), { onConflict: 'code' }).select('id,code');
-    if (eItem) throw eItem; const itemIdMap = new Map(dbItems.map(i => [i.code, i.id]));
-
-    const snapMap = new Map(); const detailsList = [];
-    _xlsxParsed.forEach(r => {
-      const locId = locIdMap.get(r.locCode); const itemId = itemIdMap.get(r.itemCode); if (!locId || !itemId) return;
-      const key = `${sid}|${locId}|${itemId}`;
-      if (!snapMap.has(key)) snapMap.set(key, { session_id: sid, location_id: locId, item_id: itemId, onhand_qty: 0, al_qty: r.alQty });
-      snapMap.get(key).onhand_qty += r.onhand;
-      if (r.lpn || r.lot || r.invStatus || r.uom) detailsList.push({ session_id: sid, location_id: locId, item_id: itemId, license_plate: r.lpn || null, lot: r.lot || null, inventory_status: r.invStatus || null, qty: r.onhand, uom: r.uom || null });
+    const parsedRows = analysis.parsed;
+    const uniqueLocsMap = new Map();
+    const uniqueItemsMap = new Map();
+    parsedRows.forEach(row => {
+      const locKey = importCodeKey(row.locCode);
+      const itemKey = importCodeKey(row.itemCode);
+      if (!uniqueLocsMap.has(locKey)) {
+        uniqueLocsMap.set(locKey,{ code:row.locCode, zone:computeZone(row.locCode,row.itemDesc) });
+      }
+      if (!uniqueItemsMap.has(itemKey)) {
+        uniqueItemsMap.set(itemKey,{ code:row.itemCode, description:row.itemDesc });
+      }
     });
 
-    const snapList = Array.from(snapMap.values()); const BATCH = 200;
-    al.innerHTML = `<div class="alert alert-blue">⏳ กำลังบันทึก Stock Snapshot (${snapList.length} รายการ)...</div>`;
-    for (let i = 0; i < snapList.length; i += BATCH) { const { error } = await sb.from('stock_snapshot').upsert(snapList.slice(i, i+BATCH), { onConflict: 'session_id,location_id,item_id' }); if (error) throw error; }
+    const { data:dbLocs,error:eLoc } = await sb.from('locations')
+      .upsert(Array.from(uniqueLocsMap.values()),{ onConflict:'code' })
+      .select('id,code');
+    if (eLoc) throw eLoc;
+    const locIdMap = new Map((dbLocs || []).map(row => [importCodeKey(row.code),row.id]));
+    if (locIdMap.size !== uniqueLocsMap.size) {
+      throw new Error(`Location บันทึกไม่ครบ: ต้องได้ ${uniqueLocsMap.size} แต่ได้ ${locIdMap.size}`);
+    }
+
+    const { data:dbItems,error:eItem } = await sb.from('items')
+      .upsert(Array.from(uniqueItemsMap.values()),{ onConflict:'code' })
+      .select('id,code');
+    if (eItem) throw eItem;
+    const itemIdMap = new Map((dbItems || []).map(row => [importCodeKey(row.code),row.id]));
+    if (itemIdMap.size !== uniqueItemsMap.size) {
+      throw new Error(`Item บันทึกไม่ครบ: ต้องได้ ${uniqueItemsMap.size} แต่ได้ ${itemIdMap.size}`);
+    }
+
+    const snapMap = new Map();
+    const detailsList = [];
+    parsedRows.forEach(row => {
+      const locId = locIdMap.get(importCodeKey(row.locCode));
+      const itemId = itemIdMap.get(importCodeKey(row.itemCode));
+      if (!locId || !itemId) throw new Error(`จับคู่ ID ไม่สำเร็จที่แถว ${row.sourceRow}`);
+      const key = `${locId}|${itemId}`;
+      if (!snapMap.has(key)) {
+        snapMap.set(key,{
+          session_id:sid,
+          location_id:locId,
+          item_id:itemId,
+          onhand_qty:0,
+          al_qty:row.alQty,
+        });
+      }
+      snapMap.get(key).onhand_qty += Number(row.onhand) || 0;
+      if (row.lpn || row.lot || row.invStatus || row.uom) {
+        detailsList.push({
+          session_id:sid,
+          location_id:locId,
+          item_id:itemId,
+          license_plate:row.lpn || null,
+          lot:row.lot || null,
+          inventory_status:row.invStatus || null,
+          qty:Number(row.onhand) || 0,
+          uom:row.uom || null,
+        });
+      }
+    });
+
+    const snapList = Array.from(snapMap.values());
     const importedLocationIds = [...new Set(snapList.map(row => row.location_id).filter(Boolean))];
-    for (let i = 0; i < importedLocationIds.length; i += BATCH) {
+    const BATCH = 200;
+    al.innerHTML = `<div class="alert alert-blue">⏳ กำลังบันทึก Stock Snapshot (${snapList.length.toLocaleString()} รายการ)...</div>`;
+    for (let start = 0; start < snapList.length; start += BATCH) {
+      const { error } = await sb.from('stock_snapshot')
+        .upsert(snapList.slice(start,start + BATCH),{ onConflict:'session_id,location_id,item_id' });
+      if (error) throw error;
+    }
+
+    for (let start = 0; start < importedLocationIds.length; start += BATCH) {
       const { error } = await sb.from('stock_snapshot_detail')
         .delete()
         .eq('session_id',sid)
-        .in('location_id',importedLocationIds.slice(i,i+BATCH));
+        .in('location_id',importedLocationIds.slice(start,start + BATCH));
       if (error) throw error;
     }
     if (detailsList.length) {
-      al.innerHTML = `<div class="alert alert-blue">⏳ กำลังบันทึก LPN/Lot Details (${detailsList.length} รายการ)...</div>`;
-      for (let i = 0; i < detailsList.length; i += BATCH) { const { error } = await sb.from('stock_snapshot_detail').insert(detailsList.slice(i, i+BATCH)); if (error) console.warn('Detail insert warning:', error); }
+      al.innerHTML = `<div class="alert alert-blue">⏳ กำลังบันทึกรายละเอียด (${detailsList.length.toLocaleString()} แถว)...</div>`;
+      for (let start = 0; start < detailsList.length; start += BATCH) {
+        const { error } = await sb.from('stock_snapshot_detail').insert(detailsList.slice(start,start + BATCH));
+        if (error) throw error;
+      }
     }
-    al.innerHTML = `<div class="alert alert-green">✅ Import ข้อมูลสำเร็จเรียบร้อย (${snapList.length} Unique Snapshots)</div>`;
-    _xlsxRawRows = null; _xlsxParsed = null; if (Q('ixlsx')) Q('ixlsx').value = ''; if (Q('ipreview')) Q('ipreview').style.display = 'none';
-  } catch (err) { al.innerHTML = errBox(err.message || 'เกิดข้อผิดพลาดระหว่าง Import'); } finally { btn.disabled = false; }
+
+    al.innerHTML = `<div class="alert alert-blue">⏳ กำลังตรวจยอดหลัง Import...</div>`;
+    let [savedSnapshots,savedDetails] = await Promise.all([
+      fetchImportedScopeRows('stock_snapshot',['id','location_id','item_id','onhand_qty'],sid,importedLocationIds),
+      fetchImportedScopeRows('stock_snapshot_detail',['id','location_id','item_id','license_plate','qty'],sid,importedLocationIds),
+    ]);
+    const expectedPairKeys = new Set(snapList.map(row => `${row.location_id}|${row.item_id}`));
+    const staleSnapshotIds = savedSnapshots
+      .filter(row => !expectedPairKeys.has(`${row.location_id}|${row.item_id}`))
+      .map(row => row.id)
+      .filter(Boolean);
+    for (let start = 0; start < staleSnapshotIds.length; start += BATCH) {
+      const { error } = await sb.from('stock_snapshot')
+        .delete()
+        .eq('session_id',sid)
+        .in('id',staleSnapshotIds.slice(start,start + BATCH));
+      if (error) throw error;
+    }
+    if (staleSnapshotIds.length) {
+      savedSnapshots = savedSnapshots.filter(row => expectedPairKeys.has(`${row.location_id}|${row.item_id}`));
+    }
+    if (savedSnapshots.length !== snapList.length) {
+      throw new Error(`ตรวจยอดหลัง Import ไม่ผ่าน: Stock Snapshot ต้องได้ ${snapList.length} รายการ แต่พบ ${savedSnapshots.length}`);
+    }
+    const savedSnapshotMap = new Map(savedSnapshots.map(row => [`${row.location_id}|${row.item_id}`,row]));
+    const snapshotMismatch = snapList.find(expected => {
+      const actual = savedSnapshotMap.get(`${expected.location_id}|${expected.item_id}`);
+      return !actual || Math.abs((Number(actual.onhand_qty) || 0) - expected.onhand_qty) > 0.000001;
+    });
+    if (snapshotMismatch) throw new Error('ตรวจยอดหลัง Import ไม่ผ่าน: Stock Snapshot หรือ OH ไม่ตรงกับไฟล์');
+    if (savedDetails.length !== detailsList.length) {
+      throw new Error(`ตรวจยอดหลัง Import ไม่ผ่าน: รายละเอียดต้องได้ ${detailsList.length} แถว แต่พบ ${savedDetails.length}`);
+    }
+    const expectedDistinctLP = new Set(detailsList.map(row => importCodeKey(row.license_plate))).size;
+    const actualDistinctLP = new Set(savedDetails.map(row => importCodeKey(row.license_plate))).size;
+    if (actualDistinctLP !== expectedDistinctLP) {
+      throw new Error(`ตรวจยอดหลัง Import ไม่ผ่าน: License Plate ต้องได้ ${expectedDistinctLP} แต่พบ ${actualDistinctLP}`);
+    }
+
+    const metrics = analysis.metrics;
+    al.innerHTML = `<div class="alert alert-green" style="line-height:1.65">
+      ✅ Import และตรวจยอดสำเร็จ<br>
+      Item ${metrics.items.toLocaleString()} · Location ${metrics.locations.toLocaleString()} ·
+      License Plate ${metrics.licensePlates.toLocaleString()} · SUM OH ${Number(metrics.sumOH).toLocaleString('th-TH',{ maximumFractionDigits:2 })}
+    </div>`;
+    _xlsxRawRows = null;
+    _xlsxParsed = null;
+    _xlsxImportAnalysis = null;
+    _xlsxWorksheetName = '';
+    if (Q('ixlsx')) Q('ixlsx').value = '';
+    if (Q('ipreview')) Q('ipreview').style.display = 'none';
+  } catch (err) {
+    al.innerHTML = errBox(err.message || 'เกิดข้อผิดพลาดระหว่าง Import');
+  } finally {
+    btn.disabled = !_xlsxImportAnalysis?.parsed?.length
+      || Boolean(_xlsxImportAnalysis?.errors?.length)
+      || Boolean(_xlsxImportAnalysis?.rejected?.length);
+  }
 }
 
 function backupCountCards(counts={}) {
+  const hasStockQty = Object.prototype.hasOwnProperty.call(counts,'Stock_Qty');
+  const hasDistinctLicensePlate = Object.prototype.hasOwnProperty.call(counts,'Stock_Detail_Distinct');
   const labels = {
     Sessions:'Session', Assignments:'งานที่จ่าย', Annual_Jobs:'Annual JOB', Annual_Job_Items:'รายการใน JOB', Items:'ITEM', Locations:'Location', Stock:'Stock',
     Stock_Detail:'LPN / Lot', Counts:'ผลการนับ', Approvals:'ผลอนุมัติ',
@@ -18285,8 +18602,20 @@ function backupCountCards(counts={}) {
   };
   return `<div class="backup-count-grid">${Object.entries(labels).map(([key,label]) => `
     <div class="backup-count-chip">
-      <strong>${Number(counts[key] || 0).toLocaleString()}</strong>
-      <span>${label}</span>
+      <strong>${Number(
+        key === 'Stock' && hasStockQty
+          ? counts.Stock_Qty
+          : key === 'Stock_Detail' && hasDistinctLicensePlate
+            ? counts.Stock_Detail_Distinct
+            : counts[key] || 0
+      ).toLocaleString('th-TH',{ maximumFractionDigits:2 })}</strong>
+      <span>${
+        key === 'Stock'
+          ? (hasStockQty ? 'Stock Qty (SUM OH)' : 'Stock Lines')
+          : key === 'Stock_Detail' && hasDistinctLicensePlate
+            ? 'License Plate (Distinct)'
+            : label
+      }</span>
     </div>`).join('')}</div>`;
 }
 
@@ -18535,13 +18864,13 @@ async function fetchBackupExactCountByValues(table, filterColumn, values) {
 
 async function backupScopeCountsWithItemLocation(sessionIds) {
   const cleanSessionIds = [...new Set((sessionIds || []).filter(Boolean))];
-  const [sessionCount,assignmentRows,stockRows,annualJobs,annualJobItems,stockDetailCount,auditCount] = await Promise.all([
+  const [sessionCount,assignmentRows,stockRows,annualJobs,annualJobItems,stockDetailRows,auditCount] = await Promise.all([
     fetchBackupExactCountByValues('count_sessions','id',cleanSessionIds),
     fetchBackupRowsByValues('assignments',['id','location_id'],'session_id',cleanSessionIds),
-    fetchBackupRowsByValues('stock_snapshot',['id','item_id','location_id'],'session_id',cleanSessionIds),
+    fetchBackupRowsByValues('stock_snapshot',['id','item_id','location_id','onhand_qty'],'session_id',cleanSessionIds),
     fetchBackupExactCountByValues('annual_count_jobs','session_id',cleanSessionIds),
     fetchBackupExactCountByValues('annual_count_job_items','session_id',cleanSessionIds),
-    fetchBackupExactCountByValues('stock_snapshot_detail','session_id',cleanSessionIds),
+    fetchBackupRowsByValues('stock_snapshot_detail',['id','license_plate'],'session_id',cleanSessionIds),
     fetchBackupExactCountByValues('audit_log','session_id',cleanSessionIds),
   ]);
   const assignmentIds = assignmentRows.map(row => row.id).filter(Boolean);
@@ -18560,7 +18889,11 @@ async function backupScopeCountsWithItemLocation(sessionIds) {
       ...assignmentRows.map(row => row.location_id),
     ].filter(Boolean)).size,
     Stock:stockRows.length,
-    Stock_Detail:stockDetailCount,
+    Stock_Qty:stockRows.reduce((sum,row) => sum + (Number(row.onhand_qty) || 0),0),
+    Stock_Detail:stockDetailRows.length,
+    Stock_Detail_Distinct:new Set(
+      stockDetailRows.map(row => importCodeKey(row.license_plate))
+    ).size,
     Counts:countRows.length,
     Approvals:approvalCount,
     Audit:auditCount,
@@ -18932,7 +19265,8 @@ function backupTeamSheetColumns() {
       col('locationId','Location ID',38), col('itemId','Item ID',38), col('stockDetailId','Stock Detail ID',38),
     ],
     Data_Count: [
-      col('session','Session',28), col('location','Location',18), col('zone','Zone',16),
+      col('session','Session',28), col('jobCode','JOB',18),
+      col('location','Location',18), col('zone','Zone',16),
       col('item','Item',24), col('description','Description',44),
       col('lpn','LPN',30), col('lot','Lot',22),
       col('inventoryStatus','Inventory Status',18), col('uom','UOM',10),
@@ -18950,8 +19284,7 @@ function backupTeamSheetColumns() {
       col('supervisorNote','Supervisor Note',34), col('approvedBy','Approved By',20),
       col('approvedAt','Approved At (Bangkok)',22), col('wmsStatus','WMS Status',18),
       col('wmsFixedBy','WMS Fixed By',20), col('wmsFixedAt','WMS Fixed At (Bangkok)',22),
-      col('assignedUser','Assigned User',20), col('sessionId','Session ID',38),
-      col('assignmentId','Assignment ID',38), col('locationId','Location ID',38), col('itemId','Item ID',38),
+      col('assignedUser','Assigned User',20),
     ],
     Transaction_History: [
       col('createdAt','Transaction Time (Bangkok)',22), col('action','Action',26),
@@ -18972,7 +19305,7 @@ function backupTeamSheetColumns() {
       col('physicalCount','Physical Count',16,'number'), col('variance','Net Variance',14,'number'),
       col('diffItems','Diff Items',12,'number'), col('matchItems','Match Items',12,'number'),
       col('stockAccuracy','Stock Accuracy %',17,'number'), col('wmsPending','WMS Pending',14,'number'),
-      col('wmsFixed','WMS Fixed',12,'number'), col('sessionId','Session ID',38),
+      col('wmsFixed','WMS Fixed',12,'number'),
     ],
   };
 }
@@ -18982,6 +19315,8 @@ function buildTeamBackupData(dataBySheet) {
   const locations = dataBySheet.Locations || [];
   const items = dataBySheet.Items || [];
   const assignments = dataBySheet.Assignments || [];
+  const annualJobs = dataBySheet.Annual_Jobs || [];
+  const annualJobItems = dataBySheet.Annual_Job_Items || [];
   const stocks = dataBySheet.Stock || [];
   const stockDetails = dataBySheet.Stock_Detail || [];
   const counts = dataBySheet.Counts || [];
@@ -18995,6 +19330,7 @@ function buildTeamBackupData(dataBySheet) {
   const locationById = byId(locations);
   const itemById = byId(items);
   const assignmentById = byId(assignments);
+  const annualJobById = byId(annualJobs);
   const profileById = byId(profiles);
   const counterById = byId(counters);
   const profileName = id => profileById.get(String(id || ''))?.name || '';
@@ -19002,6 +19338,20 @@ function buildTeamBackupData(dataBySheet) {
   const sessionLocationKey = (sessionId,locationId) => `${sessionId || ''}|${locationId || ''}`;
   const assignmentItemKey = (assignmentId,itemId) => `${assignmentId || ''}|${itemId || ''}`;
   const stockKey = (sessionId,locationId,itemId) => `${sessionId || ''}|${locationId || ''}|${itemId || ''}`;
+  const jobCodesByStockKey = new Map();
+  annualJobItems.forEach(jobItem => {
+    const job = annualJobById.get(String(jobItem.job_id || '')) || {};
+    const sessionId = jobItem.session_id || job.session_id || '';
+    const key = stockKey(sessionId,jobItem.location_id,jobItem.item_id);
+    const code = String(job.job_code || '').trim();
+    if (!code) return;
+    if (!jobCodesByStockKey.has(key)) jobCodesByStockKey.set(key,new Set());
+    jobCodesByStockKey.get(key).add(code);
+  });
+  const jobCodeForStock = (sessionId,locationId,itemId) =>
+    [...(jobCodesByStockKey.get(stockKey(sessionId,locationId,itemId)) || [])]
+      .sort((a,b) => a.localeCompare(b,'en',{ numeric:true,sensitivity:'base' }))
+      .join(' | ');
 
   const assignmentIdsByLocation = new Map();
   assignments.forEach(assignment => {
@@ -19108,7 +19458,8 @@ function buildTeamBackupData(dataBySheet) {
     });
     const r1 = countFields(c1), r2 = countFields(c2), r3 = countFields(c3);
     return {
-      session:session.name || '', sessionStatus:session.status || '', location:location.code || '',
+      session:session.name || '', jobCode:jobCodeForStock(sessionId,locationId,itemId),
+      sessionStatus:session.status || '', location:location.code || '',
       zone:location.zone || '', area:location.area || '', rowNo:location.row_no || '',
       level:location.level || '', locationType:location.type || '', locationCategory:location.category || '',
       lpn:joinUnique(detailRows,'license_plate'), lot:joinUnique(detailRows,'lot'),
@@ -19147,6 +19498,7 @@ function buildTeamBackupData(dataBySheet) {
     const stock = stockByKey.get(key) || {};
     const base = dataByComposite.get(key) || {
       session:session.name || '', sessionStatus:session.status || '',
+      jobCode:jobCodeForStock(detail.session_id,detail.location_id,detail.item_id),
       location:location.code || '', zone:location.zone || '',
       item:item.code || '', description:item.description || '',
       stockOnhand:backupNumber(stock.onhand_qty), alQty:backupNumber(stock.al_qty),
@@ -19166,6 +19518,7 @@ function buildTeamBackupData(dataBySheet) {
   });
   dataCountRows.sort((a,b) =>
     String(a.session).localeCompare(String(b.session),'th')
+    || String(a.jobCode).localeCompare(String(b.jobCode),'en',{numeric:true})
     || String(a.zone).localeCompare(String(b.zone),'th')
     || String(a.location).localeCompare(String(b.location),'en',{numeric:true})
     || String(a.item).localeCompare(String(b.item),'en',{numeric:true})
@@ -19349,7 +19702,8 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
 
   const readme = [
     ['CYCLE COUNT BACKUP','ไฟล์ข้อมูลการนับที่ทีมอื่นอ่าน ใช้งานต่อ และ Restore กลับเข้าระบบได้'],
-    ['Data_Count','ข้อมูล Stock / LPN ทั้งหมดของ Session: 1 แถวต่อ LPN/Lot และเก็บ Stock ที่ไม่มี LPN/Lot ไว้ด้วย โดยไม่กรองเฉพาะ Gain/Lost'],
+    ['Data_Count','ข้อมูล Stock / LPN ทั้งหมดของ Session: 1 แถวต่อ LPN/Lot พร้อมเลข JOB และเก็บ Stock ที่ไม่มี LPN/Lot ไว้ด้วย โดยไม่กรองเฉพาะ Gain/Lost'],
+    ['เลข JOB','เชื่อมจาก Annual JOB ตาม Session + Location + Item; รายการที่ไม่ได้อยู่ใน Annual JOB จะแสดงว่าง'],
     ['Count 1–3','แสดง Actual Counter และเวลานับแยกครบทั้ง 3 รอบ'],
     ['Photo URL','ใช้ URL รูปล่าสุดที่มีจริงของงาน แม้ผลนับรอบสุดท้ายจะไม่ได้แนบรูป'],
     ['Session_Summary','สรุป Unique ITEM, Stock Lines, LPN/Lot Rows, จำนวนแถว Data_Count, รูปถ่าย, ผลการนับ, Stock Accuracy และสถานะ WMS แยก Session'],
@@ -19358,6 +19712,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     ['คำเตือน Restore','ชีตข้อมูลระบบที่จำเป็นต่อ Restore ถูกซ่อนไว้ ห้ามเปิด แก้ชื่อ หรือลบชีตเหล่านั้น'],
     ['รูปถ่าย','เก็บเป็น URL และระบบจะรักษาไฟล์รูปใน Storage เมื่อลบผ่านเมนู Backup'],
     ['ข้อมูลระบบ','ข้อมูล Restore ยังอยู่ครบ แต่ซ่อนชีต Manifest, Sessions, Locations, Items, Assignments, Stock, Stock_Detail, Counts, Approvals, Audit, Profiles, Counters และ Remarks'],
+    ['รหัสระบบ','Session ID, Assignment ID, Location ID และ Item ID ถูกนำออกจากชีตที่ทีมใช้งาน แต่ยังอยู่ครบในชีตระบบที่ซ่อนสำหรับ Restore'],
     ['User Login','ไฟล์นี้ไม่เก็บรหัสผ่านและไม่สร้างบัญชี Auth ใหม่; Profiles ใช้เป็นข้อมูลอ้างอิง'],
     ['วิธี Restore','เมนู จัดการงาน / Sessions → Backup / Restore → เลือกไฟล์นี้'],
     ['สร้างเมื่อ',createdAt],
