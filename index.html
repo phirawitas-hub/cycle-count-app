@@ -10530,7 +10530,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v100-resilient-camera-scanner';
+window.__CYCLE_COUNT_BUILD__ = 'v102-found-work-variance-queue';
 
 let _viewportSyncFrame = 0;
 function syncViewportSize() {
@@ -10560,6 +10560,7 @@ const PAGE_LOAD_TIMEOUT_MS = 22000;
 let sb, me, prof;
 let S = {};
 let _activePageRequestController = null;
+let _renderRequestSerial = 0;
 
 function beginPageRequestScope() {
   if (_activePageRequestController) _activePageRequestController.abort();
@@ -11261,9 +11262,25 @@ document.addEventListener('keydown', event => {
 });
 
 function updateDashboardNavigationUi(tab) {
-  document.querySelectorAll('.nav-subitem[data-nav-id^="dash-"]').forEach(button => {
-    button.classList.toggle('active', button.dataset.navId === `dash-${tab}`);
+  const dashboardTab = ['summary','log','team'].includes(tab);
+  const myWorkTab = ['variance','wms'].includes(tab);
+  const activeNavId = dashboardTab ? `dash-${tab}` : myWorkTab ? `my-${tab}` : '';
+  const activeGroup = dashboardTab ? 'dashboard' : myWorkTab ? 'my-work' : '';
+
+  document.querySelectorAll('.nav-subitem[data-nav-id]').forEach(button => {
+    const navId = button.dataset.navId || '';
+    if (navId.startsWith('dash-') || navId.startsWith('my-')) {
+      button.classList.toggle('active', navId === activeNavId);
+    }
   });
+  document.querySelectorAll('.nav-group').forEach(group => {
+    const groupName = group.dataset.group || '';
+    if (!['dashboard','my-work'].includes(groupName)) return;
+    const groupIsActive = groupName === activeGroup;
+    group.classList.toggle('open', groupIsActive);
+    group.querySelector(':scope > .nav-parent')?.classList.toggle('active', groupIsActive);
+  });
+  if (activeGroup) window._openNavGroup = activeGroup;
   document.querySelector('.main-wrapper')?.classList.toggle('summary-view', tab === 'summary');
   const title = document.querySelector('.topbar-title');
   if (title) title.textContent = DASHBOARD_TAB_TITLES[tab] || 'สรุปภาพรวม';
@@ -12090,6 +12107,7 @@ function renderResponsivePreviewContent() {
 
 function render() {
   const { page } = S;
+  const renderRequestId = ++_renderRequestSerial;
   const pageRequestScope = beginPageRequestScope();
   document.body.classList.toggle('app-shell-mode', !['login','reset-password'].includes(page));
   if (page === 'login') { paintLogin(); return; }
@@ -12313,11 +12331,21 @@ function render() {
      if (page === 'sv-dash') _dashboardLoadInFlight = pending;
      pending
        .catch(err => {
+         if (
+           renderRequestId !== _renderRequestSerial ||
+           pageRequestScope !== _activePageRequestController ||
+           S?.page !== page
+         ) return;
          if (err?.code === 'AUTH_SESSION_INVALID') return;
          renderPageLoadError(err);
        })
        .finally(() => {
-         if (page === 'sv-dash' && _dashboardLoadInFlight === pending) {
+         if (
+           page === 'sv-dash' &&
+           renderRequestId === _renderRequestSerial &&
+           pageRequestScope === _activePageRequestController &&
+           _dashboardLoadInFlight === pending
+         ) {
            _dashboardLoadInFlight = null;
          }
        });
@@ -12360,13 +12388,14 @@ function openDashboardMenu(tab) {
   const alreadyOnDashboard = S?.page === 'sv-dash';
   _navStack = [];
   _dashTab = tab;
+  window._openNavGroup = ['variance','wms'].includes(tab) ? 'my-work' : 'dashboard';
   S = { ...S, page:'sv-dash', _dashTab:tab, _dashSid:S._dashSid };
   if (alreadyOnDashboard) {
     updateDashboardNavigationUi(tab);
     if (paintCachedDashboardView(tab)) return;
-    if (_dashboardLoadInFlight) return;
     const target = cnt();
     if (target) target.innerHTML = dashboardLoadingHtml();
+    if (_dashboardLoadInFlight) return;
     refreshDashboardData();
     return;
   }
@@ -12374,6 +12403,7 @@ function openDashboardMenu(tab) {
 }
 function openManageMenu(tab) {
   _navStack = [];
+  window._openNavGroup = 'manage';
   _manageTab = tab; S = { page:'ad-manage', _manageTab:tab };
   render();
 }
@@ -14149,6 +14179,50 @@ function foundRemarkOptionsHtml(selectedRemarks=[]) {
     </label>`).join('');
 }
 
+function pendingFoundVarianceHtml(rows=[]) {
+  const pendingRows = sortRowsByLocation(rows,row => row.location_code);
+  if (!pendingRows.length) return '';
+  return `
+    <section class="found-variance-queue" style="margin-bottom:20px">
+      <div class="sec" style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+        <span>＋ งานที่พบเพิ่ม รอ Supervisor ตรวจสอบ</span>
+        <span class="tag tag-amber">${pendingRows.length.toLocaleString('th-TH')} รายการ</span>
+      </div>
+      <div class="card card-flush" data-location-sort-group>
+        ${pendingRows.map(row => `
+          <div class="row click found-review-row" data-location-sort-code="${escapeWmsText(row.location_code || '')}"
+            onclick="go('sv-found',{fid:'${escapeWmsText(row.id)}'})">
+            <div class="row-body">
+              <div class="row-title mono">${escapeWmsText(row.location_code || 'ไม่ระบุ Location')} · ${escapeWmsText(row.item_code || 'ไม่ระบุ Item')}</div>
+              <div class="row-sub">${escapeWmsText(row.description || 'ไม่ระบุ Description')} · LPN ${escapeWmsText(row.license_plate || '—')} · QTY ${Number(row.qty || 0).toLocaleString('th-TH')} ${escapeWmsText(row.uom || '')}</div>
+              <div class="found-review-source">${row.source_type==='empty_location'?'Location ว่าง':'＋ เจองานเพิ่ม'} · ${escapeWmsText(row.actual_counter_name || row.profiles?.name || 'ไม่ระบุคนนับ')}</div>
+            </div>
+            <span class="tag tag-amber">รอตรวจสอบ</span>
+            <span class="caret">›</span>
+          </div>`).join('')}
+      </div>
+    </section>`;
+}
+
+function navigateAfterFoundWorkSaved(sessionId) {
+  invalidateDashboardCache();
+  if (!['admin','supervisor'].includes(prof?.role)) {
+    go('c-tasks',{}, { replace:true });
+    return;
+  }
+  selectedDateFrom = '';
+  selectedDateTo = '';
+  _dashTab = 'variance';
+  window._openNavGroup = 'my-work';
+  go('sv-dash',{
+    _dashTab:'variance',
+    _dashSid:String(sessionId || ''),
+  }, {
+    replace:true,
+    resetHistory:true,
+  });
+}
+
 async function loadCFound() {
   const [sessionResult,counterResult,remarkResult] = await Promise.all([
     sb.from('count_sessions').select('id,name,status').in('status',['draft','active']).order('created_at',{ascending:false}),
@@ -14326,8 +14400,8 @@ async function submitFoundWork() {
       status:'pending_review',
       discovered_by:me.id,
     });
-    alertBox.innerHTML = '<div class="alert alert-green">✅ บันทึกแล้ว · งานเข้าคิว Supervisor ทันที</div>';
-    setTimeout(() => go('c-tasks'),900);
+    alertBox.innerHTML = '<div class="alert alert-green">✅ บันทึกแล้ว · งานเข้าคิว Variance ให้ Supervisor ตรวจสอบทันที</div>';
+    setTimeout(() => navigateAfterFoundWorkSaved(sessionId),650);
   } catch (error) {
     alertBox.innerHTML = errBox(error.message || error);
     button.disabled = false;
@@ -15470,21 +15544,28 @@ async function loadSvDash() {
   const [
     { data: asgns, error:assignmentsError },
     { data: wmsRemarkRows, error:wmsRemarksError },
+    { data: pendingFoundRows, error:pendingFoundError },
   ] = await Promise.all([
     sb.from('assignments')
       .select('id,status,assigned_to,location_id,locations(code,zone,row_no,level)')
       .eq('session_id', curSid)
       .order('status'),
     sb.from('remark_options').select('id,label').eq('context','wms').order('label'),
+    sb.from('found_items')
+      .select('id,session_id,status,source_type,location_code,license_plate,item_code,description,uom,qty,actual_counter_name,discovered_at,profiles!found_items_discovered_by_fkey(name)')
+      .eq('session_id',curSid)
+      .eq('status','pending_review')
+      .order('discovered_at',{ ascending:true }),
   ]);
   if (isStaleLoad()) return;
   if (assignmentsError) throw assignmentsError;
+  if (pendingFoundError) throw pendingFoundError;
   if (wmsRemarksError) console.warn('โหลดตัวเลือกหมายเหตุ WMS ไม่สำเร็จ:', wmsRemarksError);
   window._wmsNoteOptions = wmsRemarkRows?.length
     ? wmsRemarkRows
     : WMS_NOTE_PRESETS.map(label => ({ id:null, label }));
 
-  if (!asgns?.length) {
+  if (!asgns?.length && !pendingFoundRows?.length) {
     cnt().innerHTML = `
       <div class="card dashboard-filter-strip">${dashboardFiltersHtml(sessOpts, (S._dashTab || _dashTab) !== 'summary')}</div>
       <div class="card">
@@ -15497,7 +15578,7 @@ async function loadSvDash() {
   let done     = asgns.filter(a => ['completed','approved'].includes(a.status)).length;
   let varCount = asgns.filter(a => ['round1_done','round2_done','round3_done'].includes(a.status)).length;
   let pending  = asgns.filter(a => ['pending','in_progress'].includes(a.status)).length;
-  let pct      = Math.round(done / total * 100);
+  let pct      = total ? Math.round(done / total * 100) : 0;
 
   const asgnInfoMap = {};
   asgns.forEach(a => { asgnInfoMap[a.id] = a; });
@@ -15525,6 +15606,10 @@ async function loadSvDash() {
   const rawCounts = countResult.data || [];
   const activeDateFilter = dashboardDateRange();
   const allCounts = filterRowsByDashboardDate(rawCounts, 'counted_at');
+  const visiblePendingFoundRows = filterRowsByDashboardDate(
+    pendingFoundRows || [],
+    'discovered_at',
+  );
   const dateCountedAssignmentIds = new Set(allCounts.map(row => row.assignment_id).filter(Boolean));
   const dashboardDataAsgnIds = activeDateFilter ? [...dateCountedAssignmentIds] : allAsgnIds;
   if (activeDateFilter) {
@@ -16056,7 +16141,11 @@ async function loadSvDash() {
       </div>
       <div id="vdetail_${i}" style="display:none;background:rgba(255,255,255,0.7);margin-top:12px;border-radius:16px;overflow:hidden; box-shadow: inset 2px 2px 5px rgba(0,0,0,0.03)"></div>
     </div>`;
-  }).join('') : `<div style="padding:40px 0;text-align:center;color:var(--text-muted);font-size:15px; font-weight:600;">🎉 ไม่มี Variance ที่ต้องตรวจสอบตอนนี้</div>`;
+  }).join('') : `<div style="padding:40px 0;text-align:center;color:var(--text-muted);font-size:15px; font-weight:600;">${
+    visiblePendingFoundRows.length
+      ? 'ไม่มี Variance จากงาน Cycle Count ที่ต้องตรวจสอบ'
+      : '🎉 ไม่มี Variance ที่ต้องตรวจสอบตอนนี้'
+  }</div>`;
 
   const tab = S._dashTab || _dashTab;
   _dashTab = tab;
@@ -16300,7 +16389,10 @@ async function loadSvDash() {
       ${peopleRows || `<div style="padding:30px 0;text-align:center;color:var(--text-muted);font-size:14px;font-weight:600">ยังไม่มีข้อมูลคนนับจริง</div>`}
     </div>`;
 
-  const varianceTabHtml = `<div data-location-sort-group>${varianceRowsHtml}</div>`;
+  const varianceTabHtml = `
+    ${pendingFoundVarianceHtml(visiblePendingFoundRows)}
+    ${needsFollowUp.length ? '<div class="sec">Variance จากงาน Cycle Count</div>' : ''}
+    <div data-location-sort-group>${varianceRowsHtml}</div>`;
 
   const wmsFilter = S._wmsFilter || 'unfixed';
   const wmsZone = S._wmsZone || '';
@@ -20027,12 +20119,15 @@ function printWindowScript() {
     });
     window.addEventListener('load',function(){
       ${autoPrint ? `var images=Array.from(document.images||[]);
-      Promise.all(images.map(function(img){
+      var layoutReady=window.__printLayoutReady&&typeof window.__printLayoutReady.then==='function'
+        ? window.__printLayoutReady
+        : Promise.resolve();
+      Promise.all([layoutReady].concat(images.map(function(img){
         return img.complete?Promise.resolve():new Promise(function(done){
           img.addEventListener('load',done,{once:true});
           img.addEventListener('error',done,{once:true});
         });
-      })).then(function(){
+      }))).then(function(){
         setTimeout(function(){
           printRequested=true;
           window.print();
@@ -20117,6 +20212,80 @@ function paginateDetailedRows(rows,maxPageHeight = detailedPageContentHeight()) 
   });
   if (page.length || !pages.length) pages.push(page);
   return pages;
+}
+
+function annualDetailedPaginationScript() {
+  return `<script>(function(){
+    function waitForImages(){
+      return Promise.all(Array.from(document.images||[]).map(function(image){
+        return image.complete?Promise.resolve():new Promise(function(done){
+          image.addEventListener('load',done,{once:true});
+          image.addEventListener('error',done,{once:true});
+        });
+      }));
+    }
+    function nextFrame(){
+      return new Promise(function(resolve){
+        requestAnimationFrame(function(){requestAnimationFrame(resolve);});
+      });
+    }
+    function splitOverflowPages(){
+      var pages=Array.from(document.querySelectorAll('.detail-page'));
+      var index=0;
+      var safety=0;
+      while(index<pages.length&&safety<500){
+        safety+=1;
+        var page=pages[index];
+        var itemArea=page.querySelector('.detail-items');
+        if(!itemArea){index+=1;continue;}
+        if(itemArea.scrollHeight>itemArea.clientHeight+1&&itemArea.children.length>1){
+          var nextPage=page.cloneNode(true);
+          var nextItemArea=nextPage.querySelector('.detail-items');
+          nextItemArea.replaceChildren();
+          page.after(nextPage);
+          while(itemArea.scrollHeight>itemArea.clientHeight+1&&itemArea.children.length>1){
+            nextItemArea.prepend(itemArea.lastElementChild);
+          }
+          pages.splice(index+1,0,nextPage);
+          continue;
+        }else if(itemArea.scrollHeight>itemArea.clientHeight+1&&itemArea.children.length===1){
+          var article=itemArea.firstElementChild;
+          var currentBody=article&&article.querySelector('.detail-table tbody');
+          if(currentBody&&currentBody.rows.length>1){
+            var continuedPage=page.cloneNode(true);
+            var continuedArea=continuedPage.querySelector('.detail-items');
+            var continuedArticle=continuedArea&&continuedArea.firstElementChild;
+            var continuedBody=continuedArticle&&continuedArticle.querySelector('.detail-table tbody');
+            if(continuedArea&&continuedArticle&&continuedBody){
+              continuedBody.replaceChildren();
+              page.after(continuedPage);
+              while(itemArea.scrollHeight>itemArea.clientHeight+1&&currentBody.rows.length>1){
+                continuedBody.prepend(currentBody.rows[currentBody.rows.length-1]);
+              }
+              var currentCountGrid=article.querySelector('.detail-count-grid');
+              if(currentCountGrid)currentCountGrid.remove();
+              var continuedTitle=continuedArticle.querySelector('.detail-item-head strong');
+              if(continuedTitle&&!continuedTitle.textContent.includes('(ต่อ)')){
+                continuedTitle.textContent+=' (ต่อ)';
+              }
+              pages.splice(index+1,0,continuedPage);
+            }
+          }
+        }
+        index+=1;
+      }
+      pages=Array.from(document.querySelectorAll('.detail-page'));
+      pages.forEach(function(page,pageIndex){
+        var number=page.querySelector('.detail-page-number');
+        if(number)number.textContent='Page '+(pageIndex+1)+'/'+pages.length;
+      });
+      document.body.classList.add('annual-layout-ready');
+    }
+    window.__printLayoutReady=Promise.all([
+      waitForImages(),
+      document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve()
+    ]).then(nextFrame).then(splitOverflowPages);
+  })();<\/script>`;
 }
 
 function openDetailedPrintWindow(rows,title,existingWindow,options = {}) {
@@ -20381,6 +20550,14 @@ function openAnnualJobPrintWindow(jobPacks,existingWindow) {
 
 function openAnnualDetailedJobPrintWindow(jobPacks,existingWindow) {
   const settings = printPageSettings('detailed');
+  const paperDimensions = {
+    A4:[210,297],
+    A3:[297,420],
+    Letter:[215.9,279.4],
+  };
+  const paperSize = paperDimensions[settings.paper] || paperDimensions.A4;
+  const physicalPageHeightMm = settings.orientation === 'landscape' ? paperSize[0] : paperSize[1];
+  const printablePageHeightMm = Math.max(120,physicalPageHeightMm-(settings.margin*2));
   const logo = normalizeLogoDataUrl(uiBranding.printLogoDataUrl)
     || normalizeLogoDataUrl(uiBranding.logoDataUrl)
     || PF_LOGO_B64;
@@ -20408,28 +20585,47 @@ function openAnnualDetailedJobPrintWindow(jobPacks,existingWindow) {
         <header class="detail-header">
           ${uiBranding.printShowLogo?`<img src="${logo}" alt="logo">`:'<span></span>'}
           <div><small>ANNUAL FORM COUNT · DETAILS</small><h1>${pfEscapeHtml(title)}</h1></div>
-          <div class="detail-meta"><strong>${pfEscapeHtml(pack.job.job_code)}</strong>${dateHtml}${uiBranding.printShowPageNumber?`<div>Page ${pageIndex+1}/${totalPages}</div>`:''}</div>
+          <div class="detail-meta"><strong>${pfEscapeHtml(pack.job.job_code)}</strong>${dateHtml}${uiBranding.printShowPageNumber?`<div class="detail-page-number">Page ${pageIndex+1}/${totalPages}</div>`:''}</div>
         </header>
         <div class="detail-items">${(pack.rows || []).map(row => detailedItemHtml(row,session.show_oh === true)).join('')}</div>
         ${uiBranding.printShowSignatures ? printSignatureHtml('detail-footer') : ''}
       </section>`;
   }).join('');
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Annual Form Count · Details</title><style>
-    @page{size:${settings.paper} ${settings.orientation};margin:${settings.margin}mm}*{box-sizing:border-box}
-    body{margin:0;color:#17383d;font-family:Arial,'Sarabun','Tahoma',sans-serif}
-    .detail-page{page-break-after:always;break-after:page}.detail-page:last-child{page-break-after:auto;break-after:auto}
-    .detail-items{display:grid;gap:9px}
-    .detail-header{min-height:62px;display:grid;grid-template-columns:150px 1fr 150px;align-items:center;gap:12px;padding:0 0 9px;border-bottom:3px solid ${settings.accent}}
+    @page{size:${settings.paper} ${settings.orientation};margin:${settings.margin}mm}
+    *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    html,body{margin:0;padding:0;color:#000;font-family:Arial,'Sarabun','Tahoma',sans-serif}
+    .detail-page{
+      width:100%;height:${printablePageHeightMm}mm;min-height:${printablePageHeightMm}mm;
+      display:grid;grid-template-rows:auto minmax(0,1fr) auto;overflow:hidden;
+      page-break-after:always;break-after:page;page-break-inside:avoid;break-inside:avoid-page;
+    }
+    .detail-page:last-child{page-break-after:auto;break-after:auto}
+    .detail-items{min-height:0;display:grid;align-content:start;gap:9px;overflow:hidden;padding-top:8px}
+    .detail-header{min-height:62px;display:grid;grid-template-columns:150px 1fr 150px;align-items:center;gap:12px;padding:0 0 9px;border-bottom:3px solid ${settings.accent};color:#000}
     .detail-header img{max-width:140px;max-height:48px;object-fit:contain;object-position:left center}.detail-header h1{margin:2px 0 0;text-align:center;font-size:22px}
-    .detail-header small{display:block;text-align:center;color:${settings.accent};font-size:8px;font-weight:800;letter-spacing:.15em}.detail-meta{text-align:right;font-size:9px;line-height:1.55}.detail-meta strong{display:block;color:${settings.accent};font-size:14px}
-    .detail-item{break-inside:avoid;overflow:hidden;border:1px solid #cddfe1;border-radius:10px;background:#fff}
-    .detail-item-head{min-height:43px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center;gap:12px;background:#f7fbfb}.detail-item-head strong{display:block;color:${settings.accent};font-size:15px}.detail-item-head span{display:block;margin-top:2px;color:#587277;font-size:9px}
-    .detail-item-summary{display:flex;align-items:center;gap:7px;flex:0 0 auto}.oh-total-chip{margin:0!important;padding:5px 8px;border:1px solid ${settings.accent};border-radius:999px;color:${settings.accent}!important;background:#fff;font-size:8px!important;font-weight:800}.oh-total-chip strong{display:inline!important;font-size:11px!important}
-    .location-chip{flex:0 0 auto!important;margin:0!important;padding:5px 8px;border-radius:999px;color:#fff!important;background:${settings.accent};font-size:9px!important;font-weight:800}
-    .detail-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8.5px}.detail-table th,.detail-table td{padding:5px 7px;border-top:1px solid #e1ecee;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.detail-table th{color:${settings.accent};background:#e7f2f3;font-size:7px}.detail-table th:nth-child(1){width:32%}.detail-table th:nth-child(2){width:23%}.detail-table .num{text-align:right}.status-pill{display:inline-block;padding:3px 7px;border-radius:999px;color:${settings.accent};background:#e6f3f2;font-size:7px;font-weight:800}.empty-detail{text-align:center!important;color:#7a9094!important}
-    .detail-count-grid{display:grid;grid-template-columns:repeat(3,.7fr) 2fr;gap:6px;padding:7px 9px 9px;background:#f7fbfb}.detail-count-grid>div{height:29px;border:1px solid #bcd2d5;border-radius:6px;background:#fff}.detail-count-grid span{display:block;padding:4px 6px;color:#789095;font-size:6px;font-weight:800}
-    .detail-footer{display:flex;justify-content:space-between;gap:14px;padding-top:9px;color:#39575c;font-size:9px}.annual-pf-noprint{padding:9px 12px;background:#fffbe6;border-bottom:1px solid #ccc;font-size:12px}@media print{.annual-pf-noprint{display:none}}
-  </style></head><body><div class="annual-pf-noprint">Annual JOB แบบรายละเอียดเต็ม · ระบบขึ้นหน้าใหม่ตามพื้นที่กระดาษอัตโนมัติ${uiBranding.printAutoOpenDialog?'':' · กด Ctrl+P หรือ Cmd+P เมื่อพร้อม'}</div>${documentsHtml}${printWindowScript()}</body></html>`;
+    .detail-header small{display:block;text-align:center;color:#000;font-size:8px;font-weight:900;letter-spacing:.15em}
+    .detail-meta{text-align:right;color:#000;font-size:9px;font-weight:800;line-height:1.55}.detail-meta strong{display:block;color:#000;font-size:14px;font-weight:900}
+    .detail-item{break-inside:avoid;page-break-inside:avoid;overflow:hidden;border:1.6px solid #000;border-radius:8px;background:#fff;color:#000}
+    .detail-item-head{min-height:43px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center;gap:12px;background:#fff;border-bottom:1.4px solid #000}
+    .detail-item-head strong{display:block;color:#000;font-size:15px;font-weight:900}.detail-item-head span{display:block;margin-top:2px;color:#000;font-size:9px;font-weight:700}
+    .detail-item-summary{display:flex;align-items:center;gap:7px;flex:0 0 auto}
+    .oh-total-chip{margin:0!important;padding:5px 8px;border:1.5px solid #000;border-radius:999px;color:#000!important;background:#fff;font-size:8px!important;font-weight:900}
+    .oh-total-chip strong{display:inline!important;color:#000!important;font-size:11px!important}
+    .location-chip{flex:0 0 auto!important;margin:0!important;padding:5px 8px;border:1.5px solid #000;border-radius:999px;color:#000!important;background:#fff;font-size:9px!important;font-weight:900}
+    .detail-table{width:100%;border-collapse:collapse;table-layout:fixed;border:1.6px solid #000;color:#000;font-size:8.5px}
+    .detail-table th,.detail-table td{padding:5px 7px;border:1.25px solid #000;color:#000;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .detail-table th{color:#000;background:#ececec;font-size:7.5px;font-weight:900}
+    .detail-table th:nth-child(1){width:32%}.detail-table th:nth-child(2){width:23%}
+    .detail-table .num{text-align:right}.status-pill{display:inline-block;padding:2px 6px;border:1px solid #000;border-radius:999px;color:#000;background:#fff;font-size:7px;font-weight:900}
+    .empty-detail{text-align:center!important;color:#000!important;font-weight:700}
+    .detail-count-grid{display:grid;grid-template-columns:repeat(3,.7fr) 2fr;gap:6px;padding:7px 9px 9px;background:#fff;border-top:1.4px solid #000}
+    .detail-count-grid>div{height:29px;border:1.5px solid #000;border-radius:5px;background:#fff}
+    .detail-count-grid span{display:block;padding:4px 6px;color:#000;font-size:6.5px;font-weight:900}
+    .detail-footer{display:flex;justify-content:space-between;gap:14px;padding-top:9px;color:#000;font-size:9px;font-weight:800}
+    .annual-pf-noprint{padding:9px 12px;background:#fffbe6;border-bottom:1px solid #000;color:#000;font-size:12px}
+    @media print{.annual-pf-noprint{display:none}.detail-page{overflow:hidden}}
+  </style></head><body><div class="annual-pf-noprint">Annual JOB แบบรายละเอียดเต็ม · ระบบตรวจการแบ่งหน้าก่อนพิมพ์${uiBranding.printAutoOpenDialog?'':' · กด Ctrl+P หรือ Cmd+P เมื่อพร้อม'}</div>${documentsHtml}${annualDetailedPaginationScript()}${printWindowScript()}</body></html>`;
   const win = existingWindow || window.open('','_blank');
   if (!win) { alert('เบราว์เซอร์บล็อกป๊อปอัพ'); return; }
   win.document.open(); win.document.write(html); win.document.close();
