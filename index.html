@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cycle Count v100 - Resilient Camera Scanner</title>
+<title>Cycle Count v105 - Warehouse Layout</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -10519,6 +10519,197 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
   .work-tracker-filter-field.search{grid-column:span 2}
 }
 
+/* ══════════════════════════════════════════════════════════
+   v105 — Warehouse Layout 2.5D + configurable editor
+   ══════════════════════════════════════════════════════════ */
+.warehouse-layout-root{min-width:0}
+.warehouse-layout-shell{display:grid;gap:16px;min-width:0}
+.warehouse-layout-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap}
+.warehouse-layout-title{display:flex;align-items:center;gap:13px;min-width:0}
+.warehouse-layout-title-icon{width:50px;height:50px;border-radius:16px;display:grid;place-items:center;color:#007982;background:linear-gradient(145deg,#ddf7f3,#aee5de);box-shadow:7px 7px 18px rgba(45,118,125,.15),inset -2px -2px 5px rgba(0,109,119,.08)}
+.warehouse-layout-title-icon svg{width:28px;height:28px}
+.warehouse-layout-title h2{margin:0;color:var(--text-main);font-size:24px;line-height:1.2}
+.warehouse-layout-title p{margin:5px 0 0;color:var(--text-muted);font-size:12px;font-weight:600}
+.warehouse-layout-actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap}
+.warehouse-layout-actions .btn{min-height:42px}
+.warehouse-layout-control{display:grid;gap:4px}
+.warehouse-layout-control>span{font-size:9px;font-weight:800;letter-spacing:.08em;color:var(--text-muted)}
+.warehouse-layout-control select,.warehouse-layout-control input{height:42px;min-width:145px;border:1px solid rgba(0,120,128,.17);border-radius:13px;background:#f8fcfc;color:var(--text-main);padding:0 12px;font:inherit;font-weight:700;outline:none}
+.warehouse-layout-control input{min-width:210px}
+.warehouse-layout-control select:focus,.warehouse-layout-control input:focus{border-color:#149ca3;box-shadow:0 0 0 3px rgba(20,156,163,.12)}
+.warehouse-layout-kpis{display:grid;grid-template-columns:repeat(7,minmax(115px,1fr));gap:10px}
+.warehouse-layout-kpi{appearance:none;text-align:left;border:1px solid rgba(0,120,128,.12);border-radius:17px;background:#fff;padding:13px 14px;box-shadow:0 8px 20px rgba(14,94,104,.065);cursor:pointer;transition:.18s ease;min-width:0}
+.warehouse-layout-kpi:hover{transform:translateY(-2px);box-shadow:0 11px 24px rgba(14,94,104,.11)}
+.warehouse-layout-kpi.active{border-color:#118f97;box-shadow:0 0 0 3px rgba(17,143,151,.12),0 10px 24px rgba(14,94,104,.09)}
+.warehouse-layout-kpi span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-muted);font-size:10px;font-weight:800}
+.warehouse-layout-kpi strong{display:block;margin-top:4px;font:800 24px/1.1 'Fredoka','Mitr',sans-serif;color:var(--text-main)}
+.warehouse-layout-kpi.matched strong{color:#247cbf}
+.warehouse-layout-kpi.completeness strong{color:#2b9a6b}
+.warehouse-layout-kpi.missing strong{color:#d85a4c}
+.warehouse-layout-kpi.imported strong{color:#4389ce}
+.warehouse-layout-kpi.counting strong{color:#cc8600}
+.warehouse-layout-kpi.variance strong{color:#7758c9}
+.warehouse-layout-kpi.completed strong{color:#288b62}
+.warehouse-layout-workspace{display:grid;grid-template-columns:minmax(0,1fr) 268px;gap:14px;align-items:start;min-width:0}
+.warehouse-layout-map-card,.warehouse-layout-side{border:1px solid rgba(0,120,128,.13);border-radius:21px;background:#fff;box-shadow:0 9px 25px rgba(14,94,104,.065)}
+.warehouse-layout-map-card{padding:13px;min-width:0;overflow:hidden}
+.warehouse-layout-map-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:2px 4px 12px;flex-wrap:wrap}
+.warehouse-layout-map-head strong{color:var(--text-main);font-size:16px}
+.warehouse-layout-map-head span{color:var(--text-muted);font-size:11px;font-weight:600}
+.warehouse-layout-map-scroll{overflow:auto;border-radius:17px;background:#f4faf9}
+.warehouse-layout-map{position:relative;min-width:820px;width:100%;aspect-ratio:16/10;min-height:500px;overflow:hidden;border:1px solid rgba(17,143,151,.12);border-radius:17px;background:
+  linear-gradient(30deg,rgba(255,255,255,.72) 12%,transparent 12.5%,transparent 87%,rgba(255,255,255,.72) 87.5%,rgba(255,255,255,.72)),
+  linear-gradient(150deg,rgba(255,255,255,.72) 12%,transparent 12.5%,transparent 87%,rgba(255,255,255,.72) 87.5%,rgba(255,255,255,.72)),
+  linear-gradient(30deg,rgba(225,242,240,.7) 12%,transparent 12.5%,transparent 87%,rgba(225,242,240,.7) 87.5%,rgba(225,242,240,.7)),
+  #edf7f5;background-size:42px 73px;background-position:0 0,0 0,21px 36px}
+.warehouse-layout-map::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(120deg,rgba(255,255,255,.32),transparent 45%,rgba(0,109,119,.035));z-index:9}
+.warehouse-layout-rack{position:absolute;border-radius:8px 8px 12px 12px;background:linear-gradient(180deg,#fbfdfe,#d8e7e7);border:2px solid #547a7d;box-shadow:8px 11px 0 rgba(60,91,94,.12),0 15px 25px rgba(37,78,82,.16);z-index:4;min-width:100px;min-height:62px}
+.warehouse-layout-rack::before{content:"";position:absolute;left:-2px;right:-2px;top:-10px;height:12px;border-radius:7px 7px 2px 2px;background:linear-gradient(135deg,#f7d1a5,#d89d62);border:2px solid #547a7d;transform:skewX(-35deg);transform-origin:bottom;z-index:0}
+.warehouse-layout-rack::after{content:"";position:absolute;top:4px;right:-9px;bottom:-2px;width:9px;border-radius:0 5px 6px 0;background:#8ea8a8;border:1px solid #547a7d;transform:skewY(-37deg);transform-origin:left;z-index:-1}
+.warehouse-layout-rack-name{position:absolute;left:5px;top:6px;bottom:6px;width:35px;border-radius:8px;display:grid;place-items:center;padding:3px;color:#fff;background:linear-gradient(180deg,#168e94,#006d77);box-shadow:2px 3px 7px rgba(0,109,119,.2);font:800 11px/1.1 'Fredoka','Mitr',sans-serif;writing-mode:vertical-rl;transform:rotate(180deg);z-index:3}
+.warehouse-layout-bays{position:absolute;left:57px;right:7px;top:7px;height:13px;display:grid;gap:1px;overflow:hidden;z-index:3}
+.warehouse-layout-bays span{min-width:0;display:grid;place-items:center;overflow:hidden;font:800 5.5px/1 'Fredoka',sans-serif;color:#2d6266}
+.warehouse-layout-bays span.skip{opacity:.22}
+.warehouse-layout-levels{position:absolute;left:43px;top:23px;bottom:7px;width:12px;display:grid;z-index:3}
+.warehouse-layout-levels span{display:grid;place-items:center;font:800 7px/1 'Fredoka',sans-serif;color:#315f63}
+.warehouse-layout-grid{position:absolute;left:57px;right:7px;top:23px;bottom:7px;display:grid;gap:1px;background:#506f72;padding:1px;border-radius:3px;overflow:hidden;z-index:2}
+.warehouse-location-cell{appearance:none;border:0;min-width:0;min-height:0;padding:0;cursor:pointer;position:relative;background:#cfd5d7;transition:transform .12s ease,filter .12s ease,opacity .12s ease;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
+.warehouse-location-cell:hover,.warehouse-location-cell:focus{z-index:6;transform:scale(1.35);filter:saturate(1.12) brightness(1.04);outline:2px solid #fff;box-shadow:0 0 0 3px #006d77}
+.warehouse-location-cell.status-not_imported{background:linear-gradient(145deg,#e1e5e6,#b9c1c3)}
+.warehouse-location-cell.status-imported{background:linear-gradient(145deg,#65b7ff,#2987da)}
+.warehouse-location-cell.status-counting{background:linear-gradient(145deg,#ffd365,#eea70a)}
+.warehouse-location-cell.status-variance{background:linear-gradient(145deg,#b59bff,#7252d0)}
+.warehouse-location-cell.status-completed{background:linear-gradient(145deg,#8edc70,#4caf4b)}
+.warehouse-location-cell.is-dimmed{opacity:.14;filter:grayscale(.55)}
+.warehouse-location-cell.is-search-hit{z-index:5;box-shadow:inset 0 0 0 2px #fff,0 0 0 2px #df3f35}
+.warehouse-layout-object{position:absolute;z-index:3;display:grid;place-items:center;text-align:center;font-size:9px;font-weight:800;color:#48595b;overflow:hidden}
+.warehouse-layout-object.aisle{border-radius:12px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.8) 0 22px,rgba(214,232,230,.72) 22px 44px);border:1px dashed rgba(68,111,115,.22);color:#789092}
+.warehouse-layout-object.pillar{border-radius:5px;background:linear-gradient(135deg,#f3f0e9,#a6a39d);border:2px solid #77736d;box-shadow:6px 8px 0 rgba(63,59,55,.12),0 9px 16px rgba(50,55,55,.18)}
+.warehouse-layout-object.obstacle{border-radius:7px;background:repeating-linear-gradient(135deg,#20292a 0 8px,#f5b620 8px 16px);border:2px solid #42494a;color:#fff;text-shadow:0 1px 3px #000;box-shadow:5px 7px 0 rgba(55,60,60,.12)}
+.warehouse-layout-object.gap{border:2px dashed rgba(95,123,125,.42);border-radius:10px;background:rgba(255,255,255,.52);color:#7f9496}
+.warehouse-layout-legend{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding-top:12px}
+.warehouse-layout-legend-item{display:flex;align-items:center;gap:6px;border:1px solid rgba(0,120,128,.1);border-radius:999px;background:#fbfefe;padding:6px 9px;color:#49676a;font-size:9px;font-weight:800}
+.warehouse-layout-legend-dot{width:12px;height:12px;border-radius:4px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.1)}
+.warehouse-layout-legend-dot.not_imported{background:#c9ced0}.warehouse-layout-legend-dot.imported{background:#3f98eb}.warehouse-layout-legend-dot.counting{background:#f1b11c}.warehouse-layout-legend-dot.variance{background:#8063d9}.warehouse-layout-legend-dot.completed{background:#5cbd50}.warehouse-layout-legend-dot.unmatched{background:#fff;border:2px solid #e9413a}
+.warehouse-layout-side{padding:16px;display:grid;gap:14px;position:sticky;top:8px}
+.warehouse-layout-progress{text-align:center}
+.warehouse-layout-progress h3{margin:0;color:var(--text-main);font-size:15px}
+.warehouse-layout-donut{--value:0;width:142px;height:142px;margin:14px auto 10px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#20a49b calc(var(--value)*1%),#e5eeee 0);position:relative}
+.warehouse-layout-donut::before{content:"";position:absolute;width:102px;height:102px;border-radius:50%;background:#fff;box-shadow:inset 0 0 12px rgba(0,109,119,.06)}
+.warehouse-layout-donut strong{position:relative;z-index:1;font:800 31px/1 'Fredoka','Mitr',sans-serif;color:#163e42}
+.warehouse-layout-donut small{font-size:14px}
+.warehouse-layout-side-summary{display:grid;gap:8px}
+.warehouse-layout-side-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border-radius:11px;background:#f5faf9;color:#5c7476;font-size:10px;font-weight:700}
+.warehouse-layout-side-row strong{font:800 15px/1 'Fredoka','Mitr',sans-serif;color:var(--text-main)}
+.warehouse-layout-alert{border:1px solid rgba(222,66,56,.22);border-radius:15px;background:#fff5f3;overflow:hidden}
+.warehouse-layout-alert-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 12px;background:#ffe6e1;color:#c4372e;font-size:11px;font-weight:900}
+.warehouse-layout-alert-list{display:grid;padding:4px 12px}
+.warehouse-layout-alert-item{display:flex;align-items:center;gap:7px;padding:9px 0;border-bottom:1px solid rgba(210,73,62,.1);font:700 10px/1.2 'Fredoka','Mitr',sans-serif;color:#594e4c}
+.warehouse-layout-alert-item::before{content:"";width:7px;height:7px;flex:none;border-radius:50%;background:#e84940}
+.warehouse-layout-empty{padding:50px 22px;text-align:center;border:1px dashed rgba(0,120,128,.25);border-radius:20px;background:linear-gradient(145deg,#fff,#eef8f6)}
+.warehouse-layout-empty-icon{width:72px;height:72px;margin:0 auto 14px;border-radius:23px;display:grid;place-items:center;color:#00828a;background:#d8f1ee;box-shadow:8px 8px 19px rgba(51,117,122,.15)}
+.warehouse-layout-empty-icon svg{width:38px;height:38px}
+.warehouse-layout-empty h3{margin:0;color:var(--text-main);font-size:20px}
+.warehouse-layout-empty p{max-width:580px;margin:8px auto 18px;color:var(--text-muted);font-size:12px;line-height:1.75}
+
+.warehouse-layout-editor{display:grid;gap:12px}
+.warehouse-editor-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.warehouse-editor-head h2{margin:0;color:var(--text-main);font-size:23px}
+.warehouse-editor-head p{margin:4px 0 0;color:var(--text-muted);font-size:11px;font-weight:600}
+.warehouse-editor-actions{display:flex;gap:8px;flex-wrap:wrap}
+.warehouse-editor-body{display:grid;grid-template-columns:132px minmax(560px,1fr) 285px;gap:12px;min-width:0;align-items:start}
+.warehouse-editor-tools,.warehouse-editor-properties,.warehouse-editor-canvas-shell{border:1px solid rgba(0,120,128,.13);border-radius:19px;background:#fff;box-shadow:0 8px 22px rgba(14,94,104,.06)}
+.warehouse-editor-tools{padding:11px;display:grid;gap:8px;position:sticky;top:8px}
+.warehouse-editor-tools h3,.warehouse-editor-properties h3{margin:0 0 3px;color:var(--text-main);font-size:14px}
+.warehouse-tool-button{appearance:none;border:1px solid rgba(0,120,128,.13);border-radius:13px;background:#f7fbfb;color:#315b5e;padding:10px 5px;display:grid;place-items:center;gap:5px;cursor:pointer;font:800 10px/1.2 'Mitr',sans-serif;transition:.16s ease}
+.warehouse-tool-button:hover{transform:translateY(-2px);border-color:#29a4a7;background:#eaf8f6;color:#00747c}
+.warehouse-tool-icon{width:35px;height:31px;display:grid;place-items:center;border-radius:9px;background:#d9efec;color:#007982;font-size:18px}
+.warehouse-editor-zone-add{margin-top:4px;border-style:dashed;color:#007982}
+.warehouse-editor-canvas-shell{padding:10px;min-width:0;overflow:hidden}
+.warehouse-editor-canvas-toolbar{display:flex;align-items:center;justify-content:space-between;gap:9px;flex-wrap:wrap;padding:1px 1px 9px}
+.warehouse-editor-canvas-toolbar-group{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.warehouse-editor-canvas-toolbar select{height:38px;border:1px solid rgba(0,120,128,.15);border-radius:11px;background:#f8fcfc;padding:0 10px;color:var(--text-main);font:700 11px 'Mitr',sans-serif}
+.warehouse-editor-canvas-scroll{overflow:auto;border-radius:14px;background:#edf6f5}
+.warehouse-editor-canvas{position:relative;min-width:760px;width:100%;aspect-ratio:5/3;min-height:480px;touch-action:none;overflow:hidden;border:1px solid rgba(0,120,128,.14);border-radius:14px;background-color:#f7fbfa;background-image:radial-gradient(rgba(0,109,119,.2) 1px,transparent 1px);background-size:18px 18px}
+.warehouse-editor-element{position:absolute;display:grid;place-items:center;border-radius:8px;user-select:none;touch-action:none;cursor:grab;transition:box-shadow .12s ease;border:2px solid transparent;color:#365b5e;font-size:9px;font-weight:800;text-align:center;overflow:hidden}
+.warehouse-editor-element:active{cursor:grabbing}
+.warehouse-editor-element.selected{border-color:#00a4ad;box-shadow:0 0 0 3px rgba(0,164,173,.18),8px 10px 18px rgba(35,100,105,.17);z-index:8}
+.warehouse-editor-element.rack{background:repeating-linear-gradient(90deg,#d8ae77 0 17px,#506e70 17px 19px),linear-gradient(#edd0a7,#c48c54);border-color:#4f7375;box-shadow:7px 9px 0 rgba(61,88,90,.12)}
+.warehouse-editor-element.rack::after{content:"";position:absolute;inset:20px 4px 4px;background:repeating-linear-gradient(0deg,transparent 0 13px,#4f7375 13px 15px);pointer-events:none}
+.warehouse-editor-element.rack strong{position:absolute;z-index:2;left:7px;top:4px;padding:3px 7px;border-radius:7px;background:#007982;color:#fff;font:800 10px/1 'Fredoka','Mitr',sans-serif}
+.warehouse-editor-element.aisle{background:repeating-linear-gradient(90deg,#f9fcfb 0 22px,#e5efed 22px 44px);border:1px dashed #9ab3b3;color:#7a9091}
+.warehouse-editor-element.pillar{background:linear-gradient(135deg,#e9e6df,#9b9994);border-color:#77736d;box-shadow:5px 6px 0 rgba(63,59,55,.13)}
+.warehouse-editor-element.obstacle{background:repeating-linear-gradient(135deg,#202829 0 8px,#f1b320 8px 16px);border-color:#4c5253;color:#fff;text-shadow:0 1px 2px #000}
+.warehouse-editor-element.gap{background:rgba(255,255,255,.62);border:2px dashed #9dafb0;color:#839596}
+.warehouse-editor-properties{padding:14px;position:sticky;top:8px;max-height:calc(100vh - 125px);overflow:auto}
+.warehouse-property-form{display:grid;gap:10px}
+.warehouse-property-field{display:grid;gap:5px}
+.warehouse-property-field label{font-size:9px;color:var(--text-muted);font-weight:800;letter-spacing:.03em}
+.warehouse-property-field input,.warehouse-property-field select,.warehouse-property-field textarea{width:100%;border:1px solid rgba(0,120,128,.15);border-radius:11px;background:#f8fcfc;color:var(--text-main);padding:9px 10px;font:700 11px 'Mitr',sans-serif;outline:none}
+.warehouse-property-field textarea{min-height:58px;resize:vertical}
+.warehouse-property-field input:focus,.warehouse-property-field select:focus,.warehouse-property-field textarea:focus{border-color:#149ca3;box-shadow:0 0 0 3px rgba(20,156,163,.11)}
+.warehouse-property-help{font-size:8px;line-height:1.55;color:#829597}
+.warehouse-property-actions{display:grid;gap:7px;margin-top:4px}
+.warehouse-editor-empty-properties{padding:30px 8px;text-align:center;color:var(--text-muted);font-size:10px;line-height:1.7}
+.warehouse-editor-validation{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;gap:9px;align-items:stretch}
+.warehouse-validation-card{border-radius:15px;padding:11px 13px;display:flex;align-items:center;gap:9px;border:1px solid transparent}
+.warehouse-validation-card strong{font:800 19px/1 'Fredoka','Mitr',sans-serif}
+.warehouse-validation-card span{display:block;margin-top:2px;font-size:9px;font-weight:700}
+.warehouse-validation-card.ok{background:#eaf8f2;border-color:#bde7d5;color:#217d5a}
+.warehouse-validation-card.warn{background:#fff8e7;border-color:#f1dfaa;color:#ae7200}
+.warehouse-validation-card.error{background:#fff0ed;border-color:#f0c1b9;color:#c84739}
+.warehouse-layout-dialog-backdrop{position:fixed;inset:0;z-index:5000;background:rgba(19,48,52,.48);backdrop-filter:blur(4px);display:grid;place-items:center;padding:18px}
+.warehouse-layout-dialog{width:min(680px,96vw);max-height:86vh;overflow:auto;border-radius:23px;background:#fff;box-shadow:0 24px 70px rgba(9,39,43,.28)}
+.warehouse-layout-dialog-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:17px 19px;border-bottom:1px solid rgba(0,120,128,.1)}
+.warehouse-layout-dialog-head strong{color:var(--text-main);font-size:18px}
+.warehouse-layout-dialog-close{appearance:none;width:36px;height:36px;border:0;border-radius:12px;background:#edf6f5;color:#315e61;font-size:21px;cursor:pointer}
+.warehouse-layout-dialog-body{padding:18px}
+.warehouse-layout-detail-code{font:800 25px/1.2 'Fredoka','Mitr',sans-serif;color:#007982}
+.warehouse-layout-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:14px}
+.warehouse-layout-detail-card{padding:11px 12px;border-radius:13px;background:#f4f9f8}
+.warehouse-layout-detail-card span{display:block;color:var(--text-muted);font-size:9px;font-weight:800}
+.warehouse-layout-detail-card strong{display:block;margin-top:4px;color:var(--text-main);font-size:12px}
+.warehouse-match-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.warehouse-match-column{border:1px solid rgba(0,120,128,.12);border-radius:15px;overflow:hidden}
+.warehouse-match-column h4{margin:0;padding:11px 13px;background:#edf7f6;color:var(--text-main);font-size:12px}
+.warehouse-match-column.error h4{background:#fff0ed;color:#c84739}
+.warehouse-match-list{max-height:46vh;overflow:auto;padding:6px 13px}
+.warehouse-match-list div{padding:8px 0;border-bottom:1px solid rgba(0,120,128,.08);font:700 10px 'Fredoka','Mitr',sans-serif}
+.warehouse-layout-toast{position:fixed;right:22px;bottom:22px;z-index:6000;max-width:min(420px,calc(100vw - 32px));padding:13px 16px;border-radius:15px;background:#153f43;color:#fff;box-shadow:0 14px 35px rgba(9,39,43,.28);font-size:11px;font-weight:700;line-height:1.55}
+.warehouse-layout-toast.warn{background:#9a6200}.warehouse-layout-toast.error{background:#b43d32}
+
+@media (max-width:1380px){
+  .warehouse-layout-kpis{grid-template-columns:repeat(4,minmax(115px,1fr))}
+  .warehouse-editor-body{grid-template-columns:112px minmax(500px,1fr) 255px}
+}
+@media (max-width:1120px){
+  .warehouse-layout-workspace{grid-template-columns:1fr}
+  .warehouse-layout-side{position:static;grid-template-columns:180px 1fr 1fr;align-items:center}
+  .warehouse-layout-progress{grid-row:span 2}
+  .warehouse-layout-donut{width:118px;height:118px}.warehouse-layout-donut::before{width:84px;height:84px}
+  .warehouse-editor-body{grid-template-columns:105px minmax(560px,1fr)}
+  .warehouse-editor-properties{grid-column:1/-1;position:static;max-height:none}
+  .warehouse-property-form{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .warehouse-property-actions{grid-column:1/-1;grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:760px){
+  .warehouse-layout-title h2,.warehouse-editor-head h2{font-size:20px}
+  .warehouse-layout-actions{width:100%;justify-content:flex-start}
+  .warehouse-layout-control{flex:1;min-width:130px}.warehouse-layout-control select,.warehouse-layout-control input{width:100%;min-width:0}
+  .warehouse-layout-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .warehouse-layout-side{grid-template-columns:1fr}
+  .warehouse-layout-progress{grid-row:auto}
+  .warehouse-layout-map{min-width:760px;min-height:475px}
+  .warehouse-editor-body{display:block}
+  .warehouse-editor-tools{position:static;grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:10px}
+  .warehouse-editor-tools h3{grid-column:1/-1}.warehouse-editor-zone-add{margin:0}
+  .warehouse-editor-canvas-shell{margin-bottom:10px}
+  .warehouse-editor-properties{position:static}
+  .warehouse-property-form{grid-template-columns:1fr}
+  .warehouse-editor-validation{grid-template-columns:1fr}
+  .warehouse-match-columns,.warehouse-layout-detail-grid{grid-template-columns:1fr}
+}
+
 </style>
 </head>
 <body>
@@ -10588,7 +10779,8 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v104-all-imported-work-tracker';
+window.__CYCLE_COUNT_BUILD__ = 'v105-warehouse-layout';
+window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
 function syncViewportSize() {
@@ -11014,7 +11206,7 @@ function applyBrandingSettings(settings, persistLocal = true) {
     const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
     root.setProperty(`--theme-${cssKey}`, uiBranding[key]);
   });
-  document.title = `${uiBranding.systemName} v100`;
+  document.title = `${uiBranding.systemName} v105`;
   if (persistLocal) {
     try { localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(uiBranding)); } catch (_) {}
   }
@@ -11063,11 +11255,22 @@ let _navStack = [];
 let _dashboardViewCache = null;
 let _dashboardLoadInFlight = null;
 const DASHBOARD_CACHE_TTL_MS = 60000;
+const WAREHOUSE_LAYOUT_STORAGE_KEY = 'cycle_count_warehouse_layout_v1';
+const WAREHOUSE_LAYOUT_DRAFT_STORAGE_KEY = 'cycle_count_warehouse_layout_draft_v1';
+const WAREHOUSE_LAYOUT_SETTING_KEY = 'warehouse_layout_v1';
+let _warehouseLayoutConfig = null;
+let _warehouseLayoutLoaded = false;
+let _warehouseLayoutDraft = null;
+let _warehouseLayoutDraftDirty = false;
+let _warehouseLayoutSelectedElementId = '';
+let _warehouseLayoutDragState = null;
+let _warehouseLayoutSearchTimer = null;
 const NAV_DETAIL_PAGES = new Set(['c-count','c-found','sv-detail','sv-found','ad-txlog','ad-new']);
 const BACK_BUTTON_PAGES = new Set(['c-count','c-found','sv-detail','sv-found','sv-list','ad-txlog','ad-new']);
 const DASHBOARD_TAB_TITLES = {
   summary: 'สรุป',
   tracker: 'ติดตามงานทั้งหมด',
+  layout: 'Layout',
   variance: 'Variance',
   wms: 'ปรับยอด WMS',
   log: 'รายงานผลต่างล่าสุด (Variance Log)',
@@ -11130,6 +11333,17 @@ function dashboardSessionControlHtml(tab, sessionOptionsHtml) {
         <div class="summary-greeting-sub">${escapeWmsText(uiBranding.systemName)} Dashboard</div>
       </div>
       <div class="summary-header-actions">${dashboardFiltersHtml(sessionOptionsHtml, false)}</div>
+    </div>`;
+  }
+  if (tab === 'layout') {
+    return `<div class="card dashboard-filter-strip">
+      <label class="dashboard-filter-control dashboard-session-filter" title="เลือก Session สำหรับตรวจ Layout">
+        <span class="dashboard-filter-icon">${dashboardFilterIconSvg('session')}</span>
+        <span class="dashboard-filter-copy">
+          <span class="dashboard-filter-label">SESSION สำหรับจับคู่ Layout</span>
+          <select aria-label="เลือก Session" onchange="changeDashboardSession(this.value)">${sessionOptionsHtml}</select>
+        </span>
+      </label>
     </div>`;
   }
   return `<div class="card dashboard-filter-strip">${dashboardFiltersHtml(sessionOptionsHtml, tab !== 'tracker')}</div>`;
@@ -11321,7 +11535,7 @@ document.addEventListener('keydown', event => {
 });
 
 function updateDashboardNavigationUi(tab) {
-  const dashboardTab = ['summary','tracker','log','team'].includes(tab);
+  const dashboardTab = ['summary','tracker','layout','log','team'].includes(tab);
   const myWorkTab = ['variance','wms'].includes(tab);
   const activeNavId = dashboardTab ? `dash-${tab}` : myWorkTab ? `my-${tab}` : '';
   const activeGroup = dashboardTab ? 'dashboard' : myWorkTab ? 'my-work' : '';
@@ -11367,6 +11581,7 @@ function paintDashboardView(tab, cache = _dashboardViewCache) {
     refreshWorkTrackerFilterOptions();
     renderWorkTrackerList();
   }
+  if (tab === 'layout') renderWarehouseLayoutTab();
   return true;
 }
 
@@ -11528,7 +11743,7 @@ async function protectedFunctionHeaders() {
   return {
     Authorization: `Bearer ${session.access_token}`,
     apikey: SUPA_KEY,
-    'x-client-info': 'cycle-count-v100',
+    'x-client-info': 'cycle-count-v105',
   };
 }
 
@@ -11827,6 +12042,7 @@ function navIconSvg(type, size=20) {
   const common = `width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"`;
   const icons = {
     summary: `<svg ${common}><path d="M4 19h16"/><rect x="5" y="10" width="3" height="6" rx="1"/><rect x="10.5" y="7" width="3" height="9" rx="1"/><rect x="16" y="4" width="3" height="12" rx="1"/></svg>`,
+    layout: `<svg ${common}><path d="m4 7 5-3 6 3 5-3v13l-5 3-6-3-5 3V7Z"/><path d="M9 4v13m6-10v13"/><path d="m6.5 9 1.2-.7m2.7 2.2 3-1.5m3.1 4.2 1.5-.8"/></svg>`,
     variance: `<svg ${common}><circle cx="12" cy="12" r="8"/><path d="m14.7 9.3-1.8 4.2-4.2 1.8 1.8-4.2 4.2-1.8Z"/></svg>`,
     wms: `<svg ${common}><path d="M14 5 19 10"/><path d="M12 7 17 12"/><path d="M4 20h6"/><path d="M5 19l6.9-6.9a2.1 2.1 0 0 0-3-3L2 16v3h3Z"/></svg>`,
     log: `<svg ${common}><path d="M8 4h8l3 3v13H5V7l3-3Z"/><path d="M8 4v3h8V4"/><path d="M9 12h6M9 16h6"/></svg>`,
@@ -12209,6 +12425,7 @@ function render() {
       { group: 'dashboard', name: 'สรุปภาพรวม', icon: navIconSvg('summary'), children: [
         { id:'dash-summary', name:'สรุป', icon:navIconSvg('summary'), action:"openDashboardMenu('summary')" },
         { id:'dash-tracker', name:'ติดตามงานทั้งหมด', icon:navIconSvg('jobs'), action:"openDashboardMenu('tracker')" },
+        { id:'dash-layout', name:'Layout', icon:navIconSvg('layout'), action:"openDashboardMenu('layout')" },
         { id:'dash-log', name:'รายงานผลต่างล่าสุด (Variance Log)', icon:navIconSvg('log'), action:"openDashboardMenu('log')" },
         { id:'dash-team', name:'ความคืบหน้าการทำงาน (Team Progress)', icon:navIconSvg('team'), action:"openDashboardMenu('team')" }
       ]},
@@ -12223,6 +12440,7 @@ function render() {
       { group: 'dashboard', name: 'สรุปภาพรวม', icon: navIconSvg('summary'), children: [
         { id:'dash-summary', name:'สรุป', icon:navIconSvg('summary'), action:"openDashboardMenu('summary')" },
         { id:'dash-tracker', name:'ติดตามงานทั้งหมด', icon:navIconSvg('jobs'), action:"openDashboardMenu('tracker')" },
+        { id:'dash-layout', name:'Layout', icon:navIconSvg('layout'), action:"openDashboardMenu('layout')" },
         { id:'dash-log', name:'รายงานผลต่างล่าสุด (Variance Log)', icon:navIconSvg('log'), action:"openDashboardMenu('log')" },
         { id:'dash-team', name:'ความคืบหน้าการทำงาน (Team Progress)', icon:navIconSvg('team'), action:"openDashboardMenu('team')" }
       ]},
@@ -12249,7 +12467,7 @@ function render() {
 
   const userNavs = navMenus[currentRole] || navMenus.counter;
   const activeDashTab = S._dashTab || _dashTab || 'summary';
-  const dashboardActive = page === 'sv-dash' && ['summary','tracker','log','team'].includes(activeDashTab);
+  const dashboardActive = page === 'sv-dash' && ['summary','tracker','layout','log','team'].includes(activeDashTab);
   const myWorkActive = page === 'c-tasks'
     || ['sv-list','sv-detail','sv-found'].includes(page)
     || (page === 'sv-dash' && ['variance','wms'].includes(activeDashTab));
@@ -15955,6 +16173,1212 @@ function workTrackerViewHtml() {
   </div>`;
 }
 
+function warehouseLayoutUid(prefix='layout') {
+  if (globalThis.crypto?.randomUUID) return `${prefix}-${crypto.randomUUID()}`;
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,9)}`;
+}
+
+function warehouseLayoutClone(value) {
+  try { return JSON.parse(JSON.stringify(value)); } catch (_) { return null; }
+}
+
+function warehouseLayoutNumber(value, fallback, min, max) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.max(min,Math.min(max,number)) : fallback;
+}
+
+function warehouseLayoutString(value, fallback='', max=120) {
+  return String(value ?? fallback).trim().slice(0,max);
+}
+
+function warehouseLayoutSafeId(value,fallback) {
+  const normalized = warehouseLayoutString(value,fallback,90).replace(/[^A-Za-z0-9_-]+/g,'-').replace(/^-+|-+$/g,'');
+  return normalized || warehouseLayoutUid('layout');
+}
+
+function warehouseLocationKey(value) {
+  return importCodeKey(value).replace(/\s*-\s*/g,'-').replace(/\s+/g,' ').trim();
+}
+
+function normalizeWarehouseLayoutLevels(value) {
+  const source = Array.isArray(value) ? value : String(value || '').split(/[\s,;|/]+/);
+  const levels = [...new Set(source.map(item => warehouseLayoutString(item,'',12).toUpperCase()).filter(Boolean))];
+  return levels.length ? levels.slice(0,30) : ['G','F','E','D','C','B','A'];
+}
+
+function normalizeWarehouseSkipBays(value) {
+  const source = Array.isArray(value) ? value : String(value || '').split(/[\s,;|/]+/);
+  return [...new Set(source
+    .map(item => Number.parseInt(String(item).replace(/\D/g,''),10))
+    .filter(item => Number.isInteger(item) && item >= 0 && item <= 99999))]
+    .sort((a,b) => a-b);
+}
+
+function normalizeWarehouseLayoutElement(element={}, index=0) {
+  const allowedTypes = new Set(['rack','aisle','pillar','obstacle','gap']);
+  const type = allowedTypes.has(element.type) ? element.type : 'rack';
+  const base = {
+    id:warehouseLayoutSafeId(element.id,warehouseLayoutUid(type)) || `${type}-${index+1}`,
+    type,
+    label:warehouseLayoutString(element.label,type === 'rack' ? `Rack ${index+1}` : ({
+      aisle:'ทางเดิน',pillar:'เสา',obstacle:'สิ่งกีดขวาง',gap:'พื้นที่ว่าง'
+    }[type] || ''),80),
+    x:warehouseLayoutNumber(element.x,60,0,4000),
+    y:warehouseLayoutNumber(element.y,60,0,4000),
+    width:warehouseLayoutNumber(element.width,type === 'rack' ? 760 : 120,24,3000),
+    height:warehouseLayoutNumber(element.height,type === 'rack' ? 108 : 70,22,1800),
+  };
+  if (type !== 'rack') return base;
+  return {
+    ...base,
+    rackCode:warehouseLayoutString(element.rackCode || element.label,base.label,80).toUpperCase(),
+    row:warehouseLayoutString(element.row,'01',40).toUpperCase(),
+    bayStart:Math.max(0,Math.floor(warehouseLayoutNumber(element.bayStart,1,0,99999))),
+    bayCount:Math.max(1,Math.floor(warehouseLayoutNumber(element.bayCount,20,1,500))),
+    bayPad:Math.max(1,Math.floor(warehouseLayoutNumber(element.bayPad,3,1,6))),
+    levels:normalizeWarehouseLayoutLevels(element.levels),
+    skipBays:normalizeWarehouseSkipBays(element.skipBays),
+    codePattern:warehouseLayoutString(element.codePattern,'{zone}-{row}-{bay}-{level}',160) || '{zone}-{row}-{bay}-{level}',
+    direction:element.direction === 'rtl' ? 'rtl' : 'ltr',
+  };
+}
+
+function normalizeWarehouseLayoutConfig(input={}) {
+  let source = input;
+  if (typeof source === 'string') {
+    try { source = JSON.parse(source); } catch (_) { source = {}; }
+  }
+  const usedZoneIds = new Set();
+  const usedElementIds = new Set();
+  const zones = (Array.isArray(source?.zones) ? source.zones : []).slice(0,100).map((zone,index) => {
+    let id = warehouseLayoutSafeId(zone?.id,`zone-${index+1}`) || `zone-${index+1}`;
+    if (usedZoneIds.has(id)) id = warehouseLayoutUid('zone');
+    usedZoneIds.add(id);
+    const canvasWidth = warehouseLayoutNumber(zone?.canvasWidth,1200,600,4000);
+    const canvasHeight = warehouseLayoutNumber(zone?.canvasHeight,720,400,4000);
+    const elements = (Array.isArray(zone?.elements) ? zone.elements : []).slice(0,500).map((element,elementIndex) => {
+      const normalized = normalizeWarehouseLayoutElement(element,elementIndex);
+      if (usedElementIds.has(normalized.id)) normalized.id = warehouseLayoutUid(normalized.type);
+      usedElementIds.add(normalized.id);
+      normalized.width = Math.min(normalized.width,canvasWidth);
+      normalized.height = Math.min(normalized.height,canvasHeight);
+      normalized.x = Math.min(normalized.x,Math.max(0,canvasWidth-normalized.width));
+      normalized.y = Math.min(normalized.y,Math.max(0,canvasHeight-normalized.height));
+      return normalized;
+    });
+    return {
+      id,
+      name:warehouseLayoutString(zone?.name,`Zone ${index+1}`,60) || `Zone ${index+1}`,
+      canvasWidth,
+      canvasHeight,
+      elements,
+    };
+  });
+  return {
+    version:1,
+    updatedAt:warehouseLayoutString(source?.updatedAt,new Date().toISOString(),50),
+    updatedBy:warehouseLayoutString(source?.updatedBy,'',100),
+    zones,
+  };
+}
+
+function readLocalWarehouseLayout(key=WAREHOUSE_LAYOUT_STORAGE_KEY) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? normalizeWarehouseLayoutConfig(JSON.parse(raw)) : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function persistLocalWarehouseLayout(config,key=WAREHOUSE_LAYOUT_STORAGE_KEY) {
+  try {
+    localStorage.setItem(key,JSON.stringify(config));
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+async function loadWarehouseLayoutConfig(force=false) {
+  if (_warehouseLayoutLoaded && !force) return _warehouseLayoutConfig;
+  const localConfig = readLocalWarehouseLayout();
+  _warehouseLayoutConfig = localConfig || normalizeWarehouseLayoutConfig({ zones:[] });
+  if (sb) {
+    try {
+      const { data, error } = await sb.from('app_settings')
+        .select('value')
+        .eq('key',WAREHOUSE_LAYOUT_SETTING_KEY)
+        .maybeSingle();
+      if (!error && data?.value) {
+        const remoteConfig = normalizeWarehouseLayoutConfig(data.value);
+        const localTime = Date.parse(localConfig?.updatedAt || '') || 0;
+        const remoteTime = Date.parse(remoteConfig.updatedAt || '') || 0;
+        _warehouseLayoutConfig = localConfig && localTime > remoteTime ? localConfig : remoteConfig;
+        persistLocalWarehouseLayout(_warehouseLayoutConfig);
+      }
+    } catch (error) {
+      console.warn('โหลด Warehouse Layout จากส่วนกลางไม่สำเร็จ ใช้ข้อมูลสำรองในอุปกรณ์นี้แทน:',error);
+    }
+  }
+  _warehouseLayoutLoaded = true;
+  return _warehouseLayoutConfig;
+}
+
+function parseWarehouseLocationMeta(location={}) {
+  const code = warehouseLocationKey(location.code || location.location_code || '');
+  const parts = code.split('-').map(part => part.trim()).filter(Boolean);
+  const standardCode = parts.length >= 4;
+  const zone = warehouseLayoutString((standardCode ? parts[0] : location.zone) || location.zone || parts[0] || 'ZONE-1','ZONE-1',60).toUpperCase();
+  const row = warehouseLayoutString((standardCode ? parts[1] : location.row_no) ?? location.row_no ?? parts[1] ?? '01','01',40).toUpperCase();
+  const level = warehouseLayoutString((standardCode ? parts[parts.length-1] : location.level) ?? location.level ?? parts[parts.length-1] ?? 'A','A',12).toUpperCase();
+  const bayCandidate = parts.length >= 3 ? parts[parts.length-2] : '';
+  const bay = Number.parseInt(String(bayCandidate).replace(/\D/g,''),10);
+  return { code,zone,row,level,bay:Number.isInteger(bay) ? bay : null };
+}
+
+function createWarehouseLayoutFromSessionData(sessionData=window._warehouseLayoutSessionData || {}) {
+  const locationMap = new Map();
+  (sessionData.snapshots || []).forEach(snapshot => {
+    const location = snapshot.locations || {};
+    const parsed = parseWarehouseLocationMeta(location);
+    if (parsed.code && !locationMap.has(parsed.code)) locationMap.set(parsed.code,{...parsed,...location});
+  });
+  const zoneGroups = new Map();
+  [...locationMap.values()].forEach(location => {
+    const zone = location.zone || 'ZONE-1';
+    const row = String(location.row || '01');
+    if (!zoneGroups.has(zone)) zoneGroups.set(zone,new Map());
+    const rowGroups = zoneGroups.get(zone);
+    if (!rowGroups.has(row)) rowGroups.set(row,[]);
+    rowGroups.get(row).push(location);
+  });
+  const zones = [...zoneGroups.entries()]
+    .sort((a,b) => String(a[0]).localeCompare(String(b[0]),undefined,{numeric:true}))
+    .map(([zoneName,rowGroups],zoneIndex) => {
+      const rows = [...rowGroups.entries()].sort((a,b) => String(a[0]).localeCompare(String(b[0]),undefined,{numeric:true}));
+      const elements = [];
+      let cursorY = 60;
+      rows.forEach(([row,locations],index) => {
+        const numericBays = locations.map(item => item.bay).filter(Number.isInteger);
+        const bayStart = numericBays.length ? Math.min(...numericBays) : 1;
+        const bayEnd = numericBays.length ? Math.max(...numericBays) : Math.max(1,locations.length);
+        const levels = [...new Set(locations.map(item => item.level).filter(Boolean))]
+          .sort((a,b) => String(b).localeCompare(String(a),undefined,{numeric:true}));
+        const existingBays = new Set(numericBays);
+        const skipBays = [];
+        for (let bay=bayStart; bay<=bayEnd; bay++) {
+          if (numericBays.length && !existingBays.has(bay)) skipBays.push(bay);
+        }
+        const rackHeight = Math.max(92,Math.min(150,46 + (levels.length * 14)));
+        const rackWidth = Math.max(360,Math.min(1040,150 + ((bayEnd-bayStart+1) * 26)));
+        const y = cursorY;
+        elements.push(normalizeWarehouseLayoutElement({
+          id:warehouseLayoutUid('rack'),
+          type:'rack',
+          label:`${zoneName}-${row}`,
+          rackCode:`${zoneName}-${row}`,
+          row,
+          x:70,
+          y,
+          width:rackWidth,
+          height:rackHeight,
+          bayStart,
+          bayCount:Math.max(1,bayEnd-bayStart+1),
+          bayPad:Math.max(3,String(bayEnd).length),
+          levels:levels.length ? levels : ['A'],
+          skipBays,
+          codePattern:'{zone}-{row}-{bay}-{level}',
+          direction:'ltr',
+        },elements.length));
+        if (index < rows.length-1) {
+          elements.push(normalizeWarehouseLayoutElement({
+            id:warehouseLayoutUid('aisle'),
+            type:'aisle',
+            label:'ทางเดิน',
+            x:70,
+            y:y+rackHeight+12,
+            width:Math.max(500,rackWidth),
+            height:34,
+          },elements.length));
+        }
+        cursorY = y+rackHeight+76;
+      });
+      return {
+        id:warehouseLayoutUid('zone'),
+        name:String(zoneName),
+        canvasWidth:1200,
+        canvasHeight:Math.max(620,cursorY+36),
+        elements,
+      };
+    });
+  return normalizeWarehouseLayoutConfig({
+    version:1,
+    updatedAt:new Date().toISOString(),
+    updatedBy:prof?.name || '',
+    zones,
+  });
+}
+
+function formatWarehouseLocationCode(pattern,context) {
+  const replacements = {
+    zone:context.zone,
+    row:context.row,
+    rack:context.rack,
+    bay:context.bay,
+    level:context.level,
+  };
+  let code = String(pattern || '{zone}-{row}-{bay}-{level}');
+  Object.entries(replacements).forEach(([key,value]) => {
+    code = code.replace(new RegExp(`\\{${key}\\}`,'gi'),String(value ?? ''));
+  });
+  return warehouseLocationKey(code);
+}
+
+function generateWarehouseLayoutLocations(config=_warehouseLayoutConfig) {
+  const normalized = normalizeWarehouseLayoutConfig(config || { zones:[] });
+  const locations = [];
+  const codeCounts = new Map();
+  normalized.zones.forEach(zone => {
+    zone.elements.filter(element => element.type === 'rack').forEach(rack => {
+      const skipped = new Set(rack.skipBays || []);
+      const bayNumbers = Array.from({length:rack.bayCount},(_,index) => rack.bayStart+index)
+        .filter(bay => !skipped.has(bay));
+      const visualBays = rack.direction === 'rtl' ? [...bayNumbers].reverse() : bayNumbers;
+      rack.levels.forEach((level,levelIndex) => {
+        visualBays.forEach((bay,bayIndex) => {
+          const bayText = String(bay).padStart(rack.bayPad,'0');
+          const code = formatWarehouseLocationCode(rack.codePattern,{
+            zone:zone.name,row:rack.row,rack:rack.rackCode,bay:bayText,level,
+          });
+          const location = {
+            code,
+            zoneId:zone.id,
+            zone:zone.name,
+            rackId:rack.id,
+            rackCode:rack.rackCode,
+            row:rack.row,
+            bay,
+            bayText,
+            level,
+            levelIndex,
+            bayIndex,
+          };
+          locations.push(location);
+          codeCounts.set(code,(codeCounts.get(code) || 0)+1);
+        });
+      });
+    });
+  });
+  const duplicates = [...codeCounts.entries()].filter(([,count]) => count > 1).map(([code,count]) => ({code,count}));
+  return { config:normalized,locations,duplicates };
+}
+
+function warehouseLayoutStatusInfo(status) {
+  const map = {
+    not_imported:{label:'ยังไม่ Import',className:'not_imported'},
+    imported:{label:'Import แล้ว',className:'imported'},
+    counting:{label:'จ่ายงาน / กำลังนับ',className:'counting'},
+    variance:{label:'รอตรวจ Variance',className:'variance'},
+    completed:{label:'เสร็จแล้ว',className:'completed'},
+  };
+  return map[status] || map.imported;
+}
+
+function warehouseLayoutStatusForLocation(imported,assignment,approvals=[]) {
+  if (!imported) return 'not_imported';
+  if (!assignment) return 'imported';
+  const status = String(assignment.status || '');
+  const varianceApprovals = approvals.filter(item => Number(item.variance) !== 0);
+  const hasOpenVariance = varianceApprovals.some(item => !item.wms_fixed);
+  const allVarianceFixed = varianceApprovals.length && varianceApprovals.every(item => item.wms_fixed);
+  if (hasOpenVariance) return 'variance';
+  if (allVarianceFixed || ['completed','approved'].includes(status)) return 'completed';
+  if (['round1_done','round2_done','round3_done'].includes(status)) return 'variance';
+  if (assignment.assigned_to || ['pending','in_progress'].includes(status)) return 'counting';
+  return 'imported';
+}
+
+function buildWarehouseLayoutRuntime(config=_warehouseLayoutConfig,sessionData=window._warehouseLayoutSessionData || {}) {
+  const generated = generateWarehouseLayoutLocations(config);
+  const layoutByCode = new Map();
+  generated.locations.forEach(location => {
+    if (location.code && !layoutByCode.has(location.code)) layoutByCode.set(location.code,location);
+  });
+
+  const importedByCode = new Map();
+  (sessionData.snapshots || []).forEach(snapshot => {
+    const location = snapshot.locations || {};
+    const code = warehouseLocationKey(location.code || '');
+    if (!code) return;
+    if (!importedByCode.has(code)) importedByCode.set(code,{
+      code,
+      id:snapshot.location_id || location.id || '',
+      zone:location.zone || '',
+      row:location.row_no || '',
+      level:location.level || '',
+      snapshotCount:0,
+    });
+    importedByCode.get(code).snapshotCount++;
+  });
+
+  const assignmentsByCode = new Map();
+  (sessionData.assignments || []).forEach(assignment => {
+    const code = warehouseLocationKey(assignment.locations?.code || '');
+    if (code) assignmentsByCode.set(code,assignment);
+  });
+  const countsByAssignment = new Map();
+  (sessionData.counts || []).forEach(record => {
+    if (!record.assignment_id) return;
+    const current = countsByAssignment.get(record.assignment_id) || {latestRound:0,latestAt:'',counters:new Set()};
+    current.latestRound = Math.max(current.latestRound,Number(record.round) || 0);
+    if (!current.latestAt || String(record.counted_at || '') > current.latestAt) current.latestAt = record.counted_at || '';
+    splitActualCounterNames(record.actual_counter_name).forEach(name => current.counters.add(name));
+    countsByAssignment.set(record.assignment_id,current);
+  });
+  const approvalsByAssignment = new Map();
+  (sessionData.approvals || []).forEach(approval => {
+    if (!approval.assignment_id) return;
+    if (!approvalsByAssignment.has(approval.assignment_id)) approvalsByAssignment.set(approval.assignment_id,[]);
+    approvalsByAssignment.get(approval.assignment_id).push(approval);
+  });
+  const jobsByCode = new Map();
+  (window._workTrackerRows || []).forEach(row => {
+    const code = warehouseLocationKey(row.location || '');
+    if (!code || !row.jobCode) return;
+    if (!jobsByCode.has(code)) jobsByCode.set(code,new Set());
+    jobsByCode.get(code).add(row.jobCode);
+  });
+
+  const detailsByCode = new Map();
+  const statusCounts = {not_imported:0,imported:0,counting:0,variance:0,completed:0};
+  layoutByCode.forEach((location,code) => {
+    const imported = importedByCode.get(code) || null;
+    const assignment = assignmentsByCode.get(code) || null;
+    const approvals = assignment ? (approvalsByAssignment.get(assignment.id) || []) : [];
+    const countInfo = assignment ? countsByAssignment.get(assignment.id) : null;
+    const status = warehouseLayoutStatusForLocation(imported,assignment,approvals);
+    statusCounts[status]++;
+    detailsByCode.set(code,{
+      ...location,
+      status,
+      imported,
+      assignment,
+      approvals,
+      latestRound:countInfo?.latestRound || 0,
+      latestAt:countInfo?.latestAt || '',
+      counters:countInfo ? [...countInfo.counters] : [],
+      jobs:[...(jobsByCode.get(code) || [])],
+    });
+  });
+
+  const unmatchedImported = [...importedByCode.values()]
+    .filter(location => !layoutByCode.has(location.code))
+    .sort((a,b) => a.code.localeCompare(b.code,undefined,{numeric:true}));
+  const missingImport = [...detailsByCode.values()]
+    .filter(location => location.status === 'not_imported')
+    .sort((a,b) => a.code.localeCompare(b.code,undefined,{numeric:true}));
+  const matched = [...importedByCode.keys()].filter(code => layoutByCode.has(code)).length;
+  const totalLayout = layoutByCode.size;
+  return {
+    config:generated.config,
+    generatedLocations:generated.locations,
+    duplicates:generated.duplicates,
+    detailsByCode,
+    importedByCode,
+    totalLayout,
+    totalImported:importedByCode.size,
+    matched,
+    completeness:totalLayout ? (matched/totalLayout)*100 : 0,
+    unmatchedImported,
+    missingImport,
+    statusCounts,
+    sessionId:sessionData.sessionId || '',
+    sessionName:sessionData.sessionName || '',
+  };
+}
+
+function refreshWarehouseLayoutRuntime() {
+  window._warehouseLayoutRuntime = buildWarehouseLayoutRuntime(
+    _warehouseLayoutConfig,
+    window._warehouseLayoutSessionData || {},
+  );
+  return window._warehouseLayoutRuntime;
+}
+
+function warehouseLayoutElementStyle(element,zone) {
+  const left = (element.x/zone.canvasWidth)*100;
+  const top = (element.y/zone.canvasHeight)*100;
+  const width = (element.width/zone.canvasWidth)*100;
+  const height = (element.height/zone.canvasHeight)*100;
+  return `left:${left.toFixed(3)}%;top:${top.toFixed(3)}%;width:${width.toFixed(3)}%;height:${height.toFixed(3)}%`;
+}
+
+function warehouseLayoutRackHtml(rack,zone,runtime,statusFilter,search) {
+  const rackLocations = runtime.generatedLocations.filter(location =>
+    location.zoneId === zone.id && location.rackId === rack.id
+  );
+  const byKey = new Map(rackLocations.map(location => [`${location.level}|${location.bay}`,location]));
+  const skipped = new Set(rack.skipBays || []);
+  const bays = Array.from({length:rack.bayCount},(_,index) => rack.bayStart+index);
+  if (rack.direction === 'rtl') bays.reverse();
+  const cells = rack.levels.map(level => bays.map(bay => {
+    if (skipped.has(bay)) {
+      return `<span class="warehouse-location-cell" style="background:transparent;box-shadow:none;cursor:default" title="ช่องเว้นว่าง"></span>`;
+    }
+    const generated = byKey.get(`${level}|${bay}`);
+    if (!generated) return '<span class="warehouse-location-cell status-not_imported is-dimmed"></span>';
+    const detail = runtime.detailsByCode.get(generated.code);
+    const status = detail?.status || 'not_imported';
+    const matchesStatus = statusFilter === 'all' || status === statusFilter;
+    const matchesSearch = !search || generated.code.includes(search);
+    const dimmed = (!matchesStatus || !matchesSearch) ? ' is-dimmed' : '';
+    const searchHit = search && generated.code.includes(search) ? ' is-search-hit' : '';
+    const statusInfo = warehouseLayoutStatusInfo(status);
+    return `<button type="button" class="warehouse-location-cell status-${statusInfo.className}${dimmed}${searchHit}"
+      data-warehouse-location-code="${escapeWmsText(generated.code)}"
+      onclick="showWarehouseLocationDetail(this.dataset.warehouseLocationCode)"
+      aria-label="${escapeWmsText(generated.code)} ${escapeWmsText(statusInfo.label)}"
+      title="${escapeWmsText(generated.code)} · ${escapeWmsText(statusInfo.label)}"></button>`;
+  }).join('')).join('');
+  return `<section class="warehouse-layout-rack" style="${warehouseLayoutElementStyle(rack,zone)}" aria-label="Rack ${escapeWmsText(rack.rackCode)}">
+    <div class="warehouse-layout-rack-name">${escapeWmsText(rack.rackCode)}</div>
+    <div class="warehouse-layout-bays" style="grid-template-columns:repeat(${rack.bayCount},minmax(0,1fr))">
+      ${bays.map(bay => `<span class="${skipped.has(bay)?'skip':''}">${escapeWmsText(String(bay).padStart(rack.bayPad,'0'))}</span>`).join('')}
+    </div>
+    <div class="warehouse-layout-levels" style="grid-template-rows:repeat(${rack.levels.length},minmax(0,1fr))">
+      ${rack.levels.map(level => `<span>${escapeWmsText(level)}</span>`).join('')}
+    </div>
+    <div class="warehouse-layout-grid" style="grid-template-columns:repeat(${rack.bayCount},minmax(0,1fr));grid-template-rows:repeat(${rack.levels.length},minmax(0,1fr))">
+      ${cells}
+    </div>
+  </section>`;
+}
+
+function warehouseLayoutObjectHtml(element,zone) {
+  return `<div class="warehouse-layout-object ${element.type}" style="${warehouseLayoutElementStyle(element,zone)}"
+    title="${escapeWmsText(element.label)}">${escapeWmsText(element.label)}</div>`;
+}
+
+function warehouseLayoutLegendHtml() {
+  return `<div class="warehouse-layout-legend">
+    <span class="warehouse-layout-legend-item"><i class="warehouse-layout-legend-dot not_imported"></i>ยังไม่ Import</span>
+    <span class="warehouse-layout-legend-item"><i class="warehouse-layout-legend-dot imported"></i>Import แล้ว</span>
+    <span class="warehouse-layout-legend-item"><i class="warehouse-layout-legend-dot counting"></i>จ่ายงาน / กำลังนับ</span>
+    <span class="warehouse-layout-legend-item"><i class="warehouse-layout-legend-dot variance"></i>รอตรวจ Variance</span>
+    <span class="warehouse-layout-legend-item"><i class="warehouse-layout-legend-dot completed"></i>เสร็จแล้ว</span>
+    <span class="warehouse-layout-legend-item"><i class="warehouse-layout-legend-dot unmatched"></i>Import มาแต่ไม่พบใน Layout</span>
+  </div>`;
+}
+
+function warehouseLayoutKpiHtml(label,value,tone,status='all',activeStatus='all',suffix='') {
+  const active = status !== 'none' && status === activeStatus ? ' active' : '';
+  const onclick = status === 'none' ? '' : `onclick="setWarehouseLayoutStatusFilter('${status}')"`;
+  return `<button type="button" class="warehouse-layout-kpi ${tone}${active}" ${onclick}>
+    <span>${escapeWmsText(label)}</span><strong>${escapeWmsText(value)}${suffix}</strong>
+  </button>`;
+}
+
+function warehouseLayoutEmptyHtml() {
+  const canEdit = prof?.role === 'admin';
+  return `<div class="warehouse-layout-empty">
+    <div class="warehouse-layout-empty-icon">${navIconSvg('layout',38)}</div>
+    <h3>ยังไม่ได้ตั้งค่า Layout คลังสินค้า</h3>
+    <p>เริ่มจากสร้างผังอัตโนมัติด้วย Location ที่ Import ใน Session นี้ แล้วปรับจำนวนช่อง ระดับ ทางเดิน เสา และสิ่งกีดขวางให้ตรงกับพื้นที่จริง</p>
+    ${canEdit
+      ? `<button class="btn btn-blue" type="button" onclick="startWarehouseLayoutFromSession()">สร้าง Layout เริ่มต้นจาก Session นี้</button>
+         <button class="btn btn-ghost" style="margin-left:7px" type="button" onclick="openWarehouseLayoutEditor(true)">เริ่มจากผังว่าง</button>`
+      : `<div class="alert alert-blue" style="max-width:520px;margin:0 auto">กรุณาให้ Admin ตั้งค่า Layout ก่อนเริ่มตรวจความครบถ้วน</div>`}
+  </div>`;
+}
+
+function warehouseLayoutViewHtml(runtime) {
+  const zones = runtime.config.zones || [];
+  const currentZoneId = zones.some(zone => zone.id === S._layoutZone)
+    ? S._layoutZone
+    : zones[0]?.id || '';
+  S._layoutZone = currentZoneId;
+  const zone = zones.find(item => item.id === currentZoneId);
+  const statusFilter = ['all','not_imported','imported','counting','variance','completed'].includes(S._layoutStatus)
+    ? S._layoutStatus
+    : 'all';
+  const search = warehouseLocationKey(S._layoutSearch || '');
+  const completenessText = runtime.completeness.toLocaleString('th-TH',{minimumFractionDigits:1,maximumFractionDigits:1});
+  const hero = `<div class="warehouse-layout-hero">
+    <div class="warehouse-layout-title">
+      <div class="warehouse-layout-title-icon">${navIconSvg('warehouse',28)}</div>
+      <div><h2>Layout คลังสินค้า</h2><p>ตรวจความครบถ้วนของ Location และติดตามสถานะงานจาก Session ที่เลือก</p></div>
+    </div>
+    <div class="warehouse-layout-actions">
+      ${zones.length ? `<label class="warehouse-layout-control"><span>ZONE</span><select onchange="setWarehouseLayoutZone(this.value)">
+        ${zones.map(item => `<option value="${escapeWmsText(item.id)}" ${item.id===currentZoneId?'selected':''}>${escapeWmsText(item.name)}</option>`).join('')}
+      </select></label>` : ''}
+      ${zones.length ? `<label class="warehouse-layout-control"><span>ค้นหา LOCATION</span><input value="${escapeWmsText(S._layoutSearch || '')}" placeholder="เช่น B-02-015-D" oninput="updateWarehouseLayoutSearch(this.value)"></label>` : ''}
+      ${prof?.role === 'admin' ? `<button class="btn btn-ghost" type="button" onclick="openWarehouseLayoutEditor()">${navIconSvg('manage',17)} ตั้งค่า Layout</button>` : ''}
+      ${zones.length ? `<button class="btn btn-blue" type="button" onclick="showWarehouseLayoutMatchReport()">ตรวจสอบและจับคู่</button>` : ''}
+    </div>
+  </div>`;
+  if (!zones.length || !zone) return `<div class="warehouse-layout-shell">${hero}${warehouseLayoutEmptyHtml()}</div>`;
+
+  const elements = zone.elements.map(element =>
+    element.type === 'rack'
+      ? warehouseLayoutRackHtml(element,zone,runtime,statusFilter,search)
+      : warehouseLayoutObjectHtml(element,zone)
+  ).join('');
+  const missingOutside = runtime.unmatchedImported;
+  const statusCounts = runtime.statusCounts;
+  return `<div class="warehouse-layout-shell">
+    ${hero}
+    <div class="warehouse-layout-kpis">
+      ${warehouseLayoutKpiHtml('Location ใน Layout',runtime.totalLayout.toLocaleString('th-TH'),'','all',statusFilter)}
+      ${warehouseLayoutKpiHtml('Import ตรง Layout',runtime.matched.toLocaleString('th-TH'),'matched','none',statusFilter)}
+      ${warehouseLayoutKpiHtml('ความครบถ้วน',completenessText,'completeness','none',statusFilter,'%')}
+      ${warehouseLayoutKpiHtml('ยังไม่ Import',statusCounts.not_imported.toLocaleString('th-TH'),'missing','not_imported',statusFilter)}
+      ${warehouseLayoutKpiHtml('กำลังนับ',statusCounts.counting.toLocaleString('th-TH'),'counting','counting',statusFilter)}
+      ${warehouseLayoutKpiHtml('Variance',statusCounts.variance.toLocaleString('th-TH'),'variance','variance',statusFilter)}
+      ${warehouseLayoutKpiHtml('เสร็จแล้ว',statusCounts.completed.toLocaleString('th-TH'),'completed','completed',statusFilter)}
+    </div>
+    <div class="warehouse-layout-workspace">
+      <section class="warehouse-layout-map-card">
+        <div class="warehouse-layout-map-head">
+          <div><strong>${escapeWmsText(zone.name)}</strong><br><span>แสดงเฉพาะ Zone นี้เพื่อลดภาระเครื่องและให้กด Location ได้ง่าย</span></div>
+          <label class="warehouse-layout-control"><span>สถานะ</span><select onchange="setWarehouseLayoutStatusFilter(this.value)">
+            <option value="all" ${statusFilter==='all'?'selected':''}>ทุกสถานะ</option>
+            <option value="not_imported" ${statusFilter==='not_imported'?'selected':''}>ยังไม่ Import</option>
+            <option value="imported" ${statusFilter==='imported'?'selected':''}>Import แล้ว</option>
+            <option value="counting" ${statusFilter==='counting'?'selected':''}>จ่ายงาน / กำลังนับ</option>
+            <option value="variance" ${statusFilter==='variance'?'selected':''}>รอตรวจ Variance</option>
+            <option value="completed" ${statusFilter==='completed'?'selected':''}>เสร็จแล้ว</option>
+          </select></label>
+        </div>
+        <div class="warehouse-layout-map-scroll">
+          <div class="warehouse-layout-map" style="aspect-ratio:${zone.canvasWidth}/${zone.canvasHeight}">
+            ${elements}
+          </div>
+        </div>
+        ${warehouseLayoutLegendHtml()}
+      </section>
+      <aside class="warehouse-layout-side">
+        <div class="warehouse-layout-progress">
+          <h3>ความครบถ้วนการ Import</h3>
+          <div class="warehouse-layout-donut" style="--value:${Math.max(0,Math.min(100,runtime.completeness)).toFixed(2)}">
+            <strong>${completenessText}<small>%</small></strong>
+          </div>
+          <div style="font-size:10px;color:var(--text-muted);font-weight:700">${runtime.matched.toLocaleString('th-TH')} / ${runtime.totalLayout.toLocaleString('th-TH')} Location</div>
+        </div>
+        <div class="warehouse-layout-side-summary">
+          <div class="warehouse-layout-side-row"><span>Import แล้ว ยังไม่จ่าย</span><strong>${statusCounts.imported.toLocaleString('th-TH')}</strong></div>
+          <div class="warehouse-layout-side-row"><span>Layout แต่ยังไม่ Import</span><strong>${runtime.missingImport.length.toLocaleString('th-TH')}</strong></div>
+          <div class="warehouse-layout-side-row"><span>Import ทั้งหมดใน Session</span><strong>${runtime.totalImported.toLocaleString('th-TH')}</strong></div>
+        </div>
+        <div class="warehouse-layout-alert">
+          <div class="warehouse-layout-alert-head"><span>ไม่พบใน Layout</span><strong>${missingOutside.length.toLocaleString('th-TH')}</strong></div>
+          <div class="warehouse-layout-alert-list">
+            ${missingOutside.slice(0,5).map(item => `<div class="warehouse-layout-alert-item">${escapeWmsText(item.code)}</div>`).join('')
+              || `<div style="padding:13px 0;text-align:center;color:#278165;font-size:10px;font-weight:800">✓ ไม่พบปัญหา</div>`}
+          </div>
+          ${missingOutside.length ? `<button class="btn btn-ghost btn-sm" style="width:calc(100% - 20px);margin:5px 10px 11px" onclick="showWarehouseLayoutMatchReport()">ดูทั้งหมด</button>` : ''}
+        </div>
+      </aside>
+    </div>
+  </div>`;
+}
+
+function renderWarehouseLayoutTab() {
+  const root = Q('warehouse-layout-root');
+  if (!root) return;
+  const runtime = window._warehouseLayoutRuntime || refreshWarehouseLayoutRuntime();
+  root.innerHTML = warehouseLayoutViewHtml(runtime);
+}
+
+function setWarehouseLayoutZone(zoneId) {
+  S._layoutZone = String(zoneId || '');
+  renderWarehouseLayoutTab();
+}
+
+function setWarehouseLayoutStatusFilter(status) {
+  S._layoutStatus = ['not_imported','imported','counting','variance','completed'].includes(status) ? status : 'all';
+  renderWarehouseLayoutTab();
+}
+
+function updateWarehouseLayoutSearch(value) {
+  S._layoutSearch = String(value || '');
+  clearTimeout(_warehouseLayoutSearchTimer);
+  _warehouseLayoutSearchTimer = setTimeout(renderWarehouseLayoutTab,180);
+}
+
+function showWarehouseLayoutToast(message,type='') {
+  document.querySelector('.warehouse-layout-toast')?.remove();
+  const toast = document.createElement('div');
+  toast.className = `warehouse-layout-toast ${type}`.trim();
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(),5200);
+}
+
+function closeWarehouseLayoutDialog() {
+  Q('warehouse-layout-dialog-backdrop')?.remove();
+}
+
+function openWarehouseLayoutDialog(title,bodyHtml) {
+  closeWarehouseLayoutDialog();
+  const backdrop = document.createElement('div');
+  backdrop.id = 'warehouse-layout-dialog-backdrop';
+  backdrop.className = 'warehouse-layout-dialog-backdrop';
+  backdrop.onclick = event => { if (event.target === backdrop) closeWarehouseLayoutDialog(); };
+  backdrop.innerHTML = `<section class="warehouse-layout-dialog" role="dialog" aria-modal="true" aria-label="${escapeWmsText(title)}">
+    <div class="warehouse-layout-dialog-head"><strong>${escapeWmsText(title)}</strong><button class="warehouse-layout-dialog-close" type="button" onclick="closeWarehouseLayoutDialog()">×</button></div>
+    <div class="warehouse-layout-dialog-body">${bodyHtml}</div>
+  </section>`;
+  document.body.appendChild(backdrop);
+}
+
+function showWarehouseLocationDetail(code) {
+  const runtime = window._warehouseLayoutRuntime || refreshWarehouseLayoutRuntime();
+  const normalizedCode = warehouseLocationKey(code);
+  const detail = runtime.detailsByCode.get(normalizedCode);
+  if (!detail) return;
+  const statusInfo = warehouseLayoutStatusInfo(detail.status);
+  const assignmentUser = detail.assignment?.profiles?.name || detail.counters.join(', ') || 'ยังไม่จ่ายงาน';
+  const latestRound = detail.latestRound ? `รอบ ${detail.latestRound}` : 'ยังไม่มีการนับ';
+  const jobs = detail.jobs.length ? detail.jobs.join(', ') : '—';
+  const importedText = detail.imported ? 'พบใน Import WMS' : 'ยังไม่พบใน Import WMS';
+  openWarehouseLayoutDialog('รายละเอียด Location',`
+    <div class="warehouse-layout-detail-code">${escapeWmsText(detail.code)}</div>
+    <div style="margin-top:7px"><span class="work-tracker-status ${escapeWmsText(detail.status)}">${escapeWmsText(statusInfo.label)}</span></div>
+    <div class="warehouse-layout-detail-grid">
+      <div class="warehouse-layout-detail-card"><span>การจับคู่ WMS</span><strong>${escapeWmsText(importedText)}</strong></div>
+      <div class="warehouse-layout-detail-card"><span>Zone / Rack</span><strong>${escapeWmsText(detail.zone)} · ${escapeWmsText(detail.rackCode)}</strong></div>
+      <div class="warehouse-layout-detail-card"><span>ช่อง / ระดับ</span><strong>${escapeWmsText(detail.bayText)} · ${escapeWmsText(detail.level)}</strong></div>
+      <div class="warehouse-layout-detail-card"><span>JOB</span><strong>${escapeWmsText(jobs)}</strong></div>
+      <div class="warehouse-layout-detail-card"><span>รอบล่าสุด</span><strong>${escapeWmsText(latestRound)}</strong></div>
+      <div class="warehouse-layout-detail-card"><span>ผู้รับผิดชอบ / คนนับจริง</span><strong>${escapeWmsText(assignmentUser)}</strong></div>
+    </div>
+    <div class="alert alert-blue" style="margin-top:14px">Layout แสดงเฉพาะสถานะงานและไม่แสดงยอด OH/QTY จึงใช้ได้กับ Blind Count โดยไม่เปิดเผยยอด</div>
+  `);
+}
+
+function warehouseLayoutMatchListHtml(rows,emptyText) {
+  return rows.length
+    ? rows.map(item => `<div>${escapeWmsText(item.code || item)}</div>`).join('')
+    : `<div style="color:#278165">${escapeWmsText(emptyText)}</div>`;
+}
+
+function showWarehouseLayoutMatchReport(useDraft=false) {
+  const runtime = useDraft && _warehouseLayoutDraft
+    ? buildWarehouseLayoutRuntime(_warehouseLayoutDraft,window._warehouseLayoutSessionData || {})
+    : (window._warehouseLayoutRuntime || refreshWarehouseLayoutRuntime());
+  openWarehouseLayoutDialog('ผลตรวจสอบและจับคู่ Location',`
+    <div class="alert alert-blue" style="margin-bottom:14px">
+      ตรงกัน ${runtime.matched.toLocaleString('th-TH')} จาก Layout ${runtime.totalLayout.toLocaleString('th-TH')} Location · ความครบถ้วน ${runtime.completeness.toLocaleString('th-TH',{minimumFractionDigits:1,maximumFractionDigits:1})}%
+    </div>
+    ${runtime.duplicates.length ? `<div class="alert alert-red" style="margin-bottom:14px">พบ Location ซ้ำใน Layout ${runtime.duplicates.length.toLocaleString('th-TH')} รหัส กรุณาแก้ก่อนบันทึกใช้งาน</div>` : ''}
+    <div class="warehouse-match-columns">
+      <section class="warehouse-match-column">
+        <h4>มีใน Layout แต่ยังไม่ Import (${runtime.missingImport.length.toLocaleString('th-TH')})</h4>
+        <div class="warehouse-match-list">${warehouseLayoutMatchListHtml(runtime.missingImport,'ครบทุก Location ใน Layout')}</div>
+      </section>
+      <section class="warehouse-match-column error">
+        <h4>Import มาแต่ไม่พบใน Layout (${runtime.unmatchedImported.length.toLocaleString('th-TH')})</h4>
+        <div class="warehouse-match-list">${warehouseLayoutMatchListHtml(runtime.unmatchedImported,'ไม่พบ Location นอก Layout')}</div>
+      </section>
+    </div>
+  `);
+}
+
+function warehouseEditorToolHtml(type,label,symbol) {
+  return `<button class="warehouse-tool-button" type="button" onclick="addWarehouseLayoutElement('${type}')">
+    <span class="warehouse-tool-icon">${symbol}</span><span>${escapeWmsText(label)}</span>
+  </button>`;
+}
+
+function warehouseEditorElementHtml(element,zone) {
+  const selected = element.id === _warehouseLayoutSelectedElementId ? ' selected' : '';
+  const label = element.type === 'rack' ? element.rackCode : element.label;
+  return `<div class="warehouse-editor-element ${element.type}${selected}" data-layout-element-id="${escapeWmsText(element.id)}"
+    style="${warehouseLayoutElementStyle(element,zone)}"
+    onpointerdown="beginWarehouseLayoutElementDrag(event,this.dataset.layoutElementId)"
+    onclick="selectWarehouseLayoutElement(this.dataset.layoutElementId)"
+    title="${escapeWmsText(label)}">
+    ${element.type === 'rack' ? `<strong>${escapeWmsText(element.rackCode)}</strong>` : escapeWmsText(element.label)}
+  </div>`;
+}
+
+function warehousePropertyFieldHtml(label,field,value,type='text',extra='') {
+  return `<div class="warehouse-property-field">
+    <label>${escapeWmsText(label)}</label>
+    <input type="${type}" value="${escapeWmsText(value)}" ${extra}
+      onchange="updateWarehouseLayoutElementField('${field}',this.value)">
+  </div>`;
+}
+
+function warehouseLayoutElementPropertiesHtml(element) {
+  if (!element) return '';
+  if (element.type !== 'rack') {
+    return `<div class="warehouse-property-form">
+      ${warehousePropertyFieldHtml('ชื่อ / ป้ายกำกับ','label',element.label)}
+      ${warehousePropertyFieldHtml('ความกว้าง','width',Math.round(element.width),'number','min="24" max="3000"')}
+      ${warehousePropertyFieldHtml('ความสูง','height',Math.round(element.height),'number','min="22" max="1800"')}
+      <div class="warehouse-property-actions">
+        <button class="btn btn-ghost btn-sm" type="button" onclick="duplicateWarehouseLayoutElement()">ทำสำเนา</button>
+        <button class="btn btn-red btn-sm" type="button" onclick="deleteWarehouseLayoutElement()">ลบองค์ประกอบ</button>
+      </div>
+    </div>`;
+  }
+  return `<div class="warehouse-property-form">
+    ${warehousePropertyFieldHtml('ชื่อ Rack','rackCode',element.rackCode)}
+    ${warehousePropertyFieldHtml('รหัส ROW','row',element.row)}
+    ${warehousePropertyFieldHtml('ช่องเริ่มต้น','bayStart',element.bayStart,'number','min="0" max="99999"')}
+    ${warehousePropertyFieldHtml('จำนวนช่อง','bayCount',element.bayCount,'number','min="1" max="500"')}
+    ${warehousePropertyFieldHtml('จำนวนหลักของเลขช่อง','bayPad',element.bayPad,'number','min="1" max="6"')}
+    <div class="warehouse-property-field">
+      <label>ระดับ เรียงจากบนลงล่าง</label>
+      <input value="${escapeWmsText(element.levels.join(', '))}" onchange="updateWarehouseLayoutElementField('levels',this.value)">
+      <div class="warehouse-property-help">ตัวอย่าง: G, F, E, D, C, B, A</div>
+    </div>
+    <div class="warehouse-property-field">
+      <label>ช่องที่เว้นว่าง / ไม่มี Location</label>
+      <input value="${escapeWmsText((element.skipBays || []).map(bay => String(bay).padStart(element.bayPad,'0')).join(', '))}"
+        placeholder="เช่น 005, 006" onchange="updateWarehouseLayoutElementField('skipBays',this.value)">
+      <div class="warehouse-property-help">ใช้กรณีมีเสาหรือช่องว่างคั่นอยู่กลาง Rack</div>
+    </div>
+    <div class="warehouse-property-field">
+      <label>รูปแบบรหัส Location</label>
+      <input value="${escapeWmsText(element.codePattern)}" onchange="updateWarehouseLayoutElementField('codePattern',this.value)">
+      <div class="warehouse-property-help">ใช้ได้: {zone} {row} {rack} {bay} {level}</div>
+    </div>
+    <div class="warehouse-property-field">
+      <label>ทิศทางเลขช่อง</label>
+      <select onchange="updateWarehouseLayoutElementField('direction',this.value)">
+        <option value="ltr" ${element.direction==='ltr'?'selected':''}>ซ้าย → ขวา</option>
+        <option value="rtl" ${element.direction==='rtl'?'selected':''}>ขวา → ซ้าย</option>
+      </select>
+    </div>
+    ${warehousePropertyFieldHtml('ความกว้างบนผัง','width',Math.round(element.width),'number','min="100" max="3000"')}
+    ${warehousePropertyFieldHtml('ความสูงบนผัง','height',Math.round(element.height),'number','min="60" max="1800"')}
+    <div class="warehouse-property-actions">
+      <button class="btn btn-blue btn-sm" type="button" onclick="validateWarehouseLayoutDraft()">สร้าง Location อัตโนมัติ</button>
+      <button class="btn btn-ghost btn-sm" type="button" onclick="duplicateWarehouseLayoutElement()">ทำสำเนาชั้นวาง</button>
+      <button class="btn btn-red btn-sm" type="button" onclick="deleteWarehouseLayoutElement()">ลบชั้นวาง</button>
+    </div>
+  </div>`;
+}
+
+function warehouseLayoutZonePropertiesHtml(zone) {
+  if (!zone) return `<div class="warehouse-editor-empty-properties">ยังไม่มี Zone<br>กด “+ เพิ่ม Zone” เพื่อเริ่มจัดผัง</div>`;
+  return `<div class="warehouse-property-form">
+    <div class="warehouse-property-field"><label>ชื่อ Zone</label><input value="${escapeWmsText(zone.name)}" onchange="updateWarehouseLayoutZoneField('name',this.value)"></div>
+    <div class="warehouse-property-field"><label>ความกว้างพื้นที่</label><input type="number" min="600" max="4000" value="${Math.round(zone.canvasWidth)}" onchange="updateWarehouseLayoutZoneField('canvasWidth',this.value)"></div>
+    <div class="warehouse-property-field"><label>ความสูงพื้นที่</label><input type="number" min="400" max="4000" value="${Math.round(zone.canvasHeight)}" onchange="updateWarehouseLayoutZoneField('canvasHeight',this.value)"></div>
+    <div class="warehouse-property-help">เลือกชั้นวางหรือสิ่งกีดขวางบนผังเพื่อแก้คุณสมบัติขององค์ประกอบนั้น</div>
+    <div class="warehouse-property-actions">
+      <button class="btn btn-red btn-sm" type="button" onclick="deleteWarehouseLayoutZone()">ลบ Zone นี้</button>
+    </div>
+  </div>`;
+}
+
+function warehouseLayoutEditorHtml() {
+  const draft = normalizeWarehouseLayoutConfig(_warehouseLayoutDraft || { zones:[] });
+  _warehouseLayoutDraft = draft;
+  const zones = draft.zones;
+  const currentZoneId = zones.some(zone => zone.id === S._layoutEditorZone)
+    ? S._layoutEditorZone
+    : zones[0]?.id || '';
+  S._layoutEditorZone = currentZoneId;
+  const zone = zones.find(item => item.id === currentZoneId) || null;
+  const selected = zone?.elements.find(element => element.id === _warehouseLayoutSelectedElementId) || null;
+  if (!selected) _warehouseLayoutSelectedElementId = '';
+  const runtime = buildWarehouseLayoutRuntime(draft,window._warehouseLayoutSessionData || {});
+  const readyLocations = Math.max(0,runtime.totalLayout);
+  return `<div class="warehouse-layout-editor">
+    <div class="warehouse-editor-head">
+      <div><h2>ตั้งค่า Layout คลังสินค้า</h2><p>ลาก วาง และกำหนดรหัส Location ให้ตรงกับพื้นที่จริง แต่ละ Zone และ Rack มีขนาดไม่เท่ากันได้</p></div>
+      <div class="warehouse-editor-actions">
+        <button class="btn btn-ghost" type="button" onclick="cancelWarehouseLayoutEditor()">ยกเลิก</button>
+        <button class="btn btn-ghost" type="button" onclick="saveWarehouseLayoutDraft()">บันทึกฉบับร่าง</button>
+        <button class="btn btn-blue" id="warehouse-layout-save-btn" type="button" onclick="saveWarehouseLayoutConfig()">บันทึกและใช้งาน</button>
+      </div>
+    </div>
+    <div class="warehouse-editor-body">
+      <aside class="warehouse-editor-tools">
+        <h3>เครื่องมือ</h3>
+        ${warehouseEditorToolHtml('rack','ชั้นวาง','▦')}
+        ${warehouseEditorToolHtml('aisle','ทางเดิน','═')}
+        ${warehouseEditorToolHtml('pillar','เสา','▮')}
+        ${warehouseEditorToolHtml('obstacle','สิ่งกีดขวาง','⚠')}
+        ${warehouseEditorToolHtml('gap','พื้นที่ว่าง','□')}
+        <button class="warehouse-tool-button warehouse-editor-zone-add" type="button" onclick="addWarehouseLayoutZone()"><span class="warehouse-tool-icon">＋</span><span>เพิ่ม Zone</span></button>
+      </aside>
+      <section class="warehouse-editor-canvas-shell">
+        <div class="warehouse-editor-canvas-toolbar">
+          <div class="warehouse-editor-canvas-toolbar-group">
+            <select onchange="setWarehouseLayoutEditorZone(this.value)" aria-label="เลือก Zone">
+              ${zones.map(item => `<option value="${escapeWmsText(item.id)}" ${item.id===currentZoneId?'selected':''}>${escapeWmsText(item.name)}</option>`).join('')}
+            </select>
+            ${zone ? `<button class="btn btn-ghost btn-sm" type="button" onclick="deleteWarehouseLayoutZone()">ลบ Zone</button>` : ''}
+          </div>
+          <div class="warehouse-editor-canvas-toolbar-group">
+            <span style="font-size:9px;color:var(--text-muted);font-weight:800">ลากองค์ประกอบเพื่อจัดตำแหน่ง · แสดงรหัส Location</span>
+            <button class="btn btn-ghost btn-sm" type="button" onclick="showWarehouseLayoutMatchReport(true)">ตรวจสอบ</button>
+          </div>
+        </div>
+        <div class="warehouse-editor-canvas-scroll">
+          ${zone ? `<div class="warehouse-editor-canvas" id="warehouse-editor-canvas" style="aspect-ratio:${zone.canvasWidth}/${zone.canvasHeight}">
+            ${zone.elements.map(element => warehouseEditorElementHtml(element,zone)).join('')}
+          </div>` : `<div class="warehouse-layout-empty" style="margin:8px"><h3>ยังไม่มี Zone</h3><p>เพิ่ม Zone แล้วจึงวางชั้นวาง ทางเดิน เสา และสิ่งกีดขวาง</p></div>`}
+        </div>
+      </section>
+      <aside class="warehouse-editor-properties">
+        <h3>${selected ? (selected.type === 'rack' ? 'คุณสมบัติชั้นวาง' : 'คุณสมบัติองค์ประกอบ') : 'คุณสมบัติ Zone'}</h3>
+        ${selected ? warehouseLayoutElementPropertiesHtml(selected) : warehouseLayoutZonePropertiesHtml(zone)}
+      </aside>
+    </div>
+    <div class="warehouse-editor-validation">
+      <div class="warehouse-validation-card ok"><strong>${readyLocations.toLocaleString('th-TH')}</strong><div><b>พร้อมใช้งาน</b><span>Location ใน Layout</span></div></div>
+      <div class="warehouse-validation-card warn"><strong>${runtime.duplicates.length.toLocaleString('th-TH')}</strong><div><b>รหัสซ้ำ</b><span>ต้องแก้ก่อนใช้งาน</span></div></div>
+      <div class="warehouse-validation-card error"><strong>${runtime.unmatchedImported.length.toLocaleString('th-TH')}</strong><div><b>ไม่พบใน Layout</b><span>Location จาก WMS</span></div></div>
+      <button class="btn btn-ghost" type="button" onclick="showWarehouseLayoutMatchReport(true)">ตรวจสอบและจับคู่</button>
+    </div>
+  </div>`;
+}
+
+function renderWarehouseLayoutEditor() {
+  const root = Q('warehouse-layout-root');
+  if (!root) return;
+  root.innerHTML = warehouseLayoutEditorHtml();
+}
+
+function startWarehouseLayoutFromSession() {
+  if (prof?.role !== 'admin') { adminOnlyMessage(); return; }
+  const generated = createWarehouseLayoutFromSessionData(window._warehouseLayoutSessionData || {});
+  if (!generated.zones.length) {
+    showWarehouseLayoutToast('Session นี้ยังไม่มี Location จาก Import WMS สำหรับสร้างผังเริ่มต้น','warn');
+    return;
+  }
+  _warehouseLayoutDraft = generated;
+  _warehouseLayoutDraftDirty = true;
+  _warehouseLayoutSelectedElementId = generated.zones[0]?.elements.find(element => element.type === 'rack')?.id || '';
+  S._layoutEditorZone = generated.zones[0]?.id || '';
+  renderWarehouseLayoutEditor();
+}
+
+function openWarehouseLayoutEditor(blank=false) {
+  if (prof?.role !== 'admin') { adminOnlyMessage(); return; }
+  const savedDraft = readLocalWarehouseLayout(WAREHOUSE_LAYOUT_DRAFT_STORAGE_KEY);
+  let source;
+  if (blank) {
+    source = normalizeWarehouseLayoutConfig({
+      zones:[{id:warehouseLayoutUid('zone'),name:'Zone A',canvasWidth:1200,canvasHeight:720,elements:[]}],
+      updatedBy:prof?.name || '',
+    });
+  } else if (savedDraft?.zones?.length && Date.parse(savedDraft.updatedAt || '') > Date.parse(_warehouseLayoutConfig?.updatedAt || '')) {
+    source = savedDraft;
+    showWarehouseLayoutToast('โหลดฉบับร่างล่าสุดที่บันทึกไว้แล้ว');
+  } else if (_warehouseLayoutConfig?.zones?.length) {
+    source = _warehouseLayoutConfig;
+  } else {
+    source = createWarehouseLayoutFromSessionData(window._warehouseLayoutSessionData || {});
+  }
+  if (!source?.zones?.length && !blank) {
+    source = normalizeWarehouseLayoutConfig({
+      zones:[{id:warehouseLayoutUid('zone'),name:'Zone A',canvasWidth:1200,canvasHeight:720,elements:[]}],
+      updatedBy:prof?.name || '',
+    });
+  }
+  _warehouseLayoutDraft = warehouseLayoutClone(source);
+  _warehouseLayoutDraftDirty = false;
+  S._layoutEditorZone = _warehouseLayoutDraft.zones[0]?.id || '';
+  _warehouseLayoutSelectedElementId = _warehouseLayoutDraft.zones[0]?.elements.find(element => element.type === 'rack')?.id || '';
+  renderWarehouseLayoutEditor();
+}
+
+function cancelWarehouseLayoutEditor() {
+  if (_warehouseLayoutDraftDirty && !confirm('มีการแก้ไข Layout ที่ยังไม่ได้บันทึก ต้องการยกเลิกจริงหรือไม่?')) return;
+  _warehouseLayoutDraft = null;
+  _warehouseLayoutDraftDirty = false;
+  _warehouseLayoutSelectedElementId = '';
+  renderWarehouseLayoutTab();
+}
+
+function saveWarehouseLayoutDraft() {
+  if (prof?.role !== 'admin') { adminOnlyMessage(); return; }
+  const draft = normalizeWarehouseLayoutConfig({
+    ..._warehouseLayoutDraft,
+    updatedAt:new Date().toISOString(),
+    updatedBy:prof?.name || '',
+  });
+  _warehouseLayoutDraft = draft;
+  if (!persistLocalWarehouseLayout(draft,WAREHOUSE_LAYOUT_DRAFT_STORAGE_KEY)) {
+    showWarehouseLayoutToast('บันทึกฉบับร่างในอุปกรณ์นี้ไม่สำเร็จ','error');
+    return;
+  }
+  _warehouseLayoutDraftDirty = false;
+  showWarehouseLayoutToast('บันทึกฉบับร่างไว้ในอุปกรณ์นี้แล้ว');
+}
+
+async function saveWarehouseLayoutConfig() {
+  if (prof?.role !== 'admin') { adminOnlyMessage(); return; }
+  const button = Q('warehouse-layout-save-btn');
+  const config = normalizeWarehouseLayoutConfig({
+    ..._warehouseLayoutDraft,
+    updatedAt:new Date().toISOString(),
+    updatedBy:prof?.name || '',
+  });
+  const validation = generateWarehouseLayoutLocations(config);
+  if (!config.zones.length || !validation.locations.length) {
+    showWarehouseLayoutToast('กรุณาเพิ่มอย่างน้อย 1 Zone และ 1 ชั้นวางก่อนบันทึก','warn');
+    return;
+  }
+  if (validation.duplicates.length) {
+    showWarehouseLayoutToast(`พบ Location ซ้ำ ${validation.duplicates.length} รหัส กรุณาแก้ก่อนบันทึก`,'error');
+    showWarehouseLayoutMatchReport(true);
+    return;
+  }
+  if (button) { button.disabled = true; button.textContent = 'กำลังบันทึก...'; }
+  const localSaved = persistLocalWarehouseLayout(config);
+  let centralSaved = false;
+  let centralError = null;
+  if (sb) {
+    try {
+      const { error } = await sb.from('app_settings').upsert({
+        key:WAREHOUSE_LAYOUT_SETTING_KEY,
+        value:config,
+      },{onConflict:'key'});
+      if (error) centralError = error;
+      else centralSaved = true;
+    } catch (error) {
+      centralError = error;
+    }
+  }
+  _warehouseLayoutConfig = config;
+  _warehouseLayoutLoaded = true;
+  _warehouseLayoutDraft = null;
+  _warehouseLayoutDraftDirty = false;
+  _warehouseLayoutSelectedElementId = '';
+  try { localStorage.removeItem(WAREHOUSE_LAYOUT_DRAFT_STORAGE_KEY); } catch (_) {}
+  refreshWarehouseLayoutRuntime();
+  S._layoutZone = config.zones[0]?.id || '';
+  renderWarehouseLayoutTab();
+  if (centralSaved) {
+    showWarehouseLayoutToast('บันทึก Layout และเริ่มใช้งานแล้ว');
+  } else if (localSaved) {
+    console.warn('บันทึก Warehouse Layout ส่วนกลางไม่สำเร็จ:',centralError);
+    showWarehouseLayoutToast('เริ่มใช้งาน Layout แล้ว แต่บันทึกได้เฉพาะอุปกรณ์นี้ กรุณาตรวจสิทธิ์ app_settings','warn');
+  } else {
+    showWarehouseLayoutToast('ไม่สามารถบันทึก Layout ได้','error');
+  }
+}
+
+function currentWarehouseLayoutDraftZone() {
+  return _warehouseLayoutDraft?.zones?.find(zone => zone.id === S._layoutEditorZone) || null;
+}
+
+function setWarehouseLayoutEditorZone(zoneId) {
+  S._layoutEditorZone = String(zoneId || '');
+  _warehouseLayoutSelectedElementId = '';
+  renderWarehouseLayoutEditor();
+}
+
+function addWarehouseLayoutZone() {
+  if (!_warehouseLayoutDraft) return;
+  const name = String(prompt('ชื่อ Zone ใหม่ เช่น Zone B หรือ B','') || '').trim();
+  if (!name) return;
+  if (_warehouseLayoutDraft.zones.some(zone => zone.name.toUpperCase() === name.toUpperCase())) {
+    showWarehouseLayoutToast('มีชื่อ Zone นี้อยู่แล้ว','warn');
+    return;
+  }
+  const zone = {id:warehouseLayoutUid('zone'),name,canvasWidth:1200,canvasHeight:720,elements:[]};
+  _warehouseLayoutDraft.zones.push(zone);
+  S._layoutEditorZone = zone.id;
+  _warehouseLayoutSelectedElementId = '';
+  _warehouseLayoutDraftDirty = true;
+  renderWarehouseLayoutEditor();
+}
+
+function deleteWarehouseLayoutZone() {
+  const zone = currentWarehouseLayoutDraftZone();
+  if (!zone || !confirm(`ลบ ${zone.name} และองค์ประกอบทั้งหมดใน Zone นี้หรือไม่?`)) return;
+  _warehouseLayoutDraft.zones = _warehouseLayoutDraft.zones.filter(item => item.id !== zone.id);
+  S._layoutEditorZone = _warehouseLayoutDraft.zones[0]?.id || '';
+  _warehouseLayoutSelectedElementId = '';
+  _warehouseLayoutDraftDirty = true;
+  renderWarehouseLayoutEditor();
+}
+
+function updateWarehouseLayoutZoneField(field,value) {
+  const zone = currentWarehouseLayoutDraftZone();
+  if (!zone) return;
+  if (field === 'name') zone.name = warehouseLayoutString(value,zone.name,60) || zone.name;
+  if (field === 'canvasWidth') zone.canvasWidth = warehouseLayoutNumber(value,zone.canvasWidth,600,4000);
+  if (field === 'canvasHeight') zone.canvasHeight = warehouseLayoutNumber(value,zone.canvasHeight,400,4000);
+  zone.elements.forEach(element => {
+    element.x = Math.min(element.x,Math.max(0,zone.canvasWidth-element.width));
+    element.y = Math.min(element.y,Math.max(0,zone.canvasHeight-element.height));
+  });
+  _warehouseLayoutDraftDirty = true;
+  renderWarehouseLayoutEditor();
+}
+
+function addWarehouseLayoutElement(type) {
+  const zone = currentWarehouseLayoutDraftZone();
+  if (!zone) {
+    showWarehouseLayoutToast('กรุณาเพิ่ม Zone ก่อน','warn');
+    return;
+  }
+  const rackCount = zone.elements.filter(element => element.type === 'rack').length;
+  const offset = (zone.elements.length*23)%220;
+  const row = String(rackCount+1).padStart(2,'0');
+  const defaults = {
+    rack:{label:`${zone.name}-${row}`,rackCode:`${zone.name}-${row}`,row,x:60,y:55+offset,width:760,height:110,bayStart:1,bayCount:20,bayPad:3,levels:['G','F','E','D','C','B','A'],skipBays:[],codePattern:'{zone}-{row}-{bay}-{level}',direction:'ltr'},
+    aisle:{label:'ทางเดิน',x:90,y:80+offset,width:650,height:52},
+    pillar:{label:'เสา',x:500,y:90+offset,width:55,height:72},
+    obstacle:{label:'สิ่งกีดขวาง',x:560,y:95+offset,width:130,height:82},
+    gap:{label:'พื้นที่ว่าง',x:710,y:95+offset,width:150,height:90},
+  };
+  const element = normalizeWarehouseLayoutElement({
+    id:warehouseLayoutUid(type),
+    type,
+    ...(defaults[type] || defaults.gap),
+  },zone.elements.length);
+  zone.elements.push(element);
+  _warehouseLayoutSelectedElementId = element.id;
+  _warehouseLayoutDraftDirty = true;
+  renderWarehouseLayoutEditor();
+}
+
+function selectWarehouseLayoutElement(elementId) {
+  if (_warehouseLayoutDragState) return;
+  _warehouseLayoutSelectedElementId = String(elementId || '');
+  renderWarehouseLayoutEditor();
+}
+
+function currentWarehouseLayoutSelectedElement() {
+  return currentWarehouseLayoutDraftZone()?.elements?.find(element => element.id === _warehouseLayoutSelectedElementId) || null;
+}
+
+function updateWarehouseLayoutElementField(field,value) {
+  const zone = currentWarehouseLayoutDraftZone();
+  const element = currentWarehouseLayoutSelectedElement();
+  if (!zone || !element) return;
+  const numericFields = new Set(['x','y','width','height','bayStart','bayCount','bayPad']);
+  if (numericFields.has(field)) {
+    const range = {
+      x:[0,zone.canvasWidth],y:[0,zone.canvasHeight],width:[24,3000],height:[22,1800],
+      bayStart:[0,99999],bayCount:[1,500],bayPad:[1,6],
+    }[field];
+    element[field] = Math.floor(warehouseLayoutNumber(value,element[field],range[0],range[1]));
+  } else if (field === 'levels') {
+    element.levels = normalizeWarehouseLayoutLevels(value);
+  } else if (field === 'skipBays') {
+    element.skipBays = normalizeWarehouseSkipBays(value);
+  } else if (field === 'direction') {
+    element.direction = value === 'rtl' ? 'rtl' : 'ltr';
+  } else if (field === 'rackCode') {
+    element.rackCode = warehouseLayoutString(value,element.rackCode,80).toUpperCase() || element.rackCode;
+    element.label = element.rackCode;
+  } else if (['row','codePattern','label'].includes(field)) {
+    element[field] = warehouseLayoutString(value,element[field],field === 'codePattern' ? 160 : 80) || element[field];
+    if (field === 'row') element.row = element.row.toUpperCase();
+  }
+  element.x = Math.min(element.x,Math.max(0,zone.canvasWidth-element.width));
+  element.y = Math.min(element.y,Math.max(0,zone.canvasHeight-element.height));
+  _warehouseLayoutDraftDirty = true;
+  renderWarehouseLayoutEditor();
+}
+
+function duplicateWarehouseLayoutElement() {
+  const zone = currentWarehouseLayoutDraftZone();
+  const element = currentWarehouseLayoutSelectedElement();
+  if (!zone || !element) return;
+  const rackNumber = zone.elements.filter(item => item.type === 'rack').length+1;
+  const nextRow = String(rackNumber).padStart(2,'0');
+  const rackCopyFields = element.type === 'rack'
+    ? { row:nextRow,rackCode:`${zone.name}-${nextRow}`,label:`${zone.name}-${nextRow}` }
+    : { label:`${element.label} Copy` };
+  const copy = normalizeWarehouseLayoutElement({
+    ...warehouseLayoutClone(element),
+    id:warehouseLayoutUid(element.type),
+    ...rackCopyFields,
+    x:element.x+28,
+    y:element.y+28,
+  },zone.elements.length);
+  zone.elements.push(copy);
+  _warehouseLayoutSelectedElementId = copy.id;
+  _warehouseLayoutDraftDirty = true;
+  renderWarehouseLayoutEditor();
+}
+
+function deleteWarehouseLayoutElement() {
+  const zone = currentWarehouseLayoutDraftZone();
+  const element = currentWarehouseLayoutSelectedElement();
+  if (!zone || !element) return;
+  zone.elements = zone.elements.filter(item => item.id !== element.id);
+  _warehouseLayoutSelectedElementId = '';
+  _warehouseLayoutDraftDirty = true;
+  renderWarehouseLayoutEditor();
+}
+
+function validateWarehouseLayoutDraft() {
+  const runtime = buildWarehouseLayoutRuntime(_warehouseLayoutDraft,window._warehouseLayoutSessionData || {});
+  if (runtime.duplicates.length) {
+    showWarehouseLayoutToast(`พบ Location ซ้ำ ${runtime.duplicates.length} รหัส`,'error');
+    showWarehouseLayoutMatchReport(true);
+    return;
+  }
+  showWarehouseLayoutToast(`สร้างและตรวจสอบแล้ว ${runtime.totalLayout.toLocaleString('th-TH')} Location`);
+  renderWarehouseLayoutEditor();
+}
+
+function beginWarehouseLayoutElementDrag(event,elementId) {
+  if (event.button !== undefined && event.button !== 0) return;
+  const zone = currentWarehouseLayoutDraftZone();
+  const element = zone?.elements.find(item => item.id === elementId);
+  const canvas = Q('warehouse-editor-canvas');
+  if (!zone || !element || !canvas) return;
+  event.preventDefault();
+  event.stopPropagation();
+  _warehouseLayoutSelectedElementId = elementId;
+  document.querySelectorAll('.warehouse-editor-element').forEach(node => {
+    node.classList.toggle('selected',node.dataset.layoutElementId === elementId);
+  });
+  _warehouseLayoutDragState = {
+    elementId,
+    zoneId:zone.id,
+    startClientX:event.clientX,
+    startClientY:event.clientY,
+    startX:element.x,
+    startY:element.y,
+    canvasRect:canvas.getBoundingClientRect(),
+  };
+  event.currentTarget?.setPointerCapture?.(event.pointerId);
+}
+
+function moveWarehouseLayoutElement(event) {
+  const drag = _warehouseLayoutDragState;
+  if (!drag || !_warehouseLayoutDraft) return;
+  const zone = _warehouseLayoutDraft.zones.find(item => item.id === drag.zoneId);
+  const element = zone?.elements.find(item => item.id === drag.elementId);
+  if (!zone || !element || !drag.canvasRect.width || !drag.canvasRect.height) return;
+  const dx = (event.clientX-drag.startClientX)*(zone.canvasWidth/drag.canvasRect.width);
+  const dy = (event.clientY-drag.startClientY)*(zone.canvasHeight/drag.canvasRect.height);
+  element.x = Math.max(0,Math.min(zone.canvasWidth-element.width,drag.startX+dx));
+  element.y = Math.max(0,Math.min(zone.canvasHeight-element.height,drag.startY+dy));
+  const node = [...document.querySelectorAll('[data-layout-element-id]')]
+    .find(item => item.dataset.layoutElementId === element.id);
+  if (node) node.style.cssText = warehouseLayoutElementStyle(element,zone);
+}
+
+function endWarehouseLayoutElementDrag() {
+  if (!_warehouseLayoutDragState) return;
+  _warehouseLayoutDragState = null;
+  _warehouseLayoutDraftDirty = true;
+  renderWarehouseLayoutEditor();
+}
+
+document.addEventListener('pointermove',moveWarehouseLayoutElement);
+document.addEventListener('pointerup',endWarehouseLayoutElementDrag);
+document.addEventListener('pointercancel',endWarehouseLayoutElementDrag);
+
 async function loadSvDash() {
   if (!['admin','supervisor'].includes(prof?.role)) {
     goPrimary('c-tasks');
@@ -15986,6 +17410,8 @@ async function loadSvDash() {
   S._dashSid = curSid;
   const curName = sessions.find(s=>s.id===curSid)?.name || sessions[0].name;
   const sessOpts = sessions.map(s=>`<option value="${s.id}" ${s.id===curSid?'selected':''}>${escapeWmsText(s.name)}</option>`).join('');
+  await loadWarehouseLayoutConfig();
+  if (isStaleLoad()) return;
 
   const [
     { data: asgns, error:assignmentsError },
@@ -16175,6 +17601,30 @@ async function loadSvDash() {
     jobItems:annualJobItemsResult.data || [],
     rules,
   });
+  const rawCountByAssignment = {};
+  rawCounts.forEach(record => {
+    if (!rawCountByAssignment[record.assignment_id]) rawCountByAssignment[record.assignment_id] = {};
+    if (!rawCountByAssignment[record.assignment_id][record.item_id]) rawCountByAssignment[record.assignment_id][record.item_id] = {};
+    rawCountByAssignment[record.assignment_id][record.item_id][record.round] = Number(record.count_qty);
+  });
+  const warehouseLayoutAssignments = asgns.map(assignment => {
+    const layoutWorkflow = deriveAssignmentWorkflowStatus(
+      snapshotsByLocation[assignment.location_id] || [],
+      rawCountByAssignment[assignment.id] || {},
+      rules,
+      assignment._storedStatus || assignment.status,
+    );
+    return { ...assignment, status:layoutWorkflow.effectiveStatus };
+  });
+  window._warehouseLayoutSessionData = {
+    sessionId:curSid,
+    sessionName:curName,
+    snapshots:allSnapshots,
+    assignments:warehouseLayoutAssignments,
+    counts:rawCounts,
+    approvals:trackerApprovalRows,
+  };
+  refreshWarehouseLayoutRuntime();
 
   const allItemIds = [...new Set(wmsRows.map(v => v.item_id).filter(Boolean))];
   const allApproverIds = [...new Set(wmsRows.map(v => v.approved_by).filter(Boolean))];
@@ -16993,6 +18443,7 @@ async function loadSvDash() {
   const dashboardViews = {
     summary: summaryTabHtml,
     tracker: workTrackerTabHtml,
+    layout: '<div class="warehouse-layout-root" id="warehouse-layout-root"></div>',
     variance: varianceTabHtml,
     wms: wmsTabHtml,
     log: varianceLogTabHtml,
