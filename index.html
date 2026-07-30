@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cycle Count v93 - Item Master & Fast Scan</title>
+<title>Cycle Count v95 - Sidebar Center & Correct Backup Totals</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -10182,32 +10182,88 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
   white-space:nowrap;
 }
 
-/* ปุ่ม Sidebar แบบ ChatGPT: ปุ่มเดียวใช้ทั้ง Desktop และ Mobile */
+/* ── v94: Sidebar toggle interaction matching ChatGPT ── */
 .sidebar-collapse-fab { display:none !important; }
-.toggle-sidebar-btn.gpt-sidebar-toggle {
-  width:38px !important;
-  height:38px !important;
-  min-width:38px !important;
-  padding:0 !important;
-  display:grid !important;
-  place-items:center;
-  border:0 !important;
-  border-radius:10px !important;
-  background:transparent !important;
-  color:var(--theme-heading-color) !important;
-  box-shadow:none !important;
-  cursor:pointer;
-  transition:background-color .16s ease,color .16s ease;
+.sidebar-header {
+  min-height:92px;
+  padding:18px 14px !important;
+  display:flex !important;
+  flex-direction:row !important;
+  align-items:center !important;
+  justify-content:center !important;
+  gap:10px !important;
+  text-align:center !important;
+  position:relative;
 }
-.toggle-sidebar-btn.gpt-sidebar-toggle:hover,
-.toggle-sidebar-btn.gpt-sidebar-toggle:focus-visible {
-  background:rgba(0,0,0,.08) !important;
+.sidebar-brand-main {
+  min-width:0;
+  max-width:calc(100% - 112px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:11px;
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+}
+.sidebar-brand-copy {
+  min-width:0;
+  text-align:left;
+}
+.sidebar-brand-copy .sidebar-title,
+.sidebar-brand-copy .sidebar-sub {
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.sidebar-logo-hover {
+  width:48px;
+  height:48px;
+  flex:0 0 48px;
+  position:relative;
+  display:grid;
+  place-items:center;
+}
+.sidebar-logo-hover .sidebar-logo-icon {
+  width:48px !important;
+  height:48px !important;
+  transition:opacity .16s ease,transform .16s ease;
+}
+.sidebar-header-toggle,
+.sidebar-logo-toggle,
+.mobile-sidebar-trigger {
+  width:38px;
+  height:38px;
+  min-width:38px;
+  padding:0;
+  display:grid;
+  place-items:center;
+  border:0;
+  border-radius:10px;
+  background:transparent;
+  color:var(--theme-sidebar-text);
+  box-shadow:none;
+  cursor:pointer;
+  transition:background-color .16s ease,color .16s ease,opacity .16s ease,transform .16s ease;
+}
+.sidebar-header-toggle {
+  position:absolute;
+  right:14px;
+}
+.sidebar-header-toggle:hover,
+.sidebar-header-toggle:focus-visible,
+.sidebar-logo-toggle:hover,
+.sidebar-logo-toggle:focus-visible {
+  color:var(--theme-sidebar-hover-text);
+  background:var(--theme-sidebar-hover-bg);
   outline:none;
 }
-.toggle-sidebar-btn.gpt-sidebar-toggle:active {
-  background:rgba(0,0,0,.13) !important;
-}
-.gpt-sidebar-toggle svg {
+.sidebar-header-toggle:active,
+.sidebar-logo-toggle:active,
+.mobile-sidebar-trigger:active { transform:scale(.94); }
+.sidebar-header-toggle svg,
+.sidebar-logo-toggle svg,
+.mobile-sidebar-trigger svg {
   width:21px;
   height:21px;
   fill:none;
@@ -10215,6 +10271,94 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
   stroke-width:1.7;
   stroke-linecap:round;
   stroke-linejoin:round;
+}
+.sidebar-logo-toggle {
+  position:absolute;
+  inset:5px;
+  width:38px;
+  height:38px;
+  opacity:0;
+  pointer-events:none;
+  color:var(--theme-sidebar-text);
+}
+.mobile-sidebar-trigger { display:none; color:var(--theme-heading-color); }
+.mobile-sidebar-trigger:hover,
+.mobile-sidebar-trigger:focus-visible {
+  background:rgba(0,0,0,.08);
+  outline:none;
+}
+.sidebar.collapsed {
+  width:var(--sidebar-collapsed-width) !important;
+  overflow:hidden !important;
+}
+.sidebar.collapsed .sidebar-header {
+  min-height:92px;
+  padding:18px 10px !important;
+  justify-content:center !important;
+}
+.sidebar.collapsed .sidebar-brand-main {
+  max-width:none;
+  position:static;
+  transform:none;
+}
+.sidebar.collapsed .sidebar-brand-copy,
+.sidebar.collapsed .sidebar-header-toggle,
+.sidebar.collapsed .sidebar-menu,
+.sidebar.collapsed .sidebar-footer {
+  display:none !important;
+}
+.sidebar.collapsed .sidebar-logo-hover .sidebar-logo-icon {
+  display:flex !important;
+  opacity:1 !important;
+  visibility:visible !important;
+  transform:none;
+}
+.sidebar.collapsed .sidebar-logo-hover:hover .sidebar-logo-icon,
+.sidebar.collapsed .sidebar-logo-hover:focus-within .sidebar-logo-icon {
+  opacity:.12 !important;
+  transform:scale(.92);
+}
+.sidebar.collapsed .sidebar-logo-hover:hover .sidebar-logo-toggle,
+.sidebar.collapsed .sidebar-logo-hover:focus-within .sidebar-logo-toggle {
+  opacity:1;
+  pointer-events:auto;
+}
+@media (max-width:900px) {
+  .mobile-sidebar-trigger { display:grid; }
+  .sidebar.collapsed { width:var(--sidebar-width) !important; }
+  .sidebar .sidebar-header,
+  .sidebar.collapsed .sidebar-header {
+    padding:18px 14px !important;
+    justify-content:center !important;
+  }
+  .sidebar .sidebar-brand-main,
+  .sidebar.collapsed .sidebar-brand-main {
+    max-width:calc(100% - 112px);
+    position:absolute;
+    left:50%;
+    transform:translateX(-50%);
+  }
+  .sidebar.collapsed .sidebar-brand-copy,
+  .sidebar.collapsed .sidebar-header-toggle,
+  .sidebar.collapsed .sidebar-menu,
+  .sidebar.collapsed .sidebar-footer {
+    display:flex !important;
+  }
+  .sidebar.collapsed .sidebar-brand-copy { display:block !important; }
+  .sidebar.collapsed .sidebar-logo-toggle { display:none !important; }
+  .sidebar.collapsed .sidebar-logo-hover .sidebar-logo-icon { opacity:1 !important; transform:none !important; }
+  .sidebar.collapsed .nav-item span:not(.nav-icon),
+  .sidebar.collapsed .nav-subitem span:not(.nav-icon) { display:initial !important; }
+  .sidebar.collapsed .nav-item { justify-content:flex-start !important; }
+  .sidebar.collapsed .nav-subitem {
+    flex:0 0 auto !important;
+    width:100% !important;
+    max-width:none !important;
+    margin:0 !important;
+    padding:10px 14px 10px 24px !important;
+    justify-content:flex-start !important;
+  }
+  .sidebar.collapsed .nav-group.open .nav-submenu { display:flex !important; }
 }
 @media (max-width:720px) {
   .found-form-grid,.found-review-detail-grid { grid-template-columns:1fr; }
@@ -10295,7 +10439,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v93-item-master-fast-scan';
+window.__CYCLE_COUNT_BUILD__ = 'v95-sidebar-center-backup-totals';
 
 let _viewportSyncFrame = 0;
 function syncViewportSize() {
@@ -10720,7 +10864,7 @@ function applyBrandingSettings(settings, persistLocal = true) {
     const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
     root.setProperty(`--theme-${cssKey}`, uiBranding[key]);
   });
-  document.title = `${uiBranding.systemName} v93`;
+  document.title = `${uiBranding.systemName} v95`;
   if (persistLocal) {
     try { localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(uiBranding)); } catch (_) {}
   }
@@ -11210,7 +11354,7 @@ async function protectedFunctionHeaders() {
   return {
     Authorization: `Bearer ${session.access_token}`,
     apikey: SUPA_KEY,
-    'x-client-info': 'cycle-count-v93',
+    'x-client-info': 'cycle-count-v95',
   };
 }
 
@@ -11758,7 +11902,7 @@ function renderResponsivePreviewContent() {
     <div class="summary-page-header">
       <div class="summary-greeting-wrap">
         <div class="summary-greeting">Hello, AuD</div>
-        <div class="summary-greeting-sub">${escapeWmsText(uiBranding.systemName)} Dashboard · v93</div>
+        <div class="summary-greeting-sub">${escapeWmsText(uiBranding.systemName)} Dashboard · v95</div>
       </div>
       <div class="summary-header-actions">${dashboardFiltersHtml('<option>Cycle Count ก.ค. 2569</option>', false)}</div>
     </div>
@@ -11889,23 +12033,27 @@ function render() {
     supervisor: [
       { group: 'dashboard', name: 'สรุปภาพรวม', icon: navIconSvg('summary'), children: [
         { id:'dash-summary', name:'สรุป', icon:navIconSvg('summary'), action:"openDashboardMenu('summary')" },
-        { id:'dash-variance', name:'Variance', icon:navIconSvg('variance'), action:"openDashboardMenu('variance')" },
-        { id:'dash-wms', name:'ปรับยอด WMS', icon:navIconSvg('wms'), action:"openDashboardMenu('wms')" },
         { id:'dash-log', name:'รายงานผลต่างล่าสุด (Variance Log)', icon:navIconSvg('log'), action:"openDashboardMenu('log')" },
         { id:'dash-team', name:'ความคืบหน้าการทำงาน (Team Progress)', icon:navIconSvg('team'), action:"openDashboardMenu('team')" }
       ]},
-      { id: 'c-tasks', name: 'งานของฉัน', icon: navIconSvg('tasks') },
+      { group:'my-work', name:'งานของฉัน', icon:navIconSvg('tasks'), children:[
+        { id:'my-tasks', name:'รายการงานของฉัน', icon:navIconSvg('tasks'), action:"goPrimary('c-tasks')" },
+        { id:'my-variance', name:'Variance', icon:navIconSvg('variance'), action:"openDashboardMenu('variance')" },
+        { id:'my-wms', name:'ปรับยอด WMS', icon:navIconSvg('wms'), action:"openDashboardMenu('wms')" }
+      ]},
       { id: 'ad-history', name: 'ประวัติการนับ', icon: navIconSvg('history') }
     ],
     admin: [
       { group: 'dashboard', name: 'สรุปภาพรวม', icon: navIconSvg('summary'), children: [
         { id:'dash-summary', name:'สรุป', icon:navIconSvg('summary'), action:"openDashboardMenu('summary')" },
-        { id:'dash-variance', name:'Variance', icon:navIconSvg('variance'), action:"openDashboardMenu('variance')" },
-        { id:'dash-wms', name:'ปรับยอด WMS', icon:navIconSvg('wms'), action:"openDashboardMenu('wms')" },
         { id:'dash-log', name:'รายงานผลต่างล่าสุด (Variance Log)', icon:navIconSvg('log'), action:"openDashboardMenu('log')" },
         { id:'dash-team', name:'ความคืบหน้าการทำงาน (Team Progress)', icon:navIconSvg('team'), action:"openDashboardMenu('team')" }
       ]},
-      { id: 'c-tasks', name: 'งานของฉัน', icon: navIconSvg('tasks') },
+      { group:'my-work', name:'งานของฉัน', icon:navIconSvg('tasks'), children:[
+        { id:'my-tasks', name:'รายการงานของฉัน', icon:navIconSvg('tasks'), action:"goPrimary('c-tasks')" },
+        { id:'my-variance', name:'Variance', icon:navIconSvg('variance'), action:"openDashboardMenu('variance')" },
+        { id:'my-wms', name:'ปรับยอด WMS', icon:navIconSvg('wms'), action:"openDashboardMenu('wms')" }
+      ]},
       { group: 'manage', name: 'จัดการงาน / Sessions', icon: navIconSvg('manage'), children: [
         { id:'manage-sessions', name:'Session', icon:navIconSvg('session'), action:"openManageMenu('sessions')" },
         { id:'manage-assign', name:'จ่ายงาน', icon:navIconSvg('assign'), action:"openManageMenu('assign')" },
@@ -11923,7 +12071,11 @@ function render() {
   };
 
   const userNavs = navMenus[currentRole] || navMenus.counter;
-  const dashboardActive = page === 'sv-dash' || page === 'sv-list' || page === 'sv-detail' || page === 'sv-found';
+  const activeDashTab = S._dashTab || _dashTab || 'summary';
+  const dashboardActive = page === 'sv-dash' && ['summary','log','team'].includes(activeDashTab);
+  const myWorkActive = page === 'c-tasks'
+    || ['sv-list','sv-detail','sv-found'].includes(page)
+    || (page === 'sv-dash' && ['variance','wms'].includes(activeDashTab));
   const manageActive = ['ad-manage','ad-new','ad-sessions','ad-assign','ad-import'].includes(page);
   const systemActive = ['ad-branding','ad-paper','ad-users'].includes(page);
 
@@ -11931,14 +12083,25 @@ function render() {
     if (item.children) {
       const groupActive = item.group === 'dashboard'
         ? dashboardActive
-        : item.group === 'manage'
-          ? manageActive
-          : systemActive;
+        : item.group === 'my-work'
+          ? myWorkActive
+          : item.group === 'manage'
+            ? manageActive
+            : systemActive;
       const isOpen = groupActive || window._openNavGroup === item.group;
       const children = item.children.map(child => {
         let childActive = false;
         if (item.group === 'dashboard' && page === 'sv-dash') {
           childActive = (child.id === 'dash-' + (S._dashTab || _dashTab || 'summary'));
+        }
+        if (item.group === 'my-work') {
+          childActive =
+            (child.id === 'my-tasks' && page === 'c-tasks') ||
+            (child.id === 'my-variance' && (
+              ['sv-list','sv-detail','sv-found'].includes(page) ||
+              (page === 'sv-dash' && activeDashTab === 'variance')
+            )) ||
+            (child.id === 'my-wms' && page === 'sv-dash' && activeDashTab === 'wms');
         }
         if (item.group === 'manage') childActive = child.id === 'manage-' + (_manageTab || 'sessions');
         if (item.group === 'system') childActive =
@@ -11967,11 +12130,29 @@ function render() {
     <div class="app-container">
       <aside class="sidebar ${isCollapsed ? 'collapsed' : ''}" id="mainSidebar">
         <div class="sidebar-header">
-          <div class="sidebar-logo-icon ${uiBranding.logoDataUrl ? 'has-custom-logo' : ''}">${brandLogoHtml('sidebar')}</div>
-          <div>
-            <div class="sidebar-title">${escapeWmsText(uiBranding.systemName)}</div>
-            <div class="sidebar-sub">${escapeWmsText(uiBranding.systemSubtitle)}</div>
+          <div class="sidebar-brand-main">
+            <div class="sidebar-logo-hover">
+              <div class="sidebar-logo-icon ${uiBranding.logoDataUrl ? 'has-custom-logo' : ''}">${brandLogoHtml('sidebar')}</div>
+              <button class="sidebar-logo-toggle" type="button" onclick="toggleSidebarCollapse()"
+                aria-label="เปิดเมนูด้านข้าง" title="เปิดเมนูด้านข้าง">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="3.5" y="4.5" width="17" height="15" rx="2.5"></rect>
+                  <path d="M9 4.5v15"></path>
+                </svg>
+              </button>
+            </div>
+            <div class="sidebar-brand-copy">
+              <div class="sidebar-title">${escapeWmsText(uiBranding.systemName)}</div>
+              <div class="sidebar-sub">${escapeWmsText(uiBranding.systemSubtitle)}</div>
+            </div>
           </div>
+          <button class="sidebar-header-toggle" type="button" onclick="handleSidebarToggle()"
+            aria-label="ปิดเมนูด้านข้าง" title="ปิดเมนูด้านข้าง">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="3.5" y="4.5" width="17" height="15" rx="2.5"></rect>
+              <path d="M9 4.5v15"></path>
+            </svg>
+          </button>
         </div>
         <nav class="sidebar-menu">
           ${sidebarNavHtml}
@@ -11985,8 +12166,8 @@ function render() {
       <div class="main-wrapper ${isSummaryView ? 'summary-view' : ''}">
         <header class="topbar">
           <div class="topbar-left">
-            <button class="toggle-sidebar-btn gpt-sidebar-toggle" type="button" onclick="handleSidebarToggle()"
-              aria-label="เปิดหรือปิดเมนู" title="เปิดหรือปิดเมนู">
+            <button class="mobile-sidebar-trigger" type="button" onclick="toggleMobileSidebar()"
+              aria-label="เปิดเมนูด้านข้าง" title="เปิดเมนูด้านข้าง">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <rect x="3.5" y="4.5" width="17" height="15" rx="2.5"></rect>
                 <path d="M9 4.5v15"></path>
@@ -12080,6 +12261,10 @@ function toggleNavGroup(group) {
   document.querySelectorAll('.nav-group').forEach(el => el.classList.toggle('open', el.dataset.group === window._openNavGroup));
 }
 function openDashboardMenu(tab) {
+  if (['variance','wms'].includes(tab) && !['admin','supervisor'].includes(prof?.role)) {
+    alert('เมนูนี้ใช้ได้เฉพาะหัวหน้างานและ Admin เท่านั้น');
+    return;
+  }
   const alreadyOnDashboard = S?.page === 'sv-dash';
   _navStack = [];
   _dashTab = tab;
@@ -13526,6 +13711,39 @@ const _dataInfoMatchCacheTime = new Map();
 const _dataInfoMatchTimers = new Map();
 const DATA_INFO_CACHE_TTL_MS = 5 * 60 * 1000;
 
+function dataInfoAttributesObject(info) {
+  if (!info?.attributes) return {};
+  if (typeof info.attributes === 'object' && !Array.isArray(info.attributes)) return info.attributes;
+  try {
+    const parsed = JSON.parse(info.attributes);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch (_) {
+    return {};
+  }
+}
+
+function isDataInfoBarcodeAttribute(key) {
+  return ['BARCODE','BARCODENO','EAN','EAN13','UPC','GTIN','ITEMBARCODE']
+    .includes(normalizeImportHeader(key));
+}
+
+function sanitizeDataInfoAttributes(input) {
+  const attributes = dataInfoAttributesObject({ attributes:input });
+  return Object.fromEntries(
+    Object.entries(attributes).filter(([key]) => !isDataInfoBarcodeAttribute(key))
+  );
+}
+
+function dataInfoCategory(info) {
+  if (info?.category) return String(info.category).trim();
+  const attributes = dataInfoAttributesObject(info);
+  const categoryKey = Object.keys(attributes).find(key =>
+    ['CATEGORY','ITEMCATEGORY','PRODUCTCATEGORY','PRODUCTGROUP','ITEMCLASS'].includes(normalizeImportHeader(key))
+  );
+  const value = categoryKey ? attributes[categoryKey] : '';
+  return String(Array.isArray(value) ? value[0] : value || '').trim();
+}
+
 async function findDataInfo(rawCode) {
   const code = importCodeKey(rawCode);
   if (!code) return null;
@@ -13538,23 +13756,14 @@ async function findDataInfo(rawCode) {
 
   let row = null;
   const byItem = await sb.from('data_info_items')
-    .select('item_code,description,uom,barcode,attributes')
+    .select('item_code,description,uom,attributes')
     .eq('item_code',code)
     .maybeSingle();
   if (!byItem.error) row = byItem.data;
 
   if (!row) {
-    const byBarcode = await sb.from('data_info_items')
-      .select('item_code,description,uom,barcode,attributes')
-      .eq('barcode',code)
-      .limit(1)
-      .maybeSingle();
-    if (!byBarcode.error) row = byBarcode.data;
-  }
-
-  if (!row) {
     const itemResult = await sb.from('items')
-      .select('code,description,uom')
+      .select('code,description,uom,category')
       .eq('code',code)
       .maybeSingle();
     if (!itemResult.error && itemResult.data) {
@@ -13562,16 +13771,16 @@ async function findDataInfo(rawCode) {
         item_code:itemResult.data.code,
         description:itemResult.data.description,
         uom:itemResult.data.uom,
-        barcode:null,
+        category:itemResult.data.category || '',
         attributes:{ source:'items' },
       };
     }
   }
   if (row) {
+    row.category = dataInfoCategory(row);
     const cacheKeys = [
       code,
       row.item_code ? importCodeKey(row.item_code) : '',
-      row.barcode ? importCodeKey(row.barcode) : '',
     ].filter(Boolean);
     cacheKeys.forEach(cacheKey => {
       _dataInfoMatchCache.set(cacheKey,row);
@@ -13600,7 +13809,7 @@ async function matchDataInfoForFields(itemInputId,descriptionInputId,uomInputId,
 
   if (card) {
     card.classList.remove('is-missing');
-    card.innerHTML = '<strong>กำลัง Match Item Master...</strong><span>ตรวจ Item Code และ Barcode</span>';
+    card.innerHTML = '<strong>กำลัง Match Item Master...</strong><span>ตรวจ Item Code และ CATEGORY</span>';
   }
   const info = await findDataInfo(requestKey);
   if (importCodeKey(itemInput?.value) !== requestKey) return null;
@@ -13611,7 +13820,7 @@ async function matchDataInfoForFields(itemInputId,descriptionInputId,uomInputId,
     if (card) {
       card.classList.remove('is-missing');
       card.innerHTML = `<strong>${escapeWmsText(info.description || 'ไม่ระบุ Description')}</strong>
-        <span>UOM: <b>${escapeWmsText(info.uom || '—')}</b>${info.barcode ? ` · Barcode: ${escapeWmsText(info.barcode)}` : ''}</span>`;
+        <span>UOM: <b>${escapeWmsText(info.uom || '—')}</b>${info.category ? ` · CATEGORY: ${escapeWmsText(info.category)}` : ''}</span>`;
     }
     return info;
   }
@@ -13728,7 +13937,7 @@ async function loadCFound() {
         <div class="fg">
           <label>ITEM <span style="color:var(--accent-red)">*</span></label>
           <div class="scan-input-row">
-            <input id="found_item" autocomplete="off" placeholder="สแกนหรือกรอก Item / Barcode"
+            <input id="found_item" autocomplete="off" placeholder="สแกนหรือกรอก Item Code"
               oninput="this.value=this.value.toUpperCase();scheduleDataInfoMatch('found_item','found_description','found_uom','found_info_card')">
             <button type="button" class="scan-field-button" onclick="scanIntoField('found_item','Item')" title="สแกน Item">${barcodeScanIconSvg()}</button>
           </div>
@@ -14120,7 +14329,7 @@ async function loadCCount() {
                  <div class="fg span-2" style="margin:0">
                    <label>ITEM</label>
                    <div class="scan-input-row">
-                     <input id="empty_item_${it.id}" autocomplete="off" placeholder="สแกนหรือกรอก Item / Barcode"
+                     <input id="empty_item_${it.id}" autocomplete="off" placeholder="สแกนหรือกรอก Item Code"
                        oninput="this.value=this.value.toUpperCase();scheduleDataInfoMatch('empty_item_${it.id}','empty_desc_${it.id}','empty_uom_${it.id}','empty_info_${it.id}')">
                      <button type="button" class="scan-field-button"
                        onclick="scanIntoField('empty_item_${it.id}','Item')" title="สแกน Item">${barcodeScanIconSvg()}</button>
@@ -14888,6 +15097,10 @@ async function fetchSnapshotsForAssignmentScopes(assignments,columns='session_id
 }
 
 async function loadSvDash() {
+  if (!['admin','supervisor'].includes(prof?.role)) {
+    goPrimary('c-tasks');
+    return;
+  }
   const loadScope = _activePageRequestController;
   const isStaleLoad = () =>
     loadScope !== _activePageRequestController ||
@@ -16826,7 +17039,7 @@ async function loadSvFound() {
   }
   const row = foundResult.data;
   const info = await findDataInfo(row.item_code);
-  const attributeEntries = Object.entries(info?.attributes || {}).slice(0,12);
+  const attributeEntries = Object.entries(sanitizeDataInfoAttributes(info?.attributes)).slice(0,12);
   const pending = row.status === 'pending_review';
   cnt().innerHTML = `
     <div class="card">
@@ -16875,7 +17088,7 @@ async function loadSvFound() {
       </div>
       <div class="info-match-card ${info?'':'is-missing'}" id="found_review_info" style="margin-top:14px">
         <strong>${info ? escapeWmsText(info.description || 'พบ Item ใน Item Master') : 'ไม่พบ Item ใน Item Master'}</strong>
-        <span>${info ? `UOM: <b>${escapeWmsText(info.uom || '—')}</b>${info.barcode?` · Barcode: ${escapeWmsText(info.barcode)}`:''}` : 'Supervisor ยังอนุมัติได้ แต่ควรตรวจสอบ Item ให้ชัดเจน'}</span>
+        <span>${info ? `UOM: <b>${escapeWmsText(info.uom || '—')}</b>${dataInfoCategory(info)?` · CATEGORY: ${escapeWmsText(dataInfoCategory(info))}`:''}` : 'Supervisor ยังอนุมัติได้ แต่ควรตรวจสอบ Item ให้ชัดเจน'}</span>
       </div>
       ${attributeEntries.length ? `<details class="admin-master-group" style="margin-top:14px">
         <summary><span>📚</span><span class="admin-master-group-title">ข้อมูลอื่นจาก Item Master</span><span class="admin-master-group-chevron">⌄</span></summary>
@@ -18257,10 +18470,10 @@ const XLSX_INFO_COLUMN_RULES = Object.freeze({
     exact:['UOM','OUM','UNIT','UNITOFMEASURE','STOCKUNIT','INVENTORYUNIT'],
     contains:['UNITOFMEASURE','INVENTORYUNIT'],
   },
-  barcode:{
-    label:'Barcode',
-    exact:['BARCODE','BARCODENO','EAN','EAN13','UPC','GTIN','ITEMBARCODE'],
-    contains:['BARCODE','GTIN'],
+  category:{
+    label:'CATEGORY',
+    exact:['CATEGORY','ITEMCATEGORY','PRODUCTCATEGORY','PRODUCTGROUP','ITEMCLASS'],
+    contains:['CATEGORY','PRODUCTGROUP','ITEMCLASS'],
   },
 });
 
@@ -18301,7 +18514,7 @@ function analyzeDataInfoRows(rows) {
         item_code:itemCode,
         description:'',
         uom:'',
-        barcode:'',
+        category:'',
         attributes:{},
         sourceRows:[],
       });
@@ -18311,26 +18524,15 @@ function analyzeDataInfoRows(rows) {
     const value = key => columns[key] ? normalizeImportText(row?.[columns[key]]) : '';
     if (!info.description && value('description')) info.description = value('description');
     if (!info.uom && value('uom')) info.uom = value('uom');
-    if (!info.barcode && value('barcode')) info.barcode = importCodeKey(value('barcode'));
-    headers.forEach(header => mergeDataInfoAttribute(info.attributes,header,row?.[header]));
+    if (!info.category && value('category')) info.category = value('category');
+    headers.forEach(header => {
+      if (!isDataInfoBarcodeAttribute(header)) {
+        mergeDataInfoAttribute(info.attributes,header,row?.[header]);
+      }
+    });
   });
 
   const parsed = [...grouped.values()];
-  const barcodeOwners = new Map();
-  parsed.forEach(info => {
-    if (!info.barcode) return;
-    if (!barcodeOwners.has(info.barcode)) barcodeOwners.set(info.barcode,[]);
-    barcodeOwners.get(info.barcode).push(info.item_code);
-  });
-  const duplicateBarcodes = [...barcodeOwners.entries()]
-    .filter(([,itemCodes]) => itemCodes.length > 1);
-  if (duplicateBarcodes.length) {
-    errors.push(`พบ Barcode ซ้ำข้าม Item ${duplicateBarcodes.length} ค่า เช่น ${
-      duplicateBarcodes.slice(0,5).map(([barcode,itemCodes]) =>
-        `${barcode} (${itemCodes.join(', ')})`
-      ).join(' · ')
-    }`);
-  }
   const mappedHeaders = new Set(Object.values(columns).filter(Boolean));
   return {
     headers,
@@ -18338,15 +18540,14 @@ function analyzeDataInfoRows(rows) {
     errors,
     rejected,
     parsed,
-    duplicateBarcodes,
-    unknownHeaders:headers.filter(header => !mappedHeaders.has(header)),
+    unknownHeaders:headers.filter(header => !mappedHeaders.has(header) && !isDataInfoBarcodeAttribute(header)),
     metrics:{
       rows:(rows || []).length,
       items:parsed.length,
       duplicates:parsed.reduce((sum,row) => sum + Math.max(0,row.sourceRows.length - 1),0),
       descriptions:parsed.filter(row => row.description).length,
       uoms:parsed.filter(row => row.uom).length,
-      barcodes:parsed.filter(row => row.barcode).length,
+      categories:parsed.filter(row => row.category).length,
     },
   };
 }
@@ -18359,7 +18560,7 @@ function renderDataInfoPreview(analysis) {
       <td class="mono">${escapeWmsText(row.item_code)}</td>
       <td>${escapeWmsText(row.description || '—')}</td>
       <td>${escapeWmsText(row.uom || '—')}</td>
-      <td>${escapeWmsText(row.barcode || '—')}</td>
+      <td>${escapeWmsText(row.category || '—')}</td>
       <td>${row.sourceRows.length.toLocaleString('th-TH')}</td>
     </tr>`).join('');
   return `
@@ -18371,7 +18572,7 @@ function renderDataInfoPreview(analysis) {
       <div class="data-info-stat"><strong>${metric(analysis.metrics.items)}</strong><span>DISTINCT ITEM</span></div>
       <div class="data-info-stat"><strong>${metric(analysis.metrics.descriptions)}</strong><span>มี DESCRIPTION</span></div>
       <div class="data-info-stat"><strong>${metric(analysis.metrics.uoms)}</strong><span>มี UOM</span></div>
-      <div class="data-info-stat"><strong>${metric(analysis.metrics.barcodes)}</strong><span>มี BARCODE</span></div>
+      <div class="data-info-stat"><strong>${metric(analysis.metrics.categories)}</strong><span>มี CATEGORY</span></div>
     </div>
     <div style="font-size:11px;color:var(--theme-muted-text-color);line-height:1.6;margin-bottom:10px">
       รวม ${metric(analysis.metrics.rows)} แถว · Item ซ้ำถูกรวม ${metric(analysis.metrics.duplicates)} แถว ·
@@ -18380,7 +18581,7 @@ function renderDataInfoPreview(analysis) {
     ${analysis.errors.length ? `<div class="alert alert-red">${analysis.errors.map(escapeWmsText).join('<br>')}</div>` : ''}
     ${analysis.rejected.length ? `<div class="alert alert-red">พบแถว Item ว่าง ${metric(analysis.rejected.length)} แถว เช่น ${analysis.rejected.slice(0,8).map(row=>row.rowNumber).join(', ')}</div>` : ''}
     ${sampleRows ? `<div class="data-info-sample"><table>
-      <thead><tr><th>ITEM</th><th>DESCRIPTION</th><th>UOM</th><th>BARCODE</th><th>SOURCE ROWS</th></tr></thead>
+      <thead><tr><th>ITEM</th><th>DESCRIPTION</th><th>UOM</th><th>CATEGORY</th><th>SOURCE ROWS</th></tr></thead>
       <tbody>${sampleRows}</tbody>
     </table></div>` : ''}`;
 }
@@ -18440,7 +18641,7 @@ async function loadDataInfoSummary() {
   if (!host) return;
   const [{ count,error },sampleResult] = await Promise.all([
     sb.from('data_info_items').select('item_code',{ count:'exact',head:true }),
-    sb.from('data_info_items').select('item_code,description,uom,barcode,updated_at')
+    sb.from('data_info_items').select('item_code,description,uom,attributes,updated_at')
       .order('updated_at',{ ascending:false }).limit(8),
   ]);
   if (error || sampleResult.error) {
@@ -18449,14 +18650,14 @@ async function loadDataInfoSummary() {
   }
   host.innerHTML = `
     <div class="alert alert-blue"><strong>Item Master ปัจจุบัน ${Number(count || 0).toLocaleString('th-TH')} Item</strong>
-      <br>ใช้ Match Description / UOM / Barcode ในงานนับและ Import WMS</div>
+      <br>ใช้ Match Description / UOM / CATEGORY ในงานนับและ Import WMS</div>
     ${(sampleResult.data || []).length ? `<div class="data-info-sample" style="margin-top:12px"><table>
-      <thead><tr><th>ITEM</th><th>DESCRIPTION</th><th>UOM</th><th>BARCODE</th></tr></thead>
+      <thead><tr><th>ITEM</th><th>DESCRIPTION</th><th>UOM</th><th>CATEGORY</th></tr></thead>
       <tbody>${sampleResult.data.map(row => `<tr>
         <td class="mono">${escapeWmsText(row.item_code)}</td>
         <td>${escapeWmsText(row.description || '—')}</td>
         <td>${escapeWmsText(row.uom || '—')}</td>
-        <td>${escapeWmsText(row.barcode || '—')}</td>
+        <td>${escapeWmsText(dataInfoCategory(row) || '—')}</td>
       </tr>`).join('')}</tbody>
     </table></div>` : ''}`;
 }
@@ -18464,10 +18665,10 @@ async function loadDataInfoSummary() {
 function downloadDataInfoTemplate() {
   const workbook = XLSX.utils.book_new();
   const rows = [
-    { 'Item Code':'ITEM-001', Description:'ตัวอย่างสินค้า', UOM:'PCS', Barcode:'885000000001', Brand:'', Category:'' },
+    { 'Item Code':'ITEM-001', Description:'ตัวอย่างสินค้า', UOM:'PCS', CATEGORY:'อะไหล่', Brand:'' },
   ];
   const sheet = XLSX.utils.json_to_sheet(rows);
-  sheet['!cols'] = [{wch:22},{wch:42},{wch:12},{wch:24},{wch:18},{wch:18}];
+  sheet['!cols'] = [{wch:22},{wch:42},{wch:12},{wch:22},{wch:18}];
   XLSX.utils.book_append_sheet(workbook,sheet,'Item_Master');
   XLSX.writeFile(workbook,'Item_Master_Template.xlsx');
 }
@@ -18491,31 +18692,13 @@ async function importDataInfoFile() {
       item_code:row.item_code,
       description:row.description || null,
       uom:row.uom || null,
-      barcode:row.barcode || null,
-      attributes:row.attributes || {},
+      barcode:null,
+      attributes:sanitizeDataInfoAttributes(row.attributes),
       source_file:_infoSourceFileName || null,
       source_sheet:_infoWorksheetName || null,
       updated_by:me.id,
       updated_at:new Date().toISOString(),
     }));
-    if (!replaceAll) {
-      const incomingByBarcode = new Map(
-        rows.filter(row => row.barcode).map(row => [importCodeKey(row.barcode),row.item_code])
-      );
-      const barcodeResult = await fetchSupabaseRowsByValues(
-        'data_info_items','item_code,barcode','barcode',[...incomingByBarcode.keys()]
-      );
-      if (barcodeResult.error) throw barcodeResult.error;
-      const barcodeConflict = (barcodeResult.data || []).find(existing =>
-        incomingByBarcode.has(importCodeKey(existing.barcode))
-        && incomingByBarcode.get(importCodeKey(existing.barcode)) !== existing.item_code
-      );
-      if (barcodeConflict) {
-        throw new Error(
-          `Barcode ${barcodeConflict.barcode} ถูกใช้กับ Item ${barcodeConflict.item_code} อยู่แล้ว`
-        );
-      }
-    }
     if (replaceAll) {
       const { error } = await sb.from('data_info_items').delete().neq('item_code','');
       if (error) throw error;
@@ -18561,7 +18744,7 @@ async function renderManageDataInfo(container) {
       </summary>
       <div class="admin-master-group-body">
         <div class="alert alert-blue" style="font-size:13px;line-height:1.7;margin:16px 0">
-          📚 เก็บ <strong>Item / Description / UOM / Barcode</strong> และคอลัมน์อื่นทั้งหมดไว้ใช้ Match ในอนาคต<br>
+          📚 เก็บ <strong>Item / Description / UOM / CATEGORY</strong> และคอลัมน์อื่นทั้งหมดไว้ใช้ Match ในอนาคต<br>
           ระบบจับชื่อคอลัมน์อัตโนมัติ และรวมแถว Item ซ้ำโดยไม่ทิ้งข้อมูลคอลัมน์อื่น
         </div>
         <div id="data-info-current"><div class="load">⏳ กำลังโหลด...</div></div>
@@ -20927,9 +21110,10 @@ async function renderManageBackup(container) {
     <div class="alert alert-blue" style="line-height:1.7">
       <strong>Backup ที่อ่านง่าย ใช้งานต่อได้ และกู้คืนได้</strong><br>
       Excel จะเปิดที่ชีต Data_Count ซึ่งรวมข้อมูล Stock / LPN ทั้งหมดของ Session โดยไม่กรองเฉพาะ Gain / Lost
-      พร้อม Location, Zone, LPN, Lot, Inventory Status, Item, OH, AL Qty, Count 1–3,
+      พร้อม Location, Zone, LPN, Lot, Inventory Status, Item, Stock Onhand ราย LPN/Lot,
+      ITEM OH Total, AL Qty และ Count 1–3 โดยยอดระดับ ITEM แสดงเพียงครั้งเดียว,
       คนนับจริงและเวลานับแยกรอบ, หมายเหตุ, รูปถ่าย และสถานะ WMS ให้ทีมอื่นนำไปใช้ต่อได้<br>
-      <span style="font-size:11px">แสดงเฉพาะ Data_Count, Session_Summary และ README · ข้อมูลระบบที่จำเป็นถูกซ่อนไว้เพื่อให้ Restore ได้ · บัญชี User Login และรหัสผ่านไม่อยู่ในไฟล์</span>
+      <span style="font-size:11px">แสดงเฉพาะ Data_Count, Found_Work, Info_Master, Session_Summary และ README · ข้อมูลระบบที่จำเป็นถูกซ่อนไว้เพื่อให้ Restore ได้ · บัญชี User Login และรหัสผ่านไม่อยู่ในไฟล์</span>
     </div>
     <div class="backup-grid">
       <details class="admin-master-group" open>
@@ -21530,8 +21714,8 @@ function backupTeamSheetColumns() {
       col('session','Session',28), col('location','Location',18), col('zone','Zone',16),
       col('area','Area',14), col('lpn','LPN',30), col('lot','Lot',22),
       col('inventoryStatus','Inventory Status',18), col('item','Item',24),
-      col('description','Description',44), col('detailQty','LPN / Lot Qty',16,'number'),
-      col('uom','UOM',10), col('stockOnhand','Stock Onhand',16,'number'),
+      col('description','Description',44), col('detailQty','Stock Onhand',16,'number'),
+      col('uom','UOM',10), col('stockOnhand','ITEM OH Total',16,'number'),
       col('alQty','AL Qty',14,'number'), col('count1','Count 1',13,'number'),
       col('count2','Count 2',13,'number'), col('count3','Count 3',13,'number'),
       col('physicalCount','Physical Count',16,'number'), col('variance','Variance',14,'number'),
@@ -21544,8 +21728,8 @@ function backupTeamSheetColumns() {
       col('item','Item',24), col('description','Description',44),
       col('lpn','LPN',30), col('lot','Lot',22),
       col('inventoryStatus','Inventory Status',18), col('uom','UOM',10),
-      col('detailQty','LPN / Lot Qty',16,'number'),
-      col('stockOnhand','Stock Onhand',16,'number'), col('alQty','AL Qty',14,'number'),
+      col('stockOnhand','Stock Onhand',16,'number'),
+      col('itemTotalOh','ITEM OH Total',16,'number'), col('alQty','AL Qty',14,'number'),
       col('count1','Count 1',13,'number'), col('count1Counter','Actual Counter1',22),
       col('count1Time','Count 1 Time',22),
       col('count2','Count 2',13,'number'), col('count2Counter','Actual Counter2',22),
@@ -21571,7 +21755,7 @@ function backupTeamSheetColumns() {
       col('supervisorNote','Supervisor Note',34), col('photoUrl','Photo URL',58,'url'),
     ],
     Info_Master: [
-      col('item','Item',24), col('barcode','Barcode',28),
+      col('item','Item',24), col('category','CATEGORY',24),
       col('description','Description',48), col('uom','UOM',12),
       col('sourceFile','Source File',32), col('sourceSheet','Source Sheet',24),
       col('attributes','ข้อมูลเพิ่มเติม (JSON)',70),
@@ -21802,12 +21986,21 @@ function buildTeamBackupData(dataBySheet) {
       ...base,
       lpn:detail.license_plate || '', lot:detail.lot || '',
       inventoryStatus:detail.inventory_status || '', uom:detail.uom || '',
-      detailQty:backupNumber(detail.qty), stockDetailId:detail.id || '',
+      stockOnhand:backupNumber(detail.qty),
+      itemTotalOh:backupNumber(base.stockOnhand),
+      stockDetailId:detail.id || '',
     };
   });
   dataRows.forEach(row => {
     const key = stockKey(row.sessionId,row.locationId,row.itemId);
-    if (!detailCompositeKeys.has(key)) dataCountRows.push({ ...row, detailQty:null, stockDetailId:'' });
+    if (!detailCompositeKeys.has(key)) {
+      dataCountRows.push({
+        ...row,
+        stockOnhand:backupNumber(row.stockOnhand),
+        itemTotalOh:backupNumber(row.stockOnhand),
+        stockDetailId:'',
+      });
+    }
   });
   dataCountRows.sort((a,b) =>
     String(a.session).localeCompare(String(b.session),'th')
@@ -21817,6 +22010,28 @@ function buildTeamBackupData(dataBySheet) {
     || String(a.item).localeCompare(String(b.item),'en',{numeric:true})
     || String(a.lpn).localeCompare(String(b.lpn),'en',{numeric:true})
     || String(a.lot).localeCompare(String(b.lot),'en',{numeric:true}));
+
+  // Data_Count is one row per LPN/Lot. Values below belong to the ITEM as a whole,
+  // so writing them on every LPN row multiplies OH, Count and Variance when Excel sums them.
+  // Keep those values only on the first row of each Session + Location + Item group.
+  const itemLevelNumberFields = [
+    'itemTotalOh','alQty','count1','count2','count3','physicalCount','variance',
+  ];
+  const itemLevelTextFields = [
+    'count1Counter','count1Time','count2Counter','count2Time','count3Counter','count3Time',
+    'remark','photoUrl','result','approvalResolution','supervisorNote','approvedBy','approvedAt',
+    'wmsStatus','wmsFixedBy','wmsFixedAt',
+  ];
+  const exportedItemGroups = new Set();
+  dataCountRows.forEach(row => {
+    const key = stockKey(row.sessionId,row.locationId,row.itemId);
+    if (!exportedItemGroups.has(key)) {
+      exportedItemGroups.add(key);
+      return;
+    }
+    itemLevelNumberFields.forEach(field => { row[field] = null; });
+    itemLevelTextFields.forEach(field => { row[field] = ''; });
+  });
 
   const countHistory = counts.map(count => {
     const assignment = assignmentById.get(String(count.assignment_id)) || {};
@@ -21860,6 +22075,18 @@ function buildTeamBackupData(dataBySheet) {
     || String(a.location).localeCompare(String(b.location),'en',{numeric:true})
     || String(a.item).localeCompare(String(b.item),'en',{numeric:true})
     || String(a.lpn).localeCompare(String(b.lpn),'en',{numeric:true}));
+
+  const stockLpnItemGroups = new Set();
+  stockLpn.forEach(row => {
+    const key = stockKey(row.sessionId,row.locationId,row.itemId);
+    if (!stockLpnItemGroups.has(key)) {
+      stockLpnItemGroups.add(key);
+      return;
+    }
+    ['stockOnhand','alQty','count1','count2','count3','physicalCount','variance']
+      .forEach(field => { row[field] = null; });
+    row.result = '';
+  });
 
   const varianceWms = dataRows.filter(row =>
     row.hasApproval || (row.physicalCount !== null && row.variance !== 0));
@@ -21911,14 +22138,12 @@ function buildTeamBackupData(dataBySheet) {
 
   const dataInfoRows = dataInfoItems.map(info => ({
     item:info.item_code || '',
-    barcode:info.barcode || '',
+    category:dataInfoCategory(info),
     description:info.description || '',
     uom:info.uom || '',
     sourceFile:info.source_file || '',
     sourceSheet:info.source_sheet || '',
-    attributes:typeof info.attributes === 'string'
-      ? info.attributes
-      : JSON.stringify(info.attributes || {}),
+    attributes:JSON.stringify(sanitizeDataInfoAttributes(info.attributes)),
     updatedBy:profileName(info.updated_by),
     updatedAt:backupDateForTeam(info.updated_at),
   })).sort((a,b) => String(a.item).localeCompare(String(b.item),'en',{numeric:true}));
@@ -22012,7 +22237,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'v93' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'v95' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -22040,12 +22265,12 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
 
   const readme = [
     ['CYCLE COUNT BACKUP','ไฟล์ข้อมูลการนับที่ทีมอื่นอ่าน ใช้งานต่อ และ Restore กลับเข้าระบบได้'],
-    ['Data_Count','ข้อมูล Stock / LPN ทั้งหมดของ Session: 1 แถวต่อ LPN/Lot พร้อมเลข JOB และเก็บ Stock ที่ไม่มี LPN/Lot ไว้ด้วย โดยไม่กรองเฉพาะ Gain/Lost'],
+    ['Data_Count','ข้อมูล Stock / LPN ทั้งหมดของ Session: 1 แถวต่อ LPN/Lot โดย Stock Onhand คือยอดของ LPN/Lot แถวนั้น และ ITEM OH Total แสดงเฉพาะแถวแรกของแต่ละ Location + Item'],
     ['เลข JOB','เชื่อมจาก Annual JOB ตาม Session + Location + Item; รายการที่ไม่ได้อยู่ใน Annual JOB จะแสดงว่าง'],
-    ['Count 1–3','แสดง Actual Counter และเวลานับแยกครบทั้ง 3 รอบ'],
+    ['Count 1–3','แสดงยอดนับ Actual Counter เวลา Physical Count และ Variance เฉพาะแถวแรกของแต่ละ Location + Item เพื่อไม่ให้ Excel รวมยอดซ้ำตามจำนวน LPN'],
     ['Photo URL','ใช้ URL รูปล่าสุดที่มีจริงของงาน แม้ผลนับรอบสุดท้ายจะไม่ได้แนบรูป'],
     ['Found_Work','งานที่พนักงานพบเพิ่มหรือพบใน Location ว่าง พร้อมสถานะการตรวจ QTY หมายเหตุ และรูปถ่าย'],
-    ['Info_Master','ข้อมูล Item, Barcode, Description, UOM และฟิลด์เสริมจาก Item Master ที่ใช้ Match ในระบบ'],
+    ['Info_Master','ข้อมูล Item, CATEGORY, Description, UOM และฟิลด์เสริมจาก Item Master ที่ใช้ Match ในระบบ'],
     ['Session_Summary','สรุป Unique ITEM, Stock Lines, LPN/Lot Rows, จำนวนแถว Data_Count, รูปถ่าย, ผลการนับ, Stock Accuracy และสถานะ WMS แยก Session'],
     ['การใช้งานต่อ','ทีมสามารถกรอง คัดลอก หรือแก้ไข Data_Count, Found_Work, Info_Master และ Session_Summary ได้ เพราะ Restore จะอ่านเฉพาะชีตระบบที่ซ่อนไว้'],
     ['ข้อความยาว','Backup Format v5 จะแบ่งข้อความที่ยาวเกินข้อจำกัด Excel เป็นคอลัมน์ __cc_part_2, 3... และประกอบกลับอัตโนมัติเมื่อ Restore'],
