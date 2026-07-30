@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cycle Count v95 - Sidebar Center & Correct Backup Totals</title>
+<title>Cycle Count v99 - Clear Print Form & Full Count History</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -8361,6 +8361,10 @@ tbody tr, .table-row {
 }
 .assign-step-section > summary::-webkit-details-marker { display:none; }
 .assign-step-section:not([open]) > .assign-step-header { border-bottom:0; }
+.assign-step-section-locked > .assign-step-header {
+  cursor:default;
+  user-select:text;
+}
 .assign-section-chevron {
   width:34px;
   height:34px;
@@ -9142,7 +9146,10 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
 .normal-free-row.is-assigned {
   background:color-mix(in srgb,var(--theme-muted-text-color) 5%,var(--theme-card-bg));
 }
-.normal-free-row.is-assigned input { opacity:.45; }
+.normal-free-row.is-assigned input {
+  opacity:1;
+  cursor:pointer;
+}
 .normal-free-code {
   color:var(--theme-heading-color);
   font-family:'Fredoka','Mitr',sans-serif;
@@ -10182,33 +10189,35 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
   white-space:nowrap;
 }
 
-/* ── v94: Sidebar toggle interaction matching ChatGPT ── */
+/* ── v99: clear printable form + complete count event history ── */
 .sidebar-collapse-fab { display:none !important; }
 .sidebar-header {
-  min-height:92px;
-  padding:18px 14px !important;
+  min-height:172px;
+  padding:18px 14px 16px !important;
   display:flex !important;
-  flex-direction:row !important;
+  flex-direction:column !important;
   align-items:center !important;
   justify-content:center !important;
-  gap:10px !important;
+  gap:8px !important;
   text-align:center !important;
   position:relative;
 }
 .sidebar-brand-main {
+  width:100%;
   min-width:0;
-  max-width:calc(100% - 112px);
+  max-width:none;
   display:flex;
+  flex-direction:column;
   align-items:center;
   justify-content:center;
-  gap:11px;
-  position:absolute;
-  left:50%;
-  transform:translateX(-50%);
+  gap:8px;
+  position:static;
+  transform:none;
 }
 .sidebar-brand-copy {
+  width:100%;
   min-width:0;
-  text-align:left;
+  text-align:center;
 }
 .sidebar-brand-copy .sidebar-title,
 .sidebar-brand-copy .sidebar-sub {
@@ -10217,16 +10226,16 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
   white-space:nowrap;
 }
 .sidebar-logo-hover {
-  width:48px;
-  height:48px;
-  flex:0 0 48px;
+  width:78px;
+  height:78px;
+  flex:0 0 78px;
   position:relative;
   display:grid;
   place-items:center;
 }
 .sidebar-logo-hover .sidebar-logo-icon {
-  width:48px !important;
-  height:48px !important;
+  width:78px !important;
+  height:78px !important;
   transition:opacity .16s ease,transform .16s ease;
 }
 .sidebar-header-toggle,
@@ -10248,6 +10257,7 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
 }
 .sidebar-header-toggle {
   position:absolute;
+  top:18px;
   right:14px;
 }
 .sidebar-header-toggle:hover,
@@ -10274,12 +10284,17 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
 }
 .sidebar-logo-toggle {
   position:absolute;
-  inset:5px;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
   width:38px;
   height:38px;
   opacity:0;
   pointer-events:none;
   color:var(--theme-sidebar-text);
+}
+.sidebar-logo-toggle:active {
+  transform:translate(-50%,-50%) scale(.94);
 }
 .mobile-sidebar-trigger { display:none; color:var(--theme-heading-color); }
 .mobile-sidebar-trigger:hover,
@@ -10293,8 +10308,17 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
 }
 .sidebar.collapsed .sidebar-header {
   min-height:92px;
-  padding:18px 10px !important;
+  padding:16px 10px 10px !important;
   justify-content:center !important;
+}
+.sidebar.collapsed .sidebar-logo-hover {
+  width:54px;
+  height:54px;
+  flex-basis:54px;
+}
+.sidebar.collapsed .sidebar-logo-hover .sidebar-logo-icon {
+  width:54px !important;
+  height:54px !important;
 }
 .sidebar.collapsed .sidebar-brand-main {
   max-width:none;
@@ -10303,9 +10327,62 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
 }
 .sidebar.collapsed .sidebar-brand-copy,
 .sidebar.collapsed .sidebar-header-toggle,
-.sidebar.collapsed .sidebar-menu,
 .sidebar.collapsed .sidebar-footer {
   display:none !important;
+}
+.sidebar.collapsed .sidebar-menu {
+  display:flex !important;
+  width:100%;
+  padding:4px 10px 14px !important;
+  gap:8px !important;
+  align-items:center;
+  overflow-x:hidden;
+}
+.sidebar.collapsed .nav-group {
+  width:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+.sidebar.collapsed .nav-item {
+  width:48px !important;
+  min-width:48px !important;
+  min-height:44px !important;
+  margin:0 auto !important;
+  padding:10px !important;
+  justify-content:center !important;
+  gap:0 !important;
+  border-radius:14px !important;
+}
+.sidebar.collapsed .nav-item span:not(.nav-icon),
+.sidebar.collapsed .nav-chevron {
+  display:none !important;
+}
+.sidebar.collapsed .nav-item .nav-icon {
+  width:22px !important;
+  min-width:22px !important;
+  margin:0 !important;
+  display:inline-flex !important;
+  align-items:center;
+  justify-content:center;
+}
+.sidebar.collapsed .nav-submenu { display:none !important; }
+.sidebar.collapsed .nav-group.open .nav-submenu {
+  display:flex !important;
+  width:100%;
+  margin:4px 0 0 !important;
+  padding:0 !important;
+  gap:4px !important;
+  align-items:center;
+  border-left:0 !important;
+}
+.sidebar.collapsed .nav-subitem {
+  width:42px !important;
+  min-width:42px !important;
+  max-width:42px !important;
+  min-height:38px !important;
+  padding:8px !important;
+  border-radius:12px !important;
 }
 .sidebar.collapsed .sidebar-logo-hover .sidebar-logo-icon {
   display:flex !important;
@@ -10328,15 +10405,17 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
   .sidebar.collapsed { width:var(--sidebar-width) !important; }
   .sidebar .sidebar-header,
   .sidebar.collapsed .sidebar-header {
-    padding:18px 14px !important;
+    min-height:172px;
+    padding:18px 14px 16px !important;
     justify-content:center !important;
   }
   .sidebar .sidebar-brand-main,
   .sidebar.collapsed .sidebar-brand-main {
-    max-width:calc(100% - 112px);
-    position:absolute;
-    left:50%;
-    transform:translateX(-50%);
+    width:100%;
+    max-width:none;
+    position:static;
+    transform:none;
+    flex-direction:column;
   }
   .sidebar.collapsed .sidebar-brand-copy,
   .sidebar.collapsed .sidebar-header-toggle,
@@ -10346,6 +10425,17 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
   }
   .sidebar.collapsed .sidebar-brand-copy { display:block !important; }
   .sidebar.collapsed .sidebar-logo-toggle { display:none !important; }
+  .sidebar .sidebar-logo-hover,
+  .sidebar.collapsed .sidebar-logo-hover {
+    width:78px;
+    height:78px;
+    flex-basis:78px;
+  }
+  .sidebar .sidebar-logo-hover .sidebar-logo-icon,
+  .sidebar.collapsed .sidebar-logo-hover .sidebar-logo-icon {
+    width:78px !important;
+    height:78px !important;
+  }
   .sidebar.collapsed .sidebar-logo-hover .sidebar-logo-icon { opacity:1 !important; transform:none !important; }
   .sidebar.collapsed .nav-item span:not(.nav-icon),
   .sidebar.collapsed .nav-subitem span:not(.nav-icon) { display:initial !important; }
@@ -10439,7 +10529,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v95-sidebar-center-backup-totals';
+window.__CYCLE_COUNT_BUILD__ = 'v99-print-form-count-history';
 
 let _viewportSyncFrame = 0;
 function syncViewportSize() {
@@ -10864,7 +10954,7 @@ function applyBrandingSettings(settings, persistLocal = true) {
     const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
     root.setProperty(`--theme-${cssKey}`, uiBranding[key]);
   });
-  document.title = `${uiBranding.systemName} v95`;
+  document.title = `${uiBranding.systemName} v99`;
   if (persistLocal) {
     try { localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(uiBranding)); } catch (_) {}
   }
@@ -11354,7 +11444,7 @@ async function protectedFunctionHeaders() {
   return {
     Authorization: `Bearer ${session.access_token}`,
     apikey: SUPA_KEY,
-    'x-client-info': 'cycle-count-v95',
+    'x-client-info': 'cycle-count-v99',
   };
 }
 
@@ -11902,7 +11992,7 @@ function renderResponsivePreviewContent() {
     <div class="summary-page-header">
       <div class="summary-greeting-wrap">
         <div class="summary-greeting">Hello, AuD</div>
-        <div class="summary-greeting-sub">${escapeWmsText(uiBranding.systemName)} Dashboard · v95</div>
+        <div class="summary-greeting-sub">${escapeWmsText(uiBranding.systemName)} Dashboard · v99</div>
       </div>
       <div class="summary-header-actions">${dashboardFiltersHtml('<option>Cycle Count ก.ค. 2569</option>', false)}</div>
     </div>
@@ -12721,17 +12811,50 @@ async function getSessionRules(sessionId) {
   }
 }
 
-function logAudit(sessionId, locationId, itemId, action, oldValue, newValue, assignmentId) {
-  sb.from('audit_log').insert({
+function auditValueText(value) {
+  if (value === undefined || value === null || value === '') return null;
+  return String(value).slice(0,3000);
+}
+
+function buildAuditRow(sessionId, locationId, itemId, action, oldValue, newValue, assignmentId) {
+  return {
     session_id: sessionId || null,
     location_id: locationId || null,
     item_id: itemId || null,
     assignment_id: assignmentId || null,
     action,
-    old_value: (oldValue===undefined||oldValue===null) ? null : String(oldValue),
-    new_value: (newValue===undefined||newValue===null) ? null : String(newValue),
+    old_value:auditValueText(oldValue),
+    new_value:auditValueText(newValue),
     performed_by: me?.id || null,
-  }).then(({error}) => { if (error) console.warn('audit_log insert failed:', error.message); });
+  };
+}
+
+async function writeAuditRows(rows) {
+  const payload = (rows || []).filter(row => row?.action);
+  if (!payload.length) return true;
+  const { error } = await sb.from('audit_log').insert(payload);
+  if (error) {
+    console.warn('audit_log insert failed:', error);
+    return false;
+  }
+  return true;
+}
+
+function logAudit(sessionId, locationId, itemId, action, oldValue, newValue, assignmentId) {
+  return writeAuditRows([
+    buildAuditRow(sessionId,locationId,itemId,action,oldValue,newValue,assignmentId),
+  ]);
+}
+
+function countAuditValue(record,round) {
+  const parts = [
+    `รอบ ${round}`,
+    `QTY ${record?.count_qty ?? '—'}`,
+    `คนนับจริง ${record?.actual_counter_name || 'ไม่ระบุ'}`,
+  ];
+  if (record?.remark) parts.push(`หมายเหตุ ${String(record.remark).replace(/\s+/g,' ').trim()}`);
+  if (record?.photo_url) parts.push('มีรูป');
+  return parts.join(' · ');
 }
 
 function tagInfo(s) {
@@ -13865,6 +13988,15 @@ async function createFoundItemRecord(payload) {
     throw new Error('รายการ Location / LPN / Item นี้อยู่ในคิวตรวจของ Supervisor แล้ว');
   }
   if (error) throw error;
+  await logAudit(
+    payload.session_id,
+    payload.location_id,
+    payload.item_id,
+    'found_item_recorded',
+    null,
+    `ITEM ${payload.item_code || '—'} · LPN ${payload.license_plate} · QTY ${payload.qty} · คนนับจริง ${payload.actual_counter_name || 'ไม่ระบุ'}`,
+    payload.assignment_id,
+  );
   return data;
 }
 
@@ -14455,9 +14587,39 @@ async function loadCCount() {
   renderCounterPicker();
 
   if (annualMode && annualJob.status === 'pending') {
-    await sb.from('annual_count_jobs').update({ status:'in_progress' }).eq('id',jid);
+    const { data:startedJobs,error:startJobError } = await sb.from('annual_count_jobs')
+      .update({ status:'in_progress' })
+      .eq('id',jid)
+      .select('id,status');
+    if (startJobError) console.warn('annual count start failed:',startJobError);
+    else if (startedJobs?.length) {
+      await logAudit(
+        asgn.session_id,
+        asgn.location_id,
+        null,
+        'count_start',
+        'pending',
+        `in_progress · Annual JOB ${annualJob.job_code || jid}`,
+        aid,
+      );
+    }
   } else if (!annualMode && asgn.status === 'pending') {
-    await sb.from('assignments').update({ status:'in_progress' }).eq('id', aid);
+    const { data:startedAssignments,error:startAssignmentError } = await sb.from('assignments')
+      .update({ status:'in_progress' })
+      .eq('id',aid)
+      .select('id,status');
+    if (startAssignmentError) console.warn('count start failed:',startAssignmentError);
+    else if (startedAssignments?.length) {
+      await logAudit(
+        asgn.session_id,
+        asgn.location_id,
+        null,
+        'count_start',
+        'pending',
+        `in_progress · รอบ ${round}`,
+        aid,
+      );
+    }
   }
 }
 
@@ -14788,6 +14950,19 @@ async function submitCount(aid, round, idsStr, annualJobId='') {
     });
   }
 
+  const previousResult = await sb.from('count_records')
+    .select('item_id,count_qty,actual_counter_name,remark,photo_url')
+    .eq('assignment_id',aid)
+    .eq('round',round)
+    .in('item_id',ids);
+  if (previousResult.error) {
+    al.innerHTML = errBox(previousResult.error.message);
+    return;
+  }
+  const previousCountMap = new Map(
+    (previousResult.data || []).map(record => [String(record.item_id),record])
+  );
+
   btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
 
   const { error } = await sb.from('count_records')
@@ -14808,11 +14983,31 @@ async function submitCount(aid, round, idsStr, annualJobId='') {
   }
 
   const { data: asgn, error:assignmentReadError } = await sb.from('assignments')
-    .select('location_id,session_id').eq('id', aid).single();
+    .select('location_id,session_id,status').eq('id', aid).single();
   if (assignmentReadError || !asgn) {
     al.innerHTML = errBox(assignmentReadError?.message || 'ไม่พบ Assignment หลังบันทึกยอด');
     btn.disabled = false; btn.textContent = `✅ ยืนยันรอบที่ ${round}`; return;
   }
+
+  const countAuditRows = recs.flatMap(record => {
+    const previous = previousCountMap.get(String(record.item_id));
+    const changed = !previous ||
+      Number(previous.count_qty) !== Number(record.count_qty) ||
+      String(previous.actual_counter_name || '') !== String(record.actual_counter_name || '') ||
+      String(previous.remark || '') !== String(record.remark || '') ||
+      String(previous.photo_url || '') !== String(record.photo_url || '');
+    if (!changed) return [];
+    return [buildAuditRow(
+      asgn.session_id,
+      asgn.location_id,
+      record.item_id,
+      previous ? 'count_edit' : 'count_recorded',
+      previous ? countAuditValue(previous,round) : null,
+      countAuditValue(record,round),
+      aid,
+    )];
+  });
+  await writeAuditRows(countAuditRows);
 
   const [snapshotResult,roundResult,rules] = await Promise.all([
     sb.from('stock_snapshot').select('item_id,onhand_qty')
@@ -14873,6 +15068,15 @@ async function submitCount(aid, round, idsStr, annualJobId='') {
       btn.disabled = false; btn.textContent = `✅ ยืนยันรอบที่ ${round}`; return;
     }
   }
+  await logAudit(
+    asgn.session_id,
+    asgn.location_id,
+    null,
+    'count_round_submit',
+    `สถานะ ${asgn.status || 'pending'}`,
+    `ยืนยันรอบ ${round} · ผล ${newStatus} · คนนับจริง ${actualCounterName}`,
+    aid,
+  );
   window._photoMap = {};
 
   if (!needsMore) {
@@ -16186,6 +16390,16 @@ async function toggleWmsFixed(vaId, checked, button) {
     if (error) throw error;
     if (!data || data.length === 0) throw new Error('ไม่พบรายการที่ต้องการอัปเดต');
     if (target) Object.assign(target, updates);
+    const assignment = window._wmsAsgnInfoMap?.[target?.assignment_id];
+    await logAudit(
+      assignment?.session_id || S._dashSid,
+      assignment?.location_id,
+      target?.item_id,
+      'wms_status_change',
+      previous?.wms_fixed ? 'ตรวจสอบแล้ว' : 'ยังไม่ได้ตรวจสอบ',
+      checked ? 'ตรวจสอบแล้ว' : 'ยังไม่ได้ตรวจสอบ',
+      target?.assignment_id,
+    );
     updateWmsOverview();
     renderWmsList();
     showWmsFeedback(checked
@@ -16292,7 +16506,7 @@ async function returnWmsForReview(vaId, assignmentId, itemId, button) {
 
     if (assignment) assignment.status = 'round3_done';
     window._wmsRows = (window._wmsRows || []).filter(row => row.id !== vaId);
-    logAudit(
+    await logAudit(
       S._dashSid || assignment?.session_id,
       assignment?.location_id,
       itemId,
@@ -16853,6 +17067,18 @@ async function persistVarianceApprovalDecision(aid,approvals) {
   return approvalRows;
 }
 
+async function recordApprovalAudit(aid,asgn,approvals) {
+  return writeAuditRows((approvals || []).map(approval => buildAuditRow(
+    asgn?.session_id,
+    asgn?.location_id,
+    approval.item_id,
+    'count_confirmed',
+    null,
+    `ยอดยืนยัน ${approval.final_qty} · Variance ${Number(approval.variance || 0) >= 0 ? '+' : ''}${Number(approval.variance || 0)} · ผล ${approval.resolution}`,
+    aid,
+  )));
+}
+
 async function doApproveInline(aid, idx) {
   const al = Q('vda_'+idx);
   if (al) al.innerHTML = `<div class="alert alert-blue" style="font-size:12px">⏳ กำลังบันทึก...</div>`;
@@ -16881,6 +17107,7 @@ async function doApproveInline(aid, idx) {
       });
     }
     await persistVarianceApprovalDecision(aid,approvals);
+    await recordApprovalAudit(aid,asgn,approvals);
     if (al) al.innerHTML = `<div class="alert alert-green" style="font-size:12px">✅ คอนเฟิร์มยอดเรียบร้อย</div>`;
     invalidateDashboardCache();
     setTimeout(() => refreshDashboardData(),1000);
@@ -16899,7 +17126,7 @@ async function doReassignUser(aid, idx, targetRound) {
   if (statusForTarget) updates.status = statusForTarget;
   await sb.from('assignments').update(updates).eq('id', aid);
   const label = sel.options[sel.selectedIndex]?.textContent || '';
-  logAudit(before?.session_id, before?.location_id, null, 'reassign', before?.profiles?.name, label, aid);
+  await logAudit(before?.session_id, before?.location_id, null, 'reassign', before?.profiles?.name, label, aid);
   refreshDashboardData();
   showAssignmentSuccessModal({
     count:1,
@@ -17142,7 +17369,8 @@ async function approveFoundWork(foundId) {
       uom:normalizeImportText(Q('found_review_uom')?.value) || null,
     };
     const { data:updated,error:updateError } = await sb.from('found_items')
-      .update(updates).eq('id',foundId).eq('status','pending_review').select('id');
+      .update(updates).eq('id',foundId).eq('status','pending_review')
+      .select('id,session_id,location_id,assignment_id,item_id,item_code,qty');
     if (updateError) throw updateError;
     if (!updated?.length) throw new Error('รายการถูกตรวจสอบโดยคนอื่นแล้ว กรุณาโหลดใหม่');
 
@@ -17152,6 +17380,16 @@ async function approveFoundWork(foundId) {
     });
     if (error) throw error;
     if (!data?.ok) throw new Error('ระบบอนุมัติงานพบเพิ่มไม่สำเร็จ');
+    const auditContext = updated[0];
+    await logAudit(
+      auditContext.session_id,
+      auditContext.location_id,
+      auditContext.item_id,
+      'found_item_approved',
+      'pending_review',
+      `approved · ITEM ${auditContext.item_code || itemCode} · QTY ${auditContext.qty ?? qty}`,
+      auditContext.assignment_id,
+    );
     invalidateDashboardCache();
     alertBox.innerHTML = `<div class="alert alert-green">✅ อนุมัติแล้ว · Variance ${Number(data.variance || 0).toLocaleString('th-TH')} ส่งต่อไปเมนู WMS</div>`;
     setTimeout(() => go('sv-list'),1100);
@@ -17178,9 +17416,20 @@ async function rejectFoundWork(foundId) {
       supervisor_note:note,
       reviewed_by:me.id,
       reviewed_at:new Date().toISOString(),
-    }).eq('id',foundId).eq('status','pending_review').select('id');
+    }).eq('id',foundId).eq('status','pending_review')
+      .select('id,session_id,location_id,assignment_id,item_id,item_code,qty');
     if (error) throw error;
     if (!data?.length) throw new Error('รายการถูกตรวจสอบโดยคนอื่นแล้ว กรุณาโหลดใหม่');
+    const auditContext = data[0];
+    await logAudit(
+      auditContext.session_id,
+      auditContext.location_id,
+      auditContext.item_id,
+      'found_item_rejected',
+      'pending_review',
+      `rejected · ITEM ${auditContext.item_code || '—'} · QTY ${auditContext.qty ?? '—'} · เหตุผล ${note}`,
+      auditContext.assignment_id,
+    );
     alertBox.innerHTML = '<div class="alert alert-green">บันทึกผลไม่อนุมัติแล้ว</div>';
     setTimeout(() => go('sv-list'),900);
   } catch (error) {
@@ -17299,7 +17548,7 @@ async function updateOH(sessionId, locationId, itemId, newVal) {
   const val = parseFloat(newVal); if (isNaN(val)) return;
   const { data: before } = await sb.from('stock_snapshot').select('onhand_qty').eq('session_id', sessionId).eq('location_id', locationId).eq('item_id', itemId).single();
   await sb.from('stock_snapshot').update({ onhand_qty: val }).eq('session_id', sessionId).eq('location_id', locationId).eq('item_id', itemId);
-  logAudit(sessionId, locationId, itemId, 'oh_edit', before?.onhand_qty, val);
+  await logAudit(sessionId, locationId, itemId, 'oh_edit', before?.onhand_qty, val);
 }
 
 async function doApprove(aid) {
@@ -17329,6 +17578,7 @@ async function doApprove(aid) {
       });
     }
     await persistVarianceApprovalDecision(aid,approvals);
+    await recordApprovalAudit(aid,asgn,approvals);
     al.innerHTML = `<div class="alert alert-green">✅ คอนเฟิร์มยอดเรียบร้อย</div>`;
     invalidateDashboardCache();
     setTimeout(() => go('sv-list'),1500);
@@ -17346,7 +17596,7 @@ async function reqRecount(aid, targetRound) {
   if (statusForTarget) updates.status = statusForTarget;
   await sb.from('assignments').update(updates).eq('id', aid);
   const label = sel.options[sel.selectedIndex]?.textContent || '';
-  logAudit(before?.session_id, before?.location_id, null, 'reassign', before?.profiles?.name, label, aid);
+  await logAudit(before?.session_id, before?.location_id, null, 'reassign', before?.profiles?.name, label, aid);
   Q('sva').innerHTML = '';
   go('sv-list');
   showAssignmentSuccessModal({
@@ -17465,10 +17715,10 @@ function countingRuleEditorHtml(session) {
           </div>
         </div>
         <div class="count-rule-inputs">
-          <div><label for="rule_oh_${id}">OH</label><input id="rule_oh_${id}" type="number" step="any" value="100" oninput="refreshCountingRulePreview('${id}')"></div>
-          <div><label for="rule_c1_${id}">COUNT 1</label><input id="rule_c1_${id}" type="number" step="any" value="98" oninput="refreshCountingRulePreview('${id}')"></div>
-          <div><label for="rule_c2_${id}">COUNT 2</label><input id="rule_c2_${id}" type="number" step="any" value="98" oninput="refreshCountingRulePreview('${id}')"></div>
-          <div><label for="rule_c3_${id}">COUNT 3</label><input id="rule_c3_${id}" type="number" step="any" value="99" oninput="refreshCountingRulePreview('${id}')"></div>
+          <div><label for="rule_oh_${id}">OH</label><input id="rule_oh_${id}" type="number" step="any" value="" placeholder="กรอก OH" oninput="refreshCountingRulePreview('${id}')"></div>
+          <div><label for="rule_c1_${id}">COUNT 1</label><input id="rule_c1_${id}" type="number" step="any" value="" placeholder="กรอก Count 1" oninput="refreshCountingRulePreview('${id}')"></div>
+          <div><label for="rule_c2_${id}">COUNT 2</label><input id="rule_c2_${id}" type="number" step="any" value="" placeholder="กรอก Count 2" oninput="refreshCountingRulePreview('${id}')"></div>
+          <div><label for="rule_c3_${id}">COUNT 3</label><input id="rule_c3_${id}" type="number" step="any" value="" placeholder="กรอก Count 3" oninput="refreshCountingRulePreview('${id}')"></div>
         </div>
         <div class="count-rule-results">
           <div class="count-rule-result" id="rule_result_1_${id}"></div>
@@ -17798,16 +18048,15 @@ async function renderManageAssign(container) {
         </div>
       </header>
 
-      <details class="assign-step-section">
-        <summary class="assign-step-header">
+      <section class="assign-step-section assign-step-section-locked">
+        <div class="assign-step-header">
           <span class="assign-step-number">1</span>
           <div class="assign-step-copy">
             <strong>เลือก Session และตั้งค่าการมองเห็น</strong>
             <span>กำหนดชุดงานก่อนเริ่มจ่ายงานให้ User</span>
           </div>
-          <span class="assign-step-badge" id="assign-mode-badge">ตั้งค่าพื้นฐาน</span>
-          <span class="assign-section-chevron" aria-hidden="true"></span>
-        </summary>
+          <span class="assign-step-badge" id="assign-mode-badge">ล็อกเปิดไว้</span>
+        </div>
         <div class="assign-step-body">
           <div class="assign-config-grid">
             <div class="assign-config-card">
@@ -17843,7 +18092,7 @@ async function renderManageAssign(container) {
             <div id="zone-dash-body"><div class="load" style="padding:20px;text-align:center">⏳ กำลังคำนวณ...</div></div>
           </details>
         </div>
-      </details>
+      </section>
 
       <div id="aa"></div>
 
@@ -17907,8 +18156,10 @@ async function renderManageAssign(container) {
               </div>
               <div class="normal-free-toolbar">
                 <span class="normal-free-count" id="normal-free-count">เลือก 0 Location</span>
-                <button class="btn btn-ghost btn-sm" type="button" onclick="selectNormalFreeLocations('visible')">เลือกที่แสดง</button>
+                <button class="btn btn-ghost btn-sm" type="button" onclick="selectNormalFreeLocations('visible')">เลือกทั้งหมดที่แสดง</button>
                 <button class="btn btn-ghost btn-sm" type="button" onclick="selectNormalFreeLocations('none')">ล้างที่เลือก</button>
+                <button class="btn btn-blue btn-sm" id="normal-free-print-btn" type="button"
+                  onclick="printSelectedNormalRoundOneLocations()" disabled>🖨️ พิมพ์งานที่เลือก</button>
                 <button class="btn btn-green btn-sm" id="normal-free-assign-btn" type="button"
                   onclick="assignSelectedNormalLocations()" disabled>✓ จ่าย Location ที่เลือก</button>
               </div>
@@ -18064,6 +18315,8 @@ function updateAssignWorkspaceStats(total, assigned, remaining) {
 async function handleAssignSessionChange() {
   updateAssignSessionHeading();
   updateAssignWorkspaceStats(0,0,0);
+  window._bulkAssignments = [];
+  syncNormalRoundOnePrintButton();
   const alertBox = Q('aa');
   if (alertBox) alertBox.innerHTML = '';
   const baseConfig = selectedAssignSessionConfig();
@@ -18071,6 +18324,7 @@ async function handleAssignSessionChange() {
   const defaultMode = savedMode || (baseConfig.countMode === 'annual' ? 'annual' : 'normal');
   const config = setRound1AssignMode(defaultMode,{ skipLoad:true });
   _normalFreeSelectedLocationIds = new Set();
+  _normalFreeSelectedPrintLocationIds = new Set();
   if (Q('normal-free-search')) Q('normal-free-search').value = '';
   ['normal-free-zone','normal-free-row','normal-free-level'].forEach(id => {
     if (Q(id)) Q(id).value = '';
@@ -18091,6 +18345,7 @@ async function handleAssignSessionChange() {
 let _annualWorkspaceJobs = [];
 let _annualWorkspaceItemCounts = {};
 let _normalFreeSelectedLocationIds = new Set();
+let _normalFreeSelectedPrintLocationIds = new Set();
 let _normalFreeVisibleLocationIds = [];
 let _normalFreeFilteredLocationCount = 0;
 
@@ -18920,14 +19175,24 @@ async function doR23Assign() {
     ? await sb.from('profiles').select('id,name').in('id', previousUserIds)
     : { data: [] };
   const previousUserMap = Object.fromEntries((previousUsers || []).map(user => [user.id, user.name]));
+  const reassignmentAuditRows = [];
   const BATCH = 200;
   for (let i = 0; i < asgns.length; i += BATCH) {
     const chunk = asgns.slice(i, i+BATCH);
     for (const a of chunk) {
       await sb.from('assignments').update({ assigned_to: uid }).eq('id', a.id);
-      logAudit(a.session_id, a.location_id, null, 'reassign', previousUserMap[a.assigned_to] || 'ไม่ระบุ User', newLabel, a.id);
+      reassignmentAuditRows.push(buildAuditRow(
+        a.session_id,
+        a.location_id,
+        null,
+        'reassign',
+        previousUserMap[a.assigned_to] || 'ไม่ระบุ User',
+        newLabel,
+        a.id,
+      ));
     }
   }
+  await writeAuditRows(reassignmentAuditRows);
   const sid = Q('as-sess')?.value;
   const locationIds = [...new Set(asgns.map(assignment => assignment.location_id).filter(Boolean))];
   Q('r23-preview').innerHTML = '';
@@ -19051,8 +19316,14 @@ function renderNormalFreeLocationList() {
   const availableIds = new Set(
     rows.filter(row => !row.assignment).map(row => row.location.id)
   );
+  const assignedIds = new Set(
+    rows.filter(row => row.assignment).map(row => row.location.id)
+  );
   _normalFreeSelectedLocationIds = new Set(
     [..._normalFreeSelectedLocationIds].filter(id => availableIds.has(id))
+  );
+  _normalFreeSelectedPrintLocationIds = new Set(
+    [..._normalFreeSelectedPrintLocationIds].filter(id => assignedIds.has(id))
   );
   const zone = Q('normal-free-zone')?.value || '';
   const row = Q('normal-free-row')?.value || '';
@@ -19072,9 +19343,7 @@ function renderNormalFreeLocationList() {
   const renderLimit = 300;
   const displayed = filtered.slice(0,renderLimit);
   _normalFreeFilteredLocationCount = filtered.length;
-  _normalFreeVisibleLocationIds = displayed
-    .filter(entry => !entry.assignment)
-    .map(entry => entry.location.id);
+  _normalFreeVisibleLocationIds = displayed.map(entry => entry.location.id);
   if (!filtered.length) {
     list.innerHTML = `<div class="annual-empty">${rows.length ? 'ไม่พบ Location ที่ตรงกับตัวกรองหรือสถานะงาน' : 'Session นี้ยังไม่มี Location'}</div>`;
     syncNormalFreeSelection();
@@ -19087,7 +19356,10 @@ function renderNormalFreeLocationList() {
     const location = entry.location;
     const assignment = entry.assignment;
     const available = !assignment;
-    const checked = _normalFreeSelectedLocationIds.has(location.id) ? 'checked' : '';
+    const selectedSet = available
+      ? _normalFreeSelectedLocationIds
+      : _normalFreeSelectedPrintLocationIds;
+    const checked = selectedSet.has(location.id) ? 'checked' : '';
     const detail = [
       location.zone,location.area,
       location.row_no ? `Row ${location.row_no}` : '',
@@ -19098,10 +19370,11 @@ function renderNormalFreeLocationList() {
       : tagInfo(assignment.status);
     const assignmentMeta = available
       ? 'เลือกอิสระ · ไม่จำกัดจำนวน'
-      : `User: ${assignment.profiles?.name || 'ไม่ระบุ'}`;
+      : `User: ${assignment.profiles?.name || 'ไม่ระบุ'} · เลือกเพื่อพิมพ์`;
     return `<label class="normal-free-row ${available?'':'is-assigned'}">
-      <input class="normal-free-checkbox" type="checkbox" value="${location.id}" ${checked} ${available?'':'disabled'}
-        onchange="toggleNormalFreeLocation('${location.id}',this.checked)">
+      <input class="normal-free-checkbox" type="checkbox" value="${location.id}" ${checked}
+        aria-label="${available?'เลือกเพื่อจ่ายงาน':'เลือกเพื่อพิมพ์'} ${escapeWmsText(location.code || '')}"
+        onchange="toggleNormalFreeLocation('${location.id}',this.checked,'${available?'assign':'print'}')">
       <span>
         <span class="normal-free-code">${escapeWmsText(location.code || '?')}</span>
         <span class="normal-free-meta" style="display:block;margin-top:3px">${escapeWmsText(detail || 'ไม่ระบุรายละเอียด')}</span>
@@ -19112,17 +19385,25 @@ function renderNormalFreeLocationList() {
   syncNormalFreeSelection();
 }
 
-function toggleNormalFreeLocation(locationId,checked) {
-  if (checked) _normalFreeSelectedLocationIds.add(locationId);
-  else _normalFreeSelectedLocationIds.delete(locationId);
+function toggleNormalFreeLocation(locationId,checked,mode='assign') {
+  const selectedSet = mode === 'print'
+    ? _normalFreeSelectedPrintLocationIds
+    : _normalFreeSelectedLocationIds;
+  if (checked) selectedSet.add(locationId);
+  else selectedSet.delete(locationId);
   syncNormalFreeSelection();
 }
 
 function selectNormalFreeLocations(mode) {
   if (mode === 'visible') {
-    _normalFreeVisibleLocationIds.forEach(id => _normalFreeSelectedLocationIds.add(id));
+    const assignedIds = new Set(getAssignedNormalRoundOneLocationIds());
+    _normalFreeVisibleLocationIds.forEach(id => {
+      if (assignedIds.has(id)) _normalFreeSelectedPrintLocationIds.add(id);
+      else _normalFreeSelectedLocationIds.add(id);
+    });
   } else {
     _normalFreeSelectedLocationIds.clear();
+    _normalFreeSelectedPrintLocationIds.clear();
   }
   renderNormalFreeLocationList();
 }
@@ -19130,9 +19411,45 @@ function selectNormalFreeLocations(mode) {
 function syncNormalFreeSelection() {
   const count = Q('normal-free-count');
   const button = Q('normal-free-assign-btn');
-  const selectedCount = _normalFreeSelectedLocationIds.size;
-  if (count) count.textContent = `เลือก ${selectedCount.toLocaleString('th-TH')} Location · แสดง ${_normalFreeVisibleLocationIds.length.toLocaleString('th-TH')} / ${_normalFreeFilteredLocationCount.toLocaleString('th-TH')}`;
-  if (button) button.disabled = selectedCount === 0;
+  const assignCount = _normalFreeSelectedLocationIds.size;
+  const printCount = _normalFreeSelectedPrintLocationIds.size;
+  if (count) {
+    count.textContent = `เลือกจ่าย ${assignCount.toLocaleString('th-TH')} · เลือกพิมพ์ ${printCount.toLocaleString('th-TH')} · แสดง ${_normalFreeVisibleLocationIds.length.toLocaleString('th-TH')} / ${_normalFreeFilteredLocationCount.toLocaleString('th-TH')}`;
+  }
+  if (button) button.disabled = assignCount === 0;
+  syncNormalRoundOnePrintButton();
+}
+
+function getAssignedNormalRoundOneLocationIds() {
+  return [...new Set(
+    (window._bulkAssignments || [])
+      .map(assignment => assignment?.location_id)
+      .filter(Boolean)
+  )];
+}
+
+function syncNormalRoundOnePrintButton() {
+  const button = Q('normal-free-print-btn');
+  if (!button) return;
+  const assignedIds = new Set(getAssignedNormalRoundOneLocationIds());
+  const count = [..._normalFreeSelectedPrintLocationIds]
+    .filter(id => assignedIds.has(id)).length;
+  button.disabled = count === 0;
+  button.textContent = count
+    ? `🖨️ พิมพ์งานที่เลือก (${count.toLocaleString('th-TH')})`
+    : '🖨️ พิมพ์งานที่เลือก';
+}
+
+function printSelectedNormalRoundOneLocations() {
+  const sessionId = Q('as-sess')?.value;
+  const assignedIds = new Set(getAssignedNormalRoundOneLocationIds());
+  const locationIds = [..._normalFreeSelectedPrintLocationIds]
+    .filter(id => assignedIds.has(id));
+  if (!sessionId || !locationIds.length) {
+    alert('กรุณาเลือก Location ที่จ่ายงานแล้วก่อนพิมพ์');
+    return;
+  }
+  printCountForm(locationIds,sessionId);
 }
 
 async function assignSelectedNormalLocations() {
@@ -19201,6 +19518,7 @@ async function refreshBulkFilters() {
   window._bulkSnaps = snaps || [];
   window._bulkAssigned = assignedSet;
   window._bulkAssignments = existing || [];
+  syncNormalRoundOnePrintButton();
   refreshBulkDependentFilters();
   refreshNormalFreeDependentFilters();
 }
@@ -19728,11 +20046,11 @@ function openPrintFormWindow(rows,title,existingWindow,options = {}) {
   const showOH = options.showOH === true;
   const printLogo = normalizeLogoDataUrl(uiBranding.printLogoDataUrl) || normalizeLogoDataUrl(uiBranding.logoDataUrl) || PF_LOGO_B64;
   const columnCount = showOH ? 10 : 9;
-  const qtyHeader = showOH ? '<th style="width:7%;text-align:right">QTY / OH</th>' : '';
-  const pagesHtml = pages.map((pageRows,pageIndex) => `<section class="pf-page"><header class="pf-header">${uiBranding.printShowLogo?`<img class="pf-logo" src="${printLogo}" alt="logo">`:'<span></span>'}<div class="pf-title">${pfEscapeHtml(title)}</div><div class="pf-meta">${printMetaHtml(pageIndex,totalPages)}</div></header><table class="pf-table"><thead><tr><th style="width:10%">Location</th><th style="width:12%">Item</th><th style="width:21%">Description</th><th style="width:9%">Inventory status</th><th style="width:8%">Unit</th>${qtyHeader}<th style="width:8%">Count 1</th><th style="width:8%">Count 2</th><th style="width:8%">Count 3</th><th style="width:9%">Remark</th></tr></thead><tbody>${pageRows.length?pageRows.map(row=>`<tr><td>${pfEscapeHtml(row.locCode)}</td><td>${pfEscapeHtml(row.itemCode)}</td><td>${pfEscapeHtml(row.desc)}</td><td>${pfEscapeHtml(row.status)}</td><td>${pfEscapeHtml(row.uom || '')}</td>${showOH?`<td style="text-align:right;font-weight:bold">${pfEscapeHtml(row.ohQty ?? '')}</td>`:''}<td></td><td></td><td></td><td></td></tr>`).join(''):`<tr><td colspan="${columnCount}" style="text-align:center;color:#888">ไม่มีรายการ</td></tr>`}</tbody></table>${printSignatureHtml()}</section>`).join('');
+  const qtyHeader = showOH ? '<th scope="col" style="width:6%;text-align:right">QTY / OH</th>' : '';
+  const pagesHtml = pages.map((pageRows,pageIndex) => `<section class="pf-page"><header class="pf-header">${uiBranding.printShowLogo?`<img class="pf-logo" src="${printLogo}" alt="logo">`:'<span></span>'}<div class="pf-title">${pfEscapeHtml(title)}</div><div class="pf-meta">${printMetaHtml(pageIndex,totalPages)}</div></header><table class="pf-table"><thead><tr><th scope="col" style="width:11%">Location</th><th scope="col" class="pf-item-head" style="width:19%">ITEM</th><th scope="col" style="width:17%">Description</th><th scope="col" style="width:9%">Inventory Status</th><th scope="col" style="width:6%">Unit</th>${qtyHeader}<th scope="col" style="width:7%">Count 1</th><th scope="col" style="width:7%">Count 2</th><th scope="col" style="width:7%">Count 3</th><th scope="col" style="width:11%">Remark</th></tr></thead><tbody>${pageRows.length?pageRows.map(row=>`<tr><td class="pf-location-code">${pfEscapeHtml(row.locCode)}</td><td class="pf-item-code">${pfEscapeHtml(row.itemCode)}</td><td class="pf-description">${pfEscapeHtml(row.desc)}</td><td>${pfEscapeHtml(row.status)}</td><td>${pfEscapeHtml(row.uom || '')}</td>${showOH?`<td style="text-align:right;font-weight:bold">${pfEscapeHtml(row.ohQty ?? '')}</td>`:''}<td></td><td></td><td></td><td></td></tr>`).join(''):`<tr><td colspan="${columnCount}" style="text-align:center;color:#888">ไม่มีรายการ</td></tr>`}</tbody></table>${printSignatureHtml()}</section>`).join('');
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${pfEscapeHtml(title)}</title><style>
-    @page{size:${settings.paper} ${settings.orientation};margin:${settings.margin}mm}*{box-sizing:border-box}body{margin:0;font-family:Arial,'Sarabun','Tahoma',sans-serif;color:#000}
-    .pf-page{page-break-after:always}.pf-page:last-child{page-break-after:auto}.pf-header{min-height:52px;display:grid;grid-template-columns:150px 1fr 150px;align-items:center;gap:14px;border-bottom:3px solid ${settings.accent};padding-bottom:6px;margin-bottom:8px}.pf-logo{max-width:140px;max-height:42px}.pf-title{text-align:center;font-size:24px;font-weight:bold}.pf-meta{font-size:10px;text-align:right;line-height:1.5;white-space:nowrap}.pf-table{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}.pf-table th,.pf-table td{border:1px solid #000;padding:5px 6px;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pf-table th{color:#fff;background:${settings.accent};font-weight:bold;font-size:10px}.pf-table td{height:22px}.pf-footer{display:flex;justify-content:space-between;margin-top:12px;font-size:11px}.pf-noprint{padding:10px;background:#fffbe6;border-bottom:1px solid #ccc;font-family:sans-serif;font-size:13px}@media print{.pf-noprint{display:none}}
+    @page{size:${settings.paper} ${settings.orientation};margin:${settings.margin}mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{margin:0;font-family:Arial,'Sarabun','Tahoma',sans-serif;color:#000}
+    .pf-page{page-break-after:always}.pf-page:last-child{page-break-after:auto}.pf-header{min-height:58px;display:grid;grid-template-columns:150px 1fr 150px;align-items:center;gap:14px;border-bottom:3px solid ${settings.accent};padding-bottom:7px;margin-bottom:8px}.pf-logo{max-width:140px;max-height:46px}.pf-title{text-align:center;color:#071f24;font-size:28px;font-weight:900;line-height:1.15}.pf-meta{color:#071f24;font-size:10.5px;font-weight:700;text-align:right;line-height:1.5;white-space:nowrap}.pf-table{width:100%;border-collapse:collapse;font-size:10.5px;table-layout:fixed}.pf-table th,.pf-table td{border:1px solid #000;padding:5px 6px;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pf-table th{color:#071f24;background:#dcebed;font-weight:900;font-size:11.5px;line-height:1.2;text-align:center;white-space:normal}.pf-table .pf-item-head{font-size:12px}.pf-table td{height:22px}.pf-table .pf-location-code{font-weight:700}.pf-table .pf-item-code{color:#000;font-size:10.5px;font-weight:900;line-height:1.15;white-space:normal;overflow-wrap:anywhere;word-break:break-word;text-overflow:clip}.pf-table .pf-description{font-size:9.5px}.pf-footer{display:flex;justify-content:space-between;margin-top:12px;color:#071f24;font-size:11px;font-weight:700}.pf-noprint{padding:10px;background:#fffbe6;border-bottom:1px solid #ccc;font-family:sans-serif;font-size:13px}@media print{.pf-noprint{display:none}}
   </style></head><body><div class="pf-noprint">Form Count แบบตารางกระชับพร้อมพิมพ์${uiBranding.printAutoOpenDialog?'':' · กด Ctrl+P หรือ Cmd+P เมื่อพร้อม'}</div>${pagesHtml}${printWindowScript()}</body></html>`;
   const win = existingWindow || window.open('','_blank');
   if (!win) { alert('เบราว์เซอร์บล็อกป๊อปอัพ'); return; }
@@ -20034,18 +20352,42 @@ async function loadAdHistory() {
     S._histSid = '';
   }
   let scopedAssignments = assignmentResult.data || [];
-  const countResult = await fetchSupabaseRowsByValues(
-    'count_records',
-    'assignment_id,actual_counter_name',
-    'assignment_id',
-    scopedAssignments.map(assignment => assignment.id),
-  );
+  const [countResult,auditResult] = await Promise.all([
+    fetchSupabaseRowsByValues(
+      'count_records',
+      'assignment_id,actual_counter_name,counted_at',
+      'assignment_id',
+      scopedAssignments.map(assignment => assignment.id),
+    ),
+    fetchSupabaseRowsByValues(
+      'audit_log',
+      'assignment_id,action,created_at',
+      'assignment_id',
+      scopedAssignments.map(assignment => assignment.id),
+    ),
+  ]);
   if (requestId !== _historyLoadRequestId) return;
-  if (countResult.error) {
-    cnt().innerHTML = errBox(countResult.error.message);
+  if (countResult.error || auditResult.error) {
+    cnt().innerHTML = errBox((countResult.error || auditResult.error).message);
     return;
   }
   const historyCounterMap = buildActualCounterMap(countResult.data || []);
+  const historyEventMap = {};
+  const rememberHistoryEvent = (assignmentId,at,isStart=false) => {
+    if (!assignmentId || !at) return;
+    const time = new Date(at).getTime();
+    if (!Number.isFinite(time)) return;
+    const event = historyEventMap[assignmentId] || { startedAt:null,latestAt:null };
+    if (isStart && (!event.startedAt || time < new Date(event.startedAt).getTime())) event.startedAt = at;
+    if (!event.latestAt || time > new Date(event.latestAt).getTime()) event.latestAt = at;
+    historyEventMap[assignmentId] = event;
+  };
+  (countResult.data || []).forEach(record =>
+    rememberHistoryEvent(record.assignment_id,record.counted_at,true)
+  );
+  (auditResult.data || []).forEach(event =>
+    rememberHistoryEvent(event.assignment_id,event.created_at,event.action === 'count_start')
+  );
   const availableCounters = [...new Set(
     Object.values(historyCounterMap).flat().filter(Boolean)
   )].sort((a,b) => a.localeCompare(b,'th',{numeric:true,sensitivity:'base'}));
@@ -20163,7 +20505,14 @@ async function loadAdHistory() {
   historyList.innerHTML = '<div class="card card-flush" data-location-sort-group>' + assignments.map(assignment => {
     const info = tagInfo(assignment.status);
     const countedBy = (historyCounterMap[assignment.id] || []).join(', ') || 'ไม่ระบุคนนับ';
-    return `<div class="row click" data-location-sort-code="${escapeWmsText(assignment.locations?.code || '')}" onclick="go('ad-txlog',{aid:'${assignment.id}'})"><div class="row-body"><div class="row-title mono">${escapeWmsText(assignment.locations?.code || '?')}</div><div class="row-sub"><span style="color:var(--primary-blue);font-weight:700">${escapeWmsText(assignment.count_sessions?.name || '')}</span> · คนนับจริง: ${escapeWmsText(countedBy)}</div><div class="row-sub">${new Date(assignment.created_at).toLocaleString('th-TH')}</div></div><span class="tag ${info.cls}">${info.lbl}</span><span class="caret">›</span></div>`;
+    const historyEvent = historyEventMap[assignment.id];
+    const startText = historyEvent?.startedAt
+      ? `เริ่มนับ ${new Date(historyEvent.startedAt).toLocaleString('th-TH')}`
+      : `ยังไม่เริ่มนับ · สร้างงาน ${new Date(assignment.created_at).toLocaleString('th-TH')}`;
+    const latestText = historyEvent?.latestAt && historyEvent.latestAt !== historyEvent.startedAt
+      ? ` · ล่าสุด ${new Date(historyEvent.latestAt).toLocaleString('th-TH')}`
+      : '';
+    return `<div class="row click" data-location-sort-code="${escapeWmsText(assignment.locations?.code || '')}" onclick="go('ad-txlog',{aid:'${assignment.id}'})"><div class="row-body"><div class="row-title mono">${escapeWmsText(assignment.locations?.code || '?')}</div><div class="row-sub"><span style="color:var(--primary-blue);font-weight:700">${escapeWmsText(assignment.count_sessions?.name || '')}</span> · คนนับจริง: ${escapeWmsText(countedBy)}</div><div class="row-sub">${startText}${latestText}</div></div><span class="tag ${info.cls}">${info.lbl}</span><span class="caret">›</span></div>`;
   }).join('') + '</div>';
 }
 
@@ -20201,7 +20550,21 @@ async function loadAdTxLog() {
 
   const si = tagInfo(asgn.status);
   const pageCounterLabel = actualCounterLabel(recs || []);
-  const ACTION_META = { oh_edit: { icon:'✏️', label:'แก้ไขยอด OH' }, reassign: { icon:'🔄', label:'เปลี่ยน User ผู้รับงาน' } };
+  const ACTION_META = {
+    count_start:{ icon:'▶️',label:'เริ่มนับงาน' },
+    count_recorded:{ icon:'🧮',label:'บันทึกยอดนับ' },
+    count_edit:{ icon:'✏️',label:'แก้ไขยอดนับ' },
+    count_round_submit:{ icon:'✅',label:'ยืนยันรอบการนับ' },
+    count_confirmed:{ icon:'🔐',label:'Supervisor คอนเฟิร์มยอด' },
+    oh_edit:{ icon:'✏️',label:'แก้ไขยอด OH' },
+    reassign:{ icon:'🔄',label:'เปลี่ยน User ผู้รับงาน' },
+    variance_reopened:{ icon:'↩️',label:'ส่งกลับตรวจ Variance' },
+    wms_status_change:{ icon:'🛠️',label:'เปลี่ยนสถานะปรับยอด WMS' },
+    wms_return_review:{ icon:'↩️',label:'ส่งจาก WMS กลับตรวจใหม่' },
+    found_item_recorded:{ icon:'➕',label:'บันทึกงานพบเพิ่ม' },
+    found_item_approved:{ icon:'✅',label:'อนุมัติงานพบเพิ่ม' },
+    found_item_rejected:{ icon:'✕',label:'ไม่อนุมัติงานพบเพิ่ม' },
+  };
   let rows = '';
   for (const ev of events) {
     if (ev.type === 'count') {
@@ -20214,7 +20577,7 @@ async function loadAdTxLog() {
       rows += `<div class="row" style="cursor:default;flex-wrap:wrap;background:${isOk?'rgba(74, 222, 128, 0.08)':'rgba(251, 113, 133, 0.08)'}"><div class="row-body"><div class="row-title mono" style="font-size:14px">${itemLabel}</div><div class="row-sub">${escapeWmsText(a.items?.description||'')}</div><div class="row-sub">${isOk?'✅':'❌'} คอนเฟิร์มยอดโดย User: <span style="font-weight:700;">${escapeWmsText(a.profiles?.name||'?')}</span></div><div class="row-sub">${a.created_at ? new Date(a.created_at).toLocaleString('th-TH') : ''}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:32px;font-weight:800;font-family:'Fredoka';color:var(--text-main)">${a.final_qty}</div><span class="tag ${isOk?'tag-green':'tag-red'}" style="font-size:10px">${a.variance>0?'+':''}${a.variance}</span></div></div>`;
     } else {
       const a = ev.data; const meta = ACTION_META[a.action] || { icon:'📝', label: a.action };
-      rows += `<div class="row" style="cursor:default;flex-wrap:wrap;background:rgba(114, 213, 246, 0.1)"><div class="row-body"><div class="row-title mono" style="font-size:14px">${a.items?.code || meta.label}</div>${a.items?.code ? `<div class="row-sub" style="font-weight:700; color:var(--primary-blue);">${meta.icon} ${meta.label}</div>` : ''}<div class="row-sub">ดำเนินการโดย User: ${escapeWmsText(a.profiles?.name||'?')}</div><div class="row-sub">${a.created_at ? new Date(a.created_at).toLocaleString('th-TH') : ''}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:16px;font-weight:800;color:var(--text-main)">${a.old_value ?? '—'} → ${a.new_value ?? '—'}</div><span class="tag tag-blue" style="font-size:10px; margin-top:6px;">${meta.icon} ${meta.label}</span></div></div>`;
+      rows += `<div class="row" style="cursor:default;flex-wrap:wrap;background:rgba(114, 213, 246, 0.1)"><div class="row-body"><div class="row-title mono" style="font-size:14px">${a.items?.code ? escapeWmsText(a.items.code) : escapeWmsText(meta.label)}</div>${a.items?.code ? `<div class="row-sub" style="font-weight:700; color:var(--primary-blue);">${meta.icon} ${escapeWmsText(meta.label)}</div>` : ''}<div class="row-sub">ดำเนินการโดย User: ${escapeWmsText(a.profiles?.name||'?')}</div><div class="row-sub">${a.created_at ? new Date(a.created_at).toLocaleString('th-TH') : ''}</div></div><div style="text-align:right;flex:1 1 260px;min-width:220px;max-width:520px"><div style="font-size:12px;font-weight:800;line-height:1.55;color:var(--text-main);white-space:normal;overflow-wrap:anywhere">${escapeWmsText(a.old_value ?? '—')} → ${escapeWmsText(a.new_value ?? '—')}</div><span class="tag tag-blue" style="font-size:10px; margin-top:6px;">${meta.icon} ${escapeWmsText(meta.label)}</span></div></div>`;
     }
   }
 
@@ -20231,18 +20594,31 @@ async function loadAdTxLog() {
 
 async function sendBackToVariance(aid) {
   if (!confirm('ส่งงานนี้กลับไปให้ Supervisor ตรวจสอบใน Variance?')) return;
+  const { data:before,error:readError } = await sb.from('assignments')
+    .select('status,session_id,location_id')
+    .eq('id',aid)
+    .single();
+  if (readError || !before) { alert(readError?.message || 'ไม่พบ Assignment'); return; }
   const { error } = await sb.from('assignments').update({ status: 'round3_done' }).eq('id', aid);
   if (error) { alert(error.message); return; }
+  await logAudit(
+    before.session_id,
+    before.location_id,
+    null,
+    'variance_reopened',
+    before.status,
+    'round3_done',
+    aid,
+  );
   alert('✅ ส่งกลับไปตรวจสอบใน Variance เรียบร้อยแล้ว'); loadAdTxLog();
 }
 
 async function loadAdSess() { S._manageTab='sessions'; _manageTab='sessions'; await loadAdManage(); }
 
 function paintAdNew() {
-  const def = `Cycle Count ${new Date().toLocaleDateString('th-TH',{month:'short',year:'numeric'})}`;
   cnt().innerHTML = `<div class="card" style="max-width:620px; margin:0 auto">
     <div id="na"></div>
-    <div class="fg"><label>ชื่อ Session</label><input id="nn" value="${def}"></div>
+    <div class="fg"><label>ชื่อ Session</label><input id="nn" value="" placeholder="กรอกชื่อ Session" autocomplete="off"></div>
     <div class="alert alert-blue" style="margin-bottom:18px;line-height:1.65">
       รูปแบบการจ่ายงานไม่ต้องกำหนดตอนสร้าง Session<br>
       เลือก <strong>แบบปกติ</strong> หรือ <strong>Annual Count</strong> ได้ภายหลังที่หน้าจ่ายงาน
@@ -20252,7 +20628,12 @@ function paintAdNew() {
 }
 
 async function createSess() {
-  const name = Q('nn').value.trim(); if (!name) return;
+  const name = Q('nn').value.trim();
+  if (!name) {
+    Q('na').innerHTML = `<div class="alert alert-amber">กรุณากรอกชื่อ Session</div>`;
+    Q('nn').focus();
+    return;
+  }
   const { data:created,error } = await sb.from('count_sessions').insert({
     name,
     created_by:me.id,
@@ -21111,7 +21492,7 @@ async function renderManageBackup(container) {
       <strong>Backup ที่อ่านง่าย ใช้งานต่อได้ และกู้คืนได้</strong><br>
       Excel จะเปิดที่ชีต Data_Count ซึ่งรวมข้อมูล Stock / LPN ทั้งหมดของ Session โดยไม่กรองเฉพาะ Gain / Lost
       พร้อม Location, Zone, LPN, Lot, Inventory Status, Item, Stock Onhand ราย LPN/Lot,
-      ITEM OH Total, AL Qty และ Count 1–3 โดยยอดระดับ ITEM แสดงเพียงครั้งเดียว,
+      AL Qty และ Count 1–3 ซึ่งกระจายยอดนับจาก LPN บนลงล่างและคำนวณ Variance ราย LPN,
       คนนับจริงและเวลานับแยกรอบ, หมายเหตุ, รูปถ่าย และสถานะ WMS ให้ทีมอื่นนำไปใช้ต่อได้<br>
       <span style="font-size:11px">แสดงเฉพาะ Data_Count, Found_Work, Info_Master, Session_Summary และ README · ข้อมูลระบบที่จำเป็นถูกซ่อนไว้เพื่อให้ Restore ได้ · บัญชี User Login และรหัสผ่านไม่อยู่ในไฟล์</span>
     </div>
@@ -21715,8 +22096,8 @@ function backupTeamSheetColumns() {
       col('area','Area',14), col('lpn','LPN',30), col('lot','Lot',22),
       col('inventoryStatus','Inventory Status',18), col('item','Item',24),
       col('description','Description',44), col('detailQty','Stock Onhand',16,'number'),
-      col('uom','UOM',10), col('stockOnhand','ITEM OH Total',16,'number'),
-      col('alQty','AL Qty',14,'number'), col('count1','Count 1',13,'number'),
+      col('uom','UOM',10), col('alQty','AL Qty',14,'number'),
+      col('count1','Count 1',13,'number'),
       col('count2','Count 2',13,'number'), col('count3','Count 3',13,'number'),
       col('physicalCount','Physical Count',16,'number'), col('variance','Variance',14,'number'),
       col('result','Result',14), col('sessionId','Session ID',38),
@@ -21729,7 +22110,7 @@ function backupTeamSheetColumns() {
       col('lpn','LPN',30), col('lot','Lot',22),
       col('inventoryStatus','Inventory Status',18), col('uom','UOM',10),
       col('stockOnhand','Stock Onhand',16,'number'),
-      col('itemTotalOh','ITEM OH Total',16,'number'), col('alQty','AL Qty',14,'number'),
+      col('alQty','AL Qty',14,'number'),
       col('count1','Count 1',13,'number'), col('count1Counter','Actual Counter1',22),
       col('count1Time','Count 1 Time',22),
       col('count2','Count 2',13,'number'), col('count2Counter','Actual Counter2',22),
@@ -21966,7 +22347,7 @@ function buildTeamBackupData(dataBySheet) {
 
   const dataByComposite = new Map(dataRows.map(row => [stockKey(row.sessionId,row.locationId,row.itemId),row]));
   const detailCompositeKeys = new Set();
-  const dataCountRows = stockDetails.map(detail => {
+  const dataCountRows = stockDetails.map((detail,detailOrder) => {
     const key = stockKey(detail.session_id,detail.location_id,detail.item_id);
     detailCompositeKeys.add(key);
     const session = sessionById.get(String(detail.session_id)) || {};
@@ -21987,7 +22368,7 @@ function buildTeamBackupData(dataBySheet) {
       lpn:detail.license_plate || '', lot:detail.lot || '',
       inventoryStatus:detail.inventory_status || '', uom:detail.uom || '',
       stockOnhand:backupNumber(detail.qty),
-      itemTotalOh:backupNumber(base.stockOnhand),
+      _detailOrder:detailOrder,
       stockDetailId:detail.id || '',
     };
   });
@@ -21997,7 +22378,7 @@ function buildTeamBackupData(dataBySheet) {
       dataCountRows.push({
         ...row,
         stockOnhand:backupNumber(row.stockOnhand),
-        itemTotalOh:backupNumber(row.stockOnhand),
+        _detailOrder:Number.MAX_SAFE_INTEGER,
         stockDetailId:'',
       });
     }
@@ -22008,29 +22389,76 @@ function buildTeamBackupData(dataBySheet) {
     || String(a.zone).localeCompare(String(b.zone),'th')
     || String(a.location).localeCompare(String(b.location),'en',{numeric:true})
     || String(a.item).localeCompare(String(b.item),'en',{numeric:true})
+    || (Number(a._detailOrder) - Number(b._detailOrder))
     || String(a.lpn).localeCompare(String(b.lpn),'en',{numeric:true})
     || String(a.lot).localeCompare(String(b.lot),'en',{numeric:true}));
 
-  // Data_Count is one row per LPN/Lot. Values below belong to the ITEM as a whole,
-  // so writing them on every LPN row multiplies OH, Count and Variance when Excel sums them.
-  // Keep those values only on the first row of each Session + Location + Item group.
-  const itemLevelNumberFields = [
-    'itemTotalOh','alQty','count1','count2','count3','physicalCount','variance',
-  ];
-  const itemLevelTextFields = [
-    'count1Counter','count1Time','count2Counter','count2Time','count3Counter','count3Time',
-    'remark','photoUrl','result','approvalResolution','supervisorNote','approvedBy','approvedAt',
-    'wmsStatus','wmsFixedBy','wmsFixedAt',
-  ];
-  const exportedItemGroups = new Set();
-  dataCountRows.forEach(row => {
-    const key = stockKey(row.sessionId,row.locationId,row.itemId);
-    if (!exportedItemGroups.has(key)) {
-      exportedItemGroups.add(key);
+  // One count record belongs to the whole Location + Item, while Data_Count is one row per LPN/Lot.
+  // Allocate each round from the top LPN downward: fill each LPN up to its OH,
+  // then put any remaining quantity on the last LPN. Variance is calculated per LPN.
+  const allocateCountAcrossLpn = (rows,total,field) => {
+    const numericTotal = backupNumber(total);
+    if (numericTotal === null) {
+      rows.forEach(row => { row[field] = null; });
       return;
     }
-    itemLevelNumberFields.forEach(field => { row[field] = null; });
-    itemLevelTextFields.forEach(field => { row[field] = ''; });
+    let remaining = Math.max(0,numericTotal);
+    rows.forEach((row,index) => {
+      const stockQty = Math.max(0,Number(row.stockOnhand) || 0);
+      const allocated = index === rows.length - 1
+        ? remaining
+        : Math.min(remaining,stockQty);
+      row[field] = allocated;
+      remaining = Math.max(0,remaining - allocated);
+    });
+  };
+  const itemLevelTextFields = [
+    'remark','photoUrl','approvalResolution','supervisorNote','approvedBy','approvedAt',
+    'wmsStatus','wmsFixedBy','wmsFixedAt',
+  ];
+  const exportedItemGroups = new Map();
+  dataCountRows.forEach(row => {
+    const key = stockKey(row.sessionId,row.locationId,row.itemId);
+    if (!exportedItemGroups.has(key)) exportedItemGroups.set(key,[]);
+    exportedItemGroups.get(key).push(row);
+  });
+  exportedItemGroups.forEach(rows => {
+    const source = rows[0] || {};
+    const totals = {
+      count1:source.count1,
+      count2:source.count2,
+      count3:source.count3,
+      physicalCount:source.physicalCount,
+    };
+    allocateCountAcrossLpn(rows,totals.count1,'count1');
+    allocateCountAcrossLpn(rows,totals.count2,'count2');
+    allocateCountAcrossLpn(rows,totals.count3,'count3');
+    allocateCountAcrossLpn(rows,totals.physicalCount,'physicalCount');
+
+    rows.forEach((row,index) => {
+      row.variance = row.physicalCount === null
+        ? null
+        : Number(row.physicalCount || 0) - Number(row.stockOnhand || 0);
+      row.result = row.physicalCount === null ? 'ยังไม่ได้นับ'
+        : row.variance === 0 ? 'Match'
+        : row.variance > 0 ? 'Gain' : 'Lost';
+      if (totals.count1 === null) {
+        row.count1Counter = '';
+        row.count1Time = '';
+      }
+      if (totals.count2 === null) {
+        row.count2Counter = '';
+        row.count2Time = '';
+      }
+      if (totals.count3 === null) {
+        row.count3Counter = '';
+        row.count3Time = '';
+      }
+      if (index > 0) {
+        row.alQty = null;
+        itemLevelTextFields.forEach(field => { row[field] = ''; });
+      }
+    });
   });
 
   const countHistory = counts.map(count => {
@@ -22237,7 +22665,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'v95' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'v99' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -22265,9 +22693,9 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
 
   const readme = [
     ['CYCLE COUNT BACKUP','ไฟล์ข้อมูลการนับที่ทีมอื่นอ่าน ใช้งานต่อ และ Restore กลับเข้าระบบได้'],
-    ['Data_Count','ข้อมูล Stock / LPN ทั้งหมดของ Session: 1 แถวต่อ LPN/Lot โดย Stock Onhand คือยอดของ LPN/Lot แถวนั้น และ ITEM OH Total แสดงเฉพาะแถวแรกของแต่ละ Location + Item'],
+    ['Data_Count','ข้อมูล Stock / LPN ทั้งหมดของ Session: 1 แถวต่อ LPN/Lot โดย Stock Onhand คือยอดของ LPN/Lot แถวนั้น พร้อม Count, Physical Count และ Variance แยกราย LPN'],
     ['เลข JOB','เชื่อมจาก Annual JOB ตาม Session + Location + Item; รายการที่ไม่ได้อยู่ใน Annual JOB จะแสดงว่าง'],
-    ['Count 1–3','แสดงยอดนับ Actual Counter เวลา Physical Count และ Variance เฉพาะแถวแรกของแต่ละ Location + Item เพื่อไม่ให้ Excel รวมยอดซ้ำตามจำนวน LPN'],
+    ['Count 1–3','กระจายยอดนับจาก LPN แถวบนลงล่าง โดยเติมได้ไม่เกิน Stock Onhand ของแต่ละ LPN และนำยอดคงเหลือทั้งหมดใส่ LPN แถวสุดท้าย จากนั้นคำนวณ Physical Count และ Variance แยกราย LPN'],
     ['Photo URL','ใช้ URL รูปล่าสุดที่มีจริงของงาน แม้ผลนับรอบสุดท้ายจะไม่ได้แนบรูป'],
     ['Found_Work','งานที่พนักงานพบเพิ่มหรือพบใน Location ว่าง พร้อมสถานะการตรวจ QTY หมายเหตุ และรูปถ่าย'],
     ['Info_Master','ข้อมูล Item, CATEGORY, Description, UOM และฟิลด์เสริมจาก Item Master ที่ใช้ Match ในระบบ'],
