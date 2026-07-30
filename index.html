@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cycle Count v105 - Warehouse Layout</title>
+<title>Cycle Count v106 - Warehouse Layout</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -10520,7 +10520,7 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
 }
 
 /* ══════════════════════════════════════════════════════════
-   v105 — Warehouse Layout 2.5D + configurable editor
+   v106 — Warehouse Layout 2.5D + scrollable map + cell exclusions
    ══════════════════════════════════════════════════════════ */
 .warehouse-layout-root{min-width:0}
 .warehouse-layout-shell{display:grid;gap:16px;min-width:0}
@@ -10556,8 +10556,12 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
 .warehouse-layout-map-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:2px 4px 12px;flex-wrap:wrap}
 .warehouse-layout-map-head strong{color:var(--text-main);font-size:16px}
 .warehouse-layout-map-head span{color:var(--text-muted);font-size:11px;font-weight:600}
-.warehouse-layout-map-scroll{overflow:auto;border-radius:17px;background:#f4faf9}
-.warehouse-layout-map{position:relative;min-width:820px;width:100%;aspect-ratio:16/10;min-height:500px;overflow:hidden;border:1px solid rgba(17,143,151,.12);border-radius:17px;background:
+.warehouse-layout-map-controls{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap}
+.warehouse-layout-map-scroll{overflow:auto;max-height:68vh;scrollbar-gutter:stable both-edges;border-radius:17px;background:#f4faf9}
+.warehouse-layout-map-scroll::-webkit-scrollbar,.warehouse-editor-canvas-scroll::-webkit-scrollbar,.warehouse-cell-editor-scroll::-webkit-scrollbar{width:12px;height:12px}
+.warehouse-layout-map-scroll::-webkit-scrollbar-track,.warehouse-editor-canvas-scroll::-webkit-scrollbar-track,.warehouse-cell-editor-scroll::-webkit-scrollbar-track{background:#e7f1f0;border-radius:999px}
+.warehouse-layout-map-scroll::-webkit-scrollbar-thumb,.warehouse-editor-canvas-scroll::-webkit-scrollbar-thumb,.warehouse-cell-editor-scroll::-webkit-scrollbar-thumb{background:#74b9ba;border:3px solid #e7f1f0;border-radius:999px}
+.warehouse-layout-map{position:relative;flex:none;min-width:900px;min-height:520px;overflow:hidden;border:1px solid rgba(17,143,151,.12);border-radius:17px;background:
   linear-gradient(30deg,rgba(255,255,255,.72) 12%,transparent 12.5%,transparent 87%,rgba(255,255,255,.72) 87.5%,rgba(255,255,255,.72)),
   linear-gradient(150deg,rgba(255,255,255,.72) 12%,transparent 12.5%,transparent 87%,rgba(255,255,255,.72) 87.5%,rgba(255,255,255,.72)),
   linear-gradient(30deg,rgba(225,242,240,.7) 12%,transparent 12.5%,transparent 87%,rgba(225,242,240,.7) 87.5%,rgba(225,242,240,.7)),
@@ -10566,13 +10570,13 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
 .warehouse-layout-rack{position:absolute;border-radius:8px 8px 12px 12px;background:linear-gradient(180deg,#fbfdfe,#d8e7e7);border:2px solid #547a7d;box-shadow:8px 11px 0 rgba(60,91,94,.12),0 15px 25px rgba(37,78,82,.16);z-index:4;min-width:100px;min-height:62px}
 .warehouse-layout-rack::before{content:"";position:absolute;left:-2px;right:-2px;top:-10px;height:12px;border-radius:7px 7px 2px 2px;background:linear-gradient(135deg,#f7d1a5,#d89d62);border:2px solid #547a7d;transform:skewX(-35deg);transform-origin:bottom;z-index:0}
 .warehouse-layout-rack::after{content:"";position:absolute;top:4px;right:-9px;bottom:-2px;width:9px;border-radius:0 5px 6px 0;background:#8ea8a8;border:1px solid #547a7d;transform:skewY(-37deg);transform-origin:left;z-index:-1}
-.warehouse-layout-rack-name{position:absolute;left:5px;top:6px;bottom:6px;width:35px;border-radius:8px;display:grid;place-items:center;padding:3px;color:#fff;background:linear-gradient(180deg,#168e94,#006d77);box-shadow:2px 3px 7px rgba(0,109,119,.2);font:800 11px/1.1 'Fredoka','Mitr',sans-serif;writing-mode:vertical-rl;transform:rotate(180deg);z-index:3}
-.warehouse-layout-bays{position:absolute;left:57px;right:7px;top:7px;height:13px;display:grid;gap:1px;overflow:hidden;z-index:3}
-.warehouse-layout-bays span{min-width:0;display:grid;place-items:center;overflow:hidden;font:800 5.5px/1 'Fredoka',sans-serif;color:#2d6266}
+.warehouse-layout-rack-name{position:absolute;left:5px;top:6px;bottom:6px;width:38px;border-radius:8px;display:grid;place-items:center;padding:3px;color:#fff;background:linear-gradient(180deg,#168e94,#006d77);box-shadow:2px 3px 7px rgba(0,109,119,.2);font:800 12px/1.1 'Fredoka','Mitr',sans-serif;writing-mode:vertical-rl;transform:rotate(180deg);z-index:3}
+.warehouse-layout-bays{position:absolute;left:70px;right:7px;top:6px;height:16px;display:grid;gap:1px;overflow:hidden;z-index:3}
+.warehouse-layout-bays span{min-width:0;display:grid;place-items:center;overflow:hidden;font:800 9px/1 'Fredoka',sans-serif;color:#244f53}
 .warehouse-layout-bays span.skip{opacity:.22}
-.warehouse-layout-levels{position:absolute;left:43px;top:23px;bottom:7px;width:12px;display:grid;z-index:3}
-.warehouse-layout-levels span{display:grid;place-items:center;font:800 7px/1 'Fredoka',sans-serif;color:#315f63}
-.warehouse-layout-grid{position:absolute;left:57px;right:7px;top:23px;bottom:7px;display:grid;gap:1px;background:#506f72;padding:1px;border-radius:3px;overflow:hidden;z-index:2}
+.warehouse-layout-levels{position:absolute;left:48px;top:25px;bottom:7px;width:18px;display:grid;z-index:3}
+.warehouse-layout-levels span{display:grid;place-items:center;font:800 10px/1 'Fredoka',sans-serif;color:#244f53}
+.warehouse-layout-grid{position:absolute;left:70px;right:7px;top:25px;bottom:7px;display:grid;gap:1px;background:#506f72;padding:1px;border-radius:3px;overflow:hidden;z-index:2}
 .warehouse-location-cell{appearance:none;border:0;min-width:0;min-height:0;padding:0;cursor:pointer;position:relative;background:#cfd5d7;transition:transform .12s ease,filter .12s ease,opacity .12s ease;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
 .warehouse-location-cell:hover,.warehouse-location-cell:focus{z-index:6;transform:scale(1.35);filter:saturate(1.12) brightness(1.04);outline:2px solid #fff;box-shadow:0 0 0 3px #006d77}
 .warehouse-location-cell.status-not_imported{background:linear-gradient(145deg,#e1e5e6,#b9c1c3)}
@@ -10582,6 +10586,8 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
 .warehouse-location-cell.status-completed{background:linear-gradient(145deg,#8edc70,#4caf4b)}
 .warehouse-location-cell.is-dimmed{opacity:.14;filter:grayscale(.55)}
 .warehouse-location-cell.is-search-hit{z-index:5;box-shadow:inset 0 0 0 2px #fff,0 0 0 2px #df3f35}
+.warehouse-location-cell.is-excluded{cursor:default;background:repeating-linear-gradient(135deg,#f7faf9 0 5px,#aebfc0 5px 10px);box-shadow:inset 0 0 0 1px rgba(55,84,87,.24)}
+.warehouse-location-cell.is-excluded::after{content:"×";position:absolute;inset:0;display:grid;place-items:center;color:#536b6d;font:900 10px/1 'Fredoka',sans-serif}
 .warehouse-layout-object{position:absolute;z-index:3;display:grid;place-items:center;text-align:center;font-size:9px;font-weight:800;color:#48595b;overflow:hidden}
 .warehouse-layout-object.aisle{border-radius:12px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.8) 0 22px,rgba(214,232,230,.72) 22px 44px);border:1px dashed rgba(68,111,115,.22);color:#789092}
 .warehouse-layout-object.pillar{border-radius:5px;background:linear-gradient(135deg,#f3f0e9,#a6a39d);border:2px solid #77736d;box-shadow:6px 8px 0 rgba(63,59,55,.12),0 9px 16px rgba(50,55,55,.18)}
@@ -10629,8 +10635,8 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
 .warehouse-editor-canvas-toolbar{display:flex;align-items:center;justify-content:space-between;gap:9px;flex-wrap:wrap;padding:1px 1px 9px}
 .warehouse-editor-canvas-toolbar-group{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 .warehouse-editor-canvas-toolbar select{height:38px;border:1px solid rgba(0,120,128,.15);border-radius:11px;background:#f8fcfc;padding:0 10px;color:var(--text-main);font:700 11px 'Mitr',sans-serif}
-.warehouse-editor-canvas-scroll{overflow:auto;border-radius:14px;background:#edf6f5}
-.warehouse-editor-canvas{position:relative;min-width:760px;width:100%;aspect-ratio:5/3;min-height:480px;touch-action:none;overflow:hidden;border:1px solid rgba(0,120,128,.14);border-radius:14px;background-color:#f7fbfa;background-image:radial-gradient(rgba(0,109,119,.2) 1px,transparent 1px);background-size:18px 18px}
+.warehouse-editor-canvas-scroll{overflow:auto;max-height:68vh;scrollbar-gutter:stable both-edges;border-radius:14px;background:#edf6f5}
+.warehouse-editor-canvas{position:relative;flex:none;min-width:760px;min-height:480px;touch-action:none;overflow:hidden;border:1px solid rgba(0,120,128,.14);border-radius:14px;background-color:#f7fbfa;background-image:radial-gradient(rgba(0,109,119,.2) 1px,transparent 1px);background-size:18px 18px}
 .warehouse-editor-element{position:absolute;display:grid;place-items:center;border-radius:8px;user-select:none;touch-action:none;cursor:grab;transition:box-shadow .12s ease;border:2px solid transparent;color:#365b5e;font-size:9px;font-weight:800;text-align:center;overflow:hidden}
 .warehouse-editor-element:active{cursor:grabbing}
 .warehouse-editor-element.selected{border-color:#00a4ad;box-shadow:0 0 0 3px rgba(0,164,173,.18),8px 10px 18px rgba(35,100,105,.17);z-index:8}
@@ -10675,6 +10681,20 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
 .warehouse-match-column.error h4{background:#fff0ed;color:#c84739}
 .warehouse-match-list{max-height:46vh;overflow:auto;padding:6px 13px}
 .warehouse-match-list div{padding:8px 0;border-bottom:1px solid rgba(0,120,128,.08);font:700 10px 'Fredoka','Mitr',sans-serif}
+.warehouse-cell-editor-intro{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;padding:11px 13px;border-radius:13px;background:#edf8f6;color:#496c6f;font-size:10px;font-weight:700;line-height:1.6}
+.warehouse-cell-editor-intro strong{color:#007982;font:800 15px/1 'Fredoka','Mitr',sans-serif}
+.warehouse-cell-editor-scroll{overflow:auto;max-height:58vh;scrollbar-gutter:stable both-edges;border:1px solid rgba(0,120,128,.13);border-radius:15px;background:#f7fbfa}
+.warehouse-cell-editor-grid{display:grid;width:max-content;min-width:100%;grid-auto-rows:minmax(80px,auto);background:#dcebea;gap:1px}
+.warehouse-cell-editor-corner,.warehouse-cell-editor-bay,.warehouse-cell-editor-level{position:sticky;z-index:4;display:grid;place-items:center;padding:7px;background:#e5f4f2;color:#285b5f;font:800 10px/1 'Fredoka','Mitr',sans-serif}
+.warehouse-cell-editor-corner{left:0;top:0;z-index:6}
+.warehouse-cell-editor-bay{top:0}
+.warehouse-cell-editor-level{left:0;z-index:5}
+.warehouse-cell-editor-item{display:grid;grid-template-columns:auto 1fr;align-content:start;gap:5px 7px;padding:8px;background:#fff;color:#5c7476;cursor:pointer}
+.warehouse-cell-editor-item>input[type="checkbox"]{width:17px;height:17px;margin:0;accent-color:#008d94}
+.warehouse-cell-editor-item>span{font:800 10px/1.7 'Fredoka','Mitr',sans-serif;color:#3f6265}
+.warehouse-cell-editor-item.is-excluded{background:#fff5dd;box-shadow:inset 0 0 0 2px #ebb037}
+.warehouse-cell-note{grid-column:1/-1;width:100%;min-width:112px;border:1px solid rgba(0,120,128,.15);border-radius:8px;background:#f8fcfc;padding:6px 7px;color:var(--text-main);font:700 9px 'Mitr',sans-serif}
+.warehouse-cell-note:disabled{opacity:.45;cursor:not-allowed}
 .warehouse-layout-toast{position:fixed;right:22px;bottom:22px;z-index:6000;max-width:min(420px,calc(100vw - 32px));padding:13px 16px;border-radius:15px;background:#153f43;color:#fff;box-shadow:0 14px 35px rgba(9,39,43,.28);font-size:11px;font-weight:700;line-height:1.55}
 .warehouse-layout-toast.warn{background:#9a6200}.warehouse-layout-toast.error{background:#b43d32}
 
@@ -10779,7 +10799,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v105-warehouse-layout';
+window.__CYCLE_COUNT_BUILD__ = 'v106-layout-scroll-prefix-exclusions';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -11206,7 +11226,7 @@ function applyBrandingSettings(settings, persistLocal = true) {
     const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
     root.setProperty(`--theme-${cssKey}`, uiBranding[key]);
   });
-  document.title = `${uiBranding.systemName} v105`;
+  document.title = `${uiBranding.systemName} v106`;
   if (persistLocal) {
     try { localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(uiBranding)); } catch (_) {}
   }
@@ -11743,7 +11763,7 @@ async function protectedFunctionHeaders() {
   return {
     Authorization: `Bearer ${session.access_token}`,
     apikey: SUPA_KEY,
-    'x-client-info': 'cycle-count-v105',
+    'x-client-info': 'cycle-count-v106',
   };
 }
 
@@ -16200,6 +16220,21 @@ function warehouseLocationKey(value) {
   return importCodeKey(value).replace(/\s*-\s*/g,'-').replace(/\s+/g,' ').trim();
 }
 
+function warehouseLocationCodeParts(value) {
+  const code = warehouseLocationKey(value);
+  const parts = code.split('-').map(part => part.trim()).filter(Boolean);
+  if (parts.length < 4) {
+    return {code,prefix:'',row:parts.at(-3) || '',bayText:parts.at(-2) || '',level:parts.at(-1) || ''};
+  }
+  return {
+    code,
+    prefix:parts.slice(0,-3).join('-'),
+    row:parts.at(-3),
+    bayText:parts.at(-2),
+    level:parts.at(-1),
+  };
+}
+
 function normalizeWarehouseLayoutLevels(value) {
   const source = Array.isArray(value) ? value : String(value || '').split(/[\s,;|/]+/);
   const levels = [...new Set(source.map(item => warehouseLayoutString(item,'',12).toUpperCase()).filter(Boolean))];
@@ -16214,6 +16249,25 @@ function normalizeWarehouseSkipBays(value) {
     .sort((a,b) => a-b);
 }
 
+function warehouseExcludedCellKey(level,bay) {
+  return `${warehouseLayoutString(level,'',12).toUpperCase()}|${Number.parseInt(bay,10)}`;
+}
+
+function normalizeWarehouseExcludedCells(value,levels,bayStart,bayCount) {
+  const allowedLevels = new Set(levels);
+  const firstBay = Number(bayStart);
+  const lastBay = firstBay+Number(bayCount)-1;
+  const cells = new Map();
+  (Array.isArray(value) ? value : []).forEach(entry => {
+    const bay = Number.parseInt(entry?.bay,10);
+    const level = warehouseLayoutString(entry?.level,'',12).toUpperCase();
+    if (!Number.isInteger(bay) || bay < firstBay || bay > lastBay || !allowedLevels.has(level)) return;
+    const key = warehouseExcludedCellKey(level,bay);
+    cells.set(key,{bay,level,note:warehouseLayoutString(entry?.note,'',100)});
+  });
+  return [...cells.values()].sort((a,b) => a.bay-b.bay || levels.indexOf(a.level)-levels.indexOf(b.level));
+}
+
 function normalizeWarehouseLayoutElement(element={}, index=0) {
   const allowedTypes = new Set(['rack','aisle','pillar','obstacle','gap']);
   const type = allowedTypes.has(element.type) ? element.type : 'rack';
@@ -16223,22 +16277,31 @@ function normalizeWarehouseLayoutElement(element={}, index=0) {
     label:warehouseLayoutString(element.label,type === 'rack' ? `Rack ${index+1}` : ({
       aisle:'ทางเดิน',pillar:'เสา',obstacle:'สิ่งกีดขวาง',gap:'พื้นที่ว่าง'
     }[type] || ''),80),
-    x:warehouseLayoutNumber(element.x,60,0,4000),
-    y:warehouseLayoutNumber(element.y,60,0,4000),
+    x:warehouseLayoutNumber(element.x,60,0,20000),
+    y:warehouseLayoutNumber(element.y,60,0,20000),
     width:warehouseLayoutNumber(element.width,type === 'rack' ? 760 : 120,24,3000),
     height:warehouseLayoutNumber(element.height,type === 'rack' ? 108 : 70,22,1800),
   };
   if (type !== 'rack') return base;
+  const levels = normalizeWarehouseLayoutLevels(element.levels);
+  const bayStart = Math.max(0,Math.floor(warehouseLayoutNumber(element.bayStart,1,0,99999)));
+  const bayCount = Math.max(1,Math.floor(warehouseLayoutNumber(element.bayCount,20,1,500)));
+  let codePattern = warehouseLayoutString(element.codePattern,'{prefix}-{row}-{bay}-{level}',160) || '{prefix}-{row}-{bay}-{level}';
+  if (codePattern.toLowerCase() === '{zone}-{row}-{bay}-{level}') {
+    codePattern = '{prefix}-{row}-{bay}-{level}';
+  }
   return {
     ...base,
     rackCode:warehouseLayoutString(element.rackCode || element.label,base.label,80).toUpperCase(),
     row:warehouseLayoutString(element.row,'01',40).toUpperCase(),
-    bayStart:Math.max(0,Math.floor(warehouseLayoutNumber(element.bayStart,1,0,99999))),
-    bayCount:Math.max(1,Math.floor(warehouseLayoutNumber(element.bayCount,20,1,500))),
+    locationPrefix:warehouseLayoutString(element.locationPrefix,'',60).toUpperCase(),
+    bayStart,
+    bayCount,
     bayPad:Math.max(1,Math.floor(warehouseLayoutNumber(element.bayPad,3,1,6))),
-    levels:normalizeWarehouseLayoutLevels(element.levels),
+    levels,
     skipBays:normalizeWarehouseSkipBays(element.skipBays),
-    codePattern:warehouseLayoutString(element.codePattern,'{zone}-{row}-{bay}-{level}',160) || '{zone}-{row}-{bay}-{level}',
+    excludedCells:normalizeWarehouseExcludedCells(element.excludedCells,levels,bayStart,bayCount),
+    codePattern,
     direction:element.direction === 'rtl' ? 'rtl' : 'ltr',
   };
 }
@@ -16254,8 +16317,8 @@ function normalizeWarehouseLayoutConfig(input={}) {
     let id = warehouseLayoutSafeId(zone?.id,`zone-${index+1}`) || `zone-${index+1}`;
     if (usedZoneIds.has(id)) id = warehouseLayoutUid('zone');
     usedZoneIds.add(id);
-    const canvasWidth = warehouseLayoutNumber(zone?.canvasWidth,1200,600,4000);
-    const canvasHeight = warehouseLayoutNumber(zone?.canvasHeight,720,400,4000);
+    const canvasWidth = warehouseLayoutNumber(zone?.canvasWidth,1200,600,20000);
+    const canvasHeight = warehouseLayoutNumber(zone?.canvasHeight,720,400,20000);
     const elements = (Array.isArray(zone?.elements) ? zone.elements : []).slice(0,500).map((element,elementIndex) => {
       const normalized = normalizeWarehouseLayoutElement(element,elementIndex);
       if (usedElementIds.has(normalized.id)) normalized.id = warehouseLayoutUid(normalized.type);
@@ -16326,15 +16389,19 @@ async function loadWarehouseLayoutConfig(force=false) {
 }
 
 function parseWarehouseLocationMeta(location={}) {
-  const code = warehouseLocationKey(location.code || location.location_code || '');
-  const parts = code.split('-').map(part => part.trim()).filter(Boolean);
-  const standardCode = parts.length >= 4;
-  const zone = warehouseLayoutString((standardCode ? parts[0] : location.zone) || location.zone || parts[0] || 'ZONE-1','ZONE-1',60).toUpperCase();
-  const row = warehouseLayoutString((standardCode ? parts[1] : location.row_no) ?? location.row_no ?? parts[1] ?? '01','01',40).toUpperCase();
-  const level = warehouseLayoutString((standardCode ? parts[parts.length-1] : location.level) ?? location.level ?? parts[parts.length-1] ?? 'A','A',12).toUpperCase();
-  const bayCandidate = parts.length >= 3 ? parts[parts.length-2] : '';
-  const bay = Number.parseInt(String(bayCandidate).replace(/\D/g,''),10);
-  return { code,zone,row,level,bay:Number.isInteger(bay) ? bay : null };
+  const parsed = warehouseLocationCodeParts(location.code || location.location_code || '');
+  const zone = warehouseLayoutString(location.zone || parsed.prefix || 'ZONE-1','ZONE-1',60).toUpperCase();
+  const row = warehouseLayoutString(location.row_no ?? parsed.row ?? '01','01',40).toUpperCase();
+  const level = warehouseLayoutString(location.level ?? parsed.level ?? 'A','A',12).toUpperCase();
+  const bay = Number.parseInt(String(parsed.bayText).replace(/\D/g,''),10);
+  return {
+    code:parsed.code,
+    prefix:parsed.prefix,
+    zone,
+    row,
+    level,
+    bay:Number.isInteger(bay) ? bay : null,
+  };
 }
 
 function createWarehouseLayoutFromSessionData(sessionData=window._warehouseLayoutSessionData || {}) {
@@ -16372,6 +16439,8 @@ function createWarehouseLayoutFromSessionData(sessionData=window._warehouseLayou
         }
         const rackHeight = Math.max(92,Math.min(150,46 + (levels.length * 14)));
         const rackWidth = Math.max(360,Math.min(1040,150 + ((bayEnd-bayStart+1) * 26)));
+        const prefixes = [...new Set(locations.map(item => item.prefix).filter(Boolean))];
+        const locationPrefix = prefixes.length === 1 ? prefixes[0] : '';
         const y = cursorY;
         elements.push(normalizeWarehouseLayoutElement({
           id:warehouseLayoutUid('rack'),
@@ -16379,6 +16448,7 @@ function createWarehouseLayoutFromSessionData(sessionData=window._warehouseLayou
           label:`${zoneName}-${row}`,
           rackCode:`${zoneName}-${row}`,
           row,
+          locationPrefix,
           x:70,
           y,
           width:rackWidth,
@@ -16388,7 +16458,8 @@ function createWarehouseLayoutFromSessionData(sessionData=window._warehouseLayou
           bayPad:Math.max(3,String(bayEnd).length),
           levels:levels.length ? levels : ['A'],
           skipBays,
-          codePattern:'{zone}-{row}-{bay}-{level}',
+          excludedCells:[],
+          codePattern:'{prefix}-{row}-{bay}-{level}',
           direction:'ltr',
         },elements.length));
         if (index < rows.length-1) {
@@ -16422,34 +16493,71 @@ function createWarehouseLayoutFromSessionData(sessionData=window._warehouseLayou
 
 function formatWarehouseLocationCode(pattern,context) {
   const replacements = {
+    prefix:context.prefix,
     zone:context.zone,
+    layoutZone:context.layoutZone,
     row:context.row,
     rack:context.rack,
     bay:context.bay,
     level:context.level,
   };
-  let code = String(pattern || '{zone}-{row}-{bay}-{level}');
+  let code = String(pattern || '{prefix}-{row}-{bay}-{level}');
   Object.entries(replacements).forEach(([key,value]) => {
     code = code.replace(new RegExp(`\\{${key}\\}`,'gi'),String(value ?? ''));
   });
   return warehouseLocationKey(code);
 }
 
-function generateWarehouseLayoutLocations(config=_warehouseLayoutConfig) {
+function warehouseLocationPrefixIndex(sessionData={}) {
+  const byRow = new Map();
+  const byZoneRow = new Map();
+  const add = (map,key,prefix) => {
+    if (!key || !prefix) return;
+    if (!map.has(key)) map.set(key,new Set());
+    map.get(key).add(prefix);
+  };
+  (sessionData.snapshots || []).forEach(snapshot => {
+    const location = snapshot.locations || {};
+    const parsed = parseWarehouseLocationMeta(location);
+    if (!parsed.prefix || !parsed.row) return;
+    const rowKey = warehouseLocationKey(parsed.row);
+    const zoneKey = warehouseLocationKey(location.zone || '');
+    add(byRow,rowKey,parsed.prefix);
+    if (zoneKey) add(byZoneRow,`${zoneKey}|${rowKey}`,parsed.prefix);
+  });
+  return {byRow,byZoneRow};
+}
+
+function warehouseRackLocationPrefix(rack,zone,prefixIndex) {
+  if (rack.locationPrefix) return warehouseLocationKey(rack.locationPrefix);
+  const rowKey = warehouseLocationKey(rack.row);
+  const zoneKey = warehouseLocationKey(zone.name);
+  const zoned = prefixIndex.byZoneRow.get(`${zoneKey}|${rowKey}`);
+  if (zoned?.size === 1) return [...zoned][0];
+  const byRow = prefixIndex.byRow.get(rowKey);
+  if (byRow?.size === 1) return [...byRow][0];
+  return warehouseLocationKey(zone.name);
+}
+
+function generateWarehouseLayoutLocations(config=_warehouseLayoutConfig,sessionData=window._warehouseLayoutSessionData || {}) {
   const normalized = normalizeWarehouseLayoutConfig(config || { zones:[] });
   const locations = [];
   const codeCounts = new Map();
+  const prefixIndex = warehouseLocationPrefixIndex(sessionData);
   normalized.zones.forEach(zone => {
     zone.elements.filter(element => element.type === 'rack').forEach(rack => {
       const skipped = new Set(rack.skipBays || []);
+      const excluded = new Set((rack.excludedCells || []).map(cell => warehouseExcludedCellKey(cell.level,cell.bay)));
+      const locationPrefix = warehouseRackLocationPrefix(rack,zone,prefixIndex);
       const bayNumbers = Array.from({length:rack.bayCount},(_,index) => rack.bayStart+index)
         .filter(bay => !skipped.has(bay));
       const visualBays = rack.direction === 'rtl' ? [...bayNumbers].reverse() : bayNumbers;
       rack.levels.forEach((level,levelIndex) => {
         visualBays.forEach((bay,bayIndex) => {
+          if (excluded.has(warehouseExcludedCellKey(level,bay))) return;
           const bayText = String(bay).padStart(rack.bayPad,'0');
           const code = formatWarehouseLocationCode(rack.codePattern,{
-            zone:zone.name,row:rack.row,rack:rack.rackCode,bay:bayText,level,
+            prefix:locationPrefix,zone:zone.name,layoutZone:zone.name,row:rack.row,rack:rack.rackCode,bay:bayText,level,
           });
           const location = {
             code,
@@ -16457,6 +16565,7 @@ function generateWarehouseLayoutLocations(config=_warehouseLayoutConfig) {
             zone:zone.name,
             rackId:rack.id,
             rackCode:rack.rackCode,
+            locationPrefix,
             row:rack.row,
             bay,
             bayText,
@@ -16500,7 +16609,7 @@ function warehouseLayoutStatusForLocation(imported,assignment,approvals=[]) {
 }
 
 function buildWarehouseLayoutRuntime(config=_warehouseLayoutConfig,sessionData=window._warehouseLayoutSessionData || {}) {
-  const generated = generateWarehouseLayoutLocations(config);
+  const generated = generateWarehouseLayoutLocations(config,sessionData);
   const layoutByCode = new Map();
   generated.locations.forEach(location => {
     if (location.code && !layoutByCode.has(location.code)) layoutByCode.set(location.code,location);
@@ -16620,11 +16729,17 @@ function warehouseLayoutRackHtml(rack,zone,runtime,statusFilter,search) {
   );
   const byKey = new Map(rackLocations.map(location => [`${location.level}|${location.bay}`,location]));
   const skipped = new Set(rack.skipBays || []);
+  const excludedByKey = new Map((rack.excludedCells || []).map(cell => [warehouseExcludedCellKey(cell.level,cell.bay),cell]));
   const bays = Array.from({length:rack.bayCount},(_,index) => rack.bayStart+index);
   if (rack.direction === 'rtl') bays.reverse();
   const cells = rack.levels.map(level => bays.map(bay => {
     if (skipped.has(bay)) {
       return `<span class="warehouse-location-cell" style="background:transparent;box-shadow:none;cursor:default" title="ช่องเว้นว่าง"></span>`;
+    }
+    const excluded = excludedByKey.get(warehouseExcludedCellKey(level,bay));
+    if (excluded) {
+      const note = excluded.note ? ` · ${excluded.note}` : '';
+      return `<span class="warehouse-location-cell is-excluded" title="ไม่ใช่ Location${escapeWmsText(note)}" aria-label="ไม่ใช่ Location${escapeWmsText(note)}"></span>`;
     }
     const generated = byKey.get(`${level}|${bay}`);
     if (!generated) return '<span class="warehouse-location-cell status-not_imported is-dimmed"></span>';
@@ -16703,6 +16818,9 @@ function warehouseLayoutViewHtml(runtime) {
     ? S._layoutStatus
     : 'all';
   const search = warehouseLocationKey(S._layoutSearch || '');
+  const zoomOptions = [0.75,1,1.25,1.5];
+  const zoom = zoomOptions.includes(Number(S._layoutZoom)) ? Number(S._layoutZoom) : 1;
+  S._layoutZoom = zoom;
   const completenessText = runtime.completeness.toLocaleString('th-TH',{minimumFractionDigits:1,maximumFractionDigits:1});
   const hero = `<div class="warehouse-layout-hero">
     <div class="warehouse-layout-title">
@@ -16742,17 +16860,22 @@ function warehouseLayoutViewHtml(runtime) {
       <section class="warehouse-layout-map-card">
         <div class="warehouse-layout-map-head">
           <div><strong>${escapeWmsText(zone.name)}</strong><br><span>แสดงเฉพาะ Zone นี้เพื่อลดภาระเครื่องและให้กด Location ได้ง่าย</span></div>
-          <label class="warehouse-layout-control"><span>สถานะ</span><select onchange="setWarehouseLayoutStatusFilter(this.value)">
-            <option value="all" ${statusFilter==='all'?'selected':''}>ทุกสถานะ</option>
-            <option value="not_imported" ${statusFilter==='not_imported'?'selected':''}>ยังไม่ Import</option>
-            <option value="imported" ${statusFilter==='imported'?'selected':''}>Import แล้ว</option>
-            <option value="counting" ${statusFilter==='counting'?'selected':''}>จ่ายงาน / กำลังนับ</option>
-            <option value="variance" ${statusFilter==='variance'?'selected':''}>รอตรวจ Variance</option>
-            <option value="completed" ${statusFilter==='completed'?'selected':''}>เสร็จแล้ว</option>
-          </select></label>
+          <div class="warehouse-layout-map-controls">
+            <label class="warehouse-layout-control"><span>ขนาดแผนผัง</span><select onchange="setWarehouseLayoutZoom(this.value)">
+              ${zoomOptions.map(value => `<option value="${value}" ${value===zoom?'selected':''}>${Math.round(value*100)}%</option>`).join('')}
+            </select></label>
+            <label class="warehouse-layout-control"><span>สถานะ</span><select onchange="setWarehouseLayoutStatusFilter(this.value)">
+              <option value="all" ${statusFilter==='all'?'selected':''}>ทุกสถานะ</option>
+              <option value="not_imported" ${statusFilter==='not_imported'?'selected':''}>ยังไม่ Import</option>
+              <option value="imported" ${statusFilter==='imported'?'selected':''}>Import แล้ว</option>
+              <option value="counting" ${statusFilter==='counting'?'selected':''}>จ่ายงาน / กำลังนับ</option>
+              <option value="variance" ${statusFilter==='variance'?'selected':''}>รอตรวจ Variance</option>
+              <option value="completed" ${statusFilter==='completed'?'selected':''}>เสร็จแล้ว</option>
+            </select></label>
+          </div>
         </div>
         <div class="warehouse-layout-map-scroll">
-          <div class="warehouse-layout-map" style="aspect-ratio:${zone.canvasWidth}/${zone.canvasHeight}">
+          <div class="warehouse-layout-map" style="width:${Math.max(900,Math.round(zone.canvasWidth*zoom))}px;height:${Math.max(520,Math.round(zone.canvasHeight*zoom))}px">
             ${elements}
           </div>
         </div>
@@ -16801,6 +16924,12 @@ function setWarehouseLayoutStatusFilter(status) {
   renderWarehouseLayoutTab();
 }
 
+function setWarehouseLayoutZoom(value) {
+  const zoom = Number(value);
+  S._layoutZoom = [0.75,1,1.25,1.5].includes(zoom) ? zoom : 1;
+  renderWarehouseLayoutTab();
+}
+
 function updateWarehouseLayoutSearch(value) {
   S._layoutSearch = String(value || '');
   clearTimeout(_warehouseLayoutSearchTimer);
@@ -16817,7 +16946,10 @@ function showWarehouseLayoutToast(message,type='') {
 }
 
 function closeWarehouseLayoutDialog() {
-  Q('warehouse-layout-dialog-backdrop')?.remove();
+  const backdrop = Q('warehouse-layout-dialog-backdrop');
+  const rerenderEditor = backdrop?.dataset?.rerenderLayoutEditor === 'true';
+  backdrop?.remove();
+  if (rerenderEditor && _warehouseLayoutDraft) renderWarehouseLayoutEditor();
 }
 
 function openWarehouseLayoutDialog(title,bodyHtml) {
@@ -16886,6 +17018,86 @@ function showWarehouseLayoutMatchReport(useDraft=false) {
   `);
 }
 
+function openWarehouseExcludedCellEditor() {
+  const rack = currentWarehouseLayoutSelectedElement();
+  if (!rack || rack.type !== 'rack') return;
+  const excludedByKey = new Map((rack.excludedCells || []).map(cell => [warehouseExcludedCellKey(cell.level,cell.bay),cell]));
+  const bays = Array.from({length:rack.bayCount},(_,index) => rack.bayStart+index);
+  if (rack.direction === 'rtl') bays.reverse();
+  const cells = rack.levels.map(level => `
+    <div class="warehouse-cell-editor-level">${escapeWmsText(level)}</div>
+    ${bays.map(bay => {
+      const excluded = excludedByKey.get(warehouseExcludedCellKey(level,bay));
+      const bayText = String(bay).padStart(rack.bayPad,'0');
+      return `<label class="warehouse-cell-editor-item${excluded?' is-excluded':''}">
+        <input type="checkbox" data-bay="${bay}" data-level="${escapeWmsText(level)}" ${excluded?'checked':''}
+          onchange="toggleWarehouseExcludedCell(this)">
+        <span>${escapeWmsText(bayText)}-${escapeWmsText(level)}</span>
+        <input class="warehouse-cell-note" data-bay="${bay}" data-level="${escapeWmsText(level)}"
+          value="${escapeWmsText(excluded?.note || '')}" placeholder="ทางเดิน / เสา / หมายเหตุ"
+          ${excluded?'':'disabled'} onclick="event.stopPropagation()" oninput="updateWarehouseExcludedCellNote(this)">
+      </label>`;
+    }).join('')}
+  `).join('');
+  openWarehouseLayoutDialog(`กำหนดช่องที่ไม่ใช่ Location · ${rack.rackCode}`,`
+    <div class="warehouse-cell-editor-intro">
+      <span>ติ๊กช่องที่เป็นทางเดิน เสา หรือสิ่งกีดขวาง แล้วใส่หมายเหตุ ช่องเหล่านี้จะไม่ถูกสร้างเป็น Location และไม่รวมในการคำนวณ</span>
+      <strong><span id="warehouse-excluded-cell-count">${excludedByKey.size.toLocaleString('th-TH')}</span> ช่อง</strong>
+    </div>
+    <div class="warehouse-cell-editor-scroll">
+      <div class="warehouse-cell-editor-grid" style="grid-template-columns:86px repeat(${bays.length},136px);grid-template-rows:40px repeat(${rack.levels.length},minmax(80px,auto))">
+        <div class="warehouse-cell-editor-corner">LEVEL \\ BAY</div>
+        ${bays.map(bay => `<div class="warehouse-cell-editor-bay">${escapeWmsText(String(bay).padStart(rack.bayPad,'0'))}</div>`).join('')}
+        ${cells}
+      </div>
+    </div>
+  `);
+  const backdrop = Q('warehouse-layout-dialog-backdrop');
+  if (backdrop) {
+    backdrop.dataset.rerenderLayoutEditor = 'true';
+    const dialog = backdrop.querySelector('.warehouse-layout-dialog');
+    if (dialog) dialog.style.width = 'min(1180px,96vw)';
+  }
+}
+
+function toggleWarehouseExcludedCell(input) {
+  const rack = currentWarehouseLayoutSelectedElement();
+  if (!rack || rack.type !== 'rack') return;
+  const bay = Number.parseInt(input?.dataset?.bay,10);
+  const level = warehouseLayoutString(input?.dataset?.level,'',12).toUpperCase();
+  if (!Number.isInteger(bay) || !level) return;
+  const key = warehouseExcludedCellKey(level,bay);
+  const current = new Map((rack.excludedCells || []).map(cell => [warehouseExcludedCellKey(cell.level,cell.bay),cell]));
+  const item = input.closest('.warehouse-cell-editor-item');
+  const noteInput = item?.querySelector('.warehouse-cell-note');
+  if (input.checked) {
+    current.set(key,{bay,level,note:warehouseLayoutString(noteInput?.value,'',100)});
+  } else {
+    current.delete(key);
+  }
+  rack.excludedCells = normalizeWarehouseExcludedCells([...current.values()],rack.levels,rack.bayStart,rack.bayCount);
+  if (noteInput) {
+    noteInput.disabled = !input.checked;
+    if (input.checked) noteInput.focus();
+  }
+  item?.classList.toggle('is-excluded',input.checked);
+  const counter = Q('warehouse-excluded-cell-count');
+  if (counter) counter.textContent = rack.excludedCells.length.toLocaleString('th-TH');
+  _warehouseLayoutDraftDirty = true;
+}
+
+function updateWarehouseExcludedCellNote(input) {
+  const rack = currentWarehouseLayoutSelectedElement();
+  if (!rack || rack.type !== 'rack') return;
+  const bay = Number.parseInt(input?.dataset?.bay,10);
+  const level = warehouseLayoutString(input?.dataset?.level,'',12).toUpperCase();
+  const key = warehouseExcludedCellKey(level,bay);
+  const cell = (rack.excludedCells || []).find(item => warehouseExcludedCellKey(item.level,item.bay) === key);
+  if (!cell) return;
+  cell.note = warehouseLayoutString(input.value,'',100);
+  _warehouseLayoutDraftDirty = true;
+}
+
 function warehouseEditorToolHtml(type,label,symbol) {
   return `<button class="warehouse-tool-button" type="button" onclick="addWarehouseLayoutElement('${type}')">
     <span class="warehouse-tool-icon">${symbol}</span><span>${escapeWmsText(label)}</span>
@@ -16928,6 +17140,12 @@ function warehouseLayoutElementPropertiesHtml(element) {
   return `<div class="warehouse-property-form">
     ${warehousePropertyFieldHtml('ชื่อ Rack','rackCode',element.rackCode)}
     ${warehousePropertyFieldHtml('รหัส ROW','row',element.row)}
+    <div class="warehouse-property-field">
+      <label>คำนำหน้า Location</label>
+      <input value="${escapeWmsText(element.locationPrefix || '')}" placeholder="เช่น B"
+        onchange="updateWarehouseLayoutElementField('locationPrefix',this.value)">
+      <div class="warehouse-property-help">ชื่อ Zone ใช้จัดกลุ่มผังเท่านั้น ระบบจะอ่านจาก Import ให้อัตโนมัติเมื่อหาได้ หรือกำหนดเอง เช่น B เพื่อสร้าง B-EA-001-A</div>
+    </div>
     ${warehousePropertyFieldHtml('ช่องเริ่มต้น','bayStart',element.bayStart,'number','min="0" max="99999"')}
     ${warehousePropertyFieldHtml('จำนวนช่อง','bayCount',element.bayCount,'number','min="1" max="500"')}
     ${warehousePropertyFieldHtml('จำนวนหลักของเลขช่อง','bayPad',element.bayPad,'number','min="1" max="6"')}
@@ -16937,15 +17155,20 @@ function warehouseLayoutElementPropertiesHtml(element) {
       <div class="warehouse-property-help">ตัวอย่าง: G, F, E, D, C, B, A</div>
     </div>
     <div class="warehouse-property-field">
-      <label>ช่องที่เว้นว่าง / ไม่มี Location</label>
+      <label>เว้นทั้ง Bay / ไม่มี Location</label>
       <input value="${escapeWmsText((element.skipBays || []).map(bay => String(bay).padStart(element.bayPad,'0')).join(', '))}"
         placeholder="เช่น 005, 006" onchange="updateWarehouseLayoutElementField('skipBays',this.value)">
       <div class="warehouse-property-help">ใช้กรณีมีเสาหรือช่องว่างคั่นอยู่กลาง Rack</div>
     </div>
     <div class="warehouse-property-field">
+      <label>เว้นเป็นรายช่อง พร้อมหมายเหตุ</label>
+      <button class="btn btn-ghost btn-sm" type="button" onclick="openWarehouseExcludedCellEditor()">ติ๊กช่องที่ไม่ใช่ Location (${(element.excludedCells || []).length.toLocaleString('th-TH')})</button>
+      <div class="warehouse-property-help">เหมาะกับทางเดิน เสา หรือสิ่งกีดขวางที่กินเฉพาะบางระดับ</div>
+    </div>
+    <div class="warehouse-property-field">
       <label>รูปแบบรหัส Location</label>
       <input value="${escapeWmsText(element.codePattern)}" onchange="updateWarehouseLayoutElementField('codePattern',this.value)">
-      <div class="warehouse-property-help">ใช้ได้: {zone} {row} {rack} {bay} {level}</div>
+      <div class="warehouse-property-help">ค่าแนะนำ: {prefix}-{row}-{bay}-{level} · ใช้ได้: {prefix} {layoutZone} {row} {rack} {bay} {level}</div>
     </div>
     <div class="warehouse-property-field">
       <label>ทิศทางเลขช่อง</label>
@@ -16968,8 +17191,8 @@ function warehouseLayoutZonePropertiesHtml(zone) {
   if (!zone) return `<div class="warehouse-editor-empty-properties">ยังไม่มี Zone<br>กด “+ เพิ่ม Zone” เพื่อเริ่มจัดผัง</div>`;
   return `<div class="warehouse-property-form">
     <div class="warehouse-property-field"><label>ชื่อ Zone</label><input value="${escapeWmsText(zone.name)}" onchange="updateWarehouseLayoutZoneField('name',this.value)"></div>
-    <div class="warehouse-property-field"><label>ความกว้างพื้นที่</label><input type="number" min="600" max="4000" value="${Math.round(zone.canvasWidth)}" onchange="updateWarehouseLayoutZoneField('canvasWidth',this.value)"></div>
-    <div class="warehouse-property-field"><label>ความสูงพื้นที่</label><input type="number" min="400" max="4000" value="${Math.round(zone.canvasHeight)}" onchange="updateWarehouseLayoutZoneField('canvasHeight',this.value)"></div>
+    <div class="warehouse-property-field"><label>ความกว้างพื้นที่</label><input type="number" min="600" max="20000" value="${Math.round(zone.canvasWidth)}" onchange="updateWarehouseLayoutZoneField('canvasWidth',this.value)"></div>
+    <div class="warehouse-property-field"><label>ความสูงพื้นที่</label><input type="number" min="400" max="20000" value="${Math.round(zone.canvasHeight)}" onchange="updateWarehouseLayoutZoneField('canvasHeight',this.value)"></div>
     <div class="warehouse-property-help">เลือกชั้นวางหรือสิ่งกีดขวางบนผังเพื่อแก้คุณสมบัติขององค์ประกอบนั้น</div>
     <div class="warehouse-property-actions">
       <button class="btn btn-red btn-sm" type="button" onclick="deleteWarehouseLayoutZone()">ลบ Zone นี้</button>
@@ -16990,6 +17213,9 @@ function warehouseLayoutEditorHtml() {
   if (!selected) _warehouseLayoutSelectedElementId = '';
   const runtime = buildWarehouseLayoutRuntime(draft,window._warehouseLayoutSessionData || {});
   const readyLocations = Math.max(0,runtime.totalLayout);
+  const editorZoomOptions = [0.5,0.75,1,1.25];
+  const editorZoom = editorZoomOptions.includes(Number(S._layoutEditorZoom)) ? Number(S._layoutEditorZoom) : 0.75;
+  S._layoutEditorZoom = editorZoom;
   return `<div class="warehouse-layout-editor">
     <div class="warehouse-editor-head">
       <div><h2>ตั้งค่า Layout คลังสินค้า</h2><p>ลาก วาง และกำหนดรหัส Location ให้ตรงกับพื้นที่จริง แต่ละ Zone และ Rack มีขนาดไม่เท่ากันได้</p></div>
@@ -17019,11 +17245,14 @@ function warehouseLayoutEditorHtml() {
           </div>
           <div class="warehouse-editor-canvas-toolbar-group">
             <span style="font-size:9px;color:var(--text-muted);font-weight:800">ลากองค์ประกอบเพื่อจัดตำแหน่ง · แสดงรหัส Location</span>
+            <select onchange="setWarehouseLayoutEditorZoom(this.value)" aria-label="ขนาดพื้นที่แก้ไข">
+              ${editorZoomOptions.map(value => `<option value="${value}" ${value===editorZoom?'selected':''}>${Math.round(value*100)}%</option>`).join('')}
+            </select>
             <button class="btn btn-ghost btn-sm" type="button" onclick="showWarehouseLayoutMatchReport(true)">ตรวจสอบ</button>
           </div>
         </div>
         <div class="warehouse-editor-canvas-scroll">
-          ${zone ? `<div class="warehouse-editor-canvas" id="warehouse-editor-canvas" style="aspect-ratio:${zone.canvasWidth}/${zone.canvasHeight}">
+          ${zone ? `<div class="warehouse-editor-canvas" id="warehouse-editor-canvas" style="width:${Math.max(760,Math.round(zone.canvasWidth*editorZoom))}px;height:${Math.max(480,Math.round(zone.canvasHeight*editorZoom))}px">
             ${zone.elements.map(element => warehouseEditorElementHtml(element,zone)).join('')}
           </div>` : `<div class="warehouse-layout-empty" style="margin:8px"><h3>ยังไม่มี Zone</h3><p>เพิ่ม Zone แล้วจึงวางชั้นวาง ทางเดิน เสา และสิ่งกีดขวาง</p></div>`}
         </div>
@@ -17179,6 +17408,12 @@ function setWarehouseLayoutEditorZone(zoneId) {
   renderWarehouseLayoutEditor();
 }
 
+function setWarehouseLayoutEditorZoom(value) {
+  const zoom = Number(value);
+  S._layoutEditorZoom = [0.5,0.75,1,1.25].includes(zoom) ? zoom : 0.75;
+  renderWarehouseLayoutEditor();
+}
+
 function addWarehouseLayoutZone() {
   if (!_warehouseLayoutDraft) return;
   const name = String(prompt('ชื่อ Zone ใหม่ เช่น Zone B หรือ B','') || '').trim();
@@ -17209,8 +17444,8 @@ function updateWarehouseLayoutZoneField(field,value) {
   const zone = currentWarehouseLayoutDraftZone();
   if (!zone) return;
   if (field === 'name') zone.name = warehouseLayoutString(value,zone.name,60) || zone.name;
-  if (field === 'canvasWidth') zone.canvasWidth = warehouseLayoutNumber(value,zone.canvasWidth,600,4000);
-  if (field === 'canvasHeight') zone.canvasHeight = warehouseLayoutNumber(value,zone.canvasHeight,400,4000);
+  if (field === 'canvasWidth') zone.canvasWidth = warehouseLayoutNumber(value,zone.canvasWidth,600,20000);
+  if (field === 'canvasHeight') zone.canvasHeight = warehouseLayoutNumber(value,zone.canvasHeight,400,20000);
   zone.elements.forEach(element => {
     element.x = Math.min(element.x,Math.max(0,zone.canvasWidth-element.width));
     element.y = Math.min(element.y,Math.max(0,zone.canvasHeight-element.height));
@@ -17229,7 +17464,7 @@ function addWarehouseLayoutElement(type) {
   const offset = (zone.elements.length*23)%220;
   const row = String(rackCount+1).padStart(2,'0');
   const defaults = {
-    rack:{label:`${zone.name}-${row}`,rackCode:`${zone.name}-${row}`,row,x:60,y:55+offset,width:760,height:110,bayStart:1,bayCount:20,bayPad:3,levels:['G','F','E','D','C','B','A'],skipBays:[],codePattern:'{zone}-{row}-{bay}-{level}',direction:'ltr'},
+    rack:{label:`${zone.name}-${row}`,rackCode:`${zone.name}-${row}`,row,locationPrefix:'',x:60,y:55+offset,width:760,height:110,bayStart:1,bayCount:20,bayPad:3,levels:['G','F','E','D','C','B','A'],skipBays:[],excludedCells:[],codePattern:'{prefix}-{row}-{bay}-{level}',direction:'ltr'},
     aisle:{label:'ทางเดิน',x:90,y:80+offset,width:650,height:52},
     pillar:{label:'เสา',x:500,y:90+offset,width:55,height:72},
     obstacle:{label:'สิ่งกีดขวาง',x:560,y:95+offset,width:130,height:82},
@@ -17276,6 +17511,8 @@ function updateWarehouseLayoutElementField(field,value) {
   } else if (field === 'rackCode') {
     element.rackCode = warehouseLayoutString(value,element.rackCode,80).toUpperCase() || element.rackCode;
     element.label = element.rackCode;
+  } else if (field === 'locationPrefix') {
+    element.locationPrefix = warehouseLayoutString(value,'',60).toUpperCase();
   } else if (['row','codePattern','label'].includes(field)) {
     element[field] = warehouseLayoutString(value,element[field],field === 'codePattern' ? 160 : 80) || element[field];
     if (field === 'row') element.row = element.row.toUpperCase();
