@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cycle Count v120 - Print Filter Summary</title>
+<title>Cycle Count v121 - Guided Session Setup</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -9582,6 +9582,96 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
   .assignment-success-buttons { grid-template-columns:1fr; }
 }
 
+/* v121 — guided Session creation and required rule selection */
+.new-session-rules-page {
+  max-width:1180px;
+  margin:0 auto;
+  overflow:hidden;
+  border:1px solid color-mix(in srgb,var(--theme-border-color) 58%,transparent);
+  border-radius:24px;
+  background:var(--theme-card-bg);
+  box-shadow:0 18px 44px color-mix(in srgb,var(--theme-primary-color) 12%,transparent);
+}
+.new-session-progress {
+  padding:18px 22px;
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+  border-bottom:1px solid color-mix(in srgb,var(--theme-border-color) 52%,transparent);
+  background:color-mix(in srgb,var(--theme-primary-color) 4%,var(--theme-card-bg));
+}
+.new-session-progress>div {
+  min-width:0;
+  display:grid;
+  grid-template-columns:34px 1fr;
+  grid-template-rows:auto auto;
+  column-gap:9px;
+  align-items:center;
+  color:var(--theme-muted-text-color);
+}
+.new-session-progress span {
+  grid-row:1/3;
+  width:34px;
+  height:34px;
+  display:grid;
+  place-items:center;
+  border:1px solid color-mix(in srgb,var(--theme-border-color) 70%,transparent);
+  border-radius:50%;
+  background:var(--theme-card-bg);
+  font-weight:900;
+}
+.new-session-progress strong { color:inherit;font-size:11px;font-weight:900; }
+.new-session-progress small { margin-top:1px;font-size:8px;font-weight:700; }
+.new-session-progress .is-done { color:var(--theme-success-color); }
+.new-session-progress .is-done span { color:white;border-color:var(--theme-success-color);background:var(--theme-success-color); }
+.new-session-progress .is-current { color:var(--theme-primary-color); }
+.new-session-progress .is-current span { border:2px solid var(--theme-primary-color);background:color-mix(in srgb,var(--theme-primary-color) 10%,white); }
+.new-session-rules-heading {
+  padding:22px 24px 16px;
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+.new-session-rules-icon {
+  width:54px;
+  height:54px;
+  flex:none;
+  display:grid;
+  place-items:center;
+  border-radius:17px;
+  color:var(--theme-primary-color);
+  background:color-mix(in srgb,var(--theme-primary-color) 12%,white);
+  font-size:25px;
+}
+.new-session-rules-heading small { color:var(--theme-primary-color);font-size:8px;font-weight:900;letter-spacing:.12em; }
+.new-session-rules-heading h2 { margin:2px 0 0;color:var(--theme-heading-color);font-size:22px;line-height:1.25; }
+.new-session-rules-heading p { margin:5px 0 0;color:var(--theme-muted-text-color);font-size:10px;font-weight:700; }
+.new-session-required-note { margin:0 24px 18px; }
+.count-rule-panel.is-standalone { border-top:1px solid color-mix(in srgb,var(--theme-border-color) 52%,transparent); }
+.count-rule-panel.is-standalone>summary { cursor:default; }
+.count-rule-panel.is-standalone>summary::after { display:none; }
+.new-session-success-summary span {
+  display:block;
+  color:var(--theme-muted-text-color);
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.12em;
+}
+.new-session-success-summary strong {
+  display:block;
+  margin-top:6px;
+  color:var(--theme-primary-color);
+  font-size:24px;
+  font-weight:900;
+  line-height:1.25;
+  overflow-wrap:anywhere;
+}
+@media (max-width:720px) {
+  .new-session-progress { grid-template-columns:1fr;padding:14px 16px; }
+  .new-session-rules-heading { align-items:flex-start;padding:18px 16px 14px; }
+  .new-session-required-note { margin:0 16px 14px; }
+}
+
 /* v84 — WMS workspace, separated workflow states and 3-part stock accuracy */
 #dash-content .summary-accuracy-breakdown {
   grid-template-columns:repeat(3,minmax(0,1fr)) !important;
@@ -10665,6 +10755,7 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
    v118 — Crisp Assignment Center icon and themed Stock Accuracy centre
    v119 — Sharp, perfectly centred Assignment KPI icons
    v120 — Show active normal Form Count filters on every printed page
+   v121 — Guided Session creation with required counting rules and activation
    ══════════════════════════════════════════════════════════ */
 .warehouse-layout-root{min-width:0}
 .warehouse-layout-shell{display:grid;gap:16px;min-width:0}
@@ -12571,7 +12662,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v120-print-filter-summary';
+window.__CYCLE_COUNT_BUILD__ = 'v121-guided-session-setup';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -13333,7 +13424,7 @@ function applyBrandingSettings(settings, persistLocal = true) {
     const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
     root.setProperty(`--theme-${cssKey}`, uiBranding[key]);
   });
-  document.title = `${uiBranding.systemName} v120`;
+  document.title = `${uiBranding.systemName} v121`;
   if (persistLocal) {
     try { localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(uiBranding)); } catch (_) {}
   }
@@ -13934,7 +14025,7 @@ async function protectedFunctionHeaders() {
   return {
     Authorization: `Bearer ${session.access_token}`,
     apikey: SUPA_KEY,
-    'x-client-info': 'cycle-count-v120',
+    'x-client-info': 'cycle-count-v121',
   };
 }
 
@@ -14485,7 +14576,7 @@ function renderResponsivePreviewContent() {
     <div class="summary-page-header">
       <div class="summary-greeting-wrap">
         <div class="summary-greeting">Hello, AuD</div>
-        <div class="summary-greeting-sub">${escapeWmsText(uiBranding.systemName)} Dashboard · v120</div>
+        <div class="summary-greeting-sub">${escapeWmsText(uiBranding.systemName)} Dashboard · v121</div>
       </div>
       <div class="summary-header-actions">${dashboardFiltersHtml('<option>Cycle Count ก.ค. 2569</option>', false)}</div>
     </div>
@@ -14968,6 +15059,7 @@ function showAssignmentSuccessModal({
 
 document.addEventListener('keydown',event => {
   if (event.key === 'Escape' && Q('assignment-success-backdrop')) closeAssignmentSuccessModal();
+  if (event.key === 'Escape' && Q('new-session-success-backdrop')) closeNewSessionSuccessModal();
 });
 
 const LOCATION_SORT_STORAGE_KEY = 'cycle_count_location_sort_direction_v1';
@@ -15360,7 +15452,7 @@ function countAuditValue(record,round) {
   const parts = [
     `รอบ ${round}`,
     `QTY ${record?.count_qty ?? '—'}`,
-    `ผู้ตรวจนับ ${record?.actual_counter_name || 'ไม่ระบุ'}`,
+    `คนนับจริง ${record?.actual_counter_name || 'ไม่ระบุ'}`,
   ];
   if (record?.remark) parts.push(`หมายเหตุ ${String(record.remark).replace(/\s+/g,' ').trim()}`);
   if (record?.photo_url) parts.push('มีรูป');
@@ -16705,7 +16797,7 @@ async function createFoundItemRecord(payload) {
     payload.item_id,
     'found_item_recorded',
     null,
-    `ITEM ${payload.item_code || '—'} · LPN ${payload.license_plate} · Lot ${payload.lot || '—'} · Status ${payload.inventory_status || '—'} · QTY ${payload.qty} · ผู้ตรวจนับ ${payload.actual_counter_name || 'ไม่ระบุ'}`,
+    `ITEM ${payload.item_code || '—'} · LPN ${payload.license_plate} · Lot ${payload.lot || '—'} · Status ${payload.inventory_status || '—'} · QTY ${payload.qty} · คนนับจริง ${payload.actual_counter_name || 'ไม่ระบุ'}`,
     payload.assignment_id,
   );
   return data;
@@ -17856,7 +17948,7 @@ async function submitCount(aid, round, idsStr, annualJobId='') {
     null,
     'count_round_submit',
     `สถานะ ${asgn.status || 'pending'}`,
-    `ยืนยันรอบ ${round} · ผล ${newStatus} · ผู้ตรวจนับ ${actualCounterName}`,
+    `ยืนยันรอบ ${round} · ผล ${newStatus} · คนนับจริง ${actualCounterName}`,
     aid,
   );
   window._photoMap = {};
@@ -18091,7 +18183,7 @@ const WORK_TRACKER_FILTERS = {
   status:{ state:'_trackerStatus', field:'statusKey', label:'สถานะงาน' },
   round:{ state:'_trackerRound', field:'roundCount', label:'รอบล่าสุด' },
   user:{ state:'_trackerUser', field:'assignedUser', label:'USER ผู้รับงาน' },
-  counter:{ state:'_trackerCounter', field:'latestCounter', label:'ผู้ตรวจนับ' },
+  counter:{ state:'_trackerCounter', field:'latestCounter', label:'คนนับจริง' },
   category:{ state:'_trackerCategory', field:'category', label:'CATEGORY' },
   uom:{ state:'_trackerUom', field:'uom', label:'UOM' },
   inventory:{ state:'_trackerInventory', field:'inventoryStatus', label:'Inventory Status' },
@@ -18413,7 +18505,7 @@ function workTrackerViewHtml() {
         ${selectField('status','สถานะงาน')}
         ${selectField('round','รอบล่าสุด')}
         ${selectField('user','USER ผู้รับงาน')}
-        ${selectField('counter','ผู้ตรวจนับ')}
+        ${selectField('counter','คนนับจริง')}
         ${selectField('category','CATEGORY')}
         ${selectField('uom','UOM')}
         ${selectField('inventory','Inventory Status')}
@@ -19225,7 +19317,7 @@ function showWarehouseLocationDetail(code) {
       <div class="warehouse-layout-detail-card"><span>ช่อง / ระดับ</span><strong>${escapeWmsText(detail.bayText)} · ${escapeWmsText(detail.level)}</strong></div>
       <div class="warehouse-layout-detail-card"><span>JOB</span><strong>${escapeWmsText(jobs)}</strong></div>
       <div class="warehouse-layout-detail-card"><span>รอบล่าสุด</span><strong>${escapeWmsText(latestRound)}</strong></div>
-      <div class="warehouse-layout-detail-card"><span>ผู้รับผิดชอบ / ผู้ตรวจนับ</span><strong>${escapeWmsText(assignmentUser)}</strong></div>
+      <div class="warehouse-layout-detail-card"><span>ผู้รับผิดชอบ / คนนับจริง</span><strong>${escapeWmsText(assignmentUser)}</strong></div>
     </div>
     <div class="alert alert-blue" style="margin-top:14px">Layout แสดงเฉพาะสถานะงานและไม่แสดงยอด OH/QTY จึงใช้ได้กับ Blind Count โดยไม่เปิดเผยยอด</div>
   `);
@@ -20529,7 +20621,7 @@ async function loadSvDash() {
       <div class="tab-row" style="display:flex;align-items:center;gap:12px; padding: 10px;" onclick="toggleVarianceDetail('${a.id}',${i})">
         <div style="flex:1;min-width:0">
           <div class="mono" style="font-size:16px;font-weight:800;color:var(--text-main)">${l?.code||'?'}</div>
-          <div style="font-size:13px;color:var(--text-muted);margin-top:4px;font-weight:600">👤 ผู้ตรวจนับ: ${escapeWmsText((actualCountersByAssignment[a.id] || []).join(', ') || 'ไม่ระบุคนนับ')} · ${[l?.zone,l?.row_no,l?.level].filter(Boolean).join(' · ')}</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-top:4px;font-weight:600">👤 คนนับจริง: ${escapeWmsText((actualCountersByAssignment[a.id] || []).join(', ') || 'ไม่ระบุคนนับ')} · ${[l?.zone,l?.row_no,l?.level].filter(Boolean).join(' · ')}</div>
         </div>
         <span class="tag ${si.cls}">${si.lbl}</span>
         <span class="caret" style="font-size:18px">▾</span>
@@ -20780,8 +20872,8 @@ async function loadSvDash() {
 
   const teamProgressTabHtml = `
     <div>
-      <div style="font-size:18px;font-weight:800;color:var(--text-main);margin-bottom:18px">👥 ความคืบหน้าผู้ตรวจนับ (Team Progress)</div>
-      ${peopleRows || `<div style="padding:30px 0;text-align:center;color:var(--text-muted);font-size:14px;font-weight:600">ยังไม่มีข้อมูลผู้ตรวจนับ</div>`}
+      <div style="font-size:18px;font-weight:800;color:var(--text-main);margin-bottom:18px">👥 ความคืบหน้าคนนับจริง (Team Progress)</div>
+      ${peopleRows || `<div style="padding:30px 0;text-align:center;color:var(--text-muted);font-size:14px;font-weight:600">ยังไม่มีข้อมูลคนนับจริง</div>`}
     </div>`;
 
   const varianceTabHtml = `
@@ -21548,7 +21640,7 @@ function renderWmsList() {
         <div class="wms-row-meta">
           Zone ${escapeWmsText(loc?.zone || '—')} · ROW ${escapeWmsText(loc?.row_no ?? '—')} · Level ${escapeWmsText(loc?.level ?? '—')}<br>
           ${isPending 
-            ? `ผู้ตรวจนับ: ${actualCounterText}`
+            ? `คนนับจริง: ${actualCounterText}`
             : `ยืนยันโดย User: ${escapeWmsText(v.profiles?.name||'?')}`
           }
         </div>
@@ -21870,7 +21962,7 @@ async function loadSvList() {
     html += `<div class="row click" data-location-sort-code="${escapeWmsText(l?.code || '')}" onclick="go('sv-detail',{aid:'${a.id}'})">
       <div class="row-body">
         <div class="row-title mono">${l.code}</div>
-        <div class="row-sub">${[l.zone,l.area].filter(Boolean).join(' · ')} · <span style="font-weight:700; color:var(--primary-blue)">ผู้ตรวจนับ: ${escapeWmsText((counterMap[a.id] || []).join(', ') || 'ไม่ระบุคนนับ')}</span></div>
+        <div class="row-sub">${[l.zone,l.area].filter(Boolean).join(' · ')} · <span style="font-weight:700; color:var(--primary-blue)">คนนับจริง: ${escapeWmsText((counterMap[a.id] || []).join(', ') || 'ไม่ระบุคนนับ')}</span></div>
       </div>
       <span class="tag ${si.cls}">${si.lbl}</span>
       <span class="caret">›</span>
@@ -22161,7 +22253,7 @@ async function loadSvDetail() {
     <div class="card">
       <div class="mono" style="font-size:22px;font-weight:800;color:var(--text-main)">${l.code}</div>
       <div style="font-size:14px;color:var(--text-muted);margin-top:6px; font-weight:600;">
-        ${[l.zone,l.area].filter(Boolean).join(' · ')} · ผู้ตรวจนับ: <span style="color:var(--primary-blue)">${actualCounterDisplay}</span>
+        ${[l.zone,l.area].filter(Boolean).join(' · ')} · คนนับจริง: <span style="color:var(--primary-blue)">${actualCounterDisplay}</span>
       </div>
       <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
         <span class="tag tag-blue">รอบที่ ${roundNum}</span>
@@ -22276,6 +22368,13 @@ function normalizeCountingRules(maxRounds, repeatMatchAction) {
   return { maxRounds:rounds, repeatMatchAction:action };
 }
 
+function hasConfiguredCountingRules(sessionOrValues={}) {
+  const maxRounds = Number(sessionOrValues.max_rounds ?? sessionOrValues.maxRounds);
+  const repeatMatchAction = sessionOrValues.repeat_match_action ?? sessionOrValues.repeatMatchAction;
+  return [1,2,3].includes(maxRounds)
+    && ['recount','auto_pass','send_variance'].includes(repeatMatchAction);
+}
+
 function countRuleActionLabel(action) {
   return ({
     recount:'นับต่อจนกว่าจะครบจำนวนรอบ',
@@ -22289,16 +22388,20 @@ function describeCountingRules(maxRounds, repeatMatchAction) {
   return `${rules.maxRounds} รอบ · ${countRuleActionLabel(rules.repeatMatchAction)}`;
 }
 
-function countingRuleEditorHtml(session) {
+function countingRuleEditorHtml(session,options={}) {
   const rules = normalizeCountingRules(session.max_rounds, session.repeat_match_action);
+  const requireSelection = options.requireSelection === true || !hasConfiguredCountingRules(session);
+  const selectedMaxRounds = requireSelection ? '' : String(rules.maxRounds);
+  const selectedRepeatAction = requireSelection ? '' : rules.repeatMatchAction;
+  const newSessionFlow = options.newSessionFlow === true;
   const id = session.id;
-  return `<details class="count-rule-panel" id="count_rule_panel_${id}"
+  return `<details class="count-rule-panel${options.standalone ? ' is-standalone' : ''}" id="count_rule_panel_${id}" ${options.open ? 'open' : ''}
       ontoggle="if(this.open)refreshCountingRulePreview('${id}')">
     <summary>
       <span class="count-rule-summary-icon">⚙️</span>
       <span class="count-rule-summary-copy">
         <strong>กติกาการนับและสนามทดลอง</strong>
-        <small id="count_rule_summary_${id}">${describeCountingRules(rules.maxRounds,rules.repeatMatchAction)}</small>
+        <small id="count_rule_summary_${id}">${requireSelection ? 'กรุณาเลือกกติกาให้ครบทั้ง 2 ช่อง' : describeCountingRules(rules.maxRounds,rules.repeatMatchAction)}</small>
       </span>
       <span class="tag tag-blue" style="font-size:9px">ADMIN</span>
     </summary>
@@ -22322,17 +22425,19 @@ function countingRuleEditorHtml(session) {
         <div class="fg">
           <label for="rule_max_${id}">จำนวนรอบสูงสุด</label>
           <select id="rule_max_${id}" onchange="refreshCountingRulePreview('${id}')">
-            <option value="1" ${rules.maxRounds===1?'selected':''}>1 รอบ</option>
-            <option value="2" ${rules.maxRounds===2?'selected':''}>2 รอบ</option>
-            <option value="3" ${rules.maxRounds===3?'selected':''}>3 รอบ</option>
+            <option value="" ${selectedMaxRounds?'':'selected'} disabled>เลือกจำนวนรอบสูงสุด</option>
+            <option value="1" ${selectedMaxRounds==='1'?'selected':''}>1 รอบ</option>
+            <option value="2" ${selectedMaxRounds==='2'?'selected':''}>2 รอบ</option>
+            <option value="3" ${selectedMaxRounds==='3'?'selected':''}>3 รอบ</option>
           </select>
         </div>
         <div class="fg">
           <label for="rule_repeat_${id}">เมื่อยอด Count สองรอบซ้ำกัน แต่ไม่ตรง OH</label>
           <select id="rule_repeat_${id}" onchange="refreshCountingRulePreview('${id}')">
-            <option value="recount" ${rules.repeatMatchAction==='recount'?'selected':''}>นับต่อจนกว่าจะครบจำนวนรอบ</option>
-            <option value="auto_pass" ${rules.repeatMatchAction==='auto_pass'?'selected':''}>ถือว่าผ่าน (OK)</option>
-            <option value="send_variance" ${rules.repeatMatchAction==='send_variance'?'selected':''}>ส่ง Variance ทันที</option>
+            <option value="" ${selectedRepeatAction?'':'selected'} disabled>เลือกวิธีดำเนินการ</option>
+            <option value="recount" ${selectedRepeatAction==='recount'?'selected':''}>นับต่อจนกว่าจะครบจำนวนรอบ</option>
+            <option value="auto_pass" ${selectedRepeatAction==='auto_pass'?'selected':''}>ถือว่าผ่าน (OK)</option>
+            <option value="send_variance" ${selectedRepeatAction==='send_variance'?'selected':''}>ส่ง Variance ทันที</option>
           </select>
         </div>
       </div>
@@ -22372,7 +22477,7 @@ function countingRuleEditorHtml(session) {
       <div id="rule_alert_${id}"></div>
       <div class="count-rule-actions">
         <button class="btn btn-ghost btn-sm" type="button" onclick="refreshCountingRulePreview('${id}')">▶ ทดสอบค่าปัจจุบัน</button>
-        <button class="btn btn-blue btn-sm" id="rule_save_${id}" type="button" onclick="saveSessionCountingRules('${id}')">💾 บันทึกกติกา Session นี้</button>
+        <button class="btn btn-blue btn-sm" id="rule_save_${id}" type="button" onclick="saveSessionCountingRules('${id}',${newSessionFlow})">${newSessionFlow ? '✓ บันทึกกติกาและสร้าง Session' : '💾 บันทึกกติกา Session นี้'}</button>
       </div>
     </div>
   </details>`;
@@ -22398,8 +22503,30 @@ function countingRuleReason(oh, counts, roundIndex, status, rules) {
 }
 
 function refreshCountingRulePreview(id) {
-  const maxRounds = Number(Q(`rule_max_${id}`)?.value || 3);
-  const repeatMatchAction = Q(`rule_repeat_${id}`)?.value || 'recount';
+  const rawMaxRounds = Q(`rule_max_${id}`)?.value || '';
+  const repeatMatchAction = Q(`rule_repeat_${id}`)?.value || '';
+  const maxRounds = Number(rawMaxRounds);
+  const configured = hasConfiguredCountingRules({ maxRounds,repeatMatchAction });
+  const summary = Q(`count_rule_summary_${id}`);
+  if (summary) {
+    summary.textContent = configured
+      ? describeCountingRules(maxRounds,repeatMatchAction)
+      : 'กรุณาเลือกกติกาให้ครบทั้ง 2 ช่อง';
+  }
+  if (!configured) {
+    [1,2,3].forEach(round => {
+      const input = Q(`rule_c${round}_${id}`);
+      const box = Q(`rule_result_${round}_${id}`);
+      if (input) input.disabled = false;
+      if (box) {
+        box.className = 'count-rule-result is-disabled';
+        box.innerHTML = `<span class="round">หลัง COUNT ${round}</span><span class="decision">รอเลือกกติกา</span><span class="reason">เลือกจำนวนรอบและวิธีจัดการยอดซ้ำก่อน</span>`;
+      }
+    });
+    const finalBox = Q(`rule_final_${id}`);
+    if (finalBox) finalBox.textContent = 'กรุณาเลือกกติกาการนับให้ครบทั้ง 2 ช่อง';
+    return;
+  }
   const rules = normalizeCountingRules(maxRounds, repeatMatchAction);
   const oh = readCountingRuleInput(id, 'oh');
   const counts = [1,2,3].map(round => readCountingRuleInput(id, `c${round}`));
@@ -22480,10 +22607,17 @@ function clearCountingRuleExample(id) {
   refreshCountingRulePreview(id);
 }
 
-async function saveSessionCountingRules(id) {
+async function saveSessionCountingRules(id,newSessionFlow=false) {
   if (prof?.role !== 'admin') { adminOnlyMessage(); return; }
   const maxRounds = Number(Q(`rule_max_${id}`)?.value);
   const repeatMatchAction = Q(`rule_repeat_${id}`)?.value;
+  if (!hasConfiguredCountingRules({ maxRounds,repeatMatchAction })) {
+    const validationAlert = Q(`rule_alert_${id}`);
+    if (validationAlert) validationAlert.innerHTML = `<div class="alert alert-amber" style="margin-top:12px">กรุณาเลือก “จำนวนรอบสูงสุด” และ “วิธีดำเนินการเมื่อยอด Count ซ้ำแต่ไม่ตรง OH” ให้ครบก่อนบันทึก</div>`;
+    if (![1,2,3].includes(maxRounds)) Q(`rule_max_${id}`)?.focus();
+    else Q(`rule_repeat_${id}`)?.focus();
+    return;
+  }
   const rules = normalizeCountingRules(maxRounds, repeatMatchAction);
   const button = Q(`rule_save_${id}`);
   const alertBox = Q(`rule_alert_${id}`);
@@ -22497,11 +22631,23 @@ async function saveSessionCountingRules(id) {
     });
     const summary = Q(`count_rule_summary_${id}`);
     if (summary) summary.textContent = describeCountingRules(rules.maxRounds,rules.repeatMatchAction);
-    if (alertBox) alertBox.innerHTML = `<div class="alert alert-green" style="margin-top:12px">✅ บันทึกกติกาแล้ว งานนับใน Session นี้จะใช้กติกาใหม่ทันที</div>`;
+    if (newSessionFlow) {
+      if (alertBox) alertBox.innerHTML = '';
+      showNewSessionSuccessModal({
+        id,
+        name:S._newSessionName || 'Session ใหม่',
+        rules,
+      });
+    } else if (alertBox) {
+      alertBox.innerHTML = `<div class="alert alert-green" style="margin-top:12px">✅ บันทึกกติกาแล้ว งานนับใน Session นี้จะใช้กติกาใหม่ทันที</div>`;
+    }
   } catch (error) {
     if (alertBox) alertBox.innerHTML = errBox(`บันทึกกติกาไม่สำเร็จ: ${error.message}`);
   } finally {
-    if (button) { button.disabled = false; button.textContent = '💾 บันทึกกติกา Session นี้'; }
+    if (button) {
+      button.disabled = false;
+      button.textContent = newSessionFlow ? '✓ บันทึกกติกาและสร้าง Session' : '💾 บันทึกกติกา Session นี้';
+    }
   }
 }
 
@@ -22518,6 +22664,7 @@ async function renderManageSessions(container) {
   let html = sessions?.length ? '' : `<div style="text-align:center;padding:40px"><div style="font-size:54px">📁</div><div style="color:var(--text-muted);font-weight:700;margin-top:16px; font-size:16px;">ยังไม่มี Session</div></div>`;
 
   for (const s of sessions || []) {
+    const hasRules = hasConfiguredCountingRules(s);
     const ohBadge = s.show_oh ? `<span class="tag tag-green" style="font-size:10px">🔓 เห็น OH</span>` : `<span class="tag tag-gray"  style="font-size:10px">🔒 Blind</span>`;
     html += `<details class="session-manage-card">
     <summary>
@@ -22541,7 +22688,9 @@ async function renderManageSessions(container) {
           </div>` : `<div style="font-size:12px;font-weight:700;color:var(--text-muted)">เปิดหรือปิด Session นี้ได้จากปุ่มด้านขวา</div>`}
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          ${isAdminOrSup && s.status==='draft'  ? `<button class="btn btn-green btn-sm" onclick="activateSess('${s.id}')">เปิด</button>` : ''}
+          ${isAdminOrSup && s.status==='draft' && hasRules ? `<button class="btn btn-green btn-sm" onclick="activateSess('${s.id}')">เปิด</button>` : ''}
+          ${isAdmin && s.status==='draft' && !hasRules ? `<button class="btn btn-ghost btn-sm" type="button" onclick="document.getElementById('count_rule_panel_${s.id}')?.setAttribute('open','')">ตั้งกติกาก่อนเปิด</button>` : ''}
+          ${prof?.role==='supervisor' && s.status==='draft' && !hasRules ? `<button class="btn btn-ghost btn-sm" type="button" disabled title="Admin ต้องตั้งกติกาการนับก่อน">รอ Admin ตั้งกติกา</button>` : ''}
           ${isAdminOrSup && s.status==='active' ? `<button class="btn btn-ghost btn-sm" onclick="closeSess('${s.id}')">ปิด</button>` : ''}
           ${isAdminOrSup && s.status==='closed' ? `<button class="btn btn-green btn-sm" onclick="reopenSess('${s.id}')">เปิดใหม่</button>` : ''}
           ${isAdmin ? `<button class="btn btn-red btn-sm admin-delete-icon"
@@ -22811,7 +22960,7 @@ async function renderManageAssign(container) {
           </div>
           <div class="assign-role-note">
             <span>ℹ️</span>
-            <span><strong>User ผู้รับงาน</strong> คือบัญชีที่ใช้ล็อกอินและรับ Location ส่วน <strong>ผู้ตรวจนับ</strong> จะเลือกภายในหน้าบันทึกการนับและใช้ในรายงาน ทั้งสองรายการแยกจากกัน</span>
+            <span><strong>User ผู้รับงาน</strong> คือบัญชีที่ใช้ล็อกอินและรับ Location ส่วน <strong>คนนับจริง</strong> จะเลือกภายในหน้าบันทึกการนับและใช้ในรายงาน ทั้งสองรายการแยกจากกัน</span>
           </div>
           <details class="assign-zone-details" id="zoneDashDetails" ontoggle="if(this.open)refreshZoneDashboard()">
             <summary>
@@ -24713,7 +24862,7 @@ function printMetaHtml(pageIndex,totalPages) {
 
 function printSignatureHtml(className = 'pf-footer') {
   if (!uiBranding.printShowSignatures) return '';
-  return `<footer class="${className}"><div>ผู้ตรวจนับ........................................</div><div>เวลาเริ่ม........................</div><div>เวลาจบ........................</div></footer>`;
+  return `<footer class="${className}"><div>คนนับจริง........................................</div><div>เวลาเริ่ม........................</div><div>เวลาจบ........................</div></footer>`;
 }
 
 function detailedItemHtml(row,showOH) {
@@ -25357,7 +25506,7 @@ async function loadAdHistory() {
       </div>
       <div class="grid-3" style="margin-bottom:10px">
         <div><label style="font-size:11px">SESSION</label><select id="hist-sess" onchange="setHistoryFilter('session',this.value)">${sessionOptions}</select></div>
-        <div><label style="font-size:11px">ผู้ตรวจนับ</label><select id="hist-cnt" onchange="setHistoryFilter('counter',this.value)">${counterOptions}</select></div>
+        <div><label style="font-size:11px">คนนับจริง</label><select id="hist-cnt" onchange="setHistoryFilter('counter',this.value)">${counterOptions}</select></div>
         <div><label style="font-size:11px">สถานะ</label><select id="hist-st" onchange="setHistoryFilter('status',this.value)">${statusOptions}</select></div>
       </div>
     </div>
@@ -25434,7 +25583,7 @@ async function loadAdHistory() {
     const latestText = historyEvent?.latestAt && historyEvent.latestAt !== historyEvent.startedAt
       ? ` · ล่าสุด ${new Date(historyEvent.latestAt).toLocaleString('th-TH')}`
       : '';
-    return `<div class="row click" data-location-sort-code="${escapeWmsText(assignment.locations?.code || '')}" onclick="go('ad-txlog',{aid:'${assignment.id}'})"><div class="row-body"><div class="row-title mono">${escapeWmsText(assignment.locations?.code || '?')}</div><div class="row-sub"><span style="color:var(--primary-blue);font-weight:700">${escapeWmsText(assignment.count_sessions?.name || '')}</span> · ผู้ตรวจนับ: ${escapeWmsText(countedBy)}</div><div class="row-sub">${startText}${latestText}</div></div><span class="tag ${info.cls}">${info.lbl}</span><span class="caret">›</span></div>`;
+    return `<div class="row click" data-location-sort-code="${escapeWmsText(assignment.locations?.code || '')}" onclick="go('ad-txlog',{aid:'${assignment.id}'})"><div class="row-body"><div class="row-title mono">${escapeWmsText(assignment.locations?.code || '?')}</div><div class="row-sub"><span style="color:var(--primary-blue);font-weight:700">${escapeWmsText(assignment.count_sessions?.name || '')}</span> · คนนับจริง: ${escapeWmsText(countedBy)}</div><div class="row-sub">${startText}${latestText}</div></div><span class="tag ${info.cls}">${info.lbl}</span><span class="caret">›</span></div>`;
   }).join('') + '</div>';
 }
 
@@ -25492,7 +25641,7 @@ async function loadAdTxLog() {
     if (ev.type === 'count') {
       const r = ev.data; const ohInfo = ohMap[r.item_id];
       const itemLabel = isEmptyLocationItem(r.items?.code) ? 'Location ว่าง' : escapeWmsText(r.items?.code || '');
-      rows += `<div class="row" style="cursor:default;flex-wrap:wrap"><div class="row-body"><div class="row-title mono" style="font-size:14px">${itemLabel}</div><div class="row-sub">${escapeWmsText(r.items?.description||'')}</div><div class="row-sub">รอบ ${r.round} · ผู้ตรวจนับ: ${escapeWmsText(r.actual_counter_name || 'ไม่ระบุคนนับ')}</div><div class="row-sub">${r.counted_at ? new Date(r.counted_at).toLocaleString('th-TH') : ''}</div>${r.remark ? `<div class="row-sub" style="color:var(--primary-blue); font-weight:600;">📝 ${escapeWmsText(r.remark)}</div>` : ''}${r.photo_url ? `<a href="${r.photo_url}" target="_blank" style="color:var(--accent-red)">📷 ดูรูป</a>` : ''}</div><div style="text-align:right;flex-shrink:0"><div style="font-size:32px;font-weight:800;font-family:'Fredoka';color:var(--text-main)">${r.count_qty}</div><span class="tag tag-blue" style="font-size:10px">R${r.round}</span>${ohInfo ? `<div class="oh-chip" style="margin-top:8px;font-size:12px;padding:4px 10px">OH: ${ohInfo.oh}${ohInfo.al!=null?` <span class="al-part">· AL ${ohInfo.al}</span>`:''}</div>` : ''}</div></div>`;
+      rows += `<div class="row" style="cursor:default;flex-wrap:wrap"><div class="row-body"><div class="row-title mono" style="font-size:14px">${itemLabel}</div><div class="row-sub">${escapeWmsText(r.items?.description||'')}</div><div class="row-sub">รอบ ${r.round} · คนนับจริง: ${escapeWmsText(r.actual_counter_name || 'ไม่ระบุคนนับ')}</div><div class="row-sub">${r.counted_at ? new Date(r.counted_at).toLocaleString('th-TH') : ''}</div>${r.remark ? `<div class="row-sub" style="color:var(--primary-blue); font-weight:600;">📝 ${escapeWmsText(r.remark)}</div>` : ''}${r.photo_url ? `<a href="${r.photo_url}" target="_blank" style="color:var(--accent-red)">📷 ดูรูป</a>` : ''}</div><div style="text-align:right;flex-shrink:0"><div style="font-size:32px;font-weight:800;font-family:'Fredoka';color:var(--text-main)">${r.count_qty}</div><span class="tag tag-blue" style="font-size:10px">R${r.round}</span>${ohInfo ? `<div class="oh-chip" style="margin-top:8px;font-size:12px;padding:4px 10px">OH: ${ohInfo.oh}${ohInfo.al!=null?` <span class="al-part">· AL ${ohInfo.al}</span>`:''}</div>` : ''}</div></div>`;
     } else if (ev.type === 'approval') {
       const a = ev.data; const isOk = a.resolution === 'ok';
       const itemLabel = isEmptyLocationItem(a.items?.code) ? 'Location ว่าง' : escapeWmsText(a.items?.code || '');
@@ -25506,7 +25655,7 @@ async function loadAdTxLog() {
   cnt().innerHTML = `
     <div class="card">
       <div class="mono" style="font-size:22px;font-weight:800">${asgn.locations?.code}</div>
-      <div style="font-size:14px;color:var(--text-muted);margin-top:6px; font-weight:600;"><span style="color:var(--primary-blue)">${asgn.count_sessions?.name||''}</span> · ผู้ตรวจนับ: ${escapeWmsText(pageCounterLabel)}</div>
+      <div style="font-size:14px;color:var(--text-muted);margin-top:6px; font-weight:600;"><span style="color:var(--primary-blue)">${asgn.count_sessions?.name||''}</span> · คนนับจริง: ${escapeWmsText(pageCounterLabel)}</div>
       <div style="margin-top:12px"><span class="tag ${si.cls}">${si.lbl}</span></div>
       ${showMismatchWarning ? `<div class="alert alert-red" style="margin-top:16px">⚠️ พบ ${mismatchItems.length} รายการที่ยอดนับไม่ตรงกับ OH ปัจจุบัน</div><button class="btn btn-red btn-sm" onclick="sendBackToVariance('${aid}')">📤 ส่งกลับไปตรวจสอบใน Variance</button>` : ''}
     </div>
@@ -25537,7 +25686,43 @@ async function sendBackToVariance(aid) {
 
 async function loadAdSess() { S._manageTab='sessions'; _manageTab='sessions'; await loadAdManage(); }
 
-function paintAdNew() {
+async function paintAdNew() {
+  if (S._newSessionId) {
+    cnt().innerHTML = `<div class="card" style="max-width:1180px;margin:0 auto"><div class="load" style="padding:42px;text-align:center">⏳ กำลังเปิดหน้าตั้งกติกาการนับ...</div></div>`;
+    const expectedId = S._newSessionId;
+    const { data:session,error } = await sb.from('count_sessions')
+      .select('id,name,status,max_rounds,repeat_match_action')
+      .eq('id',expectedId)
+      .maybeSingle();
+    if (S._newSessionId !== expectedId || S.page !== 'ad-new') return;
+    if (error || !session) {
+      cnt().innerHTML = `<div class="card" style="max-width:760px;margin:0 auto">${errBox(error?.message || 'ไม่พบ Session ที่เพิ่งสร้าง')}</div>`;
+      return;
+    }
+    S._newSessionName = session.name;
+    cnt().innerHTML = `<div class="new-session-rules-page">
+      <div class="new-session-progress" aria-label="ขั้นตอนสร้าง Session">
+        <div class="is-done"><span>1</span><strong>ตั้งชื่อ Session</strong><small>บันทึกชื่อแล้ว</small></div>
+        <div class="is-current"><span>2</span><strong>ตั้งกติกาการนับ</strong><small>ต้องเลือกให้ครบ</small></div>
+        <div><span>3</span><strong>เปิดใช้งาน</strong><small>ทำได้ในป๊อปอัปถัดไป</small></div>
+      </div>
+      <div class="new-session-rules-heading">
+        <span class="new-session-rules-icon">⚙️</span>
+        <div><small>SESSION ที่กำลังตั้งค่า</small><h2>${escapeWmsText(session.name)}</h2><p>เลือกกติกาให้ครบทั้ง 2 ช่องก่อนบันทึก ระบบจึงจะแสดงปุ่มเปิดใช้งาน Session</p></div>
+      </div>
+      <div class="alert alert-amber new-session-required-note">
+        <strong>จำเป็นต้องเลือกเอง:</strong> จำนวนรอบสูงสุด และวิธีดำเนินการเมื่อยอด Count สองรอบซ้ำกันแต่ไม่ตรง OH
+      </div>
+      ${countingRuleEditorHtml(session,{
+        requireSelection:!hasConfiguredCountingRules(session),
+        newSessionFlow:true,
+        standalone:true,
+        open:true,
+      })}
+    </div>`;
+    refreshCountingRulePreview(session.id);
+    return;
+  }
   cnt().innerHTML = `<div class="card" style="max-width:620px; margin:0 auto">
     <div id="na"></div>
     <div class="fg"><label>ชื่อ Session</label><input id="nn" value="" placeholder="กรอกชื่อ Session" autocomplete="off"></div>
@@ -25556,22 +25741,35 @@ async function createSess() {
     Q('nn').focus();
     return;
   }
+  const button = Q('nn')?.closest('.card')?.querySelector('button[onclick="createSess()"]');
+  if (button) { button.disabled = true; button.textContent = '⏳ กำลังสร้าง Session...'; }
   const { data:created,error } = await sb.from('count_sessions').insert({
     name,
     created_by:me.id,
     status:'draft',
     show_oh:false,
-    max_rounds:3,
-    repeat_match_action:'recount',
+    max_rounds:null,
+    repeat_match_action:null,
     count_mode:'cycle',
     annual_items_per_job:20,
     annual_job_prefix:'JOB',
   }).select('id,name,status').single();
-  if (error) { Q('na').innerHTML = errBox(error.message); return; }
-  if (!created?.id) { Q('na').innerHTML = errBox('สร้าง Session แล้วแต่ไม่พบ ID ที่บันทึก'); return; }
+  if (error) {
+    Q('na').innerHTML = errBox(error.message);
+    if (button) { button.disabled = false; button.textContent = '✓ สร้าง Session'; }
+    return;
+  }
+  if (!created?.id) {
+    Q('na').innerHTML = errBox('สร้าง Session แล้วแต่ไม่พบ ID ที่บันทึก');
+    if (button) { button.disabled = false; button.textContent = '✓ สร้าง Session'; }
+    return;
+  }
   S._dashSid = created.id;
   invalidateDashboardCache();
-  Q('na').innerHTML = `<div class="alert alert-green">✅ สร้างเรียบร้อย</div>`; setTimeout(() => go('ad-manage'), 1200);
+  go('ad-new',{
+    _newSessionId:created.id,
+    _newSessionName:created.name,
+  },{ replace:true });
 }
 
 async function updateSessionLifecycle(id,updates) {
@@ -25585,8 +25783,78 @@ async function updateSessionLifecycle(id,updates) {
   return true;
 }
 
-async function activateSess(id) {
-  if (await updateSessionLifecycle(id,{ status:'active',closed_at:null })) loadAdSess();
+async function activateSess(id,options={}) {
+  const { data:session,error } = await sb.from('count_sessions')
+    .select('id,max_rounds,repeat_match_action')
+    .eq('id',id)
+    .maybeSingle();
+  if (error || !session) {
+    alert(`ตรวจสอบกติกา Session ไม่สำเร็จ: ${error?.message || 'ไม่พบ Session'}`);
+    return false;
+  }
+  if (!hasConfiguredCountingRules(session)) {
+    alert('กรุณาตั้งกติกาการนับให้ครบทั้ง 2 ช่องก่อนเปิดใช้งาน Session');
+    return false;
+  }
+  const updated = await updateSessionLifecycle(id,{ status:'active',closed_at:null });
+  if (!updated) return false;
+  if (options.navigate !== false) loadAdSess();
+  return true;
+}
+
+let _newSessionSuccessData = null;
+let _newSessionSuccessPreviousOverflow = '';
+
+function closeNewSessionSuccessModal() {
+  const backdrop = Q('new-session-success-backdrop');
+  if (backdrop) backdrop.remove();
+  document.body.style.overflow = _newSessionSuccessPreviousOverflow;
+  _newSessionSuccessData = null;
+}
+
+async function activateNewSessionFromSuccess() {
+  const session = _newSessionSuccessData;
+  if (!session?.id) return;
+  const button = Q('new-session-activate-button');
+  if (button) { button.disabled = true; button.textContent = '⏳ กำลังเปิดใช้งาน...'; }
+  const activated = await activateSess(session.id,{ navigate:false });
+  if (!activated) {
+    if (button) { button.disabled = false; button.textContent = 'เปิดใช้งาน Session'; }
+    return;
+  }
+  closeNewSessionSuccessModal();
+  go('ad-manage',{ _manageTab:'sessions' },{ replace:true });
+}
+
+function showNewSessionSuccessModal({ id,name,rules }={}) {
+  closeNewSessionSuccessModal();
+  _newSessionSuccessData = { id,name,rules };
+  _newSessionSuccessPreviousOverflow = document.body.style.overflow;
+  const backdrop = document.createElement('div');
+  backdrop.id = 'new-session-success-backdrop';
+  backdrop.className = 'assignment-success-backdrop';
+  backdrop.onclick = event => {
+    if (event.target === backdrop) closeNewSessionSuccessModal();
+  };
+  backdrop.innerHTML = `<section class="assignment-success-modal new-session-success-modal" role="dialog" aria-modal="true" aria-labelledby="new-session-success-title">
+    <div class="assignment-success-icon">${stableUiIconSvg('success')}</div>
+    <h2 class="assignment-success-title" id="new-session-success-title">สร้าง Session เสร็จแล้ว</h2>
+    <div class="assignment-success-summary new-session-success-summary">
+      <span>SESSION</span>
+      <strong>${escapeWmsText(name || 'Session ใหม่')}</strong>
+    </div>
+    <p class="assignment-success-recipient">
+      บันทึกกติกาเรียบร้อยแล้ว<br>
+      <strong>${escapeWmsText(describeCountingRules(rules?.maxRounds,rules?.repeatMatchAction))}</strong>
+    </p>
+    <div class="assignment-success-buttons">
+      <button class="btn btn-green" id="new-session-activate-button" type="button" onclick="activateNewSessionFromSuccess()">เปิดใช้งาน Session</button>
+      <button class="btn btn-ghost" type="button" onclick="closeNewSessionSuccessModal()">เก็บเป็น Draft ไว้ก่อน</button>
+    </div>
+  </section>`;
+  document.body.appendChild(backdrop);
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => Q('new-session-activate-button')?.focus(),0);
 }
 async function closeSess(id) {
   if (!confirm('ปิด Session นี้? User จะบันทึกยอดเพิ่มไม่ได้แล้ว')) return;
@@ -26415,7 +26683,7 @@ async function renderManageBackup(container) {
       Excel จะเปิดที่ชีต Data_Count ซึ่งรวมข้อมูล Stock / LPN ทั้งหมดของ Session โดยไม่กรองเฉพาะ Gain / Lost
       พร้อม Location, Zone, LPN, Lot, Inventory Status, Item, Stock Onhand ราย LPN/Lot,
       AL Qty และ Count 1–3 ซึ่งกระจายยอดนับจาก LPN บนลงล่างและคำนวณ Variance ราย LPN,
-      ผู้ตรวจนับและเวลานับแยกรอบ, หมายเหตุ, รูปถ่าย และสถานะ WMS ให้ทีมอื่นนำไปใช้ต่อได้<br>
+      คนนับจริงและเวลานับแยกรอบ, หมายเหตุ, รูปถ่าย และสถานะ WMS ให้ทีมอื่นนำไปใช้ต่อได้<br>
       <span style="font-size:11px">แสดงเฉพาะ Data_Count, Found_Work, Info_Master, Session_Summary และ README · ข้อมูลระบบที่จำเป็นถูกซ่อนไว้เพื่อให้ Restore ได้ · บัญชี User Login และรหัสผ่านไม่อยู่ในไฟล์</span>
     </div>
     <div class="backup-grid">
@@ -29094,7 +29362,7 @@ async function loadAdUsers() {
     </section>
     ${masterGroup('🔑','User ที่ใช้ล็อกอินและรับงาน',users?.length || 0,
       userRows || `<div class="load" style="padding:24px">ยังไม่มี User</div>`)}
-    ${masterGroup('👥','ผู้ตรวจนับ',counters?.length || 0,`
+    ${masterGroup('👥','คนนับจริง',counters?.length || 0,`
       ${counterRows || `<div class="load" style="padding:24px">ยังไม่มีคนนับ</div>`}
       <div style="display:flex;gap:8px;padding:14px 16px;flex-wrap:wrap">
         <input id="admin_counter_new" placeholder="เพิ่มชื่อคนนับใหม่..." maxlength="120" style="flex:1;min-width:180px">
