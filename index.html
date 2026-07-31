@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cycle Count v123 - Unified Success Center</title>
+<title>Cycle Count v124 - Correct WMS Progress</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -10918,6 +10918,7 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
    v121 — Guided Session creation with required counting rules and activation
    v122 — NOT NULL-safe Session draft while keeping rule fields unselected
    v123 — Unified success modal and non-blocking repetitive-action toast
+   v124 — WMS progress includes pending-confirmation items in the total
    ══════════════════════════════════════════════════════════ */
 .warehouse-layout-root{min-width:0}
 .warehouse-layout-shell{display:grid;gap:16px;min-width:0}
@@ -12824,7 +12825,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v123-unified-success-center';
+window.__CYCLE_COUNT_BUILD__ = 'v124-correct-wms-progress';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -13586,7 +13587,7 @@ function applyBrandingSettings(settings, persistLocal = true) {
     const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
     root.setProperty(`--theme-${cssKey}`, uiBranding[key]);
   });
-  document.title = `${uiBranding.systemName} v123`;
+  document.title = `${uiBranding.systemName} v124`;
   if (persistLocal) {
     try { localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(uiBranding)); } catch (_) {}
   }
@@ -14187,7 +14188,7 @@ async function protectedFunctionHeaders() {
   return {
     Authorization: `Bearer ${session.access_token}`,
     apikey: SUPA_KEY,
-    'x-client-info': 'cycle-count-v123',
+    'x-client-info': 'cycle-count-v124',
   };
 }
 
@@ -14738,7 +14739,7 @@ function renderResponsivePreviewContent() {
     <div class="summary-page-header">
       <div class="summary-greeting-wrap">
         <div class="summary-greeting">Hello, AuD</div>
-        <div class="summary-greeting-sub">${escapeWmsText(uiBranding.systemName)} Dashboard · v123</div>
+        <div class="summary-greeting-sub">${escapeWmsText(uiBranding.systemName)} Dashboard · v124</div>
       </div>
       <div class="summary-header-actions">${dashboardFiltersHtml('<option>Cycle Count ก.ค. 2569</option>', false)}</div>
     </div>
@@ -20998,10 +20999,14 @@ async function loadSvDash() {
   const summaryWmsConfirmedRows = allWmsRows.filter(v => !v._isPending);
   const summaryWmsFixedCount = summaryWmsConfirmedRows.filter(v => v.wms_fixed).length;
   const summaryWmsUnfixedCount = summaryWmsConfirmedRows.length - summaryWmsFixedCount;
-  const summaryWmsFixedPercent = summaryWmsConfirmedRows.length > 0
-    ? Math.round((summaryWmsFixedCount / summaryWmsConfirmedRows.length) * 100)
+  // Progress means completed WMS checks out of every DIFF item.
+  // Pending-confirmation items stay in the denominator and are not completed.
+  const summaryWmsFixedPercent = summaryWmsTotalCount > 0
+    ? Math.round((summaryWmsFixedCount / summaryWmsTotalCount) * 100)
     : 0;
-  const summaryWmsUnfixedPercent = summaryWmsConfirmedRows.length > 0 ? 100 - summaryWmsFixedPercent : 0;
+  const summaryWmsUnfixedPercent = summaryWmsTotalCount > 0
+    ? Math.round((summaryWmsUnfixedCount / summaryWmsTotalCount) * 100)
+    : 0;
   const summaryWmsPendingPercent = summaryWmsTotalCount > 0
     ? Math.round((summaryWmsPendingCount / summaryWmsTotalCount) * 100)
     : 0;
@@ -21230,8 +21235,8 @@ async function loadSvDash() {
   const wmsConfirmedRows = allWmsRows.filter(v => !v._isPending);
   const wmsFixedCount = wmsConfirmedRows.filter(v => v.wms_fixed).length;
   const wmsUnfixedCount = wmsConfirmedRows.length - wmsFixedCount;
-  const wmsFixedPercent = wmsConfirmedRows.length > 0
-    ? Math.round((wmsFixedCount / wmsConfirmedRows.length) * 100)
+  const wmsFixedPercent = wmsTotalCount > 0
+    ? Math.round((wmsFixedCount / wmsTotalCount) * 100)
     : 0;
 
   const errorBanner = vaError 
@@ -21256,7 +21261,7 @@ async function loadSvDash() {
           </div>
         </div>
         <div class="wms-progress-row">
-          <span>ความคืบหน้าจากรายการที่คอนเฟิร์มแล้ว</span>
+          <span>ความคืบหน้าการตรวจสอบทั้งหมด</span>
           <strong id="wms-fixed-percent">${wmsFixedPercent}%</strong>
         </div>
         <div class="wms-progress-track"><span id="wms-fixed-progress" style="width:${wmsFixedPercent}%"></span></div>
@@ -21385,7 +21390,7 @@ function updateWmsOverview() {
   const confirmedRows = rows.filter(v => !v._isPending);
   const fixedCount = confirmedRows.filter(v => v.wms_fixed).length;
   const unfixedCount = confirmedRows.length - fixedCount;
-  const percent = confirmedRows.length ? Math.round((fixedCount / confirmedRows.length) * 100) : 0;
+  const percent = rows.length ? Math.round((fixedCount / rows.length) * 100) : 0;
   const values = {
     'wms-total-count': rows.length,
     'wms-pending-count': pendingCount,
