@@ -15360,7 +15360,7 @@ function countAuditValue(record,round) {
   const parts = [
     `รอบ ${round}`,
     `QTY ${record?.count_qty ?? '—'}`,
-    `คนนับจริง ${record?.actual_counter_name || 'ไม่ระบุ'}`,
+    `ผู้ตรวจนับ ${record?.actual_counter_name || 'ไม่ระบุ'}`,
   ];
   if (record?.remark) parts.push(`หมายเหตุ ${String(record.remark).replace(/\s+/g,' ').trim()}`);
   if (record?.photo_url) parts.push('มีรูป');
@@ -16705,7 +16705,7 @@ async function createFoundItemRecord(payload) {
     payload.item_id,
     'found_item_recorded',
     null,
-    `ITEM ${payload.item_code || '—'} · LPN ${payload.license_plate} · Lot ${payload.lot || '—'} · Status ${payload.inventory_status || '—'} · QTY ${payload.qty} · คนนับจริง ${payload.actual_counter_name || 'ไม่ระบุ'}`,
+    `ITEM ${payload.item_code || '—'} · LPN ${payload.license_plate} · Lot ${payload.lot || '—'} · Status ${payload.inventory_status || '—'} · QTY ${payload.qty} · ผู้ตรวจนับ ${payload.actual_counter_name || 'ไม่ระบุ'}`,
     payload.assignment_id,
   );
   return data;
@@ -17856,7 +17856,7 @@ async function submitCount(aid, round, idsStr, annualJobId='') {
     null,
     'count_round_submit',
     `สถานะ ${asgn.status || 'pending'}`,
-    `ยืนยันรอบ ${round} · ผล ${newStatus} · คนนับจริง ${actualCounterName}`,
+    `ยืนยันรอบ ${round} · ผล ${newStatus} · ผู้ตรวจนับ ${actualCounterName}`,
     aid,
   );
   window._photoMap = {};
@@ -18091,7 +18091,7 @@ const WORK_TRACKER_FILTERS = {
   status:{ state:'_trackerStatus', field:'statusKey', label:'สถานะงาน' },
   round:{ state:'_trackerRound', field:'roundCount', label:'รอบล่าสุด' },
   user:{ state:'_trackerUser', field:'assignedUser', label:'USER ผู้รับงาน' },
-  counter:{ state:'_trackerCounter', field:'latestCounter', label:'คนนับจริง' },
+  counter:{ state:'_trackerCounter', field:'latestCounter', label:'ผู้ตรวจนับ' },
   category:{ state:'_trackerCategory', field:'category', label:'CATEGORY' },
   uom:{ state:'_trackerUom', field:'uom', label:'UOM' },
   inventory:{ state:'_trackerInventory', field:'inventoryStatus', label:'Inventory Status' },
@@ -18413,7 +18413,7 @@ function workTrackerViewHtml() {
         ${selectField('status','สถานะงาน')}
         ${selectField('round','รอบล่าสุด')}
         ${selectField('user','USER ผู้รับงาน')}
-        ${selectField('counter','คนนับจริง')}
+        ${selectField('counter','ผู้ตรวจนับ')}
         ${selectField('category','CATEGORY')}
         ${selectField('uom','UOM')}
         ${selectField('inventory','Inventory Status')}
@@ -19225,7 +19225,7 @@ function showWarehouseLocationDetail(code) {
       <div class="warehouse-layout-detail-card"><span>ช่อง / ระดับ</span><strong>${escapeWmsText(detail.bayText)} · ${escapeWmsText(detail.level)}</strong></div>
       <div class="warehouse-layout-detail-card"><span>JOB</span><strong>${escapeWmsText(jobs)}</strong></div>
       <div class="warehouse-layout-detail-card"><span>รอบล่าสุด</span><strong>${escapeWmsText(latestRound)}</strong></div>
-      <div class="warehouse-layout-detail-card"><span>ผู้รับผิดชอบ / คนนับจริง</span><strong>${escapeWmsText(assignmentUser)}</strong></div>
+      <div class="warehouse-layout-detail-card"><span>ผู้รับผิดชอบ / ผู้ตรวจนับ</span><strong>${escapeWmsText(assignmentUser)}</strong></div>
     </div>
     <div class="alert alert-blue" style="margin-top:14px">Layout แสดงเฉพาะสถานะงานและไม่แสดงยอด OH/QTY จึงใช้ได้กับ Blind Count โดยไม่เปิดเผยยอด</div>
   `);
@@ -20529,7 +20529,7 @@ async function loadSvDash() {
       <div class="tab-row" style="display:flex;align-items:center;gap:12px; padding: 10px;" onclick="toggleVarianceDetail('${a.id}',${i})">
         <div style="flex:1;min-width:0">
           <div class="mono" style="font-size:16px;font-weight:800;color:var(--text-main)">${l?.code||'?'}</div>
-          <div style="font-size:13px;color:var(--text-muted);margin-top:4px;font-weight:600">👤 คนนับจริง: ${escapeWmsText((actualCountersByAssignment[a.id] || []).join(', ') || 'ไม่ระบุคนนับ')} · ${[l?.zone,l?.row_no,l?.level].filter(Boolean).join(' · ')}</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-top:4px;font-weight:600">👤 ผู้ตรวจนับ: ${escapeWmsText((actualCountersByAssignment[a.id] || []).join(', ') || 'ไม่ระบุคนนับ')} · ${[l?.zone,l?.row_no,l?.level].filter(Boolean).join(' · ')}</div>
         </div>
         <span class="tag ${si.cls}">${si.lbl}</span>
         <span class="caret" style="font-size:18px">▾</span>
@@ -20780,8 +20780,8 @@ async function loadSvDash() {
 
   const teamProgressTabHtml = `
     <div>
-      <div style="font-size:18px;font-weight:800;color:var(--text-main);margin-bottom:18px">👥 ความคืบหน้าคนนับจริง (Team Progress)</div>
-      ${peopleRows || `<div style="padding:30px 0;text-align:center;color:var(--text-muted);font-size:14px;font-weight:600">ยังไม่มีข้อมูลคนนับจริง</div>`}
+      <div style="font-size:18px;font-weight:800;color:var(--text-main);margin-bottom:18px">👥 ความคืบหน้าผู้ตรวจนับ (Team Progress)</div>
+      ${peopleRows || `<div style="padding:30px 0;text-align:center;color:var(--text-muted);font-size:14px;font-weight:600">ยังไม่มีข้อมูลผู้ตรวจนับ</div>`}
     </div>`;
 
   const varianceTabHtml = `
@@ -21548,7 +21548,7 @@ function renderWmsList() {
         <div class="wms-row-meta">
           Zone ${escapeWmsText(loc?.zone || '—')} · ROW ${escapeWmsText(loc?.row_no ?? '—')} · Level ${escapeWmsText(loc?.level ?? '—')}<br>
           ${isPending 
-            ? `คนนับจริง: ${actualCounterText}`
+            ? `ผู้ตรวจนับ: ${actualCounterText}`
             : `ยืนยันโดย User: ${escapeWmsText(v.profiles?.name||'?')}`
           }
         </div>
@@ -21870,7 +21870,7 @@ async function loadSvList() {
     html += `<div class="row click" data-location-sort-code="${escapeWmsText(l?.code || '')}" onclick="go('sv-detail',{aid:'${a.id}'})">
       <div class="row-body">
         <div class="row-title mono">${l.code}</div>
-        <div class="row-sub">${[l.zone,l.area].filter(Boolean).join(' · ')} · <span style="font-weight:700; color:var(--primary-blue)">คนนับจริง: ${escapeWmsText((counterMap[a.id] || []).join(', ') || 'ไม่ระบุคนนับ')}</span></div>
+        <div class="row-sub">${[l.zone,l.area].filter(Boolean).join(' · ')} · <span style="font-weight:700; color:var(--primary-blue)">ผู้ตรวจนับ: ${escapeWmsText((counterMap[a.id] || []).join(', ') || 'ไม่ระบุคนนับ')}</span></div>
       </div>
       <span class="tag ${si.cls}">${si.lbl}</span>
       <span class="caret">›</span>
@@ -22161,7 +22161,7 @@ async function loadSvDetail() {
     <div class="card">
       <div class="mono" style="font-size:22px;font-weight:800;color:var(--text-main)">${l.code}</div>
       <div style="font-size:14px;color:var(--text-muted);margin-top:6px; font-weight:600;">
-        ${[l.zone,l.area].filter(Boolean).join(' · ')} · คนนับจริง: <span style="color:var(--primary-blue)">${actualCounterDisplay}</span>
+        ${[l.zone,l.area].filter(Boolean).join(' · ')} · ผู้ตรวจนับ: <span style="color:var(--primary-blue)">${actualCounterDisplay}</span>
       </div>
       <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
         <span class="tag tag-blue">รอบที่ ${roundNum}</span>
@@ -22811,7 +22811,7 @@ async function renderManageAssign(container) {
           </div>
           <div class="assign-role-note">
             <span>ℹ️</span>
-            <span><strong>User ผู้รับงาน</strong> คือบัญชีที่ใช้ล็อกอินและรับ Location ส่วน <strong>คนนับจริง</strong> จะเลือกภายในหน้าบันทึกการนับและใช้ในรายงาน ทั้งสองรายการแยกจากกัน</span>
+            <span><strong>User ผู้รับงาน</strong> คือบัญชีที่ใช้ล็อกอินและรับ Location ส่วน <strong>ผู้ตรวจนับ</strong> จะเลือกภายในหน้าบันทึกการนับและใช้ในรายงาน ทั้งสองรายการแยกจากกัน</span>
           </div>
           <details class="assign-zone-details" id="zoneDashDetails" ontoggle="if(this.open)refreshZoneDashboard()">
             <summary>
@@ -24713,7 +24713,7 @@ function printMetaHtml(pageIndex,totalPages) {
 
 function printSignatureHtml(className = 'pf-footer') {
   if (!uiBranding.printShowSignatures) return '';
-  return `<footer class="${className}"><div>คนนับจริง........................................</div><div>เวลาเริ่ม........................</div><div>เวลาจบ........................</div></footer>`;
+  return `<footer class="${className}"><div>ผู้ตรวจนับ........................................</div><div>เวลาเริ่ม........................</div><div>เวลาจบ........................</div></footer>`;
 }
 
 function detailedItemHtml(row,showOH) {
@@ -25357,7 +25357,7 @@ async function loadAdHistory() {
       </div>
       <div class="grid-3" style="margin-bottom:10px">
         <div><label style="font-size:11px">SESSION</label><select id="hist-sess" onchange="setHistoryFilter('session',this.value)">${sessionOptions}</select></div>
-        <div><label style="font-size:11px">คนนับจริง</label><select id="hist-cnt" onchange="setHistoryFilter('counter',this.value)">${counterOptions}</select></div>
+        <div><label style="font-size:11px">ผู้ตรวจนับ</label><select id="hist-cnt" onchange="setHistoryFilter('counter',this.value)">${counterOptions}</select></div>
         <div><label style="font-size:11px">สถานะ</label><select id="hist-st" onchange="setHistoryFilter('status',this.value)">${statusOptions}</select></div>
       </div>
     </div>
@@ -25434,7 +25434,7 @@ async function loadAdHistory() {
     const latestText = historyEvent?.latestAt && historyEvent.latestAt !== historyEvent.startedAt
       ? ` · ล่าสุด ${new Date(historyEvent.latestAt).toLocaleString('th-TH')}`
       : '';
-    return `<div class="row click" data-location-sort-code="${escapeWmsText(assignment.locations?.code || '')}" onclick="go('ad-txlog',{aid:'${assignment.id}'})"><div class="row-body"><div class="row-title mono">${escapeWmsText(assignment.locations?.code || '?')}</div><div class="row-sub"><span style="color:var(--primary-blue);font-weight:700">${escapeWmsText(assignment.count_sessions?.name || '')}</span> · คนนับจริง: ${escapeWmsText(countedBy)}</div><div class="row-sub">${startText}${latestText}</div></div><span class="tag ${info.cls}">${info.lbl}</span><span class="caret">›</span></div>`;
+    return `<div class="row click" data-location-sort-code="${escapeWmsText(assignment.locations?.code || '')}" onclick="go('ad-txlog',{aid:'${assignment.id}'})"><div class="row-body"><div class="row-title mono">${escapeWmsText(assignment.locations?.code || '?')}</div><div class="row-sub"><span style="color:var(--primary-blue);font-weight:700">${escapeWmsText(assignment.count_sessions?.name || '')}</span> · ผู้ตรวจนับ: ${escapeWmsText(countedBy)}</div><div class="row-sub">${startText}${latestText}</div></div><span class="tag ${info.cls}">${info.lbl}</span><span class="caret">›</span></div>`;
   }).join('') + '</div>';
 }
 
@@ -25492,7 +25492,7 @@ async function loadAdTxLog() {
     if (ev.type === 'count') {
       const r = ev.data; const ohInfo = ohMap[r.item_id];
       const itemLabel = isEmptyLocationItem(r.items?.code) ? 'Location ว่าง' : escapeWmsText(r.items?.code || '');
-      rows += `<div class="row" style="cursor:default;flex-wrap:wrap"><div class="row-body"><div class="row-title mono" style="font-size:14px">${itemLabel}</div><div class="row-sub">${escapeWmsText(r.items?.description||'')}</div><div class="row-sub">รอบ ${r.round} · คนนับจริง: ${escapeWmsText(r.actual_counter_name || 'ไม่ระบุคนนับ')}</div><div class="row-sub">${r.counted_at ? new Date(r.counted_at).toLocaleString('th-TH') : ''}</div>${r.remark ? `<div class="row-sub" style="color:var(--primary-blue); font-weight:600;">📝 ${escapeWmsText(r.remark)}</div>` : ''}${r.photo_url ? `<a href="${r.photo_url}" target="_blank" style="color:var(--accent-red)">📷 ดูรูป</a>` : ''}</div><div style="text-align:right;flex-shrink:0"><div style="font-size:32px;font-weight:800;font-family:'Fredoka';color:var(--text-main)">${r.count_qty}</div><span class="tag tag-blue" style="font-size:10px">R${r.round}</span>${ohInfo ? `<div class="oh-chip" style="margin-top:8px;font-size:12px;padding:4px 10px">OH: ${ohInfo.oh}${ohInfo.al!=null?` <span class="al-part">· AL ${ohInfo.al}</span>`:''}</div>` : ''}</div></div>`;
+      rows += `<div class="row" style="cursor:default;flex-wrap:wrap"><div class="row-body"><div class="row-title mono" style="font-size:14px">${itemLabel}</div><div class="row-sub">${escapeWmsText(r.items?.description||'')}</div><div class="row-sub">รอบ ${r.round} · ผู้ตรวจนับ: ${escapeWmsText(r.actual_counter_name || 'ไม่ระบุคนนับ')}</div><div class="row-sub">${r.counted_at ? new Date(r.counted_at).toLocaleString('th-TH') : ''}</div>${r.remark ? `<div class="row-sub" style="color:var(--primary-blue); font-weight:600;">📝 ${escapeWmsText(r.remark)}</div>` : ''}${r.photo_url ? `<a href="${r.photo_url}" target="_blank" style="color:var(--accent-red)">📷 ดูรูป</a>` : ''}</div><div style="text-align:right;flex-shrink:0"><div style="font-size:32px;font-weight:800;font-family:'Fredoka';color:var(--text-main)">${r.count_qty}</div><span class="tag tag-blue" style="font-size:10px">R${r.round}</span>${ohInfo ? `<div class="oh-chip" style="margin-top:8px;font-size:12px;padding:4px 10px">OH: ${ohInfo.oh}${ohInfo.al!=null?` <span class="al-part">· AL ${ohInfo.al}</span>`:''}</div>` : ''}</div></div>`;
     } else if (ev.type === 'approval') {
       const a = ev.data; const isOk = a.resolution === 'ok';
       const itemLabel = isEmptyLocationItem(a.items?.code) ? 'Location ว่าง' : escapeWmsText(a.items?.code || '');
@@ -25506,7 +25506,7 @@ async function loadAdTxLog() {
   cnt().innerHTML = `
     <div class="card">
       <div class="mono" style="font-size:22px;font-weight:800">${asgn.locations?.code}</div>
-      <div style="font-size:14px;color:var(--text-muted);margin-top:6px; font-weight:600;"><span style="color:var(--primary-blue)">${asgn.count_sessions?.name||''}</span> · คนนับจริง: ${escapeWmsText(pageCounterLabel)}</div>
+      <div style="font-size:14px;color:var(--text-muted);margin-top:6px; font-weight:600;"><span style="color:var(--primary-blue)">${asgn.count_sessions?.name||''}</span> · ผู้ตรวจนับ: ${escapeWmsText(pageCounterLabel)}</div>
       <div style="margin-top:12px"><span class="tag ${si.cls}">${si.lbl}</span></div>
       ${showMismatchWarning ? `<div class="alert alert-red" style="margin-top:16px">⚠️ พบ ${mismatchItems.length} รายการที่ยอดนับไม่ตรงกับ OH ปัจจุบัน</div><button class="btn btn-red btn-sm" onclick="sendBackToVariance('${aid}')">📤 ส่งกลับไปตรวจสอบใน Variance</button>` : ''}
     </div>
@@ -26415,7 +26415,7 @@ async function renderManageBackup(container) {
       Excel จะเปิดที่ชีต Data_Count ซึ่งรวมข้อมูล Stock / LPN ทั้งหมดของ Session โดยไม่กรองเฉพาะ Gain / Lost
       พร้อม Location, Zone, LPN, Lot, Inventory Status, Item, Stock Onhand ราย LPN/Lot,
       AL Qty และ Count 1–3 ซึ่งกระจายยอดนับจาก LPN บนลงล่างและคำนวณ Variance ราย LPN,
-      คนนับจริงและเวลานับแยกรอบ, หมายเหตุ, รูปถ่าย และสถานะ WMS ให้ทีมอื่นนำไปใช้ต่อได้<br>
+      ผู้ตรวจนับและเวลานับแยกรอบ, หมายเหตุ, รูปถ่าย และสถานะ WMS ให้ทีมอื่นนำไปใช้ต่อได้<br>
       <span style="font-size:11px">แสดงเฉพาะ Data_Count, Found_Work, Info_Master, Session_Summary และ README · ข้อมูลระบบที่จำเป็นถูกซ่อนไว้เพื่อให้ Restore ได้ · บัญชี User Login และรหัสผ่านไม่อยู่ในไฟล์</span>
     </div>
     <div class="backup-grid">
@@ -29094,7 +29094,7 @@ async function loadAdUsers() {
     </section>
     ${masterGroup('🔑','User ที่ใช้ล็อกอินและรับงาน',users?.length || 0,
       userRows || `<div class="load" style="padding:24px">ยังไม่มี User</div>`)}
-    ${masterGroup('👥','คนนับจริง',counters?.length || 0,`
+    ${masterGroup('👥','ผู้ตรวจนับ',counters?.length || 0,`
       ${counterRows || `<div class="load" style="padding:24px">ยังไม่มีคนนับ</div>`}
       <div style="display:flex;gap:8px;padding:14px 16px;flex-wrap:wrap">
         <input id="admin_counter_new" placeholder="เพิ่มชื่อคนนับใหม่..." maxlength="120" style="flex:1;min-width:180px">
