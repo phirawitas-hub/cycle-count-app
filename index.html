@@ -6,13 +6,14 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v130 - Dashboard Labels and WMS Alignment</title>
+<title>Cycle Count v132 - Safe A4 Dashboard Export</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.min.js"></script>
 <!-- SheetJS สำหรับอ่านไฟล์ XLSX -->
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <!-- html5-qrcode สำหรับสแกน Location -->
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
@@ -13074,9 +13075,81 @@ body .tag.tag-gray{
   }
 }
 
+/* v132 — safe dashboard image export and larger hourly chart labels. */
+#dash-content .summary-hour-svg-label{
+  font-size:22px !important;
+  font-weight:800 !important;
+}
+#dash-content .summary-hour-axis-text{
+  font-size:18px !important;
+  font-weight:800 !important;
+}
+.dashboard-export-image-btn{
+  height:48px;
+  flex:0 0 auto;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:0 15px;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 30%,transparent);
+  border-radius:15px;
+  color:var(--theme-primary-text);
+  background:var(--theme-primary-color);
+  box-shadow:0 8px 20px color-mix(in srgb,var(--theme-primary-color) 20%,transparent);
+  font:700 11px 'Mitr',sans-serif;
+  white-space:nowrap;
+  cursor:pointer;
+}
+.dashboard-export-image-btn:hover{transform:translateY(-1px);filter:brightness(.98)}
+.dashboard-export-image-btn:disabled{opacity:.65;cursor:wait;transform:none}
+.dashboard-export-image-btn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.dashboard-a4-capture-host{
+  position:fixed !important;
+  left:0 !important;
+  top:0 !important;
+  z-index:-2147483647 !important;
+  width:1120px !important;
+  padding:0 !important;
+  overflow:visible !important;
+  pointer-events:none !important;
+  background:var(--theme-page-bg) !important;
+}
+.dashboard-a4-capture-host #dash-content{
+  width:1120px !important;
+  max-width:none !important;
+  min-width:1120px !important;
+  padding:0 !important;
+  overflow:visible !important;
+}
+.dashboard-a4-capture-host #dash-content .summary-dashboard-grid{
+  width:1120px !important;
+  min-width:1120px !important;
+  max-width:1120px !important;
+}
+.dashboard-a4-capture-host #dash-content .summary-hour-chart-line{
+  overflow:visible !important;
+}
+.dashboard-a4-capture-host #dash-content .summary-hour-svg{
+  width:100% !important;
+  min-width:0 !important;
+  max-width:100% !important;
+}
+/* Decorative pseudo-elements may still expose CSS Color 4 values to html2canvas. */
+.dashboard-a4-capture-host .dashboard-a4-export::before,
+.dashboard-a4-capture-host .dashboard-a4-export::after,
+.dashboard-a4-capture-host .dashboard-a4-export *::before,
+.dashboard-a4-capture-host .dashboard-a4-export *::after{
+  display:none !important;
+  content:none !important;
+}
+@media(max-width:700px){
+  .dashboard-export-image-btn{width:100%;flex:1 1 100%}
+}
+
 </style>
 </head>
-<body data-build="v130-dashboard-labels-wms-alignment">
+<body data-build="v132-safe-a4-dashboard-export">
 <div id="app"></div>
 
 <script>
@@ -13146,7 +13219,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v130-dashboard-labels-wms-alignment';
+window.__CYCLE_COUNT_BUILD__ = 'v132-safe-a4-dashboard-export';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -15556,7 +15629,7 @@ function applyBrandingSettings(settings, persistLocal = true) {
     const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
     root.setProperty(`--theme-${cssKey}`, uiBranding[key]);
   });
-  document.title = `${uiBranding.systemName} v130`;
+  document.title = `${uiBranding.systemName} v132`;
   if (persistLocal) {
     try { localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(uiBranding)); } catch (_) {}
   }
@@ -15715,6 +15788,10 @@ function dashboardFilterIconSvg(type) {
   return `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4M16 3v4M4 10h16"/><path d="M8 14h8M8 17h5"/></svg>`;
 }
 
+function dashboardExportIconSvg() {
+  return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>`;
+}
+
 function dashboardFiltersHtml(sessionOptionsHtml, includeLocationSort = true) {
   const hasDate = Boolean(selectedDateFrom);
   return `
@@ -15739,6 +15816,184 @@ function dashboardFiltersHtml(sessionOptionsHtml, includeLocationSort = true) {
     ${includeLocationSort ? locationSortControlHtml(true) : ''}`;
 }
 
+async function ensureDashboardCaptureLibrary() {
+  if (typeof window.html2canvas === 'function') return window.html2canvas;
+  await new Promise((resolve,reject) => {
+    const existing = document.querySelector('script[data-dashboard-capture]');
+    if (existing) {
+      existing.addEventListener('load',resolve,{once:true});
+      existing.addEventListener('error',reject,{once:true});
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+    script.dataset.dashboardCapture = 'true';
+    script.onload = resolve;
+    script.onerror = () => reject(new Error('โหลดระบบสร้างภาพไม่สำเร็จ'));
+    document.head.appendChild(script);
+  });
+  if (typeof window.html2canvas !== 'function') throw new Error('ระบบสร้างภาพไม่พร้อมใช้งาน');
+  return window.html2canvas;
+}
+
+// html2canvas 1.4 does not understand CSS Color 4's color(...) syntax.
+// Convert only the detached export copy to legacy rgba(), leaving the live UI untouched.
+function legacyDashboardCaptureColor(value) {
+  const colorFunction = /color\(\s*(srgb(?:-linear)?|display-p3)\s+([+-]?(?:\d*\.)?\d+%?)\s+([+-]?(?:\d*\.)?\d+%?)\s+([+-]?(?:\d*\.)?\d+%?)(?:\s*\/\s*([+-]?(?:\d*\.)?\d+%?))?\s*\)/gi;
+  const clampUnit = number => Math.max(0,Math.min(1,Number.isFinite(number) ? number : 0));
+  const parseUnit = token => clampUnit(String(token).endsWith('%') ? parseFloat(token) / 100 : parseFloat(token));
+  const toSrgb = value => value <= .0031308 ? value * 12.92 : (1.055 * Math.pow(value,1 / 2.4)) - .055;
+  return String(value || '').replace(colorFunction,(_match,colorSpace,redToken,greenToken,blueToken,alphaToken) => {
+    let red = parseUnit(redToken);
+    let green = parseUnit(greenToken);
+    let blue = parseUnit(blueToken);
+    if (String(colorSpace).toLowerCase() === 'srgb-linear') {
+      red = clampUnit(toSrgb(red));
+      green = clampUnit(toSrgb(green));
+      blue = clampUnit(toSrgb(blue));
+    }
+    const alpha = alphaToken == null ? 1 : parseUnit(alphaToken);
+    return `rgba(${Math.round(red * 255)}, ${Math.round(green * 255)}, ${Math.round(blue * 255)}, ${Number(alpha.toFixed(4))})`;
+  });
+}
+
+function normalizeDashboardCaptureColors(root) {
+  if (!root) return;
+  const captureView = root.ownerDocument?.defaultView || window;
+  const colorProperties = [
+    'color','background-color','background-image',
+    'border-top-color','border-right-color','border-bottom-color','border-left-color',
+    'outline-color','text-decoration-color','caret-color',
+    'box-shadow','text-shadow','fill','stroke','filter',
+    '-webkit-text-fill-color','-webkit-text-stroke-color'
+  ];
+  [root,...root.querySelectorAll('*')].forEach(element => {
+    const computed = captureView.getComputedStyle(element);
+    colorProperties.forEach(property => {
+      const currentValue = computed.getPropertyValue(property);
+      if (!/color\(/i.test(currentValue)) return;
+      const safeValue = legacyDashboardCaptureColor(currentValue);
+      if (safeValue !== currentValue) element.style.setProperty(property,safeValue,'important');
+    });
+  });
+}
+
+async function downloadSummaryA4Image(button) {
+  const source = Q('dash-content');
+  const sourceGrid = source?.querySelector('.summary-dashboard-grid');
+  if (!source || !sourceGrid || (S._dashTab || _dashTab) !== 'summary') {
+    alert(uiCopy('กรุณาเปิดเมนูสรุปภาพรวมก่อนดาวน์โหลด','Open the Summary dashboard before downloading.'));
+    return;
+  }
+
+  const originalButtonHtml = button?.innerHTML || '';
+  let captureHost = null;
+  try {
+    if (button) {
+      button.disabled = true;
+      button.innerHTML = `<span data-i18n-skip>${uiCopy('กำลังสร้างภาพ…','Creating image…')}</span>`;
+    }
+    const captureDashboard = await ensureDashboardCaptureLibrary();
+    if (document.fonts?.ready) await document.fonts.ready;
+
+    captureHost = document.createElement('div');
+    captureHost.className = 'dashboard-a4-capture-host';
+    const clonedDashboard = source.cloneNode(true);
+    clonedDashboard.querySelectorAll('[id]').forEach(element => element.removeAttribute('id'));
+    clonedDashboard.id = 'dash-content';
+    clonedDashboard.classList.add('dashboard-a4-export');
+    captureHost.appendChild(clonedDashboard);
+    document.body.appendChild(captureHost);
+
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    normalizeDashboardCaptureColors(clonedDashboard);
+    const clonedGrid = clonedDashboard.querySelector('.summary-dashboard-grid');
+    const captureWidth = Math.ceil(clonedGrid.scrollWidth || clonedGrid.getBoundingClientRect().width || 1120);
+    const captureHeight = Math.ceil(clonedGrid.scrollHeight || clonedGrid.getBoundingClientRect().height || 760);
+    const dashboardCanvas = await captureDashboard(clonedGrid, {
+      backgroundColor:null,
+      scale:2,
+      useCORS:true,
+      logging:false,
+      width:captureWidth,
+      height:captureHeight,
+      windowWidth:1120,
+      windowHeight:820,
+      scrollX:0,
+      scrollY:0,
+      onclone:clonedDocument => {
+        normalizeDashboardCaptureColors(clonedDocument.querySelector('.dashboard-a4-export'));
+      },
+    });
+
+    const pageWidth = 3508;
+    const pageHeight = 2480;
+    const pageCanvas = document.createElement('canvas');
+    pageCanvas.width = pageWidth;
+    pageCanvas.height = pageHeight;
+    const context = pageCanvas.getContext('2d');
+    const bodyBackground = getComputedStyle(document.body).backgroundColor;
+    context.fillStyle = bodyBackground && bodyBackground !== 'rgba(0, 0, 0, 0)' ? bodyBackground : '#FCF9EA';
+    context.fillRect(0,0,pageWidth,pageHeight);
+
+    const marginX = 105;
+    const headerTop = 70;
+    const contentTop = 245;
+    const contentBottom = 110;
+    const availableWidth = pageWidth - (marginX * 2);
+    const availableHeight = pageHeight - contentTop - contentBottom;
+    const drawScale = Math.min(availableWidth / dashboardCanvas.width, availableHeight / dashboardCanvas.height);
+    const drawWidth = dashboardCanvas.width * drawScale;
+    const drawHeight = dashboardCanvas.height * drawScale;
+    const drawX = (pageWidth - drawWidth) / 2;
+    const drawY = contentTop + ((availableHeight - drawHeight) / 2);
+
+    const sessionName = document.querySelector('.dashboard-session-filter select')?.selectedOptions?.[0]?.textContent?.trim() || '-';
+    const rangeLabel = dashboardDateRangeLabel();
+    context.fillStyle = '#173F45';
+    context.font = "700 64px Mitr, Sarabun, sans-serif";
+    context.textBaseline = 'top';
+    context.fillText(uiCopy('สรุปผล Cycle Count','Cycle Count Summary'),marginX,headerTop);
+    context.fillStyle = '#587277';
+    context.font = "600 30px Mitr, Sarabun, sans-serif";
+    context.fillText(`${uiCopy('Session','Session')}: ${sessionName}   •   ${uiCopy('ช่วงวันที่','Date range')}: ${rangeLabel}`,marginX,headerTop + 88);
+
+    context.drawImage(dashboardCanvas,drawX,drawY,drawWidth,drawHeight);
+
+    context.fillStyle = '#718489';
+    context.font = "500 24px Mitr, Sarabun, sans-serif";
+    context.textAlign = 'right';
+    const generatedAt = new Date().toLocaleString(uiLocale(), { dateStyle:'medium', timeStyle:'short' });
+    context.fillText(`${escapeWmsText(uiBranding.systemName)} · ${generatedAt}`,pageWidth - marginX,pageHeight - 68);
+    context.textAlign = 'left';
+
+    const blob = await new Promise(resolve => pageCanvas.toBlob(resolve,'image/png',1));
+    if (!blob) throw new Error('ไม่สามารถสร้างไฟล์ภาพได้');
+    const safeSessionName = sessionName.replace(/[^\p{L}\p{N}_-]+/gu,'_').replace(/^_+|_+$/g,'').slice(0,48) || 'Session';
+    const link = document.createElement('a');
+    const objectUrl = URL.createObjectURL(blob);
+    link.href = objectUrl;
+    link.download = `Cycle_Count_Summary_${safeSessionName}_${localDateKey(new Date())}_A4.png`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl),1500);
+    showActionSuccessToast(uiCopy('ดาวน์โหลดภาพสรุป A4 แนวนอนแล้ว','A4 landscape summary image downloaded.'), {
+      title:uiCopy('สร้างรายงานสำเร็จ','Report created'),
+      duration:3200,
+    });
+  } catch (error) {
+    console.error('A4 dashboard export failed:',error);
+    alert(`${uiCopy('สร้างภาพสรุปไม่สำเร็จ','Could not create the summary image')}: ${error?.message || error}`);
+  } finally {
+    captureHost?.remove();
+    if (button) {
+      button.disabled = false;
+      button.innerHTML = originalButtonHtml;
+    }
+  }
+}
+
 function dashboardSessionControlHtml(tab, sessionOptionsHtml) {
   if (tab === 'summary') {
     return `<div class="summary-page-header">
@@ -15746,7 +16001,12 @@ function dashboardSessionControlHtml(tab, sessionOptionsHtml) {
         <div class="summary-greeting">Hello, ${escapeWmsText(prof?.name || 'User')}</div>
         <div class="summary-greeting-sub">${escapeWmsText(uiBranding.systemName)} Dashboard</div>
       </div>
-      <div class="summary-header-actions">${dashboardFiltersHtml(sessionOptionsHtml, false)}</div>
+      <div class="summary-header-actions">
+        ${dashboardFiltersHtml(sessionOptionsHtml, false)}
+        <button class="dashboard-export-image-btn" type="button" onclick="downloadSummaryA4Image(this)" title="${uiCopy('ดาวน์โหลดภาพสรุป A4 แนวนอน','Download A4 landscape summary image')}">
+          ${dashboardExportIconSvg()}<span data-i18n-skip>${uiCopy('ดาวน์โหลด A4','Download A4')}</span>
+        </button>
+      </div>
     </div>`;
   }
   if (tab === 'layout') {
@@ -16162,7 +16422,7 @@ async function protectedFunctionHeaders() {
   return {
     Authorization: `Bearer ${session.access_token}`,
     apikey: SUPA_KEY,
-    'x-client-info': 'cycle-count-v130',
+    'x-client-info': 'cycle-count-v132',
   };
 }
 
@@ -16688,7 +16948,7 @@ function renderResponsivePreviewContent() {
   const previewValues = [0,1,2,0,3,1,0,4,6,1,1,0,2,1,0];
   const previewSvgWidth = 1200;
   const previewSvgHeight = 220;
-  const previewMargin = { top:28, right:28, bottom:34, left:28 };
+  const previewMargin = { top:46, right:28, bottom:34, left:28 };
   const previewPlotW = previewSvgWidth - previewMargin.left - previewMargin.right;
   const previewPlotH = previewSvgHeight - previewMargin.top - previewMargin.bottom;
   const previewMax = Math.max(...previewValues,1);
@@ -16719,7 +16979,7 @@ function renderResponsivePreviewContent() {
   const previewDots = previewPoints.map(point =>
     `<circle cx="${point.x}" cy="${point.y}" r="${point.value ? 4.5 : 2.5}" class="summary-hour-dot ${point.value ? 'active' : ''}"/>`).join('');
   const previewPointLabels = previewPoints.map(point => point.value
-    ? `<text x="${point.x}" y="${point.y - 12}" text-anchor="middle" class="summary-hour-svg-label">${point.value}</text>`
+    ? `<text x="${point.x}" y="${point.y - 18}" text-anchor="middle" class="summary-hour-svg-label">${point.value}</text>`
     : '').join('');
   const previewAxisLabels = previewPoints.map(point =>
     `<text x="${point.x}" y="${previewSvgHeight - 8}" text-anchor="middle" class="summary-hour-axis-text">${String(point.hour).padStart(2,'0')}</text>`).join('');
@@ -16736,7 +16996,7 @@ function renderResponsivePreviewContent() {
     <div class="summary-page-header">
       <div class="summary-greeting-wrap">
         <div class="summary-greeting">Hello, AuD</div>
-        <div class="summary-greeting-sub">${escapeWmsText(uiBranding.systemName)} Dashboard · v130</div>
+        <div class="summary-greeting-sub">${escapeWmsText(uiBranding.systemName)} Dashboard · v132</div>
       </div>
       <div class="summary-header-actions">${dashboardFiltersHtml('<option>Cycle Count ก.ค. 2569</option>', false)}</div>
     </div>
@@ -16749,7 +17009,6 @@ function renderResponsivePreviewContent() {
           <div class="summary-accuracy-core">
             <div class="summary-card-heading">
               <div><h2 data-i18n-skip>Accuracy %</h2></div>
-              <span class="summary-card-chip">Session นี้</span>
             </div>
             <div class="summary-accuracy-hero">
               <div class="summary-accuracy-ring" style="--accuracy-angle:348.48deg">
@@ -22969,7 +23228,7 @@ async function loadSvDash() {
   const avgLocationsPerHour = activeHourSpan > 0 ? Math.round(dayCountTotal / activeHourSpan) : 0;
   const svgWidth = 1200;
   const svgHeight = 220;
-  const m = { top: 28, right: 18, bottom: 34, left: 18 };
+  const m = { top: 46, right: 18, bottom: 34, left: 18 };
   const plotW = svgWidth - m.left - m.right;
   const plotH = svgHeight - m.top - m.bottom;
   const stepX = chartHours.length > 1 ? plotW / (chartHours.length - 1) : plotW;
@@ -23005,7 +23264,7 @@ async function loadSvDash() {
   const areaPath = points.length
     ? `${linePath} L ${points[points.length - 1].x} ${chartBaseY} L ${points[0].x} ${chartBaseY} Z`
     : '';
-  const pointLabels = points.map(p => p.v ? `<text x="${p.x}" y="${p.y - 12}" text-anchor="middle" class="summary-hour-svg-label">${p.v}</text>` : '').join('');
+  const pointLabels = points.map(p => p.v ? `<text x="${p.x}" y="${p.y - 18}" text-anchor="middle" class="summary-hour-svg-label">${p.v}</text>` : '').join('');
   const pointDots = points.map(p => `<circle cx="${p.x}" cy="${p.y}" r="${p.v ? 4.5 : 2.5}" class="summary-hour-dot ${p.v ? 'active' : ''}"/>`).join('');
   const axisLabels = points.map(p => `<text x="${p.x}" y="${svgHeight - 8}" text-anchor="middle" class="summary-hour-axis-text">${String(p.h).padStart(2,'0')}</text>`).join('');
   const hourlyChartSvg = `<svg viewBox="0 0 ${svgWidth} ${svgHeight}" preserveAspectRatio="xMidYMid meet" class="summary-hour-svg" aria-label="Hourly counting chart">
@@ -23170,7 +23429,6 @@ async function loadSvDash() {
             <div>
               <h2 data-i18n-skip>Accuracy %</h2>
             </div>
-            <span class="summary-card-chip">Session นี้</span>
           </div>
           <div class="summary-accuracy-hero">
             <div class="summary-accuracy-ring" style="--accuracy-angle:${stockAccuracyNum * 3.6}deg">
