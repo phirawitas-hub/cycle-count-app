@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v159 - Complete Found Work Excel Backup</title>
+<title>Cycle Count v161 - iPad Fit Screen Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -14411,9 +14411,379 @@ margin-top:8px;
   -webkit-text-fill-color:var(--theme-accuracy-lost-text) !important;
 }
 
+/* ══════════════════════════════════════════════════════════
+   v161 — iPad fit-to-screen dashboard + in-app zoom controls
+   Keep the desktop composition, remove tablet overflow and make every
+   live chart responsive to the real visual viewport.
+   ══════════════════════════════════════════════════════════ */
+.tablet-viewport-controls {
+  display:none;
+  position:fixed;
+  right:max(12px,env(safe-area-inset-right));
+  bottom:max(12px,env(safe-area-inset-bottom));
+  z-index:4600;
+  align-items:center;
+  gap:5px;
+  min-height:48px;
+  padding:5px;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 26%,transparent);
+  border-radius:17px;
+  color:var(--theme-body-text-color);
+  background:color-mix(in srgb,var(--theme-card-bg) 94%,transparent);
+  box-shadow:0 14px 34px rgba(13,55,60,.24);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+}
+.tablet-viewport-controls button {
+  min-width:39px;
+  height:38px;
+  padding:0 10px;
+  border:0;
+  border-radius:12px;
+  display:grid;
+  place-items:center;
+  color:var(--theme-primary-color) !important;
+  background:color-mix(in srgb,var(--theme-primary-color) 9%,var(--theme-card-bg)) !important;
+  box-shadow:none !important;
+  font:900 18px 'Fredoka','Mitr',sans-serif;
+  cursor:pointer;
+}
+.tablet-viewport-controls button:disabled { opacity:.38; cursor:default; }
+.tablet-viewport-controls .tablet-fit-button {
+  min-width:75px;
+  font:800 10px 'Mitr',sans-serif;
+}
+.tablet-viewport-zoom {
+  min-width:49px;
+  color:var(--theme-heading-color);
+  font:900 11px 'Fredoka','Mitr',sans-serif;
+  text-align:center;
+}
+body.tablet-ui .tablet-viewport-controls { display:flex; }
+body.tablet-ui .page-content {
+  transform-origin:top left;
+  -webkit-transform-origin:top left;
+}
+
+@media (min-width:769px) and (max-width:1366px) {
+  body.tablet-ui {
+    padding:8px !important;
+    overflow:hidden !important;
+  }
+  body.tablet-ui .app-container {
+    width:100% !important;
+    height:var(--app-height,calc(100dvh - 16px)) !important;
+    min-height:0 !important;
+    margin:0 !important;
+    padding:6px !important;
+    gap:12px !important;
+    border-width:5px !important;
+    border-radius:30px !important;
+  }
+  body.tablet-ui .sidebar.collapsed {
+    width:76px !important;
+    min-width:76px !important;
+  }
+  body.tablet-ui .sidebar.collapsed .sidebar-menu {
+    padding-left:8px !important;
+    padding-right:8px !important;
+  }
+  body.tablet-ui .main-wrapper {
+    width:auto !important;
+    height:100% !important;
+    min-height:0 !important;
+    overflow-x:hidden !important;
+  }
+  body.tablet-ui .main-wrapper.summary-view {
+    overflow-y:hidden !important;
+  }
+  body.tablet-ui .main-wrapper.summary-view .topbar {
+    display:none !important;
+  }
+  body.tablet-ui .main-wrapper.summary-view .page-content {
+    height:100% !important;
+    min-height:0 !important;
+    padding:10px 12px 12px !important;
+    overflow:hidden !important;
+  }
+  body.tablet-ui .summary-page-header {
+    min-height:48px !important;
+    margin:0 0 10px !important;
+    padding:0 !important;
+    display:flex !important;
+    align-items:center !important;
+    gap:10px !important;
+  }
+  body.tablet-ui .summary-page-header .summary-greeting-wrap {
+    display:none !important;
+  }
+  body.tablet-ui .summary-header-actions {
+    width:100% !important;
+    min-width:0 !important;
+    max-width:none !important;
+    display:grid !important;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(138px,.72fr) !important;
+    gap:9px !important;
+  }
+  body.tablet-ui .summary-header-actions .dashboard-filter-control,
+  body.tablet-ui .summary-header-actions .dashboard-export-image-btn {
+    width:100% !important;
+    min-width:0 !important;
+    max-width:none !important;
+    height:48px !important;
+    min-height:48px !important;
+    margin:0 !important;
+  }
+  body.tablet-ui .summary-header-actions .dashboard-export-image-btn {
+    padding-inline:10px !important;
+  }
+  body.tablet-ui .summary-dashboard-content {
+    width:100% !important;
+    height:calc(100% - 58px) !important;
+    padding:0 !important;
+    overflow:hidden !important;
+  }
+  body.tablet-ui #dash-content .summary-dashboard-grid {
+    width:100% !important;
+    height:100% !important;
+    min-width:0 !important;
+    min-height:0 !important;
+    display:grid !important;
+    grid-template-columns:minmax(210px,.78fr) minmax(140px,.52fr) minmax(320px,1.3fr) !important;
+    grid-template-rows:minmax(82px,.67fr) minmax(142px,1.12fr) minmax(34px,.28fr) minmax(118px,.93fr) !important;
+    grid-template-areas:
+      "accuracy progress metrics"
+      "accuracy progress hourly"
+      "zones zones hourly"
+      "zones zones status" !important;
+    column-gap:16px !important;
+    row-gap:14px !important;
+    align-items:stretch !important;
+    overflow:visible !important;
+  }
+  body.tablet-ui #dash-content .summary-accuracy-card,
+  body.tablet-ui #dash-content .summary-progress-card {
+    width:100% !important;
+    max-width:none !important;
+    height:100% !important;
+    min-height:0 !important;
+    max-height:none !important;
+    margin:0 !important;
+  }
+  body.tablet-ui #dash-content .summary-accuracy-core {
+    width:100% !important;
+    height:100% !important;
+    min-height:0 !important;
+    padding:13px 14px 11px !important;
+    border-radius:25px !important;
+    overflow:hidden !important;
+  }
+  body.tablet-ui #dash-content .summary-accuracy-card .summary-accuracy-layer {
+    border-radius:25px !important;
+  }
+  body.tablet-ui #dash-content .summary-accuracy-card .summary-accuracy-layer-back {
+    transform:rotate(4deg) translate(7px,5px) !important;
+  }
+  body.tablet-ui #dash-content .summary-accuracy-card .summary-accuracy-layer-bottom {
+    transform:rotate(7deg) translate(11px,8px) !important;
+  }
+  body.tablet-ui #dash-content .summary-card-heading {
+    gap:6px !important;
+    margin-bottom:5px !important;
+  }
+  body.tablet-ui #dash-content .summary-card h2 {
+    font-size:14px !important;
+    line-height:1.2 !important;
+  }
+  body.tablet-ui #dash-content .summary-card-kicker {
+    font-size:7px !important;
+  }
+  body.tablet-ui #dash-content .summary-accuracy-hero {
+    flex:1 1 auto !important;
+    min-height:0 !important;
+    margin:2px 0 5px !important;
+  }
+  body.tablet-ui #dash-content .summary-accuracy-ring {
+    width:clamp(112px,16vw,142px) !important;
+    height:clamp(112px,16vw,142px) !important;
+    min-width:112px !important;
+    min-height:112px !important;
+  }
+  body.tablet-ui #dash-content .summary-accuracy-ring::before {
+    inset:24px !important;
+  }
+  body.tablet-ui #dash-content .summary-accuracy-ring-inner strong {
+    font-size:27px !important;
+  }
+  body.tablet-ui #dash-content .summary-accuracy-breakdown {
+    gap:6px !important;
+  }
+  body.tablet-ui #dash-content .summary-gain-loss {
+    min-width:0 !important;
+    padding:6px 4px !important;
+    border-radius:13px !important;
+  }
+  body.tablet-ui #dash-content .summary-gain-loss > span,
+  body.tablet-ui #dash-content .summary-gain-loss > small {
+    font-size:7px !important;
+  }
+  body.tablet-ui #dash-content .summary-gain-loss > strong {
+    font-size:12px !important;
+    white-space:nowrap !important;
+  }
+  body.tablet-ui #dash-content .summary-progress-card.summary-wms-bar-card {
+    height:100% !important;
+    min-height:0 !important;
+    max-height:none !important;
+    padding:12px 10px 9px !important;
+  }
+  body.tablet-ui #dash-content .summary-wms-total-block {
+    margin:4px 0 6px !important;
+    padding:8px !important;
+  }
+  body.tablet-ui #dash-content .summary-wms-total-block strong {
+    font-size:25px !important;
+  }
+  body.tablet-ui #dash-content .summary-wms-columns {
+    flex:1 1 auto !important;
+    height:auto !important;
+    min-height:68px !important;
+    margin-top:6px !important;
+  }
+  body.tablet-ui #dash-content .summary-wms-column-item {
+    grid-template-rows:18px minmax(42px,1fr) 25px !important;
+    gap:3px !important;
+  }
+  body.tablet-ui #dash-content .summary-wms-column-track {
+    min-height:42px !important;
+  }
+  body.tablet-ui #dash-content .summary-metrics-grid {
+    width:100% !important;
+    height:100% !important;
+    min-height:0 !important;
+    grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+    gap:8px !important;
+  }
+  body.tablet-ui #dash-content .summary-metric-wrap {
+    width:100% !important;
+    max-width:none !important;
+    min-width:0 !important;
+  }
+  body.tablet-ui #dash-content .summary-metric-card {
+    width:min(100%,84px) !important;
+    max-width:84px !important;
+    padding:6px !important;
+    border-radius:20px !important;
+  }
+  body.tablet-ui #dash-content .summary-metric-card strong {
+    font-size:24px !important;
+  }
+  body.tablet-ui #dash-content .summary-metric-title {
+    font-size:9px !important;
+  }
+  body.tablet-ui #dash-content .summary-hourly-card-line {
+    width:100% !important;
+    height:100% !important;
+    min-height:0 !important;
+    padding:10px 12px 7px !important;
+    overflow:hidden !important;
+  }
+  body.tablet-ui #dash-content .summary-hour-top-stats-boxes {
+    grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+    gap:6px !important;
+  }
+  body.tablet-ui #dash-content .summary-hour-top-stats-boxes .hour-box {
+    width:100% !important;
+    min-width:0 !important;
+    height:49px !important;
+    min-height:49px !important;
+    padding:4px !important;
+  }
+  body.tablet-ui #dash-content .summary-hour-stat-label,
+  body.tablet-ui #dash-content .summary-hour-stat-sub {
+    font-size:7px !important;
+  }
+  body.tablet-ui #dash-content .summary-hour-stat-value {
+    font-size:19px !important;
+  }
+  body.tablet-ui #dash-content .summary-hour-chart-line {
+    width:100% !important;
+    min-width:0 !important;
+    min-height:0 !important;
+    margin-top:3px !important;
+    overflow:visible !important;
+  }
+  body.tablet-ui #dash-content .summary-hour-svg {
+    width:100% !important;
+    min-width:0 !important;
+    max-width:100% !important;
+    max-height:none !important;
+    overflow:visible !important;
+  }
+  body.tablet-ui #dash-content .summary-hour-footnote {
+    margin-top:1px !important;
+    font-size:7px !important;
+    line-height:1.15 !important;
+  }
+  body.tablet-ui #dash-content .summary-zones-card {
+    width:100% !important;
+    height:100% !important;
+    min-height:0 !important;
+    padding:10px 13px !important;
+    overflow:hidden !important;
+  }
+  body.tablet-ui #dash-content .summary-zone-grid {
+    min-height:0 !important;
+    overflow-y:auto !important;
+  }
+  body.tablet-ui #dash-content .summary-zone-row {
+    padding:5px 0 !important;
+  }
+  body.tablet-ui #dash-content .summary-zone-row-title {
+    font-size:11px !important;
+  }
+  body.tablet-ui #dash-content .summary-status-card {
+    width:100% !important;
+    height:100% !important;
+    min-height:0 !important;
+    padding:7px 10px !important;
+    overflow:hidden !important;
+  }
+  body.tablet-ui #dash-content .session-thermo-layout {
+    width:100% !important;
+    height:100% !important;
+    min-height:0 !important;
+    grid-template-columns:minmax(90px,.8fr) 86px minmax(125px,1.2fr) !important;
+    gap:8px !important;
+  }
+  body.tablet-ui #dash-content .session-thermo-center,
+  body.tablet-ui #dash-content .session-thermo-gauge {
+    width:82px !important;
+    height:82px !important;
+  }
+  body.tablet-ui #dash-content .session-thermo-gauge::before {
+    width:56px !important;
+    height:56px !important;
+  }
+  body.tablet-ui #dash-content .session-thermo-title {
+    font-size:13px !important;
+  }
+  body.tablet-ui #dash-content .session-thermo-sub strong,
+  body.tablet-ui #dash-content .session-thermo-gauge strong {
+    font-size:19px !important;
+  }
+  body.tablet-ui #dash-content .session-thermo-row {
+    min-height:24px !important;
+    padding:4px 7px !important;
+  }
+  body.tablet-ui #dash-content .session-thermo-row span {
+    font-size:8px !important;
+  }
+}
+
 </style>
 </head>
-<body data-build="v159-complete-found-work-backup">
+<body data-build="v161-ipad-fit-screen-dashboard">
 <div id="app"></div>
 
 <script>
@@ -14483,10 +14853,118 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v159-complete-found-work-backup';
+window.__CYCLE_COUNT_BUILD__ = 'v161-ipad-fit-screen-dashboard';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
+let _tabletViewportFrame = 0;
+const TABLET_ZOOM_STORAGE_KEY = 'cycle_count_tablet_zoom_v1';
+
+function isTabletUiDevice() {
+  const viewportWidth = window.visualViewport?.width || window.innerWidth || 0;
+  const userAgent = navigator.userAgent || '';
+  const isIPad = /iPad/i.test(userAgent)
+    || (/Macintosh/i.test(userAgent) && Number(navigator.maxTouchPoints || 0) > 1);
+  const isTouchTablet = Number(navigator.maxTouchPoints || 0) > 1
+    && viewportWidth >= 769
+    && viewportWidth <= 1366;
+  return isIPad || isTouchTablet;
+}
+
+function syncTabletUiClass() {
+  const enabled = isTabletUiDevice();
+  document.body.classList.toggle('tablet-ui',enabled);
+  return enabled;
+}
+
+function tabletZoomContextKey() {
+  if (S?.page === 'sv-dash' && (S._dashTab || window._dashTab || 'summary') === 'summary') return 'dashboard';
+  if (S?.page === 'c-count') return 'count';
+  return 'general';
+}
+
+function loadTabletZoomSettings() {
+  try {
+    const value = JSON.parse(localStorage.getItem(TABLET_ZOOM_STORAGE_KEY) || '{}');
+    return value && typeof value === 'object' ? value : {};
+  } catch (_) {
+    return {};
+  }
+}
+
+function tabletViewportControlsHtml() {
+  return `<div class="tablet-viewport-controls" id="tabletViewportControls" aria-label="ปรับขนาดหน้าจอ iPad">
+    <button type="button" onclick="changeTabletZoom(-0.05)" aria-label="ย่อหน้าจอ" title="ย่อหน้าจอ">−</button>
+    <button type="button" class="tablet-fit-button" onclick="fitTabletViewport()" aria-label="ปรับให้พอดีจอ" title="ปรับให้พอดีจอ">พอดีจอ</button>
+    <span class="tablet-viewport-zoom" id="tabletZoomLabel">100%</span>
+    <button type="button" onclick="changeTabletZoom(0.05)" aria-label="ขยายหน้าจอ" title="ขยายหน้าจอ">+</button>
+  </div>`;
+}
+
+function applyTabletZoom(rawZoom,options = {}) {
+  const page = Q('cnt');
+  if (!page || !syncTabletUiClass()) return 1;
+  const zoom = Math.max(0.70,Math.min(1.15,Math.round(Number(rawZoom || 1) * 20) / 20));
+  const compensatedSize = `${(100 / zoom).toFixed(3)}%`;
+  const supportsZoom = typeof CSS === 'undefined' || typeof CSS.supports !== 'function' || CSS.supports('zoom','0.9');
+  if (supportsZoom) {
+    page.style.setProperty('zoom',String(zoom));
+    page.style.removeProperty('transform');
+  } else {
+    page.style.removeProperty('zoom');
+    page.style.setProperty('transform',`scale(${zoom})`);
+  }
+  page.style.setProperty('width',compensatedSize,'important');
+  page.style.setProperty('height',compensatedSize,'important');
+  const label = Q('tabletZoomLabel');
+  if (label) label.textContent = `${Math.round(zoom * 100)}%`;
+  if (options.persist !== false) {
+    const saved = loadTabletZoomSettings();
+    saved[tabletZoomContextKey()] = zoom;
+    try { localStorage.setItem(TABLET_ZOOM_STORAGE_KEY,JSON.stringify(saved)); } catch (_) {}
+  }
+  return zoom;
+}
+
+function currentTabletZoom() {
+  const labelValue = parseInt(Q('tabletZoomLabel')?.textContent || '',10);
+  if (Number.isFinite(labelValue)) return labelValue / 100;
+  return Number(loadTabletZoomSettings()[tabletZoomContextKey()] || 1);
+}
+
+function changeTabletZoom(delta) {
+  applyTabletZoom(currentTabletZoom() + Number(delta || 0));
+}
+
+function fitTabletViewport() {
+  const page = Q('cnt');
+  if (!page || !syncTabletUiClass()) return;
+  applyTabletZoom(1,{ persist:false });
+  cancelAnimationFrame(_tabletViewportFrame);
+  _tabletViewportFrame = requestAnimationFrame(() => {
+    const main = page.closest('.main-wrapper');
+    if (!main) return applyTabletZoom(1);
+    const availableWidth = Math.max(1,main.clientWidth - 2);
+    const availableHeight = Math.max(1,main.clientHeight - 2);
+    const contentWidth = Math.max(page.scrollWidth,page.clientWidth,1);
+    const contentHeight = Math.max(page.scrollHeight,page.clientHeight,1);
+    const measuredZoom = Math.min(1,availableWidth / contentWidth,availableHeight / contentHeight);
+    applyTabletZoom(Number.isFinite(measuredZoom) ? measuredZoom : 1);
+  });
+}
+
+function scheduleTabletViewportLayout(autoFit = false) {
+  cancelAnimationFrame(_tabletViewportFrame);
+  _tabletViewportFrame = requestAnimationFrame(() => {
+    if (!syncTabletUiClass()) return;
+    const saved = loadTabletZoomSettings();
+    const context = tabletZoomContextKey();
+    if (Number.isFinite(Number(saved[context]))) applyTabletZoom(Number(saved[context]),{ persist:false });
+    else if (autoFit) fitTabletViewport();
+    else applyTabletZoom(1,{ persist:false });
+  });
+}
+
 function syncViewportSize() {
   const viewportHeight = window.visualViewport?.height || window.innerHeight;
   if (Number.isFinite(viewportHeight) && viewportHeight > 0) {
@@ -14495,7 +14973,10 @@ function syncViewportSize() {
 }
 function scheduleViewportSync() {
   cancelAnimationFrame(_viewportSyncFrame);
-  _viewportSyncFrame = requestAnimationFrame(syncViewportSize);
+  _viewportSyncFrame = requestAnimationFrame(() => {
+    syncViewportSize();
+    scheduleTabletViewportLayout(true);
+  });
 }
 window.addEventListener('resize', scheduleViewportSync, { passive: true });
 window.addEventListener('orientationchange', scheduleViewportSync, { passive: true });
@@ -18029,6 +18510,7 @@ function paintDashboardView(tab, cache = _dashboardViewCache) {
   container.innerHTML = `${dashboardSessionControlHtml(tab, cache.sessionOptionsHtml)}
     <div class="${tab === 'summary' ? 'summary-dashboard-content' : 'card'}" id="dash-content">${cache.views[tab]}</div>`;
   updateDashboardNavigationUi(tab);
+  scheduleTabletViewportLayout(tab === 'summary');
   if (tab === 'wms') {
     if (Q('wms-zone')) Q('wms-zone').value = S._wmsZone || '';
     if (Q('wms-row')) Q('wms-row').value = S._wmsRow || '';
@@ -18926,6 +19408,7 @@ function render() {
   const { page } = S;
   const renderRequestId = ++_renderRequestSerial;
   const pageRequestScope = beginPageRequestScope();
+  const tabletUi = syncTabletUiClass();
   document.body.classList.toggle('app-shell-mode', !['login','reset-password'].includes(page));
   if (page === 'login') { paintLogin(); return; }
   if (page === 'reset-password') { paintResetPassword(); return; }
@@ -19061,14 +19544,19 @@ function render() {
     return `<button class="nav-item ${isActive?'active':''}" onclick="${action};closeMobileSidebar()" title="${item.name}"><span class="nav-icon">${item.icon}</span><span>${item.name}</span></button>`;
   }).join('');
 
-  const isCollapsed = window._sidebarCollapsed || false;
   const isSummaryView = page === 'sv-dash' && (S._dashTab || _dashTab || 'summary') === 'summary';
+  if (tabletUi && isSummaryView && !window._tabletSummarySidebarDefaultApplied) {
+    window._sidebarCollapsed = true;
+    window._tabletSummarySidebarDefaultApplied = true;
+  }
+  const isCollapsed = window._sidebarCollapsed || false;
   const profileAvatar = normalizeLogoDataUrl(prof?.avatar_data_url);
   const profileAvatarHtml = profileAvatar
     ? `<img src="${profileAvatar}" alt="รูปประจำตัว ${escapeWmsText(prof?.name || 'User')}">`
     : escapeWmsText((prof?.name || 'U').charAt(0).toUpperCase());
 
   Q('app').innerHTML = `
+    ${tabletViewportControlsHtml()}
     <div class="app-container">
       <aside class="sidebar ${isCollapsed ? 'collapsed' : ''}" id="mainSidebar">
         <div class="sidebar-header">
@@ -19133,6 +19621,8 @@ function render() {
       </div>
     </div>`;
 
+  scheduleTabletViewportLayout(false);
+
   if (window.__CYCLE_COUNT_PREVIEW__) {
     renderResponsivePreviewContent();
     return;
@@ -19195,6 +19685,7 @@ function toggleSidebarCollapse() {
   window._sidebarCollapsed = !window._sidebarCollapsed;
   const sbEl = Q('mainSidebar');
   if (sbEl) sbEl.classList.toggle('collapsed', window._sidebarCollapsed);
+  scheduleTabletViewportLayout(true);
 }
 function toggleMobileSidebar() {
   const sidebar = Q('mainSidebar');
@@ -19595,6 +20086,7 @@ function showAssignmentSuccessModal({
 
 document.addEventListener('keydown',event => {
   if (event.key === 'Escape' && Q('assignment-success-backdrop')) closeAssignmentSuccessModal();
+  if (event.key === 'Escape' && Q('normal-assignment-confirm-backdrop')) closeNormalAssignmentConfirmModal();
   if (event.key === 'Escape' && Q('new-session-success-backdrop')) closeNewSessionSuccessModal();
 });
 
@@ -28077,7 +28569,7 @@ async function renderManageAssign(container) {
             <div class="normal-free-shell">
               <div class="assign-workspace-heading">
                 <strong>จ่ายงานแบบปกติ · เลือก Location</strong>
-                <span>ค้นหาและกรองสถานะงานได้ รายการที่จ่ายแล้วจะแสดงเพื่อการตรวจสอบแต่จะเลือกจ่ายซ้ำไม่ได้</span>
+                <span>ค้นหาและกรองสถานะงานได้ หากต้องเปลี่ยนผู้รับงานเดิมให้เปิดโหมดจ่ายงานซ้ำและยืนยันอีกครั้งก่อนบันทึก</span>
               </div>
               <div class="normal-free-controls">
                 <div class="fg">
@@ -28099,6 +28591,8 @@ async function renderManageAssign(container) {
                 <span class="normal-free-count" id="normal-free-count">เลือก 0 Location</span>
                 <button class="btn btn-ghost btn-sm" type="button" onclick="selectNormalFreeLocations('visible')">เลือกทั้งหมดที่แสดง</button>
                 <button class="btn btn-ghost btn-sm" type="button" onclick="selectNormalFreeLocations('none')">ล้างที่เลือก</button>
+                <button class="btn btn-ghost btn-sm" id="normal-free-reassign-mode-btn" type="button"
+                  onclick="setNormalFreeReassignMode()">🔄 เปิดโหมดจ่ายงานซ้ำ</button>
                 <button class="btn btn-blue btn-sm" id="normal-free-print-btn" type="button"
                   onclick="printSelectedNormalRoundOneLocations()" disabled>🖨️ พิมพ์งานที่เลือก</button>
                 <button class="btn btn-green btn-sm" id="normal-free-assign-btn" type="button"
@@ -28281,6 +28775,8 @@ async function handleAssignSessionChange() {
   const config = setRound1AssignMode(defaultMode,{ skipLoad:true });
   _normalFreeSelectedLocationIds = new Set();
   _normalFreeSelectedPrintLocationIds = new Set();
+  _normalFreeSelectedReassignLocationIds = new Set();
+  _normalFreeReassignMode = false;
   _normalFreeFilters = { zone:[],row:[],level:[],status:['unassigned'] };
   if (Q('normal-free-search')) Q('normal-free-search').value = '';
   if (Q('annual-job-filter')) Q('annual-job-filter').value = 'all';
@@ -28299,6 +28795,10 @@ let _annualWorkspaceJobs = [];
 let _annualWorkspaceItemCounts = {};
 let _normalFreeSelectedLocationIds = new Set();
 let _normalFreeSelectedPrintLocationIds = new Set();
+let _normalFreeSelectedReassignLocationIds = new Set();
+let _normalFreeReassignMode = false;
+let _normalAssignmentConfirmPayload = null;
+let _normalAssignmentConfirmPreviousOverflow = '';
 let _normalFreeVisibleLocationIds = [];
 let _normalFreeFilteredLocationCount = 0;
 let _normalFreeFilters = { zone:[],row:[],level:[],status:['unassigned'] };
@@ -29290,6 +29790,21 @@ function refreshNormalFreeDependentFilters() {
   renderNormalFreeLocationList();
 }
 
+function isNormalFreeReassignableAssignment(assignment) {
+  return Boolean(assignment && ['pending','in_progress'].includes(assignment.status));
+}
+
+function setNormalFreeReassignMode(forceValue) {
+  _normalFreeReassignMode = typeof forceValue === 'boolean'
+    ? forceValue
+    : !_normalFreeReassignMode;
+  _normalFreeSelectedLocationIds.clear();
+  _normalFreeSelectedPrintLocationIds.clear();
+  _normalFreeSelectedReassignLocationIds.clear();
+  _normalFreeFilters.status = _normalFreeReassignMode ? [] : ['unassigned'];
+  refreshNormalFreeDependentFilters();
+}
+
 function renderNormalFreeLocationList() {
   const list = Q('normal-free-location-list');
   if (!list) return;
@@ -29300,11 +29815,17 @@ function renderNormalFreeLocationList() {
   const assignedIds = new Set(
     rows.filter(row => row.assignment).map(row => row.location.id)
   );
+  const reassignableIds = new Set(
+    rows.filter(row => isNormalFreeReassignableAssignment(row.assignment)).map(row => row.location.id)
+  );
   _normalFreeSelectedLocationIds = new Set(
     [..._normalFreeSelectedLocationIds].filter(id => availableIds.has(id))
   );
   _normalFreeSelectedPrintLocationIds = new Set(
     [..._normalFreeSelectedPrintLocationIds].filter(id => assignedIds.has(id))
+  );
+  _normalFreeSelectedReassignLocationIds = new Set(
+    [..._normalFreeSelectedReassignLocationIds].filter(id => reassignableIds.has(id))
   );
   const zone = normalizeMultiFilterValues(_normalFreeFilters.zone);
   const row = normalizeMultiFilterValues(_normalFreeFilters.row);
@@ -29337,9 +29858,13 @@ function renderNormalFreeLocationList() {
     const location = entry.location;
     const assignment = entry.assignment;
     const available = !assignment;
-    const selectedSet = available
-      ? _normalFreeSelectedLocationIds
-      : _normalFreeSelectedPrintLocationIds;
+    const reassignable = isNormalFreeReassignableAssignment(assignment);
+    const selectionMode = _normalFreeReassignMode
+      ? 'reassign'
+      : (available ? 'assign' : 'print');
+    const selectedSet = selectionMode === 'reassign'
+      ? _normalFreeSelectedReassignLocationIds
+      : available ? _normalFreeSelectedLocationIds : _normalFreeSelectedPrintLocationIds;
     const checked = selectedSet.has(location.id) ? 'checked' : '';
     const detail = [
       location.zone,location.area,
@@ -29349,13 +29874,21 @@ function renderNormalFreeLocationList() {
     const status = available
       ? { cls:'tag-gray',lbl:'ยังไม่จ่ายงาน' }
       : tagInfo(assignment.status);
-    const assignmentMeta = available
-      ? 'เลือกอิสระ · ไม่จำกัดจำนวน'
-      : `User: ${assignment.profiles?.name || 'ไม่ระบุ'} · เลือกเพื่อพิมพ์`;
+    const checkboxDisabled = _normalFreeReassignMode && !reassignable ? 'disabled' : '';
+    const assignmentMeta = _normalFreeReassignMode
+      ? (reassignable
+          ? `User เดิม: ${assignment.profiles?.name || 'ไม่ระบุ'} · เลือกเพื่อจ่ายงานซ้ำ`
+          : available
+            ? 'ยังไม่เคยจ่ายงาน · ปิดโหมดจ่ายงานซ้ำเพื่อเลือก'
+            : `User: ${assignment.profiles?.name || 'ไม่ระบุ'} · สถานะนี้ให้ใช้เมนูจ่ายงานรอบ 2/3`)
+      : available
+        ? 'เลือกอิสระ · ไม่จำกัดจำนวน'
+        : `User: ${assignment.profiles?.name || 'ไม่ระบุ'} · เลือกเพื่อพิมพ์`;
+    const ariaAction = selectionMode === 'reassign' ? 'เลือกเพื่อจ่ายงานซ้ำ' : available ? 'เลือกเพื่อจ่ายงาน' : 'เลือกเพื่อพิมพ์';
     return `<label class="normal-free-row ${available?'':'is-assigned'}">
-      <input class="normal-free-checkbox" type="checkbox" value="${location.id}" ${checked}
-        aria-label="${available?'เลือกเพื่อจ่ายงาน':'เลือกเพื่อพิมพ์'} ${escapeWmsText(location.code || '')}"
-        onchange="toggleNormalFreeLocation('${location.id}',this.checked,'${available?'assign':'print'}')">
+      <input class="normal-free-checkbox" type="checkbox" value="${location.id}" ${checked} ${checkboxDisabled}
+        aria-label="${ariaAction} ${escapeWmsText(location.code || '')}"
+        onchange="toggleNormalFreeLocation('${location.id}',this.checked,'${selectionMode}')">
       <span>
         <span class="normal-free-code">${escapeWmsText(location.code || '?')}</span>
         <span class="normal-free-meta" style="display:block;margin-top:3px">${escapeWmsText(detail || 'ไม่ระบุรายละเอียด')}</span>
@@ -29367,9 +29900,9 @@ function renderNormalFreeLocationList() {
 }
 
 function toggleNormalFreeLocation(locationId,checked,mode='assign') {
-  const selectedSet = mode === 'print'
-    ? _normalFreeSelectedPrintLocationIds
-    : _normalFreeSelectedLocationIds;
+  const selectedSet = mode === 'reassign'
+    ? _normalFreeSelectedReassignLocationIds
+    : mode === 'print' ? _normalFreeSelectedPrintLocationIds : _normalFreeSelectedLocationIds;
   if (checked) selectedSet.add(locationId);
   else selectedSet.delete(locationId);
   syncNormalFreeSelection();
@@ -29377,14 +29910,24 @@ function toggleNormalFreeLocation(locationId,checked,mode='assign') {
 
 function selectNormalFreeLocations(mode) {
   if (mode === 'visible') {
-    const assignedIds = new Set(getAssignedNormalRoundOneLocationIds());
-    _normalFreeVisibleLocationIds.forEach(id => {
-      if (assignedIds.has(id)) _normalFreeSelectedPrintLocationIds.add(id);
-      else _normalFreeSelectedLocationIds.add(id);
-    });
+    if (_normalFreeReassignMode) {
+      const reassignableIds = new Set(getNormalLocationRows()
+        .filter(entry => isNormalFreeReassignableAssignment(entry.assignment))
+        .map(entry => entry.location.id));
+      _normalFreeVisibleLocationIds.forEach(id => {
+        if (reassignableIds.has(id)) _normalFreeSelectedReassignLocationIds.add(id);
+      });
+    } else {
+      const assignedIds = new Set(getAssignedNormalRoundOneLocationIds());
+      _normalFreeVisibleLocationIds.forEach(id => {
+        if (assignedIds.has(id)) _normalFreeSelectedPrintLocationIds.add(id);
+        else _normalFreeSelectedLocationIds.add(id);
+      });
+    }
   } else {
     _normalFreeSelectedLocationIds.clear();
     _normalFreeSelectedPrintLocationIds.clear();
+    _normalFreeSelectedReassignLocationIds.clear();
   }
   renderNormalFreeLocationList();
 }
@@ -29392,12 +29935,28 @@ function selectNormalFreeLocations(mode) {
 function syncNormalFreeSelection() {
   const count = Q('normal-free-count');
   const button = Q('normal-free-assign-btn');
+  const modeButton = Q('normal-free-reassign-mode-btn');
   const assignCount = _normalFreeSelectedLocationIds.size;
   const printCount = _normalFreeSelectedPrintLocationIds.size;
+  const reassignCount = _normalFreeSelectedReassignLocationIds.size;
   if (count) {
-    count.textContent = `เลือกจ่าย ${assignCount.toLocaleString(uiLocale())} · เลือกพิมพ์ ${printCount.toLocaleString(uiLocale())} · แสดง ${_normalFreeVisibleLocationIds.length.toLocaleString(uiLocale())} / ${_normalFreeFilteredLocationCount.toLocaleString(uiLocale())}`;
+    count.textContent = _normalFreeReassignMode
+      ? `เลือกจ่ายงานซ้ำ ${reassignCount.toLocaleString(uiLocale())} · แสดง ${_normalFreeVisibleLocationIds.length.toLocaleString(uiLocale())} / ${_normalFreeFilteredLocationCount.toLocaleString(uiLocale())}`
+      : `เลือกจ่าย ${assignCount.toLocaleString(uiLocale())} · เลือกพิมพ์ ${printCount.toLocaleString(uiLocale())} · แสดง ${_normalFreeVisibleLocationIds.length.toLocaleString(uiLocale())} / ${_normalFreeFilteredLocationCount.toLocaleString(uiLocale())}`;
   }
-  if (button) button.disabled = assignCount === 0;
+  if (button) {
+    const activeCount = _normalFreeReassignMode ? reassignCount : assignCount;
+    button.disabled = activeCount === 0;
+    button.textContent = _normalFreeReassignMode
+      ? `🔄 จ่ายงานซ้ำ${activeCount ? ` (${activeCount.toLocaleString(uiLocale())})` : ''}`
+      : `✓ จ่าย Location ที่เลือก${activeCount ? ` (${activeCount.toLocaleString(uiLocale())})` : ''}`;
+  }
+  if (modeButton) {
+    modeButton.classList.toggle('btn-amber',_normalFreeReassignMode);
+    modeButton.classList.toggle('btn-ghost',!_normalFreeReassignMode);
+    modeButton.textContent = _normalFreeReassignMode ? '← กลับโหมดจ่ายงานปกติ' : '🔄 เปิดโหมดจ่ายงานซ้ำ';
+    modeButton.setAttribute('aria-pressed',String(_normalFreeReassignMode));
+  }
   syncNormalRoundOnePrintButton();
 }
 
@@ -29458,49 +30017,185 @@ function printSelectedNormalRoundOneLocations() {
   });
 }
 
-async function assignSelectedNormalLocations() {
+function closeNormalAssignmentConfirmModal() {
+  Q('normal-assignment-confirm-backdrop')?.remove();
+  _normalAssignmentConfirmPayload = null;
+  document.body.style.overflow = _normalAssignmentConfirmPreviousOverflow;
+}
+
+async function confirmNormalAssignmentModal() {
+  const payload = _normalAssignmentConfirmPayload;
+  if (!payload) return;
+  const confirmButton = Q('normal-assignment-confirm-submit');
+  if (confirmButton) {
+    confirmButton.disabled = true;
+    confirmButton.textContent = payload.isReassign ? '⏳ กำลังจ่ายงานซ้ำ...' : '⏳ กำลังจ่ายงาน...';
+  }
+  Q('normal-assignment-confirm-backdrop')?.remove();
+  _normalAssignmentConfirmPayload = null;
+  document.body.style.overflow = _normalAssignmentConfirmPreviousOverflow;
+  await commitSelectedNormalLocations(payload);
+}
+
+function showNormalAssignmentConfirmModal(payload) {
+  closeNormalAssignmentConfirmModal();
+  _normalAssignmentConfirmPayload = payload;
+  _normalAssignmentConfirmPreviousOverflow = document.body.style.overflow;
+  const locationRows = getNormalLocationRows();
+  const entryByLocation = new Map(locationRows.map(entry => [entry.location.id,entry]));
+  const currentOwnerCounts = new Map();
+  const locationCodes = [];
+  payload.locationIds.forEach(locationId => {
+    const entry = entryByLocation.get(locationId);
+    if (entry?.location?.code) locationCodes.push(entry.location.code);
+    const ownerName = entry?.assignment?.profiles?.name || 'ไม่ระบุ User';
+    if (payload.isReassign) currentOwnerCounts.set(ownerName,(currentOwnerCounts.get(ownerName) || 0) + 1);
+  });
+  const ownerSummary = [...currentOwnerCounts.entries()]
+    .sort((a,b) => b[1] - a[1] || a[0].localeCompare(b[0],'th'))
+    .map(([name,count]) => `<span><strong>${escapeWmsText(name)}</strong> ${count.toLocaleString(uiLocale())} Location</span>`)
+    .join('');
+  const visibleCodes = locationCodes.slice(0,12);
+  const backdrop = document.createElement('div');
+  backdrop.id = 'normal-assignment-confirm-backdrop';
+  backdrop.className = 'assignment-success-backdrop';
+  backdrop.onclick = event => {
+    if (event.target === backdrop) closeNormalAssignmentConfirmModal();
+  };
+  backdrop.innerHTML = `<section class="assignment-success-modal" role="dialog" aria-modal="true" aria-labelledby="normal-assignment-confirm-title">
+    <div class="assignment-success-icon" style="color:#b76800;background:linear-gradient(145deg,#fff7df,#fde6ac)">!</div>
+    <h2 class="assignment-success-title" id="normal-assignment-confirm-title">
+      ${payload.isReassign ? 'ยืนยันการจ่ายงานซ้ำ' : 'ยืนยันการจ่ายงาน'}
+    </h2>
+    <div class="assignment-success-summary">
+      <div class="assignment-success-count">${payload.locationIds.length.toLocaleString(uiLocale())}</div>
+      <div class="assignment-success-unit">LOCATION</div>
+    </div>
+    <p class="assignment-success-recipient">
+      จ่ายงานให้ <strong>${escapeWmsText(payload.userName || 'User')}</strong>
+      ${payload.isReassign
+        ? '<br><span style="color:#b76800">ผู้รับมอบหมายงานเดิมจะถูกเปลี่ยนทันทีหลังยืนยัน</span>'
+        : '<br>ตรวจสอบชื่อผู้รับงานและจำนวน Location ก่อนบันทึก'}
+    </p>
+    ${payload.isReassign ? `<div class="assignment-success-jobs">
+      <span>ผู้รับงานเดิม</span>
+      <div class="assignment-success-job-list" style="display:grid;gap:7px">${ownerSummary || '<span>ไม่พบข้อมูลผู้รับงานเดิม</span>'}</div>
+    </div>` : ''}
+    <div class="assignment-success-jobs">
+      <span>LOCATION ที่เลือก</span>
+      <div class="assignment-success-job-list">
+        ${visibleCodes.map(code => `<strong>${escapeWmsText(code)}</strong>`).join('')}
+        ${locationCodes.length > visibleCodes.length ? `<strong>+${locationCodes.length-visibleCodes.length} Location</strong>` : ''}
+      </div>
+    </div>
+    <div class="assignment-success-buttons">
+      <button class="btn btn-ghost" type="button" onclick="closeNormalAssignmentConfirmModal()">ยกเลิก</button>
+      <button class="btn ${payload.isReassign ? 'btn-amber' : 'btn-green'}" id="normal-assignment-confirm-submit"
+        type="button" onclick="confirmNormalAssignmentModal()">
+        ${payload.isReassign ? '🔄 ยืนยันจ่ายงานซ้ำ' : '✓ ยืนยันการจ่ายงาน'}
+      </button>
+    </div>
+  </section>`;
+  document.body.appendChild(backdrop);
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => Q('normal-assignment-confirm-submit')?.focus(),0);
+}
+
+function assignSelectedNormalLocations() {
   const sid = Q('as-sess')?.value;
-  const userId = Q('normal-free-user')?.value;
+  const userSelect = Q('normal-free-user');
+  const userId = userSelect?.value;
+  const isReassign = _normalFreeReassignMode;
   const availableIds = new Set(getBulkAvailableLocations().map(location => location.id));
-  const locationIds = [..._normalFreeSelectedLocationIds].filter(id => availableIds.has(id));
+  const reassignableIds = new Set(getNormalLocationRows()
+    .filter(entry => isNormalFreeReassignableAssignment(entry.assignment))
+    .map(entry => entry.location.id));
+  const selectedIds = isReassign
+    ? _normalFreeSelectedReassignLocationIds
+    : _normalFreeSelectedLocationIds;
+  const allowedIds = isReassign ? reassignableIds : availableIds;
+  const locationIds = [...selectedIds].filter(id => allowedIds.has(id));
   const alertBox = Q('aa');
-  const button = Q('normal-free-assign-btn');
   if (!sid || !userId || !locationIds.length) {
-    if (alertBox) alertBox.innerHTML = `<div class="alert alert-amber">กรุณาเลือก User และ Location ที่ต้องการจ่ายงาน</div>`;
+    if (alertBox) alertBox.innerHTML = `<div class="alert alert-amber">กรุณาเลือก User และ Location ที่ต้องการ${isReassign ? 'จ่ายงานซ้ำ' : 'จ่ายงาน'}</div>`;
     return;
   }
-  const printFilterSummary = currentNormalPrintFilterSummary();
-  const userName = Q('normal-free-user')?.options?.[Q('normal-free-user').selectedIndex]?.textContent || 'User';
-  if (!confirm(`จ่าย ${locationIds.length} Location ให้ ${userName}?`)) return;
-  if (button) { button.disabled = true; button.textContent = '⏳ กำลังจ่ายงาน...'; }
+  showNormalAssignmentConfirmModal({
+    sid,
+    userId,
+    userName:userSelect?.options?.[userSelect.selectedIndex]?.textContent || 'User',
+    locationIds,
+    isReassign,
+    printFilterSummary:currentNormalPrintFilterSummary(),
+  });
+}
+
+async function commitSelectedNormalLocations(payload) {
+  const { sid,userId,userName,locationIds,isReassign,printFilterSummary } = payload;
+  const alertBox = Q('aa');
+  const button = Q('normal-free-assign-btn');
+  if (button) {
+    button.disabled = true;
+    button.textContent = isReassign ? '⏳ กำลังจ่ายงานซ้ำ...' : '⏳ กำลังจ่ายงาน...';
+  }
+  const previousByLocation = new Map(
+    (window._bulkAssignments || []).map(assignment => [assignment.location_id,assignment])
+  );
   const rows = locationIds.map(locationId => ({
     session_id:sid,
     location_id:locationId,
     assigned_to:userId,
   }));
+  const updatedAssignments = [];
   const batchSize = 200;
   for (let start=0; start<rows.length; start+=batchSize) {
-    const { error } = await sb.from('assignments')
-      .upsert(rows.slice(start,start+batchSize),{
+    const chunk = rows.slice(start,start+batchSize);
+    const { data,error } = await sb.from('assignments')
+      .upsert(chunk,{
         onConflict:'session_id,location_id',
-        ignoreDuplicates:true,
-      });
-    if (error) {
-      if (alertBox) alertBox.innerHTML = `<div class="alert alert-red">❌ ${escapeWmsText(error.message)}</div>`;
-      if (button) { button.disabled = false; button.textContent = '✓ จ่าย Location ที่เลือก'; }
+        ignoreDuplicates:!isReassign,
+      })
+      .select('id,session_id,location_id,assigned_to,status');
+    if (error || (isReassign && (data || []).length !== chunk.length)) {
+      const message = error?.message || 'ระบบอัปเดตผู้รับงานได้ไม่ครบ กรุณารีเฟรชและลองใหม่';
+      if (alertBox) alertBox.innerHTML = `<div class="alert alert-red">❌ ${escapeWmsText(message)}</div>`;
+      if (button) button.disabled = false;
+      syncNormalFreeSelection();
       return;
     }
+    updatedAssignments.push(...(data || []));
+  }
+  if (isReassign) {
+    const auditRows = updatedAssignments.map(assignment => {
+      const previous = previousByLocation.get(assignment.location_id);
+      return buildAuditRow(
+        sid,
+        assignment.location_id,
+        null,
+        'reassign',
+        previous?.profiles?.name || 'ไม่ระบุ User',
+        userName,
+        assignment.id,
+      );
+    });
+    await writeAuditRows(auditRows);
   }
   if (alertBox) alertBox.innerHTML = '';
   _normalFreeSelectedLocationIds.clear();
+  _normalFreeSelectedReassignLocationIds.clear();
+  if (isReassign) {
+    _normalFreeReassignMode = false;
+    _normalFreeFilters.status = ['unassigned'];
+  }
   invalidateAssignmentWorkspaceCache(sid);
-  if (button) button.textContent = '✓ จ่าย Location ที่เลือก';
   await Promise.all([refreshLocs(),refreshBulkFilters()]);
   showAssignmentSuccessModal({
     count:locationIds.length,
     unit:'Location',
     userName,
-    detail:'พร้อมพิมพ์ Form Count ของ Location ที่เพิ่งจ่าย',
+    detail:isReassign
+      ? 'จ่ายงานซ้ำและเปลี่ยนผู้รับมอบหมายงานเดิมเรียบร้อยแล้ว'
+      : 'พร้อมพิมพ์ Form Count ของ Location ที่เพิ่งจ่าย',
     printAction:() => printCountForm(locationIds,sid,{
       filterSummary:printFilterSummary,
     }),
