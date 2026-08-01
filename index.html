@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v163 - iPad Count Keypad and Screen Lock</title>
+<title>Cycle Count v164 - Single Device Login Guard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -14811,7 +14811,7 @@ body.tablet-ui .page-content {
 }
 
 /* ══════════════════════════════════════════════════════════
-   v163 — iPad counting mode: screen lock + custom QTY keypad
+   v164 — Single-device login lock + heartbeat + Admin force logout
    The quantity keypad stays inside the app and never opens the iPad keyboard.
    ══════════════════════════════════════════════════════════ */
 .count-touch-toolbar {
@@ -14975,7 +14975,7 @@ body.count-keypad-open .count-handheld-page {
 
 </style>
 </head>
-<body data-build="v163-ipad-count-keypad-screen-lock">
+<body data-build="v164-single-device-login-guard">
 <div id="app"></div>
 
 <script>
@@ -15045,7 +15045,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v163-ipad-count-keypad-screen-lock';
+window.__CYCLE_COUNT_BUILD__ = 'v164-single-device-login-guard';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -15211,6 +15211,10 @@ const SUPA_URL = 'https://uiuaboxsfepyftqjlwil.supabase.co';
 const SUPA_KEY = 'sb_publishable_EuJ-IUiXWBLSNvQsG0CJ5w_C2LHJXAL';
 const AUTH_STORAGE_KEY = 'cycle_count_auth_session_v2';
 const LEGACY_AUTH_STORAGE_KEYS = ['sb-uiuaboxsfepyftqjlwil-auth-token'];
+const LOGIN_DEVICE_ID_STORAGE_KEY = 'cycle_count_device_id_v1';
+const LOGIN_SESSION_TOKEN_STORAGE_KEY = 'cycle_count_login_token_v1';
+const LOGIN_HEARTBEAT_INTERVAL_MS = 45000;
+const LOGIN_SESSION_TTL_SECONDS = 300;
 const SUPABASE_REQUEST_TIMEOUT_MS = 15000;
 const PAGE_LOAD_TIMEOUT_MS = 22000;
 
@@ -15218,6 +15222,9 @@ let sb, me, prof;
 let S = {};
 let _activePageRequestController = null;
 let _renderRequestSerial = 0;
+let _loginHeartbeatTimer = null;
+let _loginHeartbeatInFlight = null;
+let _loginSessionEnding = false;
 
 function beginPageRequestScope() {
   if (_activePageRequestController) _activePageRequestController.abort();
@@ -18833,6 +18840,129 @@ function refreshDashboardData() {
 const EDGE_FUNCTION_TOKEN_SAFE_LENGTH = 16000;
 let _protectedSessionRefresh = null;
 
+function createSecureUuid() {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  const bytes = new Uint8Array(16);
+  globalThis.crypto?.getRandomValues?.(bytes);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, value => value.toString(16).padStart(2,'0')).join('');
+  return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+}
+
+function getOrCreateLoginDeviceId() {
+  try {
+    const saved = String(localStorage.getItem(LOGIN_DEVICE_ID_STORAGE_KEY) || '').trim();
+    if (saved) return saved;
+    const created = createSecureUuid();
+    localStorage.setItem(LOGIN_DEVICE_ID_STORAGE_KEY,created);
+    return created;
+  } catch (_) {
+    return createSecureUuid();
+  }
+}
+
+function loginDeviceName() {
+  const ua = String(navigator.userAgent || '');
+  const platform = String(navigator.platform || '');
+  const ipad = /iPad/i.test(ua) || (platform === 'MacIntel' && Number(navigator.maxTouchPoints || 0) > 1);
+  const device = ipad ? 'iPad'
+    : /iPhone/i.test(ua) ? 'iPhone'
+    : /Android/i.test(ua) ? 'Android'
+    : /Windows/i.test(ua) ? 'Windows'
+    : /Macintosh|Mac OS X/i.test(ua) ? 'Mac'
+    : /Linux/i.test(ua) ? 'Linux'
+    : 'อุปกรณ์';
+  const browser = /Edg\//i.test(ua) ? 'Edge'
+    : /CriOS|Chrome\//i.test(ua) ? 'Chrome'
+    : /FxiOS|Firefox\//i.test(ua) ? 'Firefox'
+    : /Safari\//i.test(ua) ? 'Safari'
+    : 'Browser';
+  return `${device} · ${browser}`;
+}
+
+function activeLoginSessionToken() {
+  try { return String(sessionStorage.getItem(LOGIN_SESSION_TOKEN_STORAGE_KEY) || '').trim(); }
+  catch (_) { return ''; }
+}
+
+function rememberLoginSessionToken(token) {
+  try {
+    if (token) sessionStorage.setItem(LOGIN_SESSION_TOKEN_STORAGE_KEY,token);
+    else sessionStorage.removeItem(LOGIN_SESSION_TOKEN_STORAGE_KEY);
+  } catch (_) {}
+}
+
+function stopLoginSessionGuard(removeToken = false) {
+  if (_loginHeartbeatTimer) clearInterval(_loginHeartbeatTimer);
+  _loginHeartbeatTimer = null;
+  _loginHeartbeatInFlight = null;
+  if (removeToken) rememberLoginSessionToken('');
+}
+
+async function endLoginSessionFromGuard(message) {
+  if (_loginSessionEnding) return;
+  _loginSessionEnding = true;
+  stopLoginSessionGuard(true);
+  try {
+    await clearLocalAuthSession();
+  } finally {
+    if (typeof go === 'function') go('login');
+    alert(message || 'Session นี้สิ้นสุดแล้ว กรุณาเข้าสู่ระบบใหม่');
+    _loginSessionEnding = false;
+  }
+}
+
+async function sendLoginSessionHeartbeat() {
+  if (_loginHeartbeatInFlight) return _loginHeartbeatInFlight;
+  const token = activeLoginSessionToken();
+  if (!sb || !me?.id || !token) return false;
+
+  const pending = (async () => {
+    const { data, error } = await sb.rpc('heartbeat_user_login', {
+      p_session_token:token,
+      p_ttl_seconds:LOGIN_SESSION_TTL_SECONDS,
+    });
+    if (error) {
+      if (isInvalidAuthError(error)) {
+        await endLoginSessionFromGuard('Session หมดอายุ กรุณาเข้าสู่ระบบใหม่');
+        return false;
+      }
+      // Do not eject a counter because of a brief Wi-Fi interruption. The
+      // next heartbeat will retry; the server-side lock still has its TTL.
+      console.warn('Login heartbeat unavailable',error);
+      return true;
+    }
+    if (data !== true) {
+      await endLoginSessionFromGuard('บัญชีนี้ถูกออกจากระบบ หรือมีการเข้าใช้งานใหม่ กรุณาเข้าสู่ระบบอีกครั้ง');
+      return false;
+    }
+    return true;
+  })();
+
+  _loginHeartbeatInFlight = pending;
+  try {
+    return await pending;
+  } finally {
+    if (_loginHeartbeatInFlight === pending) _loginHeartbeatInFlight = null;
+  }
+}
+
+function startLoginSessionGuard(token) {
+  stopLoginSessionGuard(false);
+  rememberLoginSessionToken(token);
+  sendLoginSessionHeartbeat();
+  _loginHeartbeatTimer = setInterval(() => {
+    if (!document.hidden && navigator.onLine !== false) sendLoginSessionHeartbeat();
+  },LOGIN_HEARTBEAT_INTERVAL_MS);
+}
+
+function loginSessionVisibilityCheck() {
+  if (!document.hidden && navigator.onLine !== false && me?.id && activeLoginSessionToken()) {
+    sendLoginSessionHeartbeat();
+  }
+}
+
 function isInvalidAuthError(error) {
   const status = Number(error?.status || error?.statusCode || 0);
   const message = String(error?.message || error || '');
@@ -18841,6 +18971,7 @@ function isInvalidAuthError(error) {
 }
 
 async function clearLocalAuthSession() {
+  stopLoginSessionGuard(true);
   try {
     const { error } = await sb?.auth?.signOut({ scope: 'local' }) || {};
     if (error) throw error;
@@ -18911,7 +19042,7 @@ async function protectedFunctionHeaders() {
   return {
     Authorization: `Bearer ${session.access_token}`,
     apikey: SUPA_KEY,
-    'x-client-info': 'cycle-count-v159',
+    'x-client-info': 'cycle-count-v164',
   };
 }
 
@@ -19058,7 +19189,12 @@ async function boot() {
       go('login');
     }
     sb.auth.onAuthStateChange((e, session) => {
-      if (e === 'SIGNED_OUT') { me = null; prof = null; go('login'); }
+      if (e === 'SIGNED_OUT') {
+        stopLoginSessionGuard(true);
+        me = null;
+        prof = null;
+        go('login');
+      }
       if (e === 'PASSWORD_RECOVERY') { me = session?.user || me; go('reset-password'); }
     });
   } catch (err) {
@@ -20752,7 +20888,8 @@ function paintLogin() {
         </div>
         <button class="btn btn-blue" id="lb" onclick="doLogin()" style="width:100%;margin-bottom:12px">เข้าสู่ระบบ</button>
         <div style="color:var(--brand-muted-text);font-size:10px;font-weight:600;line-height:1.55;text-align:center">
-          เพื่อความปลอดภัย ระบบจะให้ล็อกอินใหม่เมื่อรีเฟรช ปิดหน้า หรือเปิดระบบอีกครั้ง
+          เพื่อความปลอดภัย 1 User ใช้งานได้ครั้งละ 1 เครื่อง<br>
+          ระบบจะให้ล็อกอินใหม่เมื่อรีเฟรช ปิดหน้า หรือเปิดระบบอีกครั้ง
         </div>
       </div>
     </div>`;
@@ -20862,12 +20999,38 @@ async function doLogin() {
     return;
   }
   const btn = Q('lb');
+  const loginSessionToken = createSecureUuid();
+  const deviceId = getOrCreateLoginDeviceId();
   btn.disabled = true; btn.textContent = 'กำลังเข้าสู่ระบบ...';
   const { data, error } = await sb.functions.invoke('login-by-id', {
-    body: { login_id: loginId, password: pwd },
+    body: {
+      login_id:loginId,
+      password:pwd,
+      session_token:loginSessionToken,
+      device_id:deviceId,
+      device_name:loginDeviceName(),
+      user_agent:String(navigator.userAgent || '').slice(0,500),
+    },
   });
+  if (data?.code === 'LOGIN_ALREADY_ACTIVE') {
+    const active = data.active_session || {};
+    const loginAt = active.login_at ? new Date(active.login_at).toLocaleString(uiLocale()) : '—';
+    const lastSeen = active.last_seen_at ? new Date(active.last_seen_at).toLocaleString(uiLocale()) : '—';
+    Q('la').innerHTML = `<div class="alert alert-amber" style="line-height:1.7;text-align:left">
+      <strong>บัญชีนี้กำลังใช้งานอยู่</strong><br>
+      อุปกรณ์: <span data-i18n-skip>${escapeWmsText(active.device_name || 'อุปกรณ์อื่น')}</span><br>
+      เข้าระบบเมื่อ: ${escapeWmsText(loginAt)}<br>
+      ใช้งานล่าสุด: ${escapeWmsText(lastSeen)}<br>
+      กรุณาออกจากระบบที่เครื่องเดิม หรือติดต่อ Admin เพื่อบังคับออก
+    </div>`;
+    btn.disabled = false; btn.textContent = 'เข้าสู่ระบบ';
+    return;
+  }
   if (error || !data?.ok || !data?.session?.access_token || !data?.session?.refresh_token) {
-    Q('la').innerHTML = '<div class="alert alert-red">User ID หรือรหัสผ่านไม่ถูกต้อง</div>';
+    const safeMessage = data?.code === 'LOGIN_LOCK_UNAVAILABLE' || data?.code === 'INVALID_DEVICE'
+      ? (data.error || 'ระบบล็อกการเข้าใช้งานยังไม่พร้อม กรุณาลองใหม่')
+      : 'User ID หรือรหัสผ่านไม่ถูกต้อง';
+    Q('la').innerHTML = `<div class="alert alert-red">${escapeWmsText(safeMessage)}</div>`;
     btn.disabled = false; btn.textContent = 'เข้าสู่ระบบ';
   } else {
     const { error: sessionError } = await sb.auth.setSession({
@@ -20879,14 +21042,22 @@ async function doLogin() {
       btn.disabled = false; btn.textContent = 'เข้าสู่ระบบ';
       return;
     }
+    rememberLoginSessionToken(loginSessionToken);
     me = (await sb.auth.getUser()).data.user;
     await loadProf();
     await syncUiSettingsAfterLogin();
+    startLoginSessionGuard(loginSessionToken);
     go(home());
   }
 }
 
 async function doLogout() {
+  const token = activeLoginSessionToken();
+  if (sb && me?.id && token) {
+    try {
+      await sb.rpc('release_user_login',{ p_session_token:token });
+    } catch (_) {}
+  }
   await clearLocalAuthSession();
   go('login');
 }
@@ -35774,6 +35945,10 @@ async function loadAdUsers() {
         <div class="admin-user-actions">
           <button class="btn btn-blue btn-sm" onclick="saveLoginUser('${u.id}')">บันทึก</button>
           <button class="btn btn-ghost btn-sm" onclick="resetLoginUserPassword('${u.id}')">บันทึกรหัสผ่าน</button>
+          ${u.login_session && u.id !== me?.id ? `
+            <button class="btn btn-amber btn-sm" onclick="forceLogoutLoginUser('${u.id}')">
+              บังคับออก
+            </button>` : ''}
           <button class="btn btn-red btn-sm admin-delete-icon" onclick="deleteLoginUser('${u.id}')"
             ${u.id===me?.id?'disabled title="ลบบัญชีที่กำลังใช้งานไม่ได้"':''}>
             ${adminTrashIconSvg()} <span>ลบ</span>
@@ -35783,7 +35958,12 @@ async function loadAdUsers() {
       <div class="admin-user-meta">
         สร้างเมื่อ ${u.created_at ? new Date(u.created_at).toLocaleString(uiLocale()) : '—'}
         · เข้าใช้ล่าสุด ${u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleString(uiLocale()) : 'ยังไม่เคยเข้าสู่ระบบ'}
-        · เพื่อความปลอดภัย ระบบไม่แสดงรหัสผ่านเดิม
+        · เพื่อความปลอดภัย ระบบไม่แสดงรหัสผ่านเดิม<br>
+        ${u.login_session
+          ? `<span style="color:var(--brand-success);font-weight:800">● กำลังใช้งาน</span>
+             · <span data-i18n-skip>${escapeWmsText(u.login_session.device_name || 'อุปกรณ์')}</span>
+             · ล่าสุด ${new Date(u.login_session.last_seen_at).toLocaleString(uiLocale())}`
+          : '<span style="color:var(--theme-muted-text-color)">○ ไม่ได้ใช้งาน</span>'}
       </div>
     </div>`).join('');
 
@@ -36018,6 +36198,30 @@ async function resetLoginUserPassword(id) {
   }
 }
 
+async function forceLogoutLoginUser(id) {
+  if (prof?.role !== 'admin') { adminOnlyMessage(); return; }
+  if (id === me?.id) { alert('ไม่สามารถบังคับออกจากบัญชีที่กำลังใช้งานอยู่'); return; }
+  const name = Q(`admin_user_name_${id}`)?.value.trim() || 'User นี้';
+  if (!confirm(`บังคับให้ ${name} ออกจากระบบ?\n\nเครื่องเดิมจะถูกพากลับหน้า Login เมื่อตรวจสถานะครั้งถัดไป และ User จะสามารถเข้าเครื่องใหม่ได้ทันที`)) return;
+  try {
+    const result = await invokeAdminSettings('user_force_logout',{ id });
+    if (result?.forced) {
+      showActionSuccess(`${name} ถูกออกจากระบบแล้ว`, {
+        title:'บังคับออกจากระบบสำเร็จ',
+        facts:[
+          { label:'User',value:name },
+          { label:'อุปกรณ์',value:result.device_name || 'อุปกรณ์เดิม' },
+        ],
+      });
+    } else {
+      alert('User นี้ไม่ได้กำลังใช้งานอยู่');
+    }
+    loadAdUsers();
+  } catch (error) {
+    alert('บังคับออกจากระบบไม่สำเร็จ: ' + (error.message || error));
+  }
+}
+
 async function deleteLoginUser(id) {
   if (id === me?.id) { alert('ไม่สามารถลบบัญชีที่กำลังใช้งานอยู่'); return; }
   if (!confirm('ลบ User นี้แบบถาวร?\n\nบัญชีจะเข้าสู่ระบบไม่ได้อีก งานและประวัติการนับเดิมจะยังอยู่ แต่ช่อง User ผู้รับงานเดิมจะแสดงเป็น “ไม่ระบุ User”')) return;
@@ -36112,6 +36316,8 @@ async function deleteRemarkOption(id) {
 }
 
 // Start Application
+document.addEventListener('visibilitychange',loginSessionVisibilityCheck);
+window.addEventListener('online',loginSessionVisibilityCheck);
 window.addEventListener('DOMContentLoaded', () => {
   syncViewportSize();
   applyBrandingSettings(readLocalBrandingSettings(), false);
