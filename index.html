@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v132 - Safe A4 Dashboard Export</title>
+<title>Cycle Count v144 - Exact A4 Reference</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -1651,7 +1651,9 @@ details summary { box-shadow: 4px 4px 8px var(--neu-shadow-dark), -4px -4px 8px 
   font-weight:700;
   line-height:1.08;
   letter-spacing:-.035em;
-}
+}.dashboard-title-large{font-size:36px;font-weight:800;letter-spacing:-.4px;line-height:1.1;display:block;}
+.summary-greeting{min-height:8px;font-size:0!important;margin-bottom:8px;}
+
 .summary-greeting-sub {
   margin-top:8px;
   color:#9d979c;
@@ -13075,7 +13077,7 @@ body .tag.tag-gray{
   }
 }
 
-/* v132 — safe dashboard image export and larger hourly chart labels. */
+/* v140 — dedicated A4 template engine. The live dashboard is unchanged. */
 #dash-content .summary-hour-svg-label{
   font-size:22px !important;
   font-weight:800 !important;
@@ -13104,52 +13106,561 @@ body .tag.tag-gray{
 .dashboard-export-image-btn:hover{transform:translateY(-1px);filter:brightness(.98)}
 .dashboard-export-image-btn:disabled{opacity:.65;cursor:wait;transform:none}
 .dashboard-export-image-btn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.dashboard-a4-capture-host{
+
+/* Detached report surface: 1400 x 990 has the same ratio as A4 landscape. */
+.a4-template-host-v2{
   position:fixed !important;
-  left:0 !important;
+  left:-20000px !important;
   top:0 !important;
   z-index:-2147483647 !important;
-  width:1120px !important;
-  padding:0 !important;
+  width:1400px !important;
+  height:990px !important;
   overflow:visible !important;
   pointer-events:none !important;
-  background:var(--theme-page-bg) !important;
 }
-.dashboard-a4-capture-host #dash-content{
-  width:1120px !important;
+.a4-template-v2{
+  --a4-page-bg:var(--theme-dashboard-bg,#FCF9EA);
+  /* The template is also #dash-content, so all live dashboard theme rules
+     (KPI, Accuracy, WMS, charts, Zone and status) apply unchanged. */
+  position:relative !important;
+  width:1400px !important;
+  height:990px !important;
+  min-width:1400px !important;
+  min-height:990px !important;
+  max-width:1400px !important;
+  max-height:990px !important;
+  overflow:hidden !important;
+  box-sizing:border-box !important;
+  background:var(--a4-page-bg) !important;
+  color:var(--theme-dashboard-text,#394A43) !important;
+  font-family:'Mitr','Sarabun',sans-serif !important;
+}
+.a4-template-v2,
+.a4-template-v2 *,
+.a4-template-v2 *::before,
+.a4-template-v2 *::after{
+  box-sizing:border-box !important;
+  animation:none !important;
+  transition:none !important;
+  caret-color:transparent !important;
+}
+.a4-template-v2 .date-range-popover,
+.a4-template-v2 .dashboard-date-clear{display:none !important}
+.a4-template-v2 .a4-v2-header{
+  position:absolute !important;
+  left:42px !important;
+  top:34px !important;
+  width:1316px !important;
+  height:116px !important;
+  margin:0 !important;
+  padding:0 2px !important;
+  display:flex !important;
+  align-items:flex-start !important;
+  justify-content:space-between !important;
+  gap:28px !important;
+  overflow:visible !important;
+}
+.a4-template-v2 .a4-v2-header .summary-greeting-wrap{
+  flex:0 0 auto !important;
+  min-width:360px !important;
+  padding:0 !important;
+}
+.a4-template-v2 .a4-v2-header .summary-greeting{
+  margin:0 !important;
+  color:var(--theme-dashboard-heading,#33423B) !important;
+  font-family:'Fredoka','Mitr',sans-serif !important;
+  font-size:45px !important;
+  font-weight:700 !important;
+  line-height:1.02 !important;
+  letter-spacing:-1.4px !important;
+}
+.a4-template-v2 .a4-v2-header .summary-greeting-sub{
+  margin-top:9px !important;
+  color:var(--theme-dashboard-muted,#738077) !important;
+  font-size:13px !important;
+  font-weight:600 !important;
+  line-height:1.3 !important;
+}
+.a4-template-v2 .a4-v2-header .summary-header-actions{
+  position:relative !important;
+  flex:0 1 790px !important;
+  width:790px !important;
+  min-width:790px !important;
+  height:116px !important;
+  display:flex !important;
+  align-items:flex-start !important;
+  justify-content:flex-end !important;
+  gap:12px !important;
+  flex-wrap:nowrap !important;
+}
+.a4-template-v2 .a4-v2-header .dashboard-filter-control{
+  height:50px !important;
+  min-height:50px !important;
+  margin:0 !important;
+}
+.a4-template-v2 .a4-v2-header .dashboard-session-filter{
+  flex:1 1 320px !important;
+  width:332px !important;
+  max-width:332px !important;
+}
+.a4-template-v2 .a4-v2-header .dashboard-date-filter{
+  flex:1 1 305px !important;
+  width:318px !important;
+  max-width:318px !important;
+}
+.a4-template-v2 .a4-v2-header .dashboard-export-image-btn{
+  position:absolute !important;
+  right:0 !important;
+  top:64px !important;
+  display:inline-flex !important;
+  height:48px !important;
+  min-width:154px !important;
+  margin:0 !important;
+  z-index:3 !important;
+}
+
+.a4-template-v2 .a4-v2-slot{
+  position:absolute !important;
+  margin:0 !important;
+  padding:0 !important;
+  min-width:0 !important;
+  min-height:0 !important;
+  overflow:visible !important;
+}
+.a4-template-v2 .a4-v2-slot > *{
+  position:relative !important;
+  inset:auto !important;
+  margin:0 !important;
   max-width:none !important;
-  min-width:1120px !important;
+  justify-self:auto !important;
+  align-self:auto !important;
+}
+.a4-template-v2 .a4-v2-accuracy{left:42px !important;top:180px !important;width:330px !important;height:385px !important;z-index:3 !important}
+.a4-template-v2 .a4-v2-wms{left:412px !important;top:180px !important;width:220px !important;height:385px !important;z-index:4 !important}
+.a4-template-v2 .a4-v2-metrics{left:670px !important;top:180px !important;width:688px !important;height:124px !important;z-index:2 !important}
+.a4-template-v2 .a4-v2-hourly{left:670px !important;top:330px !important;width:688px !important;height:334px !important;z-index:2 !important}
+.a4-template-v2 .a4-v2-zones{left:42px !important;top:614px !important;width:590px !important;height:300px !important;z-index:2 !important}
+.a4-template-v2 .a4-v2-status{left:670px !important;top:700px !important;width:688px !important;height:214px !important;z-index:2 !important}
+
+/* Accuracy: a clean three-layer stack with enough space before WMS. */
+.a4-template-v2 .a4-v2-accuracy .summary-accuracy-card{
+  width:304px !important;
+  min-width:304px !important;
+  max-width:304px !important;
+  height:365px !important;
+  min-height:365px !important;
+  max-height:365px !important;
+  margin:0 !important;
   padding:0 !important;
   overflow:visible !important;
+  background:transparent !important;
+  border:0 !important;
+  box-shadow:none !important;
 }
-.dashboard-a4-capture-host #dash-content .summary-dashboard-grid{
-  width:1120px !important;
-  min-width:1120px !important;
-  max-width:1120px !important;
+.a4-template-v2 .a4-v2-accuracy .summary-accuracy-layer{
+  position:absolute !important;
+  inset:0 !important;
+  width:304px !important;
+  height:365px !important;
+  border-radius:32px !important;
+  transform-origin:center center !important;
 }
-.dashboard-a4-capture-host #dash-content .summary-hour-chart-line{
-  overflow:visible !important;
+.a4-template-v2 .a4-v2-accuracy .summary-accuracy-layer-mid{transform:none !important;z-index:2 !important}
+.a4-template-v2 .a4-v2-accuracy .summary-accuracy-layer-back{transform:rotate(5deg) translate(11px,8px) !important;z-index:1 !important}
+.a4-template-v2 .a4-v2-accuracy .summary-accuracy-layer-bottom{transform:rotate(9deg) translate(19px,14px) !important;z-index:0 !important}
+.a4-template-v2 .a4-v2-accuracy .summary-accuracy-core{
+  position:relative !important;
+  z-index:3 !important;
+  width:304px !important;
+  height:365px !important;
+  min-height:365px !important;
+  margin:0 !important;
+  padding:20px 20px 18px !important;
+  border-radius:32px !important;
+  overflow:hidden !important;
 }
-.dashboard-a4-capture-host #dash-content .summary-hour-svg{
+.a4-template-v2 .a4-v2-accuracy .summary-card-heading{margin-bottom:6px !important}
+.a4-template-v2 .a4-v2-accuracy .summary-card-heading h2{font-size:18px !important;line-height:1.2 !important}
+.a4-template-v2 .a4-v2-accuracy .summary-accuracy-hero{min-height:205px !important;height:205px !important;display:grid !important;place-items:center !important}
+.a4-template-v2 .a4-v2-accuracy .summary-accuracy-ring{width:198px !important;height:198px !important;min-width:198px !important;min-height:198px !important}
+.a4-template-v2 .a4-v2-accuracy .summary-accuracy-ring-inner strong{font-size:31px !important}
+.a4-template-v2 .a4-v2-accuracy .summary-accuracy-breakdown{margin-top:9px !important;display:grid !important;grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:7px !important}
+.a4-template-v2 .a4-v2-accuracy .summary-gain-loss{min-width:0 !important;min-height:73px !important;padding:9px 5px 7px !important;border-radius:16px !important}
+.a4-template-v2 .a4-v2-accuracy .summary-gain-loss span{font-size:8px !important}
+.a4-template-v2 .a4-v2-accuracy .summary-gain-loss strong{font-size:14px !important;white-space:nowrap !important}
+.a4-template-v2 .a4-v2-accuracy .summary-gain-loss small{font-size:7px !important}
+
+/* WMS uses the same height and sits beside Accuracy, never on top of it. */
+.a4-template-v2 .a4-v2-wms .summary-progress-card{
+  width:220px !important;
+  min-width:220px !important;
+  max-width:220px !important;
+  height:365px !important;
+  min-height:365px !important;
+  max-height:365px !important;
+  margin:0 !important;
+  padding:20px 16px 14px !important;
+  display:flex !important;
+  flex-direction:column !important;
+  overflow:hidden !important;
+}
+.a4-template-v2 .a4-v2-wms .summary-card-kicker{font-size:8px !important;line-height:1.25 !important}
+.a4-template-v2 .a4-v2-wms h2{font-size:16px !important;line-height:1.25 !important;margin-top:2px !important}
+.a4-template-v2 .a4-v2-wms .summary-wms-total-block{min-height:74px !important;margin-top:9px !important;padding:9px 7px !important}
+.a4-template-v2 .a4-v2-wms .summary-wms-total-block strong{font-size:30px !important}
+.a4-template-v2 .a4-v2-wms .summary-wms-progress-head{margin-top:10px !important}
+.a4-template-v2 .a4-v2-wms .summary-wms-columns{flex:0 0 138px !important;height:138px !important;min-height:138px !important;margin-top:auto !important;gap:8px !important}
+.a4-template-v2 .a4-v2-wms .summary-wms-column-item{grid-template-rows:20px minmax(76px,1fr) 34px !important;gap:4px !important}
+.a4-template-v2 .a4-v2-wms .summary-wms-column-track{min-height:76px !important}
+.a4-template-v2 .a4-v2-wms .summary-wms-column-label{font-size:8px !important;line-height:1.2 !important}
+.a4-template-v2 .a4-v2-wms .summary-wms-column-percent{display:none !important}
+
+.a4-template-v2 .a4-v2-metrics .summary-metrics-grid{
+  width:688px !important;
+  height:124px !important;
+  min-height:124px !important;
+  margin:0 !important;
+  display:grid !important;
+  grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+  gap:20px !important;
+  align-items:start !important;
+}
+.a4-template-v2 .a4-v2-metrics .summary-metric-wrap{width:100% !important;max-width:105px !important;justify-self:center !important}
+.a4-template-v2 .a4-v2-metrics .summary-metric-card{width:96px !important;height:96px !important;min-width:96px !important;min-height:96px !important;max-width:96px !important;max-height:96px !important;margin:0 auto !important}
+.a4-template-v2 .a4-v2-metrics .summary-metric-card strong{font-size:31px !important}
+.a4-template-v2 .a4-v2-metrics .summary-metric-title{margin-top:6px !important;font-size:11px !important;line-height:1.25 !important}
+
+.a4-template-v2 .a4-v2-hourly .summary-hourly-card{
+  width:688px !important;
+  height:334px !important;
+  min-height:334px !important;
+  max-height:334px !important;
+  margin:0 !important;
+  padding:18px 20px 13px !important;
+  overflow:hidden !important;
+  display:flex !important;
+  flex-direction:column !important;
+}
+.a4-template-v2 .a4-v2-hourly .summary-card-heading{margin-bottom:8px !important}
+.a4-template-v2 .a4-v2-hourly .summary-card-heading h2{font-size:17px !important;line-height:1.3 !important}
+.a4-template-v2 .a4-v2-hourly .summary-hour-top-stats-boxes{grid-template-columns:repeat(4,minmax(0,1fr)) !important;gap:9px !important}
+.a4-template-v2 .a4-v2-hourly .summary-hour-top-stats-boxes .hour-box{height:68px !important;min-height:68px !important;padding:7px !important}
+.a4-template-v2 .a4-v2-hourly .summary-hour-chart-line{flex:1 1 auto !important;width:100% !important;min-height:142px !important;height:142px !important;margin-top:8px !important;overflow:hidden !important}
+.a4-template-v2 .a4-v2-hourly .summary-hour-svg{display:block !important;width:100% !important;min-width:0 !important;max-width:100% !important;height:142px !important;max-height:142px !important}
+.a4-template-v2 .a4-v2-hourly .summary-hour-svg-label{font-size:14px !important}
+.a4-template-v2 .a4-v2-hourly .summary-hour-axis-text{font-size:12px !important}
+.a4-template-v2 .a4-v2-hourly .summary-hour-footnote{font-size:8px !important;line-height:1.3 !important}
+
+.a4-template-v2 .a4-v2-zones .summary-zones-card{
+  width:590px !important;
+  height:300px !important;
+  min-height:300px !important;
+  max-height:300px !important;
+  margin:0 !important;
+  padding:20px 22px !important;
+  overflow:hidden !important;
+  display:flex !important;
+  flex-direction:column !important;
+}
+.a4-template-v2 .a4-v2-zones .summary-card-heading{margin-bottom:10px !important}
+.a4-template-v2 .a4-v2-zones .summary-card-heading h2{font-size:17px !important}
+.a4-template-v2 .a4-v2-zones .summary-zone-grid{flex:1 1 auto !important;min-height:0 !important;max-height:222px !important;overflow:hidden !important}
+.a4-template-v2 .a4-v2-zones .summary-zone-row{padding:10px 0 !important}
+.a4-template-v2 .a4-v2-zones .summary-zone-row-title{font-size:14px !important}
+.a4-template-v2 .a4-v2-zones .summary-zone-row-meta{font-size:9px !important}
+.a4-template-v2 .a4-v2-zones .summary-zone-metric-head{font-size:9px !important}
+
+.a4-template-v2 .a4-v2-status .summary-status-card{
+  width:688px !important;
+  height:214px !important;
+  min-height:214px !important;
+  max-height:214px !important;
+  margin:0 !important;
+  padding:18px 22px !important;
+  overflow:hidden !important;
+}
+.a4-template-v2 .a4-v2-status .session-thermo-layout{height:100% !important;min-height:0 !important}
+.a4-template-v2 .a4-v2-status .session-thermo-gauge{width:146px !important;height:146px !important;min-width:146px !important;min-height:146px !important}
+.a4-template-v2 .a4-v2-status .session-thermo-title{font-size:17px !important}
+.a4-template-v2 .a4-v2-status .session-thermo-row{min-height:43px !important}
+
+.a4-template-v2 .dashboard-export-ring-svg{
   width:100% !important;
-  min-width:0 !important;
-  max-width:100% !important;
+  height:100% !important;
+  display:block !important;
+  grid-area:1 / 1 !important;
+  position:relative !important;
+  z-index:0 !important;
+  overflow:visible !important;
+  pointer-events:none !important;
 }
-/* Decorative pseudo-elements may still expose CSS Color 4 values to html2canvas. */
-.dashboard-a4-capture-host .dashboard-a4-export::before,
-.dashboard-a4-capture-host .dashboard-a4-export::after,
-.dashboard-a4-capture-host .dashboard-a4-export *::before,
-.dashboard-a4-capture-host .dashboard-a4-export *::after{
-  display:none !important;
-  content:none !important;
+.a4-template-v2 :is(.summary-accuracy-ring,.session-thermo-gauge,.summary-wms-ring){
+  background:none !important;
+  background-image:none !important;
+  isolation:isolate !important;
+}
+.a4-template-v2 :is(.summary-metric-card,.summary-hour-top-stats-boxes .hour-box,.summary-card){
+  filter:none !important;
+  -webkit-filter:none !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
 }
 @media(max-width:700px){
   .dashboard-export-image-btn{width:100%;flex:1 1 100%}
 }
 
+
+/* ══════════════════════════════════════════════════════════
+   v143 — deterministic A4 reference theme.
+   The exported report intentionally uses the same palette and composition
+   as v142_template_preview_full.png, independent of the live app theme.
+   ══════════════════════════════════════════════════════════ */
+.a4-template-v2.a4-preview-reference{
+  --theme-dashboard-bg:#F7FBFC;
+  --theme-dashboard-card-bg:#FFFFFF;
+  --theme-dashboard-border:#D9ECEE;
+  --theme-dashboard-heading:#006D77;
+  --theme-dashboard-text:#16383C;
+  --theme-dashboard-muted:#638083;
+
+  --theme-kpi-mint:#83C5BE;
+  --theme-kpi-mint-text:#006D77;
+  --theme-kpi-sku:#3AA6A5;
+  --theme-kpi-sku-text:#FFFFFF;
+  --theme-kpi-blush:#FFD9CF;
+  --theme-kpi-blush-text:#006D77;
+  --theme-kpi-coral:#E29578;
+  --theme-kpi-coral-text:#FFFFFF;
+
+  --theme-accuracy-start:#83C5BE;
+  --theme-accuracy-end:#007B83;
+  --theme-accuracy-layer-back:#A8D5C7;
+  --theme-accuracy-layer-bottom:#E7AB8E;
+  --theme-accuracy-ring-main:#E29578;
+  --theme-accuracy-ring-diff:#FFD9CF;
+  --theme-accuracy-heading-text:#FFFFFF;
+  --theme-accuracy-body-text:#FFFFFF;
+  --theme-accuracy-ok-text:#087F77;
+  --theme-accuracy-gain-text:#007B83;
+  --theme-accuracy-lost-text:#E29578;
+
+  --theme-wms-card-bg:#FFFFFF;
+  --theme-wms-heading-text:#006D77;
+  --theme-wms-body-text:#638083;
+  --theme-wms-value-text:#16383C;
+  --theme-wms-progress-track:#EAE7E9;
+  --theme-wms-pending-confirm-bar:#E6A23C;
+  --theme-wms-pending-bar:#EF91A2;
+  --theme-wms-done-bar:#58CADC;
+  --theme-wms-pending-confirm-text:#C77B19;
+  --theme-wms-pending-text:#4F484D;
+  --theme-wms-done-text:#007B83;
+
+  --theme-hourly-card-bg:#FFFFFF;
+  --theme-hourly-heading-text:#006D77;
+  --theme-hourly-text:#638083;
+  --theme-hourly-stat-work-bg:#E1F1F2;
+  --theme-hourly-stat-regular-bg:#EAF4F8;
+  --theme-hourly-stat-ot-bg:#FFF0EB;
+  --theme-hourly-stat-average-bg:#F8ECE8;
+  --theme-hourly-stat-text:#006D77;
+  --theme-chart-line:#007B83;
+  --theme-chart-area:#D9EEF0;
+  --theme-chart-point-text:#006D77;
+
+  --theme-zone-card-bg:#FFFFFF;
+  --theme-zone-heading-text:#006D77;
+  --theme-zone-text:#638083;
+  --theme-zone-progress-track:#E8EFEF;
+  --theme-progress-start:#68D7D4;
+  --theme-progress-end:#34BEE0;
+  --theme-zone-accuracy-bar:#F0A38C;
+
+  --theme-session-card-bg:#FFFFFF;
+  --theme-session-heading-text:#006D77;
+  --theme-session-text:#638083;
+  --theme-session-donut-done:#007B83;
+  --theme-session-donut-remain:#DDEDEF;
+  --theme-session-row-bg:#F0ECEE;
+  --theme-session-row-text:#4F484D;
+  --theme-session-active-bg:#5ED1DE;
+  --theme-session-active-text:#FFFFFF;
+
+  --theme-primary-color:#006D77;
+  --theme-primary-text:#FFFFFF;
+  --theme-input-bg:#FFFFFF;
+  --theme-input-text:#16383C;
+  --theme-input-border:#83C5BE;
+
+  background:#F7FBFC !important;
+  box-shadow:inset 0 0 0 18px #A7D8D5 !important;
+}
+.a4-template-v2.a4-preview-reference,
+.a4-template-v2.a4-preview-reference *{
+  -webkit-print-color-adjust:exact !important;
+  print-color-adjust:exact !important;
+}
+.a4-template-v2.a4-preview-reference .dashboard-export-image-btn{
+  display:none !important;
+}
+.a4-template-v2.a4-preview-reference .a4-v2-header .summary-header-actions{
+  width:670px !important;
+  flex-basis:670px !important;
+}
+.a4-template-v2.a4-preview-reference .a4-v2-header .dashboard-session-filter{
+  width:332px !important;
+  max-width:332px !important;
+}
+.a4-template-v2.a4-preview-reference .a4-v2-header .dashboard-date-filter{
+  width:316px !important;
+  max-width:316px !important;
+}
+.a4-template-v2.a4-preview-reference .dashboard-filter-control{
+  background:#FFFFFF !important;
+  border:1px solid #83C5BE !important;
+  box-shadow:0 8px 20px rgba(0,109,119,.08) !important;
+}
+.a4-template-v2.a4-preview-reference .summary-accuracy-core{
+  background:linear-gradient(180deg,#83C5BE 0%,#007B83 100%) !important;
+  box-shadow:0 18px 34px rgba(0,123,131,.22), inset 0 1px 0 rgba(255,255,255,.18) !important;
+}
+.a4-template-v2.a4-preview-reference .summary-accuracy-layer-mid{
+  background:#62B8B5 !important;
+}
+.a4-template-v2.a4-preview-reference .summary-accuracy-layer-back{
+  background:#A8D5C7 !important;
+}
+.a4-template-v2.a4-preview-reference .summary-accuracy-layer-bottom{
+  background:#E7AB8E !important;
+}
+.a4-template-v2.a4-preview-reference .summary-gain-loss{
+  background:#FFFFFF !important;
+  box-shadow:0 7px 15px rgba(0,109,119,.10) !important;
+}
+.a4-template-v2.a4-preview-reference .summary-gain-loss.ok :is(span,strong,small){
+  color:#087F77 !important;
+}
+.a4-template-v2.a4-preview-reference .summary-gain-loss.gain :is(span,strong,small){
+  color:#007B83 !important;
+}
+.a4-template-v2.a4-preview-reference .summary-gain-loss.loss :is(span,strong,small){
+  color:#E29578 !important;
+}
+.a4-template-v2.a4-preview-reference .summary-progress-card,
+.a4-template-v2.a4-preview-reference .summary-hourly-card,
+.a4-template-v2.a4-preview-reference .summary-zones-card,
+.a4-template-v2.a4-preview-reference .summary-status-card{
+  background:#FFFFFF !important;
+  border-color:#D9ECEE !important;
+  box-shadow:0 18px 34px rgba(0,109,119,.10) !important;
+}
+/* Avoid html2canvas gradient tiling: all KPI and summary boxes use explicit solids. */
+.a4-template-v2.a4-preview-reference .summary-metric-card{
+  background-image:none !important;
+}
+.a4-template-v2.a4-preview-reference .summary-metric-card.tone-mint{
+  background-color:#83C5BE !important;
+}
+.a4-template-v2.a4-preview-reference .summary-metric-card.tone-lilac{
+  background-color:#3AA6A5 !important;
+  border-color:#83C5BE !important;
+  box-shadow:0 14px 26px rgba(0,109,119,.20) !important;
+}
+.a4-template-v2.a4-preview-reference .summary-metric-card.tone-sand{
+  background-color:#FFD9CF !important;
+}
+.a4-template-v2.a4-preview-reference .summary-metric-card.tone-peach{
+  background-color:#E29578 !important;
+}
+.a4-template-v2.a4-preview-reference .summary-hour-top-stats-boxes .hour-box{
+  background-image:none !important;
+  box-shadow:none !important;
+}
+.a4-template-v2.a4-preview-reference .summary-hour-top-stats-boxes .hour-box.total{
+  background-color:#E1F1F2 !important;
+}
+.a4-template-v2.a4-preview-reference .summary-hour-top-stats-boxes .hour-box.regular{
+  background-color:#EAF4F8 !important;
+}
+.a4-template-v2.a4-preview-reference .summary-hour-top-stats-boxes .hour-box.ot{
+  background-color:#FFF0EB !important;
+}
+.a4-template-v2.a4-preview-reference .summary-hour-top-stats-boxes .hour-box.average{
+  background-color:#F8ECE8 !important;
+}
+.a4-template-v2.a4-preview-reference .summary-hour-line{
+  stroke:#007B83 !important;
+}
+.a4-template-v2.a4-preview-reference .summary-hour-area{
+  fill:#D9EEF0 !important;
+}
+.a4-template-v2.a4-preview-reference .summary-hour-dot{
+  fill:#007B83 !important;
+}
+.a4-template-v2.a4-preview-reference .summary-zone-track.progress span{
+  background:linear-gradient(90deg,#68D7D4 0%,#34BEE0 100%) !important;
+}
+.a4-template-v2.a4-preview-reference .summary-zone-track.accuracy span{
+  background:#F0A38C !important;
+}
+.a4-template-v2.a4-preview-reference .session-thermo-row{
+  background:#F0ECEE !important;
+  color:#4F484D !important;
+}
+.a4-template-v2.a4-preview-reference .session-thermo-row.active{
+  background:#5ED1DE !important;
+  color:#FFFFFF !important;
+}
+.a4-template-v2.a4-preview-reference .summary-card-chip{
+  background:#EEF5F5 !important;
+  color:#638083 !important;
+}
+
+
+/* v144 — final pixel-stable reference adjustments */
+.a4-template-v2.a4-preview-reference{
+  font-family:'Mitr','Fredoka','Sarabun',sans-serif !important;
+}
+.a4-template-v2.a4-preview-reference .a4-v2-header{
+  left:0 !important;
+  right:0 !important;
+}
+.a4-template-v2.a4-preview-reference .summary-greeting{
+  color:#007B83 !important;
+}
+.a4-template-v2.a4-preview-reference .summary-greeting-sub{
+  color:#638083 !important;
+}
+.a4-template-v2.a4-preview-reference .summary-metric-card,
+.a4-template-v2.a4-preview-reference .summary-hour-top-stats-boxes .hour-box{
+  background-repeat:no-repeat !important;
+  background-size:100% 100% !important;
+}
+.a4-template-v2.a4-preview-reference .summary-metric-card::before,
+.a4-template-v2.a4-preview-reference .summary-metric-card::after,
+.a4-template-v2.a4-preview-reference .summary-hour-top-stats-boxes .hour-box::before,
+.a4-template-v2.a4-preview-reference .summary-hour-top-stats-boxes .hour-box::after{
+  display:none !important;
+  content:none !important;
+}
+
+
+.summary-title-only{
+display:flex;
+align-items:flex-start;
+font-size:0;
+}
+.summary-title-only .dashboard-title-large{
+font-size:54px !important;
+font-weight:800 !important;
+line-height:1.05;
+display:block;
+margin-top:8px;
+}
+
 </style>
 </head>
-<body data-build="v132-safe-a4-dashboard-export">
+<body data-build="v142-a4-template-match-live">
 <div id="app"></div>
 
 <script>
@@ -15836,6 +16347,310 @@ async function ensureDashboardCaptureLibrary() {
   return window.html2canvas;
 }
 
+
+async function ensureDashboardPdfLibrary() {
+  if (window.jspdf?.jsPDF) return window.jspdf.jsPDF;
+  await new Promise((resolve,reject) => {
+    const existing = document.querySelector('script[data-dashboard-pdf]');
+    if (existing) {
+      if (window.jspdf?.jsPDF) return resolve();
+      existing.addEventListener('load',resolve,{once:true});
+      existing.addEventListener('error',reject,{once:true});
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js';
+    script.dataset.dashboardPdf = 'true';
+    script.onload = resolve;
+    script.onerror = () => reject(new Error('โหลดระบบสร้าง PDF ไม่สำเร็จ'));
+    document.head.appendChild(script);
+  });
+  if (!window.jspdf?.jsPDF) throw new Error('ระบบสร้าง PDF ไม่พร้อมใช้งาน');
+  return window.jspdf.jsPDF;
+}
+
+
+async function ensureDashboardDomImageLibrary() {
+  if (window.htmlToImage?.toPng) return window.htmlToImage;
+  await new Promise((resolve,reject) => {
+    const existing = document.querySelector('script[data-dashboard-dom-image]');
+    if (existing) {
+      if (window.htmlToImage?.toPng) {
+        resolve();
+        return;
+      }
+      existing.addEventListener('load',resolve,{once:true});
+      existing.addEventListener('error',reject,{once:true});
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js';
+    script.dataset.dashboardDomImage = 'true';
+    script.onload = resolve;
+    script.onerror = () => reject(new Error('โหลดระบบเรนเดอร์ PDF แบบตรงกับหน้าจอไม่สำเร็จ'));
+    document.head.appendChild(script);
+  });
+  if (!window.htmlToImage?.toPng) throw new Error('ระบบเรนเดอร์ PDF แบบตรงกับหน้าจอไม่พร้อมใช้งาน');
+  return window.htmlToImage;
+}
+
+function syncDashboardCaptureFormState(sourceRoot, cloneRoot) {
+  const sourceFields = sourceRoot?.querySelectorAll('input,select,textarea') || [];
+  const cloneFields = cloneRoot?.querySelectorAll('input,select,textarea') || [];
+  sourceFields.forEach((field,index) => {
+    const clone = cloneFields[index];
+    if (!clone) return;
+    if (field instanceof HTMLSelectElement) {
+      clone.value = field.value;
+      [...clone.options].forEach((option,optionIndex) => {
+        option.selected = Boolean(field.options[optionIndex]?.selected);
+      });
+      return;
+    }
+    if (field instanceof HTMLInputElement) {
+      clone.value = field.value;
+      clone.checked = field.checked;
+      return;
+    }
+    clone.value = field.value;
+    clone.textContent = field.value;
+  });
+}
+
+function dashboardExportNumber(value,fallback=0) {
+  const number = Number.parseFloat(String(value ?? '').replace(/[^0-9.+-]/g,''));
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function dashboardExportPercentFromAngle(element,propertyName,textSelector='strong') {
+  if (!element) return 0;
+  const style = (element.ownerDocument?.defaultView || window).getComputedStyle(element);
+  const angle = dashboardExportNumber(style.getPropertyValue(propertyName),NaN);
+  if (Number.isFinite(angle)) return Math.max(0,Math.min(1,angle / 360));
+  const label = element.querySelector(textSelector)?.textContent || '';
+  return Math.max(0,Math.min(1,dashboardExportNumber(label,0) / 100));
+}
+
+function dashboardExportThemeColor(element,propertyName,fallback) {
+  const value = (element.ownerDocument?.defaultView || window).getComputedStyle(element).getPropertyValue(propertyName).trim();
+  return legacyDashboardCaptureColor(value || fallback);
+}
+
+function installDashboardExportRing(element,{percent,progressColor,trackColor,strokeWidth=18}={}) {
+  if (!element) return;
+  element.querySelector(':scope > .dashboard-export-ring-svg')?.remove();
+  const safePercent = Math.max(0,Math.min(1,Number(percent) || 0));
+  const svgNs = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNs,'svg');
+  svg.setAttribute('class','dashboard-export-ring-svg');
+  svg.setAttribute('viewBox','0 0 120 120');
+  svg.setAttribute('aria-hidden','true');
+  svg.style.transform = 'rotate(-90deg)';
+  const radius = 50;
+  const circumference = 2 * Math.PI * radius;
+  const makeCircle = (stroke,dashOffset=null) => {
+    const circle = document.createElementNS(svgNs,'circle');
+    circle.setAttribute('cx','60');
+    circle.setAttribute('cy','60');
+    circle.setAttribute('r',String(radius));
+    circle.setAttribute('fill','none');
+    circle.setAttribute('stroke',legacyDashboardCaptureColor(stroke));
+    circle.setAttribute('stroke-width',String(strokeWidth));
+    circle.setAttribute('stroke-linecap','butt');
+    circle.setAttribute('shape-rendering','geometricPrecision');
+    if (dashOffset !== null) {
+      circle.setAttribute('stroke-dasharray',String(circumference));
+      circle.setAttribute('stroke-dashoffset',String(dashOffset));
+    }
+    return circle;
+  };
+  svg.appendChild(makeCircle(trackColor));
+  svg.appendChild(makeCircle(progressColor,circumference * (1 - safePercent)));
+  element.prepend(svg);
+  element.style.setProperty('background','none','important');
+  element.style.setProperty('background-image','none','important');
+}
+
+
+function applyDashboardA4ReferenceTheme(root) {
+  if (!root) return;
+  root.classList.add('a4-preview-reference');
+  const variables = {
+    '--theme-dashboard-bg':'#F7FBFC',
+    '--theme-dashboard-card-bg':'#FFFFFF',
+    '--theme-dashboard-border':'#D9ECEE',
+    '--theme-dashboard-heading':'#006D77',
+    '--theme-dashboard-text':'#16383C',
+    '--theme-dashboard-muted':'#638083',
+    '--theme-kpi-mint':'#83C5BE',
+    '--theme-kpi-mint-text':'#006D77',
+    '--theme-kpi-sku':'#3AA6A5',
+    '--theme-kpi-sku-text':'#FFFFFF',
+    '--theme-kpi-blush':'#FFD9CF',
+    '--theme-kpi-blush-text':'#006D77',
+    '--theme-kpi-coral':'#E29578',
+    '--theme-kpi-coral-text':'#FFFFFF',
+    '--theme-accuracy-start':'#83C5BE',
+    '--theme-accuracy-end':'#007B83',
+    '--theme-accuracy-layer-back':'#A8D5C7',
+    '--theme-accuracy-layer-bottom':'#E7AB8E',
+    '--theme-accuracy-ring-main':'#E29578',
+    '--theme-accuracy-ring-diff':'#FFD9CF',
+    '--theme-accuracy-heading-text':'#FFFFFF',
+    '--theme-accuracy-body-text':'#FFFFFF',
+    '--theme-accuracy-ok-text':'#087F77',
+    '--theme-accuracy-gain-text':'#007B83',
+    '--theme-accuracy-lost-text':'#E29578',
+    '--theme-wms-card-bg':'#FFFFFF',
+    '--theme-wms-heading-text':'#006D77',
+    '--theme-wms-body-text':'#638083',
+    '--theme-wms-value-text':'#16383C',
+    '--theme-wms-progress-track':'#EAE7E9',
+    '--theme-wms-pending-confirm-bar':'#E6A23C',
+    '--theme-wms-pending-bar':'#EF91A2',
+    '--theme-wms-done-bar':'#58CADC',
+    '--theme-wms-pending-confirm-text':'#C77B19',
+    '--theme-wms-pending-text':'#4F484D',
+    '--theme-wms-done-text':'#007B83',
+    '--theme-hourly-card-bg':'#FFFFFF',
+    '--theme-hourly-heading-text':'#006D77',
+    '--theme-hourly-text':'#638083',
+    '--theme-hourly-stat-work-bg':'#E1F1F2',
+    '--theme-hourly-stat-regular-bg':'#EAF4F8',
+    '--theme-hourly-stat-ot-bg':'#FFF0EB',
+    '--theme-hourly-stat-average-bg':'#F8ECE8',
+    '--theme-hourly-stat-text':'#006D77',
+    '--theme-chart-line':'#007B83',
+    '--theme-chart-area':'#D9EEF0',
+    '--theme-chart-point-text':'#006D77',
+    '--theme-zone-card-bg':'#FFFFFF',
+    '--theme-zone-heading-text':'#006D77',
+    '--theme-zone-text':'#638083',
+    '--theme-zone-progress-track':'#E8EFEF',
+    '--theme-progress-start':'#68D7D4',
+    '--theme-progress-end':'#34BEE0',
+    '--theme-zone-accuracy-bar':'#F0A38C',
+    '--theme-session-card-bg':'#FFFFFF',
+    '--theme-session-heading-text':'#006D77',
+    '--theme-session-text':'#638083',
+    '--theme-session-donut-done':'#007B83',
+    '--theme-session-donut-remain':'#DDEDEF',
+    '--theme-session-row-bg':'#F0ECEE',
+    '--theme-session-row-text':'#4F484D',
+    '--theme-session-active-bg':'#5ED1DE',
+    '--theme-session-active-text':'#FFFFFF',
+    '--theme-primary-color':'#006D77',
+    '--theme-primary-text':'#FFFFFF',
+    '--theme-input-bg':'#FFFFFF',
+    '--theme-input-text':'#16383C',
+    '--theme-input-border':'#83C5BE',
+  };
+  Object.entries(variables).forEach(([name,value]) => root.style.setProperty(name,value,'important'));
+
+  const solidCard = (selector,color,textColor='') => {
+    root.querySelectorAll(selector).forEach(element => {
+      element.style.setProperty('background-image','none','important');
+      element.style.setProperty('background-color',color,'important');
+      if (textColor) element.style.setProperty('color',textColor,'important');
+    });
+  };
+  solidCard('.summary-metric-card.tone-mint','#83C5BE','#006D77');
+  solidCard('.summary-metric-card.tone-lilac','#3AA6A5','#FFFFFF');
+  solidCard('.summary-metric-card.tone-sand','#FFD9CF','#006D77');
+  solidCard('.summary-metric-card.tone-peach','#E29578','#FFFFFF');
+  solidCard('.summary-hour-top-stats-boxes .hour-box.total','#E1F1F2');
+  solidCard('.summary-hour-top-stats-boxes .hour-box.regular','#EAF4F8');
+  solidCard('.summary-hour-top-stats-boxes .hour-box.ot','#FFF0EB');
+  solidCard('.summary-hour-top-stats-boxes .hour-box.average','#F8ECE8');
+  root.querySelector('.dashboard-export-image-btn')?.remove();
+}
+
+function prepareDashboardA4Template(root,originalButtonHtml='') {
+  if (!root) return;
+  applyDashboardA4ReferenceTheme(root);
+  root.querySelectorAll('[id]').forEach(element => element.removeAttribute('id'));
+  root.querySelectorAll('.date-range-popover').forEach(popover => { popover.hidden = true; });
+  const exportButton = root.querySelector('.dashboard-export-image-btn');
+  if (exportButton && originalButtonHtml) {
+    exportButton.disabled = false;
+    exportButton.innerHTML = originalButtonHtml;
+  }
+  root.querySelectorAll('.summary-accuracy-ring').forEach(ring => {
+    installDashboardExportRing(ring,{
+      percent:dashboardExportPercentFromAngle(ring,'--accuracy-angle'),
+      progressColor:dashboardExportThemeColor(ring,'--theme-accuracy-ring-main','#E29578'),
+      trackColor:dashboardExportThemeColor(ring,'--theme-accuracy-ring-diff','#FFD9CF'),
+      strokeWidth:19,
+    });
+  });
+  root.querySelectorAll('.session-thermo-gauge').forEach(ring => {
+    installDashboardExportRing(ring,{
+      percent:dashboardExportPercentFromAngle(ring,'--session-angle'),
+      progressColor:dashboardExportThemeColor(ring,'--theme-session-donut-done','#007B83'),
+      trackColor:dashboardExportThemeColor(ring,'--theme-session-donut-remain','#DDEDEF'),
+      strokeWidth:18,
+    });
+  });
+  root.querySelectorAll('.summary-metric-card').forEach(card => {
+    const computed = (root.ownerDocument?.defaultView || window).getComputedStyle(card);
+    const background = legacyDashboardCaptureColor(computed.backgroundColor);
+    card.style.setProperty('background-image','none','important');
+    if (background && background !== 'rgba(0, 0, 0, 0)') card.style.setProperty('background-color',background,'important');
+  });
+  root.querySelectorAll('.summary-hour-top-stats-boxes .hour-box').forEach(card => {
+    const computed = (root.ownerDocument?.defaultView || window).getComputedStyle(card);
+    const background = legacyDashboardCaptureColor(computed.backgroundColor);
+    card.style.setProperty('background-image','none','important');
+    if (background && background !== 'rgba(0, 0, 0, 0)') card.style.setProperty('background-color',background,'important');
+  });
+}
+
+function cloneDashboardExportNode(source,selector) {
+  const node = source.querySelector(selector);
+  if (!node) throw new Error(`ไม่พบองค์ประกอบสำหรับ PDF: ${selector}`);
+  return node.cloneNode(true);
+}
+
+function buildSummaryA4Template(livePage,liveDashboard,originalButtonHtml='') {
+  const template = document.createElement('div');
+  // Keep the same selector context as the live dashboard. A large part of the
+  // branding CSS intentionally uses `#dash-content ...`; without this ID the
+  // detached report falls back to old/default colors and no longer matches
+  // what the user sees in the app.
+  template.id = 'dash-content';
+  template.className = 'a4-template-v2 a4-preview-reference dashboard-a4-export summary-dashboard-content';
+
+  const liveHeader = livePage.querySelector('.summary-page-header');
+  if (!liveHeader) throw new Error('ไม่พบส่วนหัว Dashboard');
+  const header = liveHeader.cloneNode(true);
+  header.classList.add('a4-v2-header');
+  syncDashboardCaptureFormState(liveHeader,header);
+  const subtitle = header.querySelector('.summary-greeting-sub');
+  if (subtitle && !/v132/i.test(subtitle.textContent || '')) {
+    subtitle.textContent = `${(subtitle.textContent || '').trim()} · v132`;
+  }
+  header.querySelector('.dashboard-export-image-btn')?.remove();
+  template.appendChild(header);
+
+  const slots = [
+    ['a4-v2-accuracy','.summary-accuracy-card'],
+    ['a4-v2-wms','.summary-progress-card'],
+    ['a4-v2-metrics','.summary-metrics-grid'],
+    ['a4-v2-hourly','.summary-hourly-card'],
+    ['a4-v2-zones','.summary-zones-card'],
+    ['a4-v2-status','.summary-status-card'],
+  ];
+  slots.forEach(([className,selector]) => {
+    const slot = document.createElement('div');
+    slot.className = `a4-v2-slot ${className}`;
+    slot.appendChild(cloneDashboardExportNode(liveDashboard,selector));
+    template.appendChild(slot);
+  });
+
+  prepareDashboardA4Template(template,originalButtonHtml);
+  return template;
+}
+
 // html2canvas 1.4 does not understand CSS Color 4's color(...) syntax.
 // Convert only the detached export copy to legacy rgba(), leaving the live UI untouched.
 function legacyDashboardCaptureColor(value) {
@@ -15879,9 +16694,9 @@ function normalizeDashboardCaptureColors(root) {
 }
 
 async function downloadSummaryA4Image(button) {
-  const source = Q('dash-content');
-  const sourceGrid = source?.querySelector('.summary-dashboard-grid');
-  if (!source || !sourceGrid || (S._dashTab || _dashTab) !== 'summary') {
+  const livePage = document.querySelector('.main-wrapper.summary-view .page-content');
+  const liveDashboard = livePage?.querySelector('#dash-content');
+  if (!livePage || !liveDashboard || !liveDashboard.querySelector('.summary-dashboard-grid') || (S._dashTab || _dashTab) !== 'summary') {
     alert(uiCopy('กรุณาเปิดเมนูสรุปภาพรวมก่อนดาวน์โหลด','Open the Summary dashboard before downloading.'));
     return;
   }
@@ -15889,102 +16704,113 @@ async function downloadSummaryA4Image(button) {
   const originalButtonHtml = button?.innerHTML || '';
   let captureHost = null;
   try {
+    closeDashboardDatePicker();
     if (button) {
       button.disabled = true;
-      button.innerHTML = `<span data-i18n-skip>${uiCopy('กำลังสร้างภาพ…','Creating image…')}</span>`;
+      button.innerHTML = `<span data-i18n-skip>${uiCopy('กำลังสร้าง PDF…','Creating PDF…')}</span>`;
     }
-    const captureDashboard = await ensureDashboardCaptureLibrary();
+
+    const [captureDashboard, JsPDF, domImage] = await Promise.all([
+      ensureDashboardCaptureLibrary(),
+      ensureDashboardPdfLibrary(),
+      ensureDashboardDomImageLibrary().catch(error => {
+        console.warn('html-to-image unavailable; using html2canvas fallback:',error);
+        return null;
+      }),
+    ]);
     if (document.fonts?.ready) await document.fonts.ready;
 
     captureHost = document.createElement('div');
-    captureHost.className = 'dashboard-a4-capture-host';
-    const clonedDashboard = source.cloneNode(true);
-    clonedDashboard.querySelectorAll('[id]').forEach(element => element.removeAttribute('id'));
-    clonedDashboard.id = 'dash-content';
-    clonedDashboard.classList.add('dashboard-a4-export');
-    captureHost.appendChild(clonedDashboard);
+    captureHost.className = 'a4-template-host-v2';
+    const template = buildSummaryA4Template(livePage,liveDashboard,originalButtonHtml);
+    captureHost.appendChild(template);
     document.body.appendChild(captureHost);
 
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-    normalizeDashboardCaptureColors(clonedDashboard);
-    const clonedGrid = clonedDashboard.querySelector('.summary-dashboard-grid');
-    const captureWidth = Math.ceil(clonedGrid.scrollWidth || clonedGrid.getBoundingClientRect().width || 1120);
-    const captureHeight = Math.ceil(clonedGrid.scrollHeight || clonedGrid.getBoundingClientRect().height || 760);
-    const dashboardCanvas = await captureDashboard(clonedGrid, {
-      backgroundColor:null,
-      scale:2,
-      useCORS:true,
-      logging:false,
-      width:captureWidth,
-      height:captureHeight,
-      windowWidth:1120,
-      windowHeight:820,
-      scrollX:0,
-      scrollY:0,
-      onclone:clonedDocument => {
-        normalizeDashboardCaptureColors(clonedDocument.querySelector('.dashboard-a4-export'));
-      },
+    normalizeDashboardCaptureColors(template);
+
+    const exportWidth = 1400;
+    const exportHeight = 990;
+    const renderScale = 3508 / exportWidth;
+    let imageData = '';
+
+    // html-to-image uses the browser's own SVG/foreignObject renderer. This
+    // preserves the same colors, card layers, SVG chart, fonts and proportions
+    // shown in v142_template_preview_full.png more faithfully than html2canvas.
+    if (domImage?.toPng) {
+      try {
+        imageData = await domImage.toPng(template, {
+          width:exportWidth,
+          height:exportHeight,
+          pixelRatio:renderScale,
+          backgroundColor:'#F7FBFC',
+          cacheBust:true,
+          includeQueryParams:true,
+          preferredFontFormat:'woff2',
+          skipAutoScale:true,
+          style:{
+            width:`${exportWidth}px`,
+            height:`${exportHeight}px`,
+            transform:'none',
+            transformOrigin:'top left',
+          },
+          filter:node => !node?.classList?.contains('dashboard-export-image-btn'),
+        });
+      } catch (domImageError) {
+        console.warn('html-to-image render failed; using html2canvas fallback:',domImageError);
+      }
+    }
+
+    if (!imageData) {
+      const pageCanvas = await captureDashboard(template, {
+        backgroundColor:'#F7FBFC',
+        scale:renderScale,
+        useCORS:true,
+        allowTaint:false,
+        imageTimeout:25000,
+        logging:false,
+        width:exportWidth,
+        height:exportHeight,
+        windowWidth:exportWidth,
+        windowHeight:exportHeight,
+        scrollX:0,
+        scrollY:0,
+        removeContainer:true,
+        onclone:clonedDocument => {
+          const clonedTemplate = clonedDocument.querySelector('.a4-template-v2');
+          prepareDashboardA4Template(clonedTemplate,originalButtonHtml);
+          normalizeDashboardCaptureColors(clonedTemplate);
+        },
+      });
+      if (!pageCanvas.width || !pageCanvas.height) throw new Error('ไม่สามารถสร้างภาพ A4 ได้');
+      imageData = pageCanvas.toDataURL('image/png',1);
+    }
+
+    if (!imageData || imageData === 'data:,') throw new Error('ไม่สามารถสร้างภาพสำหรับ PDF ได้');
+    const pdf = new JsPDF({
+      orientation:'landscape',
+      unit:'mm',
+      format:'a4',
+      compress:true,
+      putOnlyUsedFonts:true,
+      precision:16,
     });
+    pdf.addImage(imageData,'PNG',0,0,297,210,undefined,'NONE');
 
-    const pageWidth = 3508;
-    const pageHeight = 2480;
-    const pageCanvas = document.createElement('canvas');
-    pageCanvas.width = pageWidth;
-    pageCanvas.height = pageHeight;
-    const context = pageCanvas.getContext('2d');
-    const bodyBackground = getComputedStyle(document.body).backgroundColor;
-    context.fillStyle = bodyBackground && bodyBackground !== 'rgba(0, 0, 0, 0)' ? bodyBackground : '#FCF9EA';
-    context.fillRect(0,0,pageWidth,pageHeight);
+    const sessionName = document.querySelector('.dashboard-session-filter select')?.selectedOptions?.[0]?.textContent?.trim() || 'Session';
+    const safeSessionName = sessionName
+      .replace(/[^\p{L}\p{N}_-]+/gu,'_')
+      .replace(/^_+|_+$/g,'')
+      .slice(0,48) || 'Session';
+    pdf.save(`Cycle_Count_Summary_${safeSessionName}_${localDateKey(new Date())}_A4_Exact_Reference_v144.pdf`);
 
-    const marginX = 105;
-    const headerTop = 70;
-    const contentTop = 245;
-    const contentBottom = 110;
-    const availableWidth = pageWidth - (marginX * 2);
-    const availableHeight = pageHeight - contentTop - contentBottom;
-    const drawScale = Math.min(availableWidth / dashboardCanvas.width, availableHeight / dashboardCanvas.height);
-    const drawWidth = dashboardCanvas.width * drawScale;
-    const drawHeight = dashboardCanvas.height * drawScale;
-    const drawX = (pageWidth - drawWidth) / 2;
-    const drawY = contentTop + ((availableHeight - drawHeight) / 2);
-
-    const sessionName = document.querySelector('.dashboard-session-filter select')?.selectedOptions?.[0]?.textContent?.trim() || '-';
-    const rangeLabel = dashboardDateRangeLabel();
-    context.fillStyle = '#173F45';
-    context.font = "700 64px Mitr, Sarabun, sans-serif";
-    context.textBaseline = 'top';
-    context.fillText(uiCopy('สรุปผล Cycle Count','Cycle Count Summary'),marginX,headerTop);
-    context.fillStyle = '#587277';
-    context.font = "600 30px Mitr, Sarabun, sans-serif";
-    context.fillText(`${uiCopy('Session','Session')}: ${sessionName}   •   ${uiCopy('ช่วงวันที่','Date range')}: ${rangeLabel}`,marginX,headerTop + 88);
-
-    context.drawImage(dashboardCanvas,drawX,drawY,drawWidth,drawHeight);
-
-    context.fillStyle = '#718489';
-    context.font = "500 24px Mitr, Sarabun, sans-serif";
-    context.textAlign = 'right';
-    const generatedAt = new Date().toLocaleString(uiLocale(), { dateStyle:'medium', timeStyle:'short' });
-    context.fillText(`${escapeWmsText(uiBranding.systemName)} · ${generatedAt}`,pageWidth - marginX,pageHeight - 68);
-    context.textAlign = 'left';
-
-    const blob = await new Promise(resolve => pageCanvas.toBlob(resolve,'image/png',1));
-    if (!blob) throw new Error('ไม่สามารถสร้างไฟล์ภาพได้');
-    const safeSessionName = sessionName.replace(/[^\p{L}\p{N}_-]+/gu,'_').replace(/^_+|_+$/g,'').slice(0,48) || 'Session';
-    const link = document.createElement('a');
-    const objectUrl = URL.createObjectURL(blob);
-    link.href = objectUrl;
-    link.download = `Cycle_Count_Summary_${safeSessionName}_${localDateKey(new Date())}_A4.png`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(objectUrl),1500);
-    showActionSuccessToast(uiCopy('ดาวน์โหลดภาพสรุป A4 แนวนอนแล้ว','A4 landscape summary image downloaded.'), {
+    showActionSuccessToast(uiCopy('ดาวน์โหลด PDF A4 แบบจัดวางเฉพาะแล้ว','A4 PDF matching v142_template_preview_full.png downloaded.'), {
       title:uiCopy('สร้างรายงานสำเร็จ','Report created'),
       duration:3200,
     });
   } catch (error) {
-    console.error('A4 dashboard export failed:',error);
-    alert(`${uiCopy('สร้างภาพสรุปไม่สำเร็จ','Could not create the summary image')}: ${error?.message || error}`);
+    console.error('A4 template PDF export failed:',error);
+    alert(`${uiCopy('สร้าง PDF A4 ไม่สำเร็จ','Could not create the A4 PDF')}: ${error?.message || error}`);
   } finally {
     captureHost?.remove();
     if (button) {
@@ -15998,13 +16824,13 @@ function dashboardSessionControlHtml(tab, sessionOptionsHtml) {
   if (tab === 'summary') {
     return `<div class="summary-page-header">
       <div class="summary-greeting-wrap">
-        <div class="summary-greeting">Hello, ${escapeWmsText(prof?.name || 'User')}</div>
-        <div class="summary-greeting-sub">${escapeWmsText(uiBranding.systemName)} Dashboard</div>
+        <div class="summary-greeting"></div>
+        <div class="summary-greeting-sub"><span class="dashboard-title-large">${escapeWmsText(uiBranding.systemName)} Dashboard</span></div>
       </div>
       <div class="summary-header-actions">
         ${dashboardFiltersHtml(sessionOptionsHtml, false)}
-        <button class="dashboard-export-image-btn" type="button" onclick="downloadSummaryA4Image(this)" title="${uiCopy('ดาวน์โหลดภาพสรุป A4 แนวนอน','Download A4 landscape summary image')}">
-          ${dashboardExportIconSvg()}<span data-i18n-skip>${uiCopy('ดาวน์โหลด A4','Download A4')}</span>
+        <button class="dashboard-export-image-btn" type="button" onclick="downloadSummaryA4Image(this)" title="${uiCopy('ดาวน์โหลด PDF A4 แบบจัดวางเฉพาะ','Download dedicated A4 PDF')}">
+          ${dashboardExportIconSvg()}<span data-i18n-skip>${uiCopy('ดาวน์โหลด PDF A4','Download A4 PDF')}</span>
         </button>
       </div>
     </div>`;
@@ -16992,11 +17818,16 @@ function renderResponsivePreviewContent() {
       ${previewAxisLabels}
     </svg>`;
 
+  
+const rs=getComputedStyle(document.documentElement);
+['--main-bg','--neu-surface','--primary-blue','--primary-grad','--accent-green','--accent-red','--accent-amber','--text-main','--text-muted'].forEach(v=>{
+ document.documentElement.style.setProperty(v,rs.getPropertyValue(v));
+});
+
   cnt().innerHTML = `
     <div class="summary-page-header">
       <div class="summary-greeting-wrap">
-        <div class="summary-greeting">Hello, AuD</div>
-        <div class="summary-greeting-sub">${escapeWmsText(uiBranding.systemName)} Dashboard · v132</div>
+        <div class="summary-greeting-sub summary-title-only"><span class="dashboard-title-large">${escapeWmsText(uiBranding.systemName)} Dashboard</span></div>
       </div>
       <div class="summary-header-actions">${dashboardFiltersHtml('<option>Cycle Count ก.ค. 2569</option>', false)}</div>
     </div>
