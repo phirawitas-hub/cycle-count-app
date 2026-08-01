@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v155 - Navigation Title Synchronisation</title>
+<title>Cycle Count v159 - Complete Found Work Excel Backup</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -14227,9 +14227,193 @@ margin-top:8px;
   .scanner-file-button { min-height:48px; }
 }
 
+/* ══════════════════════════════════════════════════════════
+   v156 — Built-in Handheld laser scanner (Keyboard Wedge/HID)
+   ══════════════════════════════════════════════════════════ */
+.handheld-laser-bar {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+  margin-top:12px;
+  padding:9px 10px;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 30%,transparent);
+  border-radius:15px;
+  background:color-mix(in srgb,var(--theme-surface-color) 88%,var(--theme-primary-color) 12%);
+}
+.handheld-laser-icon {
+  width:36px;
+  height:36px;
+  flex:0 0 36px;
+  display:grid;
+  place-items:center;
+  border-radius:11px;
+  background:var(--theme-primary-color);
+  color:var(--theme-button-text-color);
+}
+.handheld-laser-icon svg {
+  width:21px;
+  height:21px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.handheld-laser-copy { flex:0 1 auto; min-width:112px; }
+.handheld-laser-copy strong {
+  display:block;
+  color:var(--theme-heading-color);
+  font-size:11px;
+  font-weight:900;
+  line-height:1.2;
+}
+.handheld-laser-copy span {
+  display:block;
+  margin-top:2px;
+  color:var(--theme-muted-text-color);
+  font-size:9px;
+  font-weight:700;
+  line-height:1.25;
+}
+.handheld-laser-input {
+  flex:1 1 180px;
+  min-width:0;
+  height:40px !important;
+  margin:0 !important;
+  padding:7px 11px !important;
+  border:1.5px solid color-mix(in srgb,var(--theme-primary-color) 40%,transparent) !important;
+  border-radius:12px !important;
+  background:var(--theme-surface-color) !important;
+  color:var(--theme-text-color) !important;
+  font-family:ui-monospace,monospace !important;
+  font-size:12px !important;
+  font-weight:800 !important;
+  box-shadow:none !important;
+}
+.handheld-laser-input:focus {
+  outline:none;
+  border-color:var(--theme-primary-color) !important;
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--theme-primary-color) 16%,transparent) !important;
+}
+.handheld-laser-input::placeholder { color:var(--theme-muted-text-color); opacity:.86; }
+
+.handheld-scan-feedback {
+  position:fixed;
+  z-index:2600;
+  left:50%;
+  top:50%;
+  width:min(88vw,360px);
+  padding:18px 16px;
+  border:2px solid transparent;
+  border-radius:22px;
+  background:var(--theme-surface-color);
+  box-shadow:0 22px 60px rgba(15,44,51,.30);
+  text-align:center;
+  opacity:0;
+  pointer-events:none;
+  transform:translate(-50%,-44%) scale(.94);
+  transition:opacity .16s ease,transform .16s ease;
+}
+.handheld-scan-feedback.show { opacity:1; transform:translate(-50%,-50%) scale(1); }
+.handheld-scan-feedback.success { border-color:#35a985; }
+.handheld-scan-feedback.error { border-color:#e26458; }
+.handheld-scan-feedback.warning { border-color:#e7a42d; }
+.handheld-scan-feedback-icon {
+  width:48px;
+  height:48px;
+  margin:0 auto 9px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  color:#fff;
+  font-size:25px;
+  font-weight:900;
+}
+.handheld-scan-feedback.success .handheld-scan-feedback-icon { background:#2b9b78; }
+.handheld-scan-feedback.error .handheld-scan-feedback-icon { background:#dc5549; }
+.handheld-scan-feedback.warning .handheld-scan-feedback-icon { background:#d98a13; }
+.handheld-scan-feedback strong {
+  display:block;
+  color:var(--theme-heading-color);
+  font-size:17px;
+  font-weight:900;
+  line-height:1.3;
+}
+.handheld-scan-feedback code {
+  display:block;
+  margin-top:7px;
+  color:var(--theme-primary-color);
+  font-family:ui-monospace,monospace;
+  font-size:15px;
+  font-weight:900;
+  overflow-wrap:anywhere;
+}
+.handheld-scan-feedback span {
+  display:block;
+  margin-top:6px;
+  color:var(--theme-muted-text-color);
+  font-size:11px;
+  font-weight:700;
+  line-height:1.4;
+}
+.citem-wrap.handheld-scan-match {
+  border-color:var(--theme-primary-color) !important;
+  box-shadow:0 0 0 4px color-mix(in srgb,var(--theme-primary-color) 17%,transparent),0 14px 32px rgba(15,92,98,.18) !important;
+}
+.scan-input-row input.handheld-scan-active,
+.handheld-laser-input.handheld-scan-active {
+  border-color:#2b9b78 !important;
+  background:#effbf7 !important;
+}
+
+@media (max-width:620px) {
+  .handheld-laser-bar {
+    display:grid;
+    grid-template-columns:36px minmax(0,1fr);
+    gap:7px 9px;
+    margin-top:9px;
+    padding:8px;
+    border-radius:14px;
+  }
+  .handheld-laser-copy { min-width:0; }
+  .handheld-laser-input { grid-column:1 / -1; width:100%; height:44px !important; }
+  .handheld-scan-feedback { width:calc(100vw - 24px); padding:16px 13px; }
+  .handheld-scan-feedback strong { font-size:16px; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   v158 — Accuracy breakdown color roles
+   Top labels and ITEM totals stay black; the middle quantity
+   follows each status color from the selected Theme.
+   ══════════════════════════════════════════════════════════ */
+#dash-content .summary-accuracy-card .summary-accuracy-breakdown .summary-gain-loss > span,
+#dash-content .summary-accuracy-card .summary-accuracy-breakdown .summary-gain-loss > small,
+.a4-template-v2 .a4-v2-accuracy .summary-accuracy-breakdown .summary-gain-loss > span,
+.a4-template-v2 .a4-v2-accuracy .summary-accuracy-breakdown .summary-gain-loss > small {
+  color:#111111 !important;
+  -webkit-text-fill-color:#111111 !important;
+  opacity:1 !important;
+}
+#dash-content .summary-accuracy-card .summary-accuracy-breakdown .summary-gain-loss.ok > strong,
+.a4-template-v2 .a4-v2-accuracy .summary-accuracy-breakdown .summary-gain-loss.ok > strong {
+  color:var(--theme-accuracy-ok-text) !important;
+  -webkit-text-fill-color:var(--theme-accuracy-ok-text) !important;
+}
+#dash-content .summary-accuracy-card .summary-accuracy-breakdown .summary-gain-loss.gain > strong,
+.a4-template-v2 .a4-v2-accuracy .summary-accuracy-breakdown .summary-gain-loss.gain > strong {
+  color:var(--theme-accuracy-gain-text) !important;
+  -webkit-text-fill-color:var(--theme-accuracy-gain-text) !important;
+}
+#dash-content .summary-accuracy-card .summary-accuracy-breakdown .summary-gain-loss.loss > strong,
+.a4-template-v2 .a4-v2-accuracy .summary-accuracy-breakdown .summary-gain-loss.loss > strong {
+  color:var(--theme-accuracy-lost-text) !important;
+  -webkit-text-fill-color:var(--theme-accuracy-lost-text) !important;
+}
+
 </style>
 </head>
-<body data-build="v155-navigation-title-sync">
+<body data-build="v159-complete-found-work-backup">
 <div id="app"></div>
 
 <script>
@@ -14299,7 +14483,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v155-navigation-title-sync';
+window.__CYCLE_COUNT_BUILD__ = 'v159-complete-found-work-backup';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -16709,7 +16893,7 @@ function applyBrandingSettings(settings, persistLocal = true) {
     const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
     root.setProperty(`--theme-${cssKey}`, uiBranding[key]);
   });
-  document.title = `${uiBranding.systemName} v155`;
+  document.title = `${uiBranding.systemName} v159`;
   if (persistLocal) {
     try { localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(uiBranding)); } catch (_) {}
   }
@@ -17574,7 +17758,7 @@ async function downloadSummaryA4Image(button) {
       .replace(/[^\p{L}\p{N}_-]+/gu,'_')
       .replace(/^_+|_+$/g,'')
       .slice(0,48) || 'Session';
-    pdf.save(`Cycle_Count_Summary_${safeSessionName}_${localDateKey(new Date())}_A4_App_Matched_v155.pdf`);
+    pdf.save(`Cycle_Count_Summary_${safeSessionName}_${localDateKey(new Date())}_A4_App_Matched_v159.pdf`);
 
     showActionSuccessToast(uiCopy('ดาวน์โหลด PDF A4 แบบจัดวางเฉพาะแล้ว','A4 PDF matching v142_template_preview_full.png downloaded.'), {
       title:uiCopy('สร้างรายงานสำเร็จ','Report created'),
@@ -18023,7 +18207,7 @@ async function protectedFunctionHeaders() {
   return {
     Authorization: `Bearer ${session.access_token}`,
     apikey: SUPA_KEY,
-    'x-client-info': 'cycle-count-v155',
+    'x-client-info': 'cycle-count-v159',
   };
 }
 
@@ -20221,10 +20405,16 @@ async function loadCTasks() {
       </div>
       <div class="prog"><div class="prog-fill" style="width:${pct}%"></div></div>
       ${(asgns.length || annualJobs.length) ? `<button class="btn btn-blue" style="margin-top:24px;width:100%" onclick="openScanner()">📷 สแกน Location</button>` : ''}
+      ${(asgns.length || annualJobs.length) ? hardwareLaserCaptureHtml(
+        'task_hardware_scan',
+        'task-location',
+        uiCopy('กดปุ่มยิง Location เพื่อเปิดงานได้ทันที','Scan a Location to open the assigned work immediately'),
+      ) : ''}
     </div>
     ${normalHtml}`;
 
   if (asgns.length || annualJobs.length) refreshMyTaskFilters();
+  activateHardwareLaserScanner();
 }
 
 function annualAssignmentKey(sessionId,locationId) {
@@ -20545,6 +20735,335 @@ function renderMyTasks() {
   }
   list.innerHTML = html;
 }
+
+const HANDHELD_SCAN_CONFIG = Object.freeze({
+  minLength:2,
+  maxInterKeyMs:90,
+  maxDurationMs:1600,
+  duplicateWindowMs:1100,
+});
+let _hardwareScanBuffer = '';
+let _hardwareScanStartedAt = 0;
+let _hardwareScanLastKeyAt = 0;
+let _hardwareScanMaxGap = 0;
+let _hardwareScanTarget = null;
+let _hardwareScanNumberOriginalValue = '';
+let _hardwareScanLastValue = '';
+let _hardwareScanLastAcceptedAt = 0;
+let _hardwareScanFeedbackTimer = null;
+let _hardwareScanCommitTimer = null;
+let _hardwareScanInputCommitTimer = null;
+
+function hardwareLaserCaptureHtml(id,context,instruction) {
+  return `<div class="handheld-laser-bar" data-i18n-skip>
+    <span class="handheld-laser-icon">${barcodeScanIconSvg()}</span>
+    <span class="handheld-laser-copy">
+      <strong>${escapeWmsText(uiCopy('เลเซอร์ Handheld พร้อมใช้งาน','Handheld Laser Ready'))}</strong>
+      <span>${escapeWmsText(instruction)}</span>
+    </span>
+    <input class="handheld-laser-input" id="${escapeWmsText(id)}"
+      data-hw-scan-capture="true" data-hw-scan-context="${escapeWmsText(context)}"
+      inputmode="none" autocomplete="off" autocapitalize="characters" spellcheck="false"
+      aria-label="${escapeWmsText(uiCopy('ช่องรับข้อมูลจากเลเซอร์ Handheld','Handheld Laser Input'))}"
+      placeholder="${escapeWmsText(uiCopy('กดปุ่มยิง Barcode ได้ทันที','Press the Hardware Scan Button'))}"
+      onfocus="this.select()">
+  </div>`;
+}
+
+function resetHardwareScanBuffer() {
+  clearTimeout(_hardwareScanCommitTimer);
+  _hardwareScanCommitTimer = null;
+  _hardwareScanBuffer = '';
+  _hardwareScanStartedAt = 0;
+  _hardwareScanLastKeyAt = 0;
+  _hardwareScanMaxGap = 0;
+  _hardwareScanTarget = null;
+  _hardwareScanNumberOriginalValue = '';
+}
+
+function commitHardwareScanBufferWithoutSuffix() {
+  const target = _hardwareScanTarget;
+  const numericTarget = Boolean(target?.matches?.('input[type="number"]'));
+  const originalNumericValue = _hardwareScanNumberOriginalValue;
+  const elapsed = _hardwareScanStartedAt ? performance.now() - _hardwareScanStartedAt : 0;
+  const valid = _hardwareScanBuffer.length >= 4
+    && elapsed <= HANDHELD_SCAN_CONFIG.maxDurationMs
+    && _hardwareScanMaxGap <= HANDHELD_SCAN_CONFIG.maxInterKeyMs;
+  const value = valid ? _hardwareScanBuffer : '';
+  resetHardwareScanBuffer();
+  if (value && numericTarget) {
+    target.value = originalNumericValue;
+    target.dispatchEvent(new Event('input',{ bubbles:true }));
+  }
+  if (value) routeHardwareLaserScan(value,target);
+}
+
+function normalizeHardwareScanValue(value='') {
+  return String(value || '')
+    .replace(/[\x00-\x1F\x7F]/g,'')
+    .trim();
+}
+
+function hardwareScanCompareKey(value='') {
+  return normalizeHardwareScanValue(value).toUpperCase();
+}
+
+function hardwareScanOperationalPage() {
+  return ['c-tasks','c-count','c-found'].includes(S?.page);
+}
+
+function hardwareScanEditableTarget(target) {
+  return target instanceof HTMLElement && (
+    target.matches('input,textarea,select') || target.isContentEditable
+  );
+}
+
+function hardwareScanRoleLabel(role='') {
+  const labels = {
+    location:uiCopy('Location','Location'),
+    lpn:uiCopy('LPN','LPN'),
+    item:uiCopy('Item','Item'),
+  };
+  return labels[role] || uiCopy('Barcode','Barcode');
+}
+
+function handheldScanSignal(kind='success') {
+  try {
+    navigator.vibrate?.(kind === 'success' ? 65 : kind === 'warning' ? [45,35,45] : [80,45,80]);
+  } catch (_) {}
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    const audio = new AudioContextClass();
+    const playTone = (frequency,start,duration) => {
+      const oscillator = audio.createOscillator();
+      const gain = audio.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.value = frequency;
+      gain.gain.setValueAtTime(.0001,audio.currentTime + start);
+      gain.gain.exponentialRampToValueAtTime(.13,audio.currentTime + start + .01);
+      gain.gain.exponentialRampToValueAtTime(.0001,audio.currentTime + start + duration);
+      oscillator.connect(gain); gain.connect(audio.destination);
+      oscillator.start(audio.currentTime + start);
+      oscillator.stop(audio.currentTime + start + duration + .02);
+    };
+    if (kind === 'success') playTone(920,0,.10);
+    else { playTone(300,0,.11); playTone(220,.14,.14); }
+    setTimeout(() => audio.close().catch(()=>{}),500);
+  } catch (_) {}
+}
+
+function handheldScanFeedback(kind,title,value='',detail='') {
+  let box = Q('handheldScanFeedback');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'handheldScanFeedback';
+    box.className = 'handheld-scan-feedback';
+    box.setAttribute('role','status');
+    box.setAttribute('aria-live','assertive');
+    document.body.appendChild(box);
+  }
+  const safeKind = ['success','error','warning'].includes(kind) ? kind : 'success';
+  const icon = safeKind === 'success' ? '✓' : safeKind === 'warning' ? '!' : '×';
+  box.className = `handheld-scan-feedback ${safeKind}`;
+  box.innerHTML = `<div class="handheld-scan-feedback-icon">${icon}</div>
+    <strong>${escapeWmsText(translateUiText(title))}</strong>
+    ${value ? `<code data-i18n-skip>${escapeWmsText(value)}</code>` : ''}
+    ${detail ? `<span>${escapeWmsText(translateUiText(detail))}</span>` : ''}`;
+  clearTimeout(_hardwareScanFeedbackTimer);
+  requestAnimationFrame(() => box.classList.add('show'));
+  _hardwareScanFeedbackTimer = setTimeout(() => box.classList.remove('show'),safeKind === 'error' ? 2200 : 1450);
+  handheldScanSignal(safeKind);
+}
+
+function focusHardwareScanTarget(targetOrId,{ select=true }={}) {
+  const target = typeof targetOrId === 'string' ? Q(targetOrId) : targetOrId;
+  if (!target || target.disabled || target.offsetParent === null) return false;
+  try { target.focus({ preventScroll:true }); } catch (_) { target.focus(); }
+  if (select) target.select?.();
+  return true;
+}
+
+function activateHardwareLaserScanner() {
+  const narrowTerminal = window.matchMedia?.('(max-width:760px)').matches
+    || (/Android/i.test(navigator.userAgent) && window.innerWidth <= 900);
+  if (!narrowTerminal) return;
+  const targetId = S?.page === 'c-tasks'
+    ? 'task_hardware_scan'
+    : S?.page === 'c-found'
+      ? 'found_hardware_scan'
+      : S?.page === 'c-count'
+        ? 'count_hardware_scan'
+        : '';
+  if (targetId) setTimeout(() => focusHardwareScanTarget(targetId),120);
+}
+
+function assignHardwareScanToField(input,value,role='') {
+  if (!input) return false;
+  const cleaned = normalizeHardwareScanValue(value);
+  const finalValue = ['location','item'].includes(role) ? cleaned.toUpperCase() : cleaned;
+  input.value = finalValue;
+  input.dispatchEvent(new Event('input',{ bubbles:true }));
+  input.dispatchEvent(new Event('change',{ bubbles:true }));
+  input.classList.add('handheld-scan-active');
+  setTimeout(() => input.classList.remove('handheld-scan-active'),1100);
+  const nextId = input.dataset.hwScanNext || '';
+  if (nextId) setTimeout(() => focusHardwareScanTarget(nextId),80);
+  handheldScanFeedback(
+    'success',
+    `${hardwareScanRoleLabel(role)} ${uiCopy('ถูกต้อง','Scanned')}`,
+    finalValue,
+    nextId ? uiCopy('พร้อมสแกนหรือกรอกช่องถัดไป','Ready for the next field') : uiCopy('รับข้อมูลเรียบร้อยแล้ว','Data captured successfully'),
+  );
+  return true;
+}
+
+function firstIncompleteFoundScanField() {
+  return [Q('found_location'),Q('found_lpn'),Q('found_item')]
+    .find(input => input && !normalizeHardwareScanValue(input.value));
+}
+
+function handleFoundHardwareScan(value,target=null) {
+  const directRole = target?.dataset?.hwScanRole || '';
+  if (directRole && !target.dataset.hwScanCapture) {
+    return assignHardwareScanToField(target,value,directRole);
+  }
+  const input = firstIncompleteFoundScanField();
+  if (!input) {
+    handheldScanFeedback('warning',uiCopy('ข้อมูล Barcode ครบแล้ว','Barcode Fields Complete'),value,uiCopy('กรอก QTY, Lot และ Status แล้วบันทึกงาน','Enter QTY, Lot and Status, then save'));
+    focusHardwareScanTarget('found_qty');
+    return false;
+  }
+  return assignHardwareScanToField(input,value,input.dataset.hwScanRole || '');
+}
+
+function handleCountHardwareScan(value,target=null) {
+  const directRole = target?.dataset?.hwScanRole || '';
+  if (directRole && !target.dataset.hwScanCapture) {
+    return assignHardwareScanToField(target,value,directRole);
+  }
+  const key = hardwareScanCompareKey(value);
+  const page = document.querySelector('.count-handheld-page');
+  const locationKey = hardwareScanCompareKey(page?.dataset.hwLocationCode || '');
+  if (key && locationKey && key === locationKey) {
+    handheldScanFeedback('success',uiCopy('Location ถูกต้อง','Location Verified'),value,uiCopy('ยิง LPN หรือ Item เพื่อเลือกสินค้าที่จะนับ','Scan an LPN or Item to select the count line'));
+    setTimeout(() => focusHardwareScanTarget('count_hardware_scan'),80);
+    return true;
+  }
+  const wrappers = [...document.querySelectorAll('.count-handheld-page .citem-wrap[data-hw-item-id]')];
+  const match = wrappers.find(wrapper => {
+    const itemKey = hardwareScanCompareKey(wrapper.dataset.hwItemCode || '');
+    const lpnKeys = String(wrapper.dataset.hwLpCodes || '').split('|').map(hardwareScanCompareKey);
+    return key && (key === itemKey || lpnKeys.includes(key));
+  });
+  if (!match) {
+    handheldScanFeedback('error',uiCopy('ไม่พบ Barcode ใน Location นี้','Barcode Not Found in This Location'),value,uiCopy('ตรวจสอบ LPN / Item หรือ Location แล้วลองอีกครั้ง','Check the LPN, Item or Location and try again'));
+    setTimeout(() => focusHardwareScanTarget('count_hardware_scan'),80);
+    return false;
+  }
+  document.querySelectorAll('.citem-wrap.handheld-scan-match').forEach(card => card.classList.remove('handheld-scan-match'));
+  match.classList.add('handheld-scan-match');
+  setTimeout(() => match.classList.remove('handheld-scan-match'),1800);
+  const itemId = match.dataset.hwItemId || '';
+  const qtyInput = Q(`q_${itemId}`);
+  window._hardwareScanReturnInputId = qtyInput?.id || '';
+  match.scrollIntoView({ block:'center',behavior:'smooth' });
+  setTimeout(() => focusHardwareScanTarget(qtyInput),170);
+  const matchedAs = key === hardwareScanCompareKey(match.dataset.hwItemCode || '') ? 'Item' : 'LPN';
+  handheldScanFeedback('success',`${matchedAs} ${uiCopy('ตรงกับรายการ','Matched')}`,value,uiCopy('กรอกจำนวนที่นับได้ แล้วกด Enter / OK','Enter the counted quantity, then press Enter / OK'));
+  return true;
+}
+
+function routeHardwareLaserScan(rawValue,target=null) {
+  const value = normalizeHardwareScanValue(rawValue);
+  if (value.length < HANDHELD_SCAN_CONFIG.minLength) return false;
+  const now = Date.now();
+  if (hardwareScanCompareKey(value) === hardwareScanCompareKey(_hardwareScanLastValue)
+      && now - _hardwareScanLastAcceptedAt < HANDHELD_SCAN_CONFIG.duplicateWindowMs) {
+    handheldScanFeedback('warning',uiCopy('ป้องกันการสแกนซ้ำ','Duplicate Scan Blocked'),value,uiCopy('รอสักครู่แล้วจึงสแกนรหัสเดิมอีกครั้ง','Wait briefly before scanning the same code again'));
+    return false;
+  }
+  _hardwareScanLastValue = value;
+  _hardwareScanLastAcceptedAt = now;
+  if (target?.dataset?.hwScanCapture) target.value = '';
+
+  if (S?.page === 'c-tasks') {
+    onTaskLocationScanned(value,true);
+    return true;
+  }
+  if (S?.page === 'c-found') return handleFoundHardwareScan(value,target);
+  if (S?.page === 'c-count') return handleCountHardwareScan(value,target);
+  return false;
+}
+
+function handleHardwareLaserKeydown(event) {
+  if (!hardwareScanOperationalPage() || Q('scanOverlay')) return;
+  if (event.ctrlKey || event.altKey || event.metaKey || event.isComposing) return;
+  const target = event.target instanceof HTMLElement ? event.target : null;
+  const numericTarget = Boolean(target?.matches('input[type="number"]'));
+  if (target?.matches('textarea,select,[contenteditable="true"]')) {
+    resetHardwareScanBuffer();
+    return;
+  }
+  const scanTarget = Boolean(target?.dataset?.hwScanCapture || target?.dataset?.hwScanRole);
+  if (hardwareScanEditableTarget(target) && !scanTarget && !numericTarget) {
+    resetHardwareScanBuffer();
+    return;
+  }
+  const terminalKey = event.key === 'Enter' || event.key === 'Tab';
+  if (terminalKey) {
+    const elapsed = _hardwareScanStartedAt ? performance.now() - _hardwareScanStartedAt : 0;
+    const fastBuffer = _hardwareScanBuffer.length >= HANDHELD_SCAN_CONFIG.minLength
+      && elapsed <= HANDHELD_SCAN_CONFIG.maxDurationMs
+      && _hardwareScanMaxGap <= HANDHELD_SCAN_CONFIG.maxInterKeyMs;
+    const fieldValue = scanTarget ? normalizeHardwareScanValue(target?.value || '') : '';
+    const candidate = fastBuffer ? _hardwareScanBuffer : fieldValue;
+    const numericBarcode = numericTarget && fastBuffer && candidate.length >= 4;
+    if (numericBarcode) {
+      event.preventDefault();
+      event.stopPropagation();
+      target.value = _hardwareScanNumberOriginalValue;
+      target.dispatchEvent(new Event('input',{ bubbles:true }));
+      routeHardwareLaserScan(candidate,target);
+    } else if (!numericTarget && candidate.length >= HANDHELD_SCAN_CONFIG.minLength) {
+      event.preventDefault();
+      event.stopPropagation();
+      routeHardwareLaserScan(candidate,target);
+    }
+    resetHardwareScanBuffer();
+    return;
+  }
+  if (event.key.length !== 1 || event.repeat) return;
+  const now = performance.now();
+  const sameTarget = !_hardwareScanTarget || _hardwareScanTarget === target;
+  const gap = _hardwareScanLastKeyAt ? now - _hardwareScanLastKeyAt : 0;
+  if (!sameTarget || (gap && gap > HANDHELD_SCAN_CONFIG.maxInterKeyMs)) resetHardwareScanBuffer();
+  if (!_hardwareScanStartedAt) {
+    _hardwareScanStartedAt = now;
+    if (numericTarget) _hardwareScanNumberOriginalValue = target.value || '';
+  }
+  if (_hardwareScanLastKeyAt) _hardwareScanMaxGap = Math.max(_hardwareScanMaxGap,now - _hardwareScanLastKeyAt);
+  _hardwareScanLastKeyAt = now;
+  _hardwareScanTarget = target;
+  _hardwareScanBuffer += event.key;
+  if (target?.dataset?.hwScanCapture) event.preventDefault();
+  clearTimeout(_hardwareScanCommitTimer);
+  _hardwareScanCommitTimer = setTimeout(commitHardwareScanBufferWithoutSuffix,140);
+}
+
+document.addEventListener('keydown',handleHardwareLaserKeydown,true);
+document.addEventListener('input',event => {
+  const target = event.target instanceof HTMLElement ? event.target : null;
+  if (!hardwareScanOperationalPage() || !target?.dataset?.hwScanCapture) return;
+  const value = normalizeHardwareScanValue(target.value || '');
+  if (value.length < 4) return;
+  clearTimeout(_hardwareScanInputCommitTimer);
+  _hardwareScanInputCommitTimer = setTimeout(() => {
+    const committed = normalizeHardwareScanValue(target.value || '');
+    target.value = '';
+    if (committed.length >= 4) routeHardwareLaserScan(committed,target);
+  },100);
+},true);
 
 let _scannerCallback = null;
 let _scannerLocked = false;
@@ -20938,12 +21457,17 @@ function openScanner() {
   openBarcodeScanner({ title:'สแกน Location', onDetected:onTaskLocationScanned });
 }
 
-function onTaskLocationScanned(text) {
+function onTaskLocationScanned(text,fromHardwareLaser=false) {
   const code = (text || '').trim().toUpperCase();
   const tasks = window._myTasks || [];
   const match = tasks.find(a => a.locations?.code?.toUpperCase() === code);
   if (match) {
-    if (['completed','approved'].includes(match.status)) { alert(`Location "${code}" นับเสร็จแล้ว`); return; }
+    if (['completed','approved'].includes(match.status)) {
+      handheldScanFeedback('warning',uiCopy('Location นี้นับเสร็จแล้ว','Location Already Completed'),code,uiCopy('เลือก Location อื่นเพื่อเริ่มงาน','Scan another Location to continue'));
+      setTimeout(() => focusHardwareScanTarget('task_hardware_scan'),80);
+      return;
+    }
+    handheldScanFeedback('success',uiCopy('พบ Location ที่ได้รับมอบหมาย','Assigned Location Found'),code,uiCopy('กำลังเปิดหน้าบันทึกการนับ','Opening the physical count page'));
     go('c-count', { aid: match.id });
     return;
   }
@@ -20951,10 +21475,12 @@ function onTaskLocationScanned(text) {
     item.locations?.code?.toUpperCase() === code
   );
   if (annualItem) {
+    handheldScanFeedback('success',uiCopy('พบ Location ใน JOB','Job Location Found'),code,uiCopy('กำลังเปิดหน้าบันทึกการนับ','Opening the physical count page'));
     openAnnualJobCount(annualItem.job_id,annualItem.id);
     return;
   }
-  alert(`ไม่พบ Location "${code}" ในงานของคุณ`);
+  handheldScanFeedback('error',uiCopy('ไม่พบ Location ในงานที่ได้รับมอบหมาย','Location Not Found in Assigned Work'),code,uiCopy('ตรวจสอบรหัสหรือแจ้งหัวหน้างาน','Check the code or contact your supervisor'));
+  if (fromHardwareLaser) setTimeout(() => focusHardwareScanTarget('task_hardware_scan'),80);
 }
 
 const COUNT_REMARK_PRESETS = [
@@ -21252,10 +21778,18 @@ async function loadCFound() {
             `<option value="${session.id}" ${session.id===preferredSession?'selected':''}>${escapeWmsText(session.name)} · ${escapeWmsText(session.status)}</option>`
           ).join('')}</select>
         </div>
+        <div class="span-2">
+          ${hardwareLaserCaptureHtml(
+            'found_hardware_scan',
+            'found-flow',
+            uiCopy('ยิงตามลำดับ Location → LPN → Item','Scan in sequence: Location → LPN → Item'),
+          )}
+        </div>
         <div class="fg">
           <label>LOCATION <span style="color:var(--accent-red)">*</span></label>
           <div class="scan-input-row">
             <input id="found_location" autocomplete="off" placeholder="สแกนหรือกรอก Location"
+              data-hw-scan-role="location" data-hw-scan-next="found_lpn"
               oninput="this.value=this.value.toUpperCase()">
             <button type="button" class="scan-field-button" onclick="scanIntoField('found_location','Location')" title="สแกน Location">${barcodeScanIconSvg()}</button>
           </div>
@@ -21263,7 +21797,8 @@ async function loadCFound() {
         <div class="fg">
           <label>LPN <span style="color:var(--accent-red)">*</span></label>
           <div class="scan-input-row">
-            <input id="found_lpn" autocomplete="off" placeholder="สแกนหรือกรอก LPN">
+            <input id="found_lpn" autocomplete="off" placeholder="สแกนหรือกรอก LPN"
+              data-hw-scan-role="lpn" data-hw-scan-next="found_item">
             <button type="button" class="scan-field-button" onclick="scanIntoField('found_lpn','LPN')" title="สแกน LPN">${barcodeScanIconSvg()}</button>
           </div>
         </div>
@@ -21271,6 +21806,7 @@ async function loadCFound() {
           <label>ITEM <span style="color:var(--accent-red)">*</span></label>
           <div class="scan-input-row">
             <input id="found_item" autocomplete="off" placeholder="สแกนหรือกรอก Item Code"
+              data-hw-scan-role="item" data-hw-scan-next="found_qty"
               oninput="this.value=this.value.toUpperCase();scheduleDataInfoMatch('found_item','found_description','found_uom','found_info_card')">
             <button type="button" class="scan-field-button" onclick="scanIntoField('found_item','Item')" title="สแกน Item">${barcodeScanIconSvg()}</button>
           </div>
@@ -21348,6 +21884,7 @@ async function loadCFound() {
     )
   );
   renderCounterPicker();
+  activateHardwareLaserScanner();
 }
 
 async function submitFoundWork() {
@@ -21680,7 +22217,14 @@ async function loadCCount() {
         <span data-i18n-skip>${escapeWmsText(option.label)}</span>
       </label>`).join('');
 
-    items += `<div class="citem-wrap">
+    const hardwareLpCodes = dets
+      .map(detail => normalizeHardwareScanValue(detail.license_plate || ''))
+      .filter(Boolean)
+      .join('|');
+    items += `<div class="citem-wrap"
+      data-hw-item-id="${escapeWmsText(String(it.id))}"
+      data-hw-item-code="${escapeWmsText(it?.code || '')}"
+      data-hw-lp-codes="${escapeWmsText(hardwareLpCodes)}">
       <div class="citem">
         <div class="citem-info">
           ${emptyLocation
@@ -21691,6 +22235,7 @@ async function loadCCount() {
                    <label>LOCATION</label>
                    <div class="scan-input-row">
                      <input id="empty_location_${it.id}" value="${escapeWmsText(l.code)}"
+                       data-hw-scan-role="location" data-hw-scan-next="empty_lpn_${it.id}"
                        autocomplete="off" oninput="this.value=this.value.toUpperCase()">
                      <button type="button" class="scan-field-button"
                        onclick="scanIntoField('empty_location_${it.id}','Location')" title="สแกน Location">${barcodeScanIconSvg()}</button>
@@ -21699,7 +22244,8 @@ async function loadCCount() {
                  <div class="fg" style="margin:0">
                    <label>LPN <span style="color:var(--accent-red)">*</span></label>
                    <div class="scan-input-row">
-                     <input id="empty_lpn_${it.id}" autocomplete="off" placeholder="สแกนหรือกรอก LPN">
+                     <input id="empty_lpn_${it.id}" autocomplete="off" placeholder="สแกนหรือกรอก LPN"
+                       data-hw-scan-role="lpn" data-hw-scan-next="empty_item_${it.id}">
                      <button type="button" class="scan-field-button"
                        onclick="scanIntoField('empty_lpn_${it.id}','LPN')" title="สแกน LPN">${barcodeScanIconSvg()}</button>
                    </div>
@@ -21708,6 +22254,7 @@ async function loadCCount() {
                    <label>ITEM</label>
                    <div class="scan-input-row">
                      <input id="empty_item_${it.id}" autocomplete="off" placeholder="สแกนหรือกรอก Item Code"
+                       data-hw-scan-role="item" data-hw-scan-next="q_${it.id}"
                        oninput="this.value=this.value.toUpperCase();scheduleDataInfoMatch('empty_item_${it.id}','empty_desc_${it.id}','empty_uom_${it.id}','empty_info_${it.id}')">
                      <button type="button" class="scan-field-button"
                        onclick="scanIntoField('empty_item_${it.id}','Item')" title="สแกน Item">${barcodeScanIconSvg()}</button>
@@ -21784,7 +22331,7 @@ async function loadCCount() {
 
   const ids = snaps.map(s => s.item_id).join(',');
 
-  cnt().innerHTML = `<div class="count-handheld-page">
+  cnt().innerHTML = `<div class="count-handheld-page" data-hw-location-code="${escapeWmsText(l.code || '')}">
     <div class="card count-header-card">
       <div class="mono count-header-location" style="font-size:22px;font-weight:800;color:var(--text-main)">${l.code}</div>
       <div class="count-header-meta" style="font-size:14px;color:var(--text-muted);margin-top:4px; font-weight:600;">${sub}</div>
@@ -21794,6 +22341,11 @@ async function loadCCount() {
         ${annualMode ? `<span class="tag tag-green">${escapeWmsText(annualJob.job_code)}</span>` : ''}
         <span class="tag ${showOH?'tag-green':'tag-gray'}">${showOH?'OH + AL':'🔒 Blind Count'}</span>
       </div>
+      ${hardwareLaserCaptureHtml(
+        'count_hardware_scan',
+        'count-verify',
+        uiCopy('ยิง Location, LPN หรือ Item เพื่อค้นหาและเลือกช่องนับ','Scan a Location, LPN or Item to find the count line'),
+      )}
       ${round > 1 ? `<div class="alert alert-amber count-round-warning" style="margin-top:16px">
         🔄 ยอดไม่ตรงจากรอบที่ ${round-1} — กรุณานับใหม่อย่างระมัดระวัง
       </div>` : ''}
@@ -21836,6 +22388,7 @@ async function loadCCount() {
 
   window._selectedCounters = new Set((window._lastPickedCounterNames||[]).filter(n => (window._counterNames||[]).some(c=>c.name===n)));
   renderCounterPicker();
+  activateHardwareLaserScanner();
 
   if (annualMode && annualJob.status === 'pending') {
     const { data:startedJobs,error:startJobError } = await sb.from('annual_count_jobs')
@@ -21875,6 +22428,17 @@ async function loadCCount() {
 }
 
 function focusNextCountField(currentInput) {
+  if (window._hardwareScanReturnInputId && currentInput?.id === window._hardwareScanReturnInputId) {
+    window._hardwareScanReturnInputId = '';
+    focusHardwareScanTarget('count_hardware_scan');
+    handheldScanFeedback(
+      'success',
+      uiCopy('บันทึกจำนวนแล้ว','Count Quantity Entered'),
+      currentInput.value,
+      uiCopy('พร้อมยิง LPN หรือ Item รายการถัดไป','Ready to scan the next LPN or Item'),
+    );
+    return;
+  }
   const inputs = [...document.querySelectorAll('.count-handheld-page .cqty')]
     .filter(input => !input.disabled && input.offsetParent !== null);
   const currentIndex = inputs.indexOf(currentInput);
@@ -31231,7 +31795,7 @@ async function renderManageBackup(container) {
   container.innerHTML = `
     <div class="alert alert-blue" style="line-height:1.7">
       <strong>Backup ที่อ่านง่าย ใช้งานต่อได้ และกู้คืนได้</strong><br>
-      Excel จะเปิดที่ชีต Data_Count ซึ่งรวมข้อมูล Stock / LPN ทั้งหมดของ Session โดยไม่กรองเฉพาะ Gain / Lost
+      Excel จะเปิดที่ชีต Data_Count ซึ่งรวมข้อมูล Stock / LPN และ Found_Work ที่ไม่ถูกปฏิเสธของ Session โดยไม่กรองเฉพาะ Gain / Lost
       พร้อม Location, Zone, LPN, Lot, Inventory Status, Item, Stock Onhand ราย LPN/Lot,
       AL Qty และ Count 1–3 ซึ่งกระจายยอดนับจาก LPN บนลงล่างและคำนวณ Variance ราย LPN,
       คนนับจริงและเวลานับแยกรอบ, หมายเหตุ, รูปถ่าย และสถานะ WMS ให้ทีมอื่นนำไปใช้ต่อได้<br>
@@ -31929,6 +32493,8 @@ function buildTeamBackupData(dataBySheet) {
   const sessionById = byId(sessions);
   const locationById = byId(locations);
   const itemById = byId(items);
+  const locationByCode = new Map(locations.map(row => [importCodeKey(row.code),row]));
+  const itemByCode = new Map(items.map(row => [importCodeKey(row.code),row]));
   const assignmentById = byId(assignments);
   const annualJobById = byId(annualJobs);
   const profileById = byId(profiles);
@@ -32125,44 +32691,145 @@ function buildTeamBackupData(dataBySheet) {
       });
     }
   });
+  const dataCountLocationMatches = (row,sessionId,locationId,locationCode) => {
+    if (String(row?.sessionId || '') !== String(sessionId || '')) return false;
+    if (locationId && row?.locationId) return String(row.locationId) === String(locationId);
+    return importCodeKey(row?.location) === importCodeKey(locationCode);
+  };
+  const dataCountItemMatches = (row,itemId,itemCode) => {
+    if (itemId && row?.itemId) return String(row.itemId) === String(itemId);
+    return importCodeKey(row?.item) === importCodeKey(itemCode);
+  };
+  const emptyDataCountTemplate = ({
+    session,location,item,assignment,sessionId,locationId,itemId,foundOrder,
+  }) => ({
+    session:session.name || '',
+    sessionStatus:session.status || '',
+    jobCode:itemId ? jobCodeForStock(sessionId,locationId,itemId) : '',
+    location:location.code || '', zone:location.zone || '',
+    item:item.code || '', description:item.description || '',
+    lpn:'', lot:'', inventoryStatus:'', uom:item.uom || '',
+    stockOnhand:0, alQty:null,
+    count1:null, count1Counter:'', count1Time:'',
+    count2:null, count2Counter:'', count2Time:'',
+    count3:null, count3Counter:'', count3Time:'',
+    physicalCount:null, variance:null, result:'ยังไม่ได้นับ',
+    remark:'', photoUrl:'', approvalResolution:'', supervisorNote:'',
+    approvedBy:'', approvedAt:'', wmsStatus:'', wmsFixedBy:'', wmsFixedAt:'',
+    assignedUser:profileName(assignment?.assigned_to),
+    sessionId, assignmentId:assignment?.id || '', locationId, itemId,
+    hasApproval:false,
+    _detailOrder:Number.MAX_SAFE_INTEGER - 100000 + foundOrder,
+    stockDetailId:'',
+  });
+
+  // Found_Work can be a new Item discovered in a Location that was empty in WMS.
+  // The old export required an existing Stock row, so it skipped the finding or
+  // left only the blank-location row. Resolve by code and build a complete row.
   foundItems
     .filter(found => found.status !== 'rejected')
     .forEach((found,foundOrder) => {
-      const itemId = found.promoted_item_id || found.item_id || '';
       const sessionId = found.session_id || '';
-      const locationId = found.location_id || '';
-      if (!sessionId || !locationId || !itemId) return;
-      const key = stockKey(sessionId,locationId,itemId);
+      const foundLocationCode = importCodeKey(found.location_code);
+      const location = locationById.get(String(found.location_id || ''))
+        || locationByCode.get(foundLocationCode)
+        || { code:foundLocationCode };
+      const locationId = found.location_id || location.id || '';
+      const foundItemCode = importCodeKey(found.item_code);
+      const item = itemById.get(String(found.promoted_item_id || found.item_id || ''))
+        || itemByCode.get(foundItemCode)
+        || { code:foundItemCode, description:found.description || '', uom:found.uom || '' };
+      const itemId = found.promoted_item_id || found.item_id || item.id || '';
+      const itemCode = foundItemCode || importCodeKey(item.code);
+      const session = sessionById.get(String(sessionId)) || {};
+      const assignment = assignmentById.get(String(found.promoted_assignment_id || found.assignment_id || ''))
+        || assignments.find(row =>
+          String(row.session_id || '') === String(sessionId)
+          && String(row.location_id || '') === String(locationId)
+        )
+        || null;
       const foundLpn = normalizeImportText(found.license_plate);
       const foundLot = normalizeImportText(found.lot);
-      if (!foundLpn) return;
-      const sameItemRows = dataCountRows.filter(row =>
-        stockKey(row.sessionId,row.locationId,row.itemId) === key
+      if (!sessionId || !location.code || !itemCode) return;
+
+      const sameLocationRows = dataCountRows.filter(row =>
+        dataCountLocationMatches(row,sessionId,locationId,location.code)
+      );
+      const sameItemRows = sameLocationRows.filter(row =>
+        dataCountItemMatches(row,itemId,itemCode)
       );
       let target = sameItemRows.find(row =>
         importCodeKey(row.lpn) === importCodeKey(foundLpn)
         && normalizeImportText(row.lot) === foundLot
       );
       if (!target) target = sameItemRows.find(row => !normalizeImportText(row.lpn));
+
+      // Replace the blank Item row created for an empty-location count.
+      let reusedEmptyLocationRow = false;
+      if (!target && found.source_type === 'empty_location') {
+        target = sameLocationRows.find(row => isEmptyLocationItem(row.item));
+        reusedEmptyLocationRow = Boolean(target);
+      }
+
       if (!target) {
-        const base = dataByComposite.get(key);
-        if (!base) return;
+        const compositeBase = itemId
+          ? dataByComposite.get(stockKey(sessionId,locationId,itemId))
+          : null;
+        const assignmentBase = dataRows.find(row =>
+          String(row.assignmentId || '') === String(assignment?.id || '')
+          && dataCountItemMatches(row,itemId,itemCode)
+        );
         target = {
-          ...base,
+          ...(compositeBase || assignmentBase || emptyDataCountTemplate({
+            session,location,item,assignment,sessionId,locationId,itemId,foundOrder,
+          })),
           stockOnhand:0,
           _detailOrder:Number.MAX_SAFE_INTEGER - 100000 + foundOrder,
           stockDetailId:'',
         };
         dataCountRows.push(target);
       }
-      target.lpn = foundLpn;
-      target.lot = foundLot;
-      target.inventoryStatus = normalizeImportText(found.inventory_status)
-        || target.inventoryStatus
-        || '';
-      target.uom = normalizeImportText(found.uom) || target.uom || '';
+
+      const foundQty = backupNumber(found.qty);
+      const reviewedAt = backupDateForTeam(found.reviewed_at);
+      const discoveredAt = backupDateForTeam(found.discovered_at);
+      target.session = target.session || session.name || '';
+      target.sessionStatus = target.sessionStatus || session.status || '';
+      target.jobCode = target.jobCode || (itemId ? jobCodeForStock(sessionId,locationId,itemId) : '');
+      target.location = location.code || target.location || '';
+      target.zone = location.zone || target.zone || '';
+      target.item = normalizeImportText(found.item_code) || item.code || target.item || '';
+      target.description = normalizeImportText(found.description) || item.description || target.description || '';
+      target.lpn = foundLpn || target.lpn || '';
+      target.lot = foundLot || target.lot || '';
+      target.inventoryStatus = normalizeImportText(found.inventory_status) || target.inventoryStatus || '';
+      target.uom = normalizeImportText(found.uom) || item.uom || target.uom || '';
       target.remark = normalizeImportText(found.remark) || target.remark || '';
       target.photoUrl = normalizeImportText(found.photo_url) || target.photoUrl || '';
+      target.sessionId = sessionId;
+      target.locationId = locationId;
+      target.itemId = itemId;
+      target.assignmentId = found.promoted_assignment_id || found.assignment_id || target.assignmentId || '';
+      target.assignedUser = target.assignedUser || profileName(assignment?.assigned_to);
+      target.supervisorNote = normalizeImportText(found.supervisor_note) || target.supervisorNote || '';
+      target.approvedBy = profileName(found.reviewed_by) || target.approvedBy || '';
+      target.approvedAt = reviewedAt || target.approvedAt || '';
+      target.approvalResolution = target.approvalResolution
+        || (found.status === 'approved' ? 'อนุมัติ Found Work' : 'รอตรวจสอบ Found Work');
+      if (!target.wmsStatus && found.status === 'approved') target.wmsStatus = 'ยังไม่แก้ WMS';
+      target._foundRecordId = found.id || '';
+      target._foundStatus = found.status || '';
+
+      const hasPhysicalCount = backupNumber(target.physicalCount) !== null;
+      if (foundQty !== null && (reusedEmptyLocationRow || !hasPhysicalCount)) {
+        target.stockOnhand = 0;
+        target.count1 = foundQty;
+        target.count1Counter = normalizeImportText(found.actual_counter_name) || target.count1Counter || '';
+        target.count1Time = discoveredAt || target.count1Time || '';
+        target.physicalCount = foundQty;
+        target.variance = foundQty;
+        target.result = found.status === 'pending_review' ? 'Pending Review' : (foundQty === 0 ? 'Match' : 'Gain');
+      }
     });
   dataCountRows.sort((a,b) =>
     String(a.session).localeCompare(String(b.session),'th')
@@ -32197,9 +32864,14 @@ function buildTeamBackupData(dataBySheet) {
     'remark','photoUrl','approvalResolution','supervisorNote','approvedBy','approvedAt',
     'wmsStatus','wmsFixedBy','wmsFixedAt',
   ];
+  const dataCountGroupKey = row => stockKey(
+    row.sessionId,
+    row.locationId || `LOCATION:${importCodeKey(row.location)}`,
+    row.itemId || `ITEM:${importCodeKey(row.item) || row._foundRecordId || row.stockDetailId || row._detailOrder}`,
+  );
   const exportedItemGroups = new Map();
   dataCountRows.forEach(row => {
-    const key = stockKey(row.sessionId,row.locationId,row.itemId);
+    const key = dataCountGroupKey(row);
     if (!exportedItemGroups.has(key)) exportedItemGroups.set(key,[]);
     exportedItemGroups.get(key).push(row);
   });
@@ -32220,7 +32892,8 @@ function buildTeamBackupData(dataBySheet) {
       row.variance = row.physicalCount === null
         ? null
         : Number(row.physicalCount || 0) - Number(row.stockOnhand || 0);
-      row.result = row.physicalCount === null ? 'ยังไม่ได้นับ'
+      row.result = row._foundStatus === 'pending_review' ? 'Pending Review'
+        : row.physicalCount === null ? 'ยังไม่ได้นับ'
         : row.variance === 0 ? 'Match'
         : row.variance > 0 ? 'Gain' : 'Lost';
       if (totals.count1 === null) {
@@ -32476,7 +33149,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
 
   const readme = [
     ['CYCLE COUNT BACKUP','ไฟล์ข้อมูลการนับที่ทีมอื่นอ่าน ใช้งานต่อ และ Restore กลับเข้าระบบได้'],
-    ['Data_Count','ข้อมูล Stock / LPN ทั้งหมดของ Session: 1 แถวต่อ LPN/Lot โดย Stock Onhand คือยอดของ LPN/Lot แถวนั้น พร้อม Count, Physical Count และ Variance แยกราย LPN'],
+    ['Data_Count','ข้อมูล Stock / LPN และ Found_Work ที่ไม่ถูกปฏิเสธทั้งหมดของ Session: 1 แถวต่อ LPN/Lot พร้อม Location, Zone, Item, Description, Status, UOM, Count, Physical Count และ Variance ครบถ้วน'],
     ['เลข JOB','เชื่อมจาก Annual JOB ตาม Session + Location + Item; รายการที่ไม่ได้อยู่ใน Annual JOB จะแสดงว่าง'],
     ['Count 1–3','กระจายยอดนับจาก LPN แถวบนลงล่าง โดยเติมได้ไม่เกิน Stock Onhand ของแต่ละ LPN และนำยอดคงเหลือทั้งหมดใส่ LPN แถวสุดท้าย จากนั้นคำนวณ Physical Count และ Variance แยกราย LPN'],
     ['Photo URL','ใช้ URL รูปล่าสุดที่มีจริงของงาน แม้ผลนับรอบสุดท้ายจะไม่ได้แนบรูป'],
