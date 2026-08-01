@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v161 - iPad Fit Screen Dashboard</title>
+<title>Cycle Count v163 - iPad Count Keypad and Screen Lock</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -14449,6 +14449,35 @@ margin-top:8px;
   cursor:pointer;
 }
 .tablet-viewport-controls button:disabled { opacity:.38; cursor:default; }
+.tablet-viewport-controls .tablet-controls-toggle {
+  min-width:38px;
+  width:38px;
+  padding:0;
+  color:#fff !important;
+  background:var(--theme-primary-color) !important;
+}
+.tablet-controls-toggle svg {
+  width:18px;
+  height:18px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.tablet-viewport-controls.is-collapsed {
+  width:48px;
+  min-width:48px;
+  min-height:48px;
+  padding:5px;
+  border-radius:50%;
+}
+.tablet-viewport-controls.is-collapsed > :not(.tablet-controls-toggle) {
+  display:none !important;
+}
+.tablet-viewport-controls.is-collapsed .tablet-controls-toggle {
+  border-radius:50%;
+}
 .tablet-viewport-controls .tablet-fit-button {
   min-width:75px;
   font:800 10px 'Mitr',sans-serif;
@@ -14781,9 +14810,172 @@ body.tablet-ui .page-content {
   }
 }
 
+/* ══════════════════════════════════════════════════════════
+   v163 — iPad counting mode: screen lock + custom QTY keypad
+   The quantity keypad stays inside the app and never opens the iPad keyboard.
+   ══════════════════════════════════════════════════════════ */
+.count-touch-toolbar {
+  display:none;
+  align-items:center;
+  gap:8px;
+  margin-top:12px;
+}
+body.tablet-ui .count-touch-toolbar { display:flex; }
+.count-screen-lock-button {
+  min-height:40px;
+  padding:7px 12px;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 22%,transparent);
+  border-radius:13px;
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  color:var(--theme-primary-color) !important;
+  background:color-mix(in srgb,var(--theme-primary-color) 8%,var(--theme-card-bg)) !important;
+  box-shadow:0 7px 16px rgba(13,74,80,.12) !important;
+  font:800 11px 'Mitr',sans-serif;
+}
+.count-screen-lock-button svg {
+  width:17px;
+  height:17px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+body.count-screen-locked .count-screen-lock-button {
+  color:#fff !important;
+  background:var(--theme-primary-color) !important;
+}
+body.count-screen-locked .count-handheld-page {
+  touch-action:pan-x pan-y;
+  -webkit-user-select:none;
+  user-select:none;
+}
+body.count-screen-locked .count-handheld-page :is(input,textarea,[contenteditable="true"]) {
+  -webkit-user-select:text;
+  user-select:text;
+}
+.cqty.custom-keypad-ready {
+  cursor:pointer;
+  caret-color:transparent;
+  touch-action:manipulation;
+}
+.cqty.custom-keypad-active {
+  border-color:var(--theme-primary-color) !important;
+  box-shadow:0 0 0 4px color-mix(in srgb,var(--theme-primary-color) 18%,transparent),inset 3px 3px 7px var(--neu-shadow-dark) !important;
+}
+.count-numeric-keypad {
+  display:none;
+  position:fixed;
+  left:50%;
+  bottom:max(12px,env(safe-area-inset-bottom));
+  z-index:5200;
+  width:min(356px,calc(100vw - 24px));
+  padding:10px;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 24%,transparent);
+  border-radius:22px;
+  color:var(--theme-body-text-color);
+  background:color-mix(in srgb,var(--theme-card-bg) 96%,transparent);
+  box-shadow:0 22px 54px rgba(8,48,54,.34);
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+  transform:translateX(-50%);
+  touch-action:manipulation;
+}
+.count-numeric-keypad.is-open { display:block; }
+.count-keypad-head {
+  min-height:42px;
+  margin-bottom:8px;
+  padding:0 2px 0 8px;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto auto;
+  align-items:center;
+  gap:8px;
+}
+.count-keypad-title { min-width:0; }
+.count-keypad-title small {
+  display:block;
+  color:var(--theme-muted-text-color);
+  font-size:8px;
+  font-weight:800;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.count-keypad-title strong {
+  display:block;
+  color:var(--theme-heading-color);
+  font:900 13px 'Fredoka','Mitr',sans-serif;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.count-keypad-value {
+  min-width:78px;
+  padding:5px 10px;
+  border-radius:11px;
+  color:var(--theme-heading-color);
+  background:color-mix(in srgb,var(--theme-primary-color) 8%,var(--theme-card-bg));
+  font:900 22px 'Fredoka',monospace;
+  text-align:right;
+}
+.count-keypad-close {
+  width:38px;
+  min-width:38px;
+  height:38px;
+  padding:0 !important;
+  border-radius:12px !important;
+  color:var(--theme-muted-text-color) !important;
+  background:color-mix(in srgb,var(--theme-muted-text-color) 8%,var(--theme-card-bg)) !important;
+  box-shadow:none !important;
+  font-size:18px !important;
+}
+.count-keypad-grid {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:7px;
+}
+.count-keypad-grid button {
+  min-width:0;
+  height:48px;
+  padding:0 !important;
+  border:0 !important;
+  border-radius:13px !important;
+  color:var(--theme-heading-color) !important;
+  background:color-mix(in srgb,var(--theme-primary-color) 7%,var(--theme-card-bg)) !important;
+  box-shadow:0 5px 11px rgba(14,75,81,.11) !important;
+  font:900 21px 'Fredoka','Mitr',sans-serif;
+  touch-action:manipulation;
+}
+.count-keypad-grid button:active { transform:scale(.96); }
+.count-keypad-grid .keypad-tool {
+  color:var(--theme-primary-color) !important;
+  font:800 11px 'Mitr',sans-serif;
+}
+.count-keypad-grid .keypad-confirm {
+  grid-column:4;
+  grid-row:3 / span 2;
+  height:auto;
+  color:#fff !important;
+  background:var(--theme-primary-color) !important;
+  font:900 13px 'Mitr',sans-serif;
+}
+body.count-keypad-open .tablet-viewport-controls { display:none !important; }
+body.count-keypad-open .count-handheld-page {
+  padding-bottom:280px !important;
+}
+@media (orientation:landscape) and (max-height:820px) {
+  .count-numeric-keypad { width:min(330px,calc(100vw - 24px)); padding:8px; border-radius:19px; }
+  .count-keypad-head { min-height:36px; margin-bottom:6px; }
+  .count-keypad-grid { gap:5px; }
+  .count-keypad-grid button { height:42px; border-radius:11px !important; }
+  body.count-keypad-open .count-handheld-page { padding-bottom:242px !important; }
+}
+
 </style>
 </head>
-<body data-build="v161-ipad-fit-screen-dashboard">
+<body data-build="v163-ipad-count-keypad-screen-lock">
 <div id="app"></div>
 
 <script>
@@ -14853,12 +15045,18 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v161-ipad-fit-screen-dashboard';
+window.__CYCLE_COUNT_BUILD__ = 'v163-ipad-count-keypad-screen-lock';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
 let _tabletViewportFrame = 0;
 const TABLET_ZOOM_STORAGE_KEY = 'cycle_count_tablet_zoom_v1';
+const TABLET_CONTROLS_COLLAPSED_KEY = 'cycle_count_tablet_controls_collapsed_v1';
+const COUNT_SCREEN_LOCK_STORAGE_KEY = 'cycle_count_ipad_screen_lock_v1';
+let _countKeypadInput = null;
+let _countLastTouchAt = 0;
+let _countLastTouchX = 0;
+let _countLastTouchY = 0;
 
 function isTabletUiDevice() {
   const viewportWidth = window.visualViewport?.width || window.innerWidth || 0;
@@ -14893,12 +15091,36 @@ function loadTabletZoomSettings() {
 }
 
 function tabletViewportControlsHtml() {
-  return `<div class="tablet-viewport-controls" id="tabletViewportControls" aria-label="ปรับขนาดหน้าจอ iPad">
+  let isCollapsed = true;
+  try { isCollapsed = localStorage.getItem(TABLET_CONTROLS_COLLAPSED_KEY) !== 'false'; } catch (_) {}
+  return `<div class="tablet-viewport-controls ${isCollapsed ? 'is-collapsed' : ''}" id="tabletViewportControls" aria-label="ปรับขนาดหน้าจอ iPad">
+    <button type="button" class="tablet-controls-toggle" onclick="toggleTabletViewportControls()"
+      aria-label="${isCollapsed ? 'แสดงปุ่มปรับขนาดหน้าจอ' : 'ซ่อนปุ่มปรับขนาดหน้าจอ'}"
+      aria-expanded="${isCollapsed ? 'false' : 'true'}"
+      title="${isCollapsed ? 'แสดงปุ่มปรับขนาด' : 'ซ่อนปุ่มปรับขนาด'}">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"></path>
+        <path d="m3 8 5-5m13 5-5-5M3 16l5 5m13-5-5 5"></path>
+      </svg>
+    </button>
     <button type="button" onclick="changeTabletZoom(-0.05)" aria-label="ย่อหน้าจอ" title="ย่อหน้าจอ">−</button>
     <button type="button" class="tablet-fit-button" onclick="fitTabletViewport()" aria-label="ปรับให้พอดีจอ" title="ปรับให้พอดีจอ">พอดีจอ</button>
     <span class="tablet-viewport-zoom" id="tabletZoomLabel">100%</span>
     <button type="button" onclick="changeTabletZoom(0.05)" aria-label="ขยายหน้าจอ" title="ขยายหน้าจอ">+</button>
   </div>`;
+}
+
+function toggleTabletViewportControls() {
+  const controls = Q('tabletViewportControls');
+  if (!controls) return;
+  const isCollapsed = controls.classList.toggle('is-collapsed');
+  const toggle = controls.querySelector('.tablet-controls-toggle');
+  if (toggle) {
+    toggle.setAttribute('aria-expanded',isCollapsed ? 'false' : 'true');
+    toggle.setAttribute('aria-label',isCollapsed ? 'แสดงปุ่มปรับขนาดหน้าจอ' : 'ซ่อนปุ่มปรับขนาดหน้าจอ');
+    toggle.title = isCollapsed ? 'แสดงปุ่มปรับขนาด' : 'ซ่อนปุ่มปรับขนาด';
+  }
+  try { localStorage.setItem(TABLET_CONTROLS_COLLAPSED_KEY,isCollapsed ? 'true' : 'false'); } catch (_) {}
 }
 
 function applyTabletZoom(rawZoom,options = {}) {
@@ -19406,6 +19628,8 @@ function render() {
   S = { ...S, ...normalizedRoute.extra, page:normalizedRoute.page };
   syncNavigationStateGlobals();
   const { page } = S;
+  if (page !== 'c-count') teardownCountTouchControls();
+  else removeCountNumericKeypad();
   const renderRequestId = ++_renderRequestSerial;
   const pageRequestScope = beginPageRequestScope();
   const tabletUi = syncTabletUiClass();
@@ -22768,11 +22992,12 @@ async function loadCCount() {
         <button class="item-toggle ${hasExtra?'has':''}" id="tg_${it.id}" onclick="toggleExtra('${it.id}')" title="หมายเหตุ/รูป">📝</button>
         <div class="count-value-stack">
           <span class="count-qty-label">COUNT R${round}</span>
-          <input type="number" class="cqty ${v !== undefined ? 'ok' : ''}"
-            id="q_${it.id}" min="0" step="1"
-            inputmode="numeric" enterkeyhint="next"
+          <input type="text" class="cqty ${v !== undefined ? 'ok' : ''}"
+            id="q_${it.id}" inputmode="decimal" enterkeyhint="next"
+            pattern="[0-9]*[.]?[0-9]*" autocomplete="off"
             value="${v !== undefined ? v : ''}" placeholder="0"
-            oninput="this.classList.add('ok')"
+            oninput="normalizeCountQtyInput(this);this.classList.toggle('ok',this.value!=='')"
+            onfocus="openCountNumericKeypad(this)" onclick="openCountNumericKeypad(this)"
             onkeydown="if(event.key==='Enter'){event.preventDefault();focusNextCountField(this)}">
           ${ohDisplay}
         </div>
@@ -22833,6 +23058,7 @@ async function loadCCount() {
         ${annualMode ? `<span class="tag tag-green">${escapeWmsText(annualJob.job_code)}</span>` : ''}
         <span class="tag ${showOH?'tag-green':'tag-gray'}">${showOH?'OH + AL':'🔒 Blind Count'}</span>
       </div>
+      ${countTouchToolbarHtml()}
       ${hardwareLaserCaptureHtml(
         'count_hardware_scan',
         'count-verify',
@@ -22881,6 +23107,7 @@ async function loadCCount() {
   window._selectedCounters = new Set((window._lastPickedCounterNames||[]).filter(n => (window._counterNames||[]).some(c=>c.name===n)));
   renderCounterPicker();
   activateHardwareLaserScanner();
+  initializeCountTouchControls();
 
   if (annualMode && annualJob.status === 'pending') {
     const { data:startedJobs,error:startJobError } = await sb.from('annual_count_jobs')
@@ -22919,9 +23146,207 @@ async function loadCCount() {
   }
 }
 
+function countScreenLockEnabled() {
+  try { return localStorage.getItem(COUNT_SCREEN_LOCK_STORAGE_KEY) !== 'false'; }
+  catch (_) { return true; }
+}
+
+function countTouchToolbarHtml() {
+  return `<div class="count-touch-toolbar" aria-label="เครื่องมือสำหรับนับงานบน iPad">
+    <button type="button" class="count-screen-lock-button" id="countScreenLockButton"
+      onclick="toggleCountScreenLock()" aria-pressed="true">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="5" y="10" width="14" height="11" rx="2"></rect>
+        <path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
+      </svg>
+      <span id="countScreenLockLabel">ล็อกหน้าจอ: เปิด</span>
+    </button>
+  </div>`;
+}
+
+function updateCountScreenLockUi() {
+  const enabled = countScreenLockEnabled() && S?.page === 'c-count' && isTabletUiDevice();
+  document.body.classList.toggle('count-screen-locked',enabled);
+  const button = Q('countScreenLockButton');
+  const label = Q('countScreenLockLabel');
+  if (button) button.setAttribute('aria-pressed',enabled ? 'true' : 'false');
+  if (label) label.textContent = enabled ? 'ล็อกหน้าจอ: เปิด' : 'ล็อกหน้าจอ: ปิด';
+  return enabled;
+}
+
+function toggleCountScreenLock() {
+  const next = !countScreenLockEnabled();
+  try { localStorage.setItem(COUNT_SCREEN_LOCK_STORAGE_KEY,next ? 'true' : 'false'); } catch (_) {}
+  updateCountScreenLockUi();
+}
+
+function normalizeCountQtyInput(input) {
+  if (!input) return '';
+  const source = String(input.value || '').replace(/,/g,'.');
+  const firstDot = source.indexOf('.');
+  let normalized = source.replace(/[^0-9.]/g,'');
+  if (firstDot >= 0) {
+    const parts = normalized.split('.');
+    normalized = `${parts.shift() || '0'}.${parts.join('')}`;
+  }
+  normalized = normalized.slice(0,18);
+  if (input.value !== normalized) input.value = normalized;
+  return normalized;
+}
+
+function countNumericKeypadHtml() {
+  const keyButton = (label,value,extraClass='') =>
+    `<button type="button" class="${extraClass}" onclick="pressCountNumericKey('${value}')">${label}</button>`;
+  return `<section class="count-numeric-keypad" id="countNumericKeypad" aria-label="แป้นตัวเลขสำหรับกรอกยอดนับ">
+    <div class="count-keypad-head">
+      <div class="count-keypad-title">
+        <small id="countKeypadRoundLabel">กรอกยอดนับ</small>
+        <strong id="countKeypadItemLabel">ITEM</strong>
+      </div>
+      <div class="count-keypad-value" id="countKeypadValue">0</div>
+      <button type="button" class="count-keypad-close" onclick="closeCountNumericKeypad()" aria-label="ซ่อนแป้นตัวเลข" title="ซ่อนแป้นตัวเลข">×</button>
+    </div>
+    <div class="count-keypad-grid">
+      ${keyButton('7','7')}${keyButton('8','8')}${keyButton('9','9')}${keyButton('⌫','backspace','keypad-tool')}
+      ${keyButton('4','4')}${keyButton('5','5')}${keyButton('6','6')}${keyButton('ล้าง','clear','keypad-tool')}
+      ${keyButton('1','1')}${keyButton('2','2')}${keyButton('3','3')}
+      ${keyButton('ยืนยัน','confirm','keypad-confirm')}
+      ${keyButton('.','decimal')}${keyButton('0','0')}${keyButton('00','00')}
+    </div>
+  </section>`;
+}
+
+function ensureCountNumericKeypad() {
+  let keypad = Q('countNumericKeypad');
+  if (keypad) return keypad;
+  const app = Q('app');
+  if (!app) return null;
+  app.insertAdjacentHTML('beforeend',countNumericKeypadHtml());
+  return Q('countNumericKeypad');
+}
+
+function updateCountNumericKeypadDisplay() {
+  const input = _countKeypadInput;
+  const keypad = Q('countNumericKeypad');
+  if (!input || !keypad) return;
+  const card = input.closest('.citem-wrap');
+  const itemCode = card?.querySelector('.citem-code')?.textContent?.trim() || 'Location ว่าง';
+  const roundLabel = input.closest('.count-value-stack')?.querySelector('.count-qty-label')?.textContent?.trim() || 'กรอกยอดนับ';
+  const itemLabel = Q('countKeypadItemLabel');
+  const round = Q('countKeypadRoundLabel');
+  const value = Q('countKeypadValue');
+  if (itemLabel) itemLabel.textContent = itemCode;
+  if (round) round.textContent = roundLabel;
+  if (value) value.textContent = input.value === '' ? '—' : input.value;
+}
+
+function openCountNumericKeypad(input) {
+  if (!isTabletUiDevice() || !input?.classList?.contains('cqty')) return false;
+  input.readOnly = true;
+  input.setAttribute('inputmode','none');
+  document.querySelectorAll('.cqty.custom-keypad-active').forEach(field => field.classList.remove('custom-keypad-active'));
+  _countKeypadInput = input;
+  input.classList.add('custom-keypad-active');
+  const keypad = ensureCountNumericKeypad();
+  if (!keypad) return false;
+  keypad.classList.add('is-open');
+  document.body.classList.add('count-keypad-open');
+  updateCountNumericKeypadDisplay();
+  requestAnimationFrame(() => input.scrollIntoView({ block:'center', behavior:'smooth' }));
+  return true;
+}
+
+function setCountKeypadValue(nextValue) {
+  const input = _countKeypadInput;
+  if (!input) return;
+  input.value = String(nextValue || '').slice(0,18);
+  normalizeCountQtyInput(input);
+  input.classList.toggle('ok',input.value !== '');
+  input.dispatchEvent(new Event('input',{ bubbles:true }));
+  updateCountNumericKeypadDisplay();
+}
+
+function pressCountNumericKey(key) {
+  const input = _countKeypadInput;
+  if (!input) return;
+  const current = String(input.value || '');
+  if (key === 'confirm') {
+    if (current === '') {
+      const label = Q('countKeypadRoundLabel');
+      if (label) label.textContent = 'กรุณากรอก QTY ก่อนยืนยัน';
+      navigator.vibrate?.(35);
+      return;
+    }
+    input.dispatchEvent(new Event('change',{ bubbles:true }));
+    focusNextCountField(input);
+    return;
+  }
+  if (key === 'clear') return setCountKeypadValue('');
+  if (key === 'backspace') return setCountKeypadValue(current.slice(0,-1));
+  if (key === 'decimal') {
+    if (!current.includes('.')) setCountKeypadValue(current ? `${current}.` : '0.');
+    return;
+  }
+  if (/^\d{1,2}$/.test(key) && current.length < 18) setCountKeypadValue(`${current}${key}`);
+}
+
+function closeCountNumericKeypad(options = {}) {
+  const input = _countKeypadInput;
+  input?.classList.remove('custom-keypad-active');
+  if (options.blur !== false) input?.blur?.();
+  _countKeypadInput = null;
+  Q('countNumericKeypad')?.classList.remove('is-open');
+  document.body.classList.remove('count-keypad-open');
+}
+
+function removeCountNumericKeypad() {
+  closeCountNumericKeypad();
+  Q('countNumericKeypad')?.remove();
+}
+
+function initializeCountTouchControls() {
+  updateCountScreenLockUi();
+  if (!isTabletUiDevice()) return;
+  document.querySelectorAll('.count-handheld-page .cqty').forEach(input => {
+    input.readOnly = true;
+    input.setAttribute('inputmode','none');
+    input.classList.add('custom-keypad-ready');
+    input.setAttribute('aria-haspopup','dialog');
+    input.setAttribute('aria-label',`${input.closest('.citem-wrap')?.querySelector('.citem-code')?.textContent?.trim() || 'ITEM'} จำนวนที่นับได้`);
+  });
+}
+
+function teardownCountTouchControls() {
+  removeCountNumericKeypad();
+  document.body.classList.remove('count-screen-locked');
+}
+
+document.addEventListener('gesturestart',event => {
+  if (document.body.classList.contains('count-screen-locked')) event.preventDefault();
+},{ passive:false });
+
+document.addEventListener('touchmove',event => {
+  if (document.body.classList.contains('count-screen-locked') && event.touches?.length > 1) event.preventDefault();
+},{ passive:false });
+
+document.addEventListener('touchend',event => {
+  if (!document.body.classList.contains('count-screen-locked')) return;
+  const target = event.target instanceof Element ? event.target : event.target?.parentElement;
+  if (target?.closest('button,input,textarea,select,a,.count-numeric-keypad')) return;
+  const touch = event.changedTouches?.[0];
+  if (!touch) return;
+  const now = Date.now();
+  const nearPrevious = Math.hypot(touch.clientX - _countLastTouchX,touch.clientY - _countLastTouchY) < 28;
+  if (nearPrevious && now - _countLastTouchAt < 360) event.preventDefault();
+  _countLastTouchAt = now;
+  _countLastTouchX = touch.clientX;
+  _countLastTouchY = touch.clientY;
+},{ passive:false });
+
 function focusNextCountField(currentInput) {
   if (window._hardwareScanReturnInputId && currentInput?.id === window._hardwareScanReturnInputId) {
     window._hardwareScanReturnInputId = '';
+    closeCountNumericKeypad();
     focusHardwareScanTarget('count_hardware_scan');
     handheldScanFeedback(
       'success',
@@ -22936,11 +23361,16 @@ function focusNextCountField(currentInput) {
   const currentIndex = inputs.indexOf(currentInput);
   const nextInput = inputs[currentIndex + 1];
   if (nextInput) {
+    if (isTabletUiDevice()) {
+      openCountNumericKeypad(nextInput);
+      return;
+    }
     nextInput.focus({ preventScroll:true });
     nextInput.select?.();
     nextInput.scrollIntoView({ block:'center', behavior:'smooth' });
     return;
   }
+  closeCountNumericKeypad();
   const submitButton = Q('cb');
   submitButton?.focus({ preventScroll:true });
   submitButton?.scrollIntoView({ block:'end', behavior:'smooth' });
@@ -23200,6 +23630,8 @@ async function handlePhoto(itemId, input) {
 }
 
 async function submitCount(aid, round, idsStr, annualJobId='') {
+  closeCountNumericKeypad();
+  document.activeElement?.blur?.();
   const ids = idsStr.split(',');
   const al  = Q('ca'), btn = Q('cb');
 
