@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v175 - Explicit Assignment Session Selection</title>
+<title>Cycle Count v176 - iPad Accuracy Desktop Stack</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -16463,9 +16463,46 @@ body :is(.alert-green,.alert-amber,.alert-red,.alert-blue) {
   filter:saturate(.65);
 }
 
+/* ══════════════════════════════════════════════════════════
+   v176 — iPad Accuracy stack matches the desktop composition
+   Keep the desktop 5° / 9° sheet angles and all three visible cards.
+   A larger internal safety edge contains the rotated paint so Safari zoom
+   cannot push it into the WMS or Zone cards.
+   ══════════════════════════════════════════════════════════ */
+@media (min-width:769px) and (max-width:1366px) {
+  body.tablet-ui #dash-content .summary-accuracy-card {
+    --tablet-accuracy-safe-x:56px;
+    --tablet-accuracy-safe-y:42px;
+  }
+  body.tablet-ui #dash-content .summary-accuracy-card .summary-accuracy-layer,
+  body.tablet-ui #dash-content .summary-accuracy-card .summary-accuracy-core {
+    border-radius:32px !important;
+  }
+  body.tablet-ui #dash-content .summary-accuracy-card .summary-accuracy-layer-mid {
+    display:block !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    transform:none !important;
+  }
+  body.tablet-ui #dash-content .summary-accuracy-card .summary-accuracy-layer-back,
+  body.tablet-ui #dash-content .summary-accuracy-card[data-accuracy-guard] .summary-accuracy-layer-back {
+    display:block !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    transform:rotate(5deg) translate(12px,8px) !important;
+  }
+  body.tablet-ui #dash-content .summary-accuracy-card .summary-accuracy-layer-bottom,
+  body.tablet-ui #dash-content .summary-accuracy-card[data-accuracy-guard] .summary-accuracy-layer-bottom {
+    display:block !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    transform:rotate(9deg) translate(20px,14px) !important;
+  }
+}
+
 </style>
 </head>
-<body data-build="v175-explicit-assignment-session-selection">
+<body data-build="v176-ipad-accuracy-desktop-stack">
 <div id="app"></div>
 
 <script>
@@ -16535,7 +16572,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v175-explicit-assignment-session-selection';
+window.__CYCLE_COUNT_BUILD__ = 'v176-ipad-accuracy-desktop-stack';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -16638,8 +16675,11 @@ function syncTabletAccuracyLayoutGuard() {
   const height = Math.max(0,card.clientHeight || card.getBoundingClientRect().height || 0);
   if (!width || !height) return false;
 
-  const safeX = Math.max(10,Math.min(16,Math.round(width * .047)));
-  const safeY = Math.max(9,Math.min(14,Math.round(height * .036)));
+  /* A 9deg rotation needs more room than a straight translated layer.
+     Reserve that room inside the Grid area instead of letting Safari paint
+     the stack into neighbouring dashboard cards. */
+  const safeY = Math.max(30,Math.min(48,Math.round(width * .115)));
+  const safeX = Math.max(44,Math.min(58,Math.round((height - safeY) * .145)));
   const ringSize = Math.max(84,Math.min(
     142,
     Math.round((width - safeX) * .49),
@@ -16649,14 +16689,9 @@ function syncTabletAccuracyLayoutGuard() {
   setTabletAccuracyVariable(card,'--tablet-accuracy-safe-y',`${safeY}px`);
   setTabletAccuracyVariable(card,'--tablet-accuracy-ring-size',`${ringSize}px`);
 
-  /* Safari sometimes rounds transformed Grid children after zoom. Detect the
-     real painted layer bounds and fall back to a tighter offset if necessary. */
-  const zones = document.querySelector('#dash-content .summary-zones-card');
-  const layerBottom = Math.max(...[...card.querySelectorAll('.summary-accuracy-layer')]
-    .map(layer => layer.getBoundingClientRect().bottom),0);
-  const zoneTop = zones?.getBoundingClientRect().top || Number.POSITIVE_INFINITY;
-  const compact = Number.isFinite(zoneTop) && layerBottom > zoneTop - 2;
-  card.dataset.accuracyGuard = compact ? 'compact' : 'active';
+  /* Keep one deterministic composition at every iPad zoom level. The former
+     compact fallback flattened the layers and made iPad differ from desktop. */
+  card.dataset.accuracyGuard = 'desktop-stack';
 
   if (_tabletAccuracyGuardTarget !== card && typeof ResizeObserver === 'function') {
     disconnectTabletAccuracyLayoutGuard();
@@ -19287,7 +19322,7 @@ function applyBrandingSettings(settings, persistLocal = true) {
     const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
     root.setProperty(`--theme-${cssKey}`, uiBranding[key]);
   });
-  document.title = `${uiBranding.systemName} v175`;
+  document.title = `${uiBranding.systemName} v176`;
   if (persistLocal) {
     try { localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(uiBranding)); } catch (_) {}
   }
@@ -20728,7 +20763,7 @@ async function protectedFunctionHeaders() {
   return {
     Authorization: `Bearer ${session.access_token}`,
     apikey: SUPA_KEY,
-    'x-client-info': 'cycle-count-v175',
+    'x-client-info': 'cycle-count-v176',
   };
 }
 
