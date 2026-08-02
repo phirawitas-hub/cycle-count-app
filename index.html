@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v179 - Assignment Summary and User Dropdown Fix</title>
+<title>Cycle Count v180 - Adjustable App Typography</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -16542,9 +16542,171 @@ body select option {
   line-height:1.45 !important;
 }
 
+/* ══════════════════════════════════════════════════════════
+   v180 — One typography scale for the application.
+   Values are supplied by Settings: compact / standard / large.
+   Print documents keep their own fixed paper typography.
+   ══════════════════════════════════════════════════════════ */
+:root {
+  --ui-font-micro:10px;
+  --ui-font-badge:11px;
+  --ui-font-caption:12px;
+  --ui-font-body:14px;
+  --ui-font-control:14px;
+  --ui-font-card-title:16px;
+  --ui-font-section-title:20px;
+  --ui-font-page-title:26px;
+  --report-font-micro:9px;
+  --report-font-badge:10px;
+  --report-font-caption:11px;
+  --report-font-body:13px;
+  --report-font-control:13px;
+  --report-font-card-title:15px;
+  --report-font-section-title:18px;
+  --report-font-page-title:24px;
+}
+#app { font-size:var(--ui-font-body); line-height:1.55; }
+#app :is(button,input,select,textarea) {
+  font-size:var(--ui-font-control) !important;
+  line-height:1.45 !important;
+}
+#app :is(label,small,.row-sub,.muted,.subtext,.helper-text,.meta,.description,.admin-user-meta) {
+  font-size:var(--ui-font-caption) !important;
+  line-height:1.5 !important;
+}
+#app :is(.tag,.badge,.work-tracker-status,.assign-step-badge,.assign-bento-step-count,.assign-mode-badge) {
+  font-size:var(--ui-font-badge) !important;
+  line-height:1.4 !important;
+}
+#app :is(.row-title,.card-title,.panel-title,.assign-step-copy > strong,.assign-workspace-heading > strong) {
+  font-size:var(--ui-font-card-title) !important;
+  line-height:1.4 !important;
+}
+#app :is(.section-title,.admin-settings-head h2) {
+  font-size:var(--ui-font-section-title) !important;
+  line-height:1.35 !important;
+}
+#app :is(.topbar-title,.page-title) {
+  font-size:var(--ui-font-page-title) !important;
+  line-height:1.25 !important;
+}
+#app :is(.summary-hour-value,.summary-hour-label,.summary-hour-axis-label) {
+  font-size:var(--ui-font-micro) !important;
+  line-height:1.35 !important;
+}
+#app :is(.summary-card-kicker,.summary-metric-card span,.summary-hour-total span,
+  .summary-zone-count,.summary-status-donut span,.summary-status-legend > div,
+  .summary-gain-loss span,.assign-hero-progress-head span,.assign-hero-stat span,
+  .assign-bento-eyebrow,.assign-workflow-copy strong,.assign-step-copy > span,
+  .assign-role-note,.normal-free-meta,.normal-free-count,
+  .assign-bento-nav-filters label,.assign-bento-assignee-field label) {
+  font-size:var(--ui-font-caption) !important;
+  line-height:1.45 !important;
+}
+#app :is(#dash-content,.work-tracker-workspace) { font-size:var(--report-font-body); }
+#app :is(#dash-content,.work-tracker-workspace) :is(button,input,select,textarea) {
+  font-size:var(--report-font-control) !important;
+}
+#app :is(#dash-content,.work-tracker-workspace) :is(label,small,.row-sub,.muted,.subtext,.helper-text,.meta,.description) {
+  font-size:var(--report-font-caption) !important;
+}
+#app :is(#dash-content,.work-tracker-workspace) :is(.tag,.badge,.work-tracker-status) {
+  font-size:var(--report-font-badge) !important;
+}
+#app :is(#dash-content,.work-tracker-workspace) :is(.row-title,.card-title,.panel-title) {
+  font-size:var(--report-font-card-title) !important;
+}
+#app :is(#dash-content,.work-tracker-workspace) :is(.section-title) {
+  font-size:var(--report-font-section-title) !important;
+}
+#app :is(#dash-content,.work-tracker-workspace) :is(.topbar-title,.page-title) {
+  font-size:var(--report-font-page-title) !important;
+}
+#app :is(#dash-content,.work-tracker-workspace) :is(.summary-hour-value,.summary-hour-label,.summary-hour-axis-label) {
+  font-size:var(--report-font-micro) !important;
+}
+#app :is(#dash-content,.work-tracker-workspace) :is(.summary-card-kicker,.summary-metric-card span,.summary-hour-total span,
+  .summary-zone-count,.summary-status-donut span,.summary-status-legend > div,.summary-gain-loss span) {
+  font-size:var(--report-font-caption) !important;
+}
+.typography-scale-grid {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:14px;
+}
+.typography-scale-card {
+  padding:17px;
+  border:1px solid var(--theme-border-color);
+  border-radius:18px;
+  background:var(--theme-card-bg);
+}
+.typography-scale-head {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:14px;
+}
+.typography-scale-head strong {
+  display:block;
+  color:var(--theme-heading-color);
+  font-size:var(--ui-font-card-title);
+  line-height:1.35;
+}
+.typography-scale-head span {
+  display:block;
+  margin-top:4px;
+  color:var(--theme-muted-text-color);
+  font-size:var(--ui-font-caption);
+  line-height:1.5;
+}
+.typography-scale-value {
+  flex:0 0 auto;
+  min-width:64px;
+  padding:7px 10px;
+  border-radius:999px;
+  color:var(--theme-primary-text);
+  background:var(--theme-primary-color);
+  font-family:'Fredoka','Mitr',sans-serif;
+  font-size:var(--ui-font-card-title);
+  font-weight:900;
+  text-align:center;
+}
+.typography-scale-card input[type="range"] {
+  width:100%;
+  min-height:28px !important;
+  padding:0 !important;
+  accent-color:var(--theme-primary-color);
+  background:transparent !important;
+  box-shadow:none !important;
+}
+.typography-scale-limits {
+  display:flex;
+  justify-content:space-between;
+  margin-top:6px;
+  color:var(--theme-muted-text-color);
+  font-size:var(--ui-font-caption);
+  font-weight:700;
+}
+.typography-print-lock {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-top:14px;
+  padding:12px 14px;
+  border-radius:14px;
+  color:var(--theme-body-text-color);
+  background:color-mix(in srgb,var(--theme-primary-color) 7%,var(--theme-card-bg));
+  font-size:var(--ui-font-caption);
+  font-weight:700;
+}
+@media (max-width:760px) {
+  .typography-scale-grid { grid-template-columns:1fr; }
+}
+
 </style>
 </head>
-<body data-build="v179-assignment-summary-user-dropdown-fix">
+<body data-build="v180-adjustable-app-typography">
 <div id="app"></div>
 
 <script>
@@ -16614,7 +16776,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v179-assignment-summary-user-dropdown-fix';
+window.__CYCLE_COUNT_BUILD__ = 'v180-adjustable-app-typography';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -16898,8 +17060,8 @@ async function supabaseFetchWithTimeout(input, init = {}) {
   }
 }
 
-const BRANDING_STORAGE_KEY = 'cycle_count_ui_branding_v69';
-const LEGACY_BRANDING_STORAGE_KEYS = ['cycle_count_ui_branding_v68', 'cycle_count_ui_branding_v67', 'cycle_count_ui_branding_v66', 'cycle_count_ui_branding_v65', 'cycle_count_ui_branding_v64', 'cycle_count_ui_branding_v63'];
+const BRANDING_STORAGE_KEY = 'cycle_count_ui_branding_v70';
+const LEGACY_BRANDING_STORAGE_KEYS = ['cycle_count_ui_branding_v69', 'cycle_count_ui_branding_v68', 'cycle_count_ui_branding_v67', 'cycle_count_ui_branding_v66', 'cycle_count_ui_branding_v65', 'cycle_count_ui_branding_v64', 'cycle_count_ui_branding_v63'];
 const BRANDING_SETTING_KEY = 'ui_branding';
 const THEME_SETS_STORAGE_KEY = 'cycle_count_theme_sets_v1';
 const THEME_SETS_SETTING_KEY = 'ui_theme_sets_v1';
@@ -16909,6 +17071,8 @@ const DEFAULT_BRANDING = Object.freeze({
   systemSubtitle: 'Warehouse v1.0',
   language: 'th',
   autoContrast: true,
+  workFontScale: 100,
+  reportFontScale: 100,
   dashboardBg: '#F7FBFC',
   dashboardCardBg: '#FFFFFF',
   dashboardBorder: '#D9ECEE',
@@ -17491,6 +17655,14 @@ const UI_EN_EXACT = Object.freeze({
   'รหัสผ่านเริ่มต้น':'Initial password',
   'จัดการ User และข้อมูลระบบ':'Manage users and system data',
   'ชื่อและโลโก้ระบบ':'System name and logo',
+  'ขนาดตัวอักษร':'Font size',
+  'ระบบงาน':'Work system',
+  'Report / Dashboard':'Report / Dashboard',
+  '90% กะทัดรัด':'90% compact',
+  '125% ตัวใหญ่':'125% large',
+  '85% กะทัดรัด':'85% compact',
+  '110% ปลอดภัยกับกราฟ':'110% chart-safe maximum',
+  'บันทึกการแสดงผลทั้งหมด':'Save all display settings',
   'ชุดธีม (Theme Set)':'Theme sets',
   'ชื่อ Theme Set':'Theme Set name',
   'บันทึกเป็น Set':'Save as Set',
@@ -19003,6 +19175,8 @@ function normalizeBrandingSettings(input = {}) {
   output.systemSubtitle = String(input?.systemSubtitle || DEFAULT_BRANDING.systemSubtitle).trim().slice(0, 100) || DEFAULT_BRANDING.systemSubtitle;
   output.language = input?.language === 'en' ? 'en' : 'th';
   output.autoContrast = input?.autoContrast !== false;
+  output.workFontScale = Math.max(90,Math.min(125,Math.round(Number(input?.workFontScale) || DEFAULT_BRANDING.workFontScale)));
+  output.reportFontScale = Math.max(85,Math.min(110,Math.round(Number(input?.reportFontScale) || DEFAULT_BRANDING.reportFontScale)));
   output.printFormStyle = input?.printFormStyle === 'detailed' ? 'detailed' : 'compact';
   output.printPaperSize = ['A4','A3','Letter'].includes(input?.printPaperSize) ? input.printPaperSize : DEFAULT_BRANDING.printPaperSize;
   output.printOrientation = ['auto','portrait','landscape'].includes(input?.printOrientation) ? input.printOrientation : DEFAULT_BRANDING.printOrientation;
@@ -19283,6 +19457,33 @@ function readLocalBrandingSettings() {
   }
 }
 
+function scaledTypographyPx(basePx, percent) {
+  const value = Math.round((Number(basePx) * Number(percent || 100) / 100) * 10) / 10;
+  return `${value}px`;
+}
+
+function applyTypographyScaleSettings(settings = {}) {
+  const root = document.documentElement;
+  const style = root.style;
+  const workScale = Math.max(90,Math.min(125,Number(settings.workFontScale) || 100));
+  const reportScale = Math.max(85,Math.min(110,Number(settings.reportFontScale) || 100));
+  const workBase = {
+    micro:10,badge:11,caption:12,body:14,control:14,cardTitle:16,sectionTitle:20,pageTitle:26,
+  };
+  const reportBase = {
+    micro:9,badge:10,caption:11,body:13,control:13,cardTitle:15,sectionTitle:18,pageTitle:24,
+  };
+  const cssName = key => key.replace(/[A-Z]/g,letter => `-${letter.toLowerCase()}`);
+  Object.entries(workBase).forEach(([key,value]) => {
+    style.setProperty(`--ui-font-${cssName(key)}`,scaledTypographyPx(value,workScale));
+  });
+  Object.entries(reportBase).forEach(([key,value]) => {
+    style.setProperty(`--report-font-${cssName(key)}`,scaledTypographyPx(value,reportScale));
+  });
+  root.dataset.workFontScale = String(workScale);
+  root.dataset.reportFontScale = String(reportScale);
+}
+
 function applyBrandingSettings(settings, persistLocal = true) {
   uiBranding = normalizeBrandingSettings(settings);
   applyUiLanguage(uiBranding.language);
@@ -19360,11 +19561,12 @@ function applyBrandingSettings(settings, persistLocal = true) {
     '--theme-danger-contrast': themeReadableForeground('#FFFFFF',uiBranding.dangerColor),
   };
   Object.entries(variableMap).forEach(([key, value]) => root.setProperty(key, value));
+  applyTypographyScaleSettings(uiBranding);
   BRANDING_COLOR_FIELDS.forEach(({ key }) => {
     const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
     root.setProperty(`--theme-${cssKey}`, uiBranding[key]);
   });
-  document.title = `${uiBranding.systemName} v179`;
+  document.title = `${uiBranding.systemName} v180`;
   if (persistLocal) {
     try { localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(uiBranding)); } catch (_) {}
   }
@@ -20805,7 +21007,7 @@ async function protectedFunctionHeaders() {
   return {
     Authorization: `Bearer ${session.access_token}`,
     apikey: SUPA_KEY,
-    'x-client-info': 'cycle-count-v179',
+    'x-client-info': 'cycle-count-v180',
   };
 }
 
@@ -37503,7 +37705,7 @@ async function loadAdBranding() {
   cnt().innerHTML = `
     <div class="admin-settings-shell">
       <div class="alert alert-blue" style="line-height:1.7">
-        🔒 หน้านี้ใช้ได้เฉพาะ Admin · ชื่อ สี และโลโก้ที่บันทึกจะใช้กับหน้า Login และทุกอุปกรณ์
+        🔒 หน้านี้ใช้ได้เฉพาะ Admin · ชื่อ สี โลโก้ และขนาดตัวอักษรที่บันทึกจะใช้กับทุกอุปกรณ์
       </div>
 
       <section class="admin-settings-card">
@@ -37536,6 +37738,49 @@ async function loadAdBranding() {
             <button class="btn btn-ghost btn-sm" type="button" style="margin-top:12px"
               onclick="removeBrandLogo()">ใช้ไอคอนเริ่มต้น</button>
           </div>
+        </div>
+      </section>
+
+      <section class="admin-settings-card">
+        <div class="admin-settings-head">
+          <div>
+            <h2>ขนาดตัวอักษร</h2>
+            <p>ปรับแยกระหว่างระบบงานกับ Report เพื่อให้ตัวหนังสืออ่านง่ายโดยไม่กระทบ Layout กราฟและแบบพิมพ์</p>
+          </div>
+        </div>
+        <div class="typography-scale-grid">
+          <div class="typography-scale-card">
+            <div class="typography-scale-head">
+              <div>
+                <strong>ระบบงาน</strong>
+                <span>เมนูทำงาน ปุ่ม ช่องกรอก ตาราง และหน้ามอบหมายงาน</span>
+              </div>
+              <output class="typography-scale-value" id="branding-work-font-value">${Number(uiBranding.workFontScale || 100)}%</output>
+            </div>
+            <input id="branding-work-font-scale" type="range" min="90" max="125" step="1"
+              value="${Number(uiBranding.workFontScale || 100)}"
+              aria-label="ขนาดตัวอักษรระบบงาน"
+              oninput="syncTypographyScaleControl('work',this.value)">
+            <div class="typography-scale-limits"><span>90% กะทัดรัด</span><span>125% ตัวใหญ่</span></div>
+          </div>
+          <div class="typography-scale-card">
+            <div class="typography-scale-head">
+              <div>
+                <strong>Report / Dashboard</strong>
+                <span>กราฟ KPI ป้ายกำกับ และหน้ารายงานบนจอ</span>
+              </div>
+              <output class="typography-scale-value" id="branding-report-font-value">${Number(uiBranding.reportFontScale || 100)}%</output>
+            </div>
+            <input id="branding-report-font-scale" type="range" min="85" max="110" step="1"
+              value="${Number(uiBranding.reportFontScale || 100)}"
+              aria-label="ขนาดตัวอักษร Report และ Dashboard"
+              oninput="syncTypographyScaleControl('report',this.value)">
+            <div class="typography-scale-limits"><span>85% กะทัดรัด</span><span>110% ปลอดภัยกับกราฟ</span></div>
+          </div>
+        </div>
+        <div class="typography-print-lock">
+          <span aria-hidden="true">🔒</span>
+          <span>Form Count, Annual Form และไฟล์พิมพ์ A4 ล็อกขนาดเดิม 100% จึงไม่ตัดหน้าและไม่ทำให้ตารางพัง</span>
         </div>
       </section>
 
@@ -37656,7 +37901,7 @@ async function loadAdBranding() {
       <div class="admin-save-bar">
         <button class="btn btn-ghost" type="button" onclick="resetBrandingDraft()">คืนค่าเริ่มต้นทั้งหมด</button>
         <button class="btn btn-ghost" type="button" onclick="cancelBrandingChanges()">ยกเลิกการแก้ไข</button>
-        <button class="btn btn-blue" id="branding-save-btn" type="button" onclick="saveBrandingSettings()">บันทึกชื่อ ธีม และโลโก้</button>
+        <button class="btn btn-blue" id="branding-save-btn" type="button" onclick="saveBrandingSettings()">บันทึกการแสดงผลทั้งหมด</button>
       </div>
     </div>`;
 }
@@ -37701,12 +37946,26 @@ function normalizeThemeColorField(key) {
   syncThemeColorField(key, 'hex');
 }
 
+function syncTypographyScaleControl(scope, value) {
+  const isReport = scope === 'report';
+  const min = isReport ? 85 : 90;
+  const max = isReport ? 110 : 125;
+  const normalized = Math.max(min,Math.min(max,Math.round(Number(value) || 100)));
+  const input = Q(isReport ? 'branding-report-font-scale' : 'branding-work-font-scale');
+  const output = Q(isReport ? 'branding-report-font-value' : 'branding-work-font-value');
+  if (input && Number(input.value) !== normalized) input.value = String(normalized);
+  if (output) output.textContent = `${normalized}%`;
+  previewBrandingDraft();
+}
+
 function collectBrandingDraft() {
   const draft = {
     ...uiBranding,
     systemName: Q('branding-system-name')?.value || uiBranding.systemName,
     systemSubtitle: Q('branding-system-subtitle')?.value || uiBranding.systemSubtitle,
     autoContrast: Q('branding-auto-contrast')?.checked !== false,
+    workFontScale: Number(Q('branding-work-font-scale')?.value) || uiBranding.workFontScale,
+    reportFontScale: Number(Q('branding-report-font-scale')?.value) || uiBranding.reportFontScale,
     logoDataUrl: _brandingDraftLogo,
   };
   BRANDING_COLOR_FIELDS.forEach(({ key, label }) => {
@@ -37816,6 +38075,10 @@ function resetBrandingDraft() {
   if (Q('branding-system-name')) Q('branding-system-name').value = DEFAULT_BRANDING.systemName;
   if (Q('branding-system-subtitle')) Q('branding-system-subtitle').value = DEFAULT_BRANDING.systemSubtitle;
   if (Q('branding-auto-contrast')) Q('branding-auto-contrast').checked = DEFAULT_BRANDING.autoContrast;
+  if (Q('branding-work-font-scale')) Q('branding-work-font-scale').value = String(DEFAULT_BRANDING.workFontScale);
+  if (Q('branding-report-font-scale')) Q('branding-report-font-scale').value = String(DEFAULT_BRANDING.reportFontScale);
+  if (Q('branding-work-font-value')) Q('branding-work-font-value').textContent = `${DEFAULT_BRANDING.workFontScale}%`;
+  if (Q('branding-report-font-value')) Q('branding-report-font-value').textContent = `${DEFAULT_BRANDING.reportFontScale}%`;
   S._activeThemeSetId = '';
   _brandingDraftLogo = '';
   removeBrandLogo();
@@ -37843,7 +38106,7 @@ async function saveBrandingSettings() {
       syncVersion:1,
     });
     if (button) { button.disabled = true; button.textContent = 'กำลังบันทึก...'; }
-    if (alertBox) alertBox.innerHTML = `<div class="alert alert-blue">⏳ กำลังบันทึกและซิงก์ชื่อ ธีม และโลโก้...</div>`;
+    if (alertBox) alertBox.innerHTML = `<div class="alert alert-blue">⏳ กำลังบันทึกและซิงก์ชื่อ ธีม โลโก้ และขนาดตัวอักษร...</div>`;
     const result = await invokeAdminSettings('branding_save', { settings });
     const syncedSettings = normalizeBrandingSettings({
       ...settings,
@@ -37863,18 +38126,20 @@ async function saveBrandingSettings() {
         : `<div class="alert alert-amber">✅ ระบบหลักบันทึกธีมแล้ว แต่ตรวจสอบการซิงก์โดยตรงไม่ได้ กรุณาลองเปิดจากอีกเครื่อง</div>`;
     }
     if (centralResult.centralSaved) {
-      showActionSuccess('บันทึกและซิงก์ชื่อระบบ ธีม และโลโก้ไปยังทุกอุปกรณ์แล้ว', {
+      showActionSuccess('บันทึกและซิงก์ชื่อระบบ ธีม โลโก้ และขนาดตัวอักษรไปยังทุกอุปกรณ์แล้ว', {
         title:'บันทึกธีมสำเร็จ',
         facts:[
           {label:'ชื่อระบบ',value:syncedSettings.systemName},
           {label:'Theme Set',value:S._activeThemeSetId ? 'กำลังใช้งาน' : 'กำหนดเอง'},
+          {label:'ตัวอักษรระบบงาน',value:`${syncedSettings.workFontScale}%`},
+          {label:'ตัวอักษร Report',value:`${syncedSettings.reportFontScale}%`},
         ],
       });
     }
     setTimeout(() => render(), 700);
   } catch (error) {
     if (alertBox) alertBox.innerHTML = `<div class="alert alert-red">❌ ${escapeWmsText(error.message || error)}</div>`;
-    if (button) { button.disabled = false; button.textContent = 'บันทึกชื่อ ธีม และโลโก้'; }
+    if (button) { button.disabled = false; button.textContent = 'บันทึกการแสดงผลทั้งหมด'; }
   }
 }
 
