@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v176 - iPad Accuracy Desktop Stack</title>
+<title>Cycle Count v177 - Three-Layer Accuracy Stack</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -16464,8 +16464,9 @@ body :is(.alert-green,.alert-amber,.alert-red,.alert-blue) {
 }
 
 /* ══════════════════════════════════════════════════════════
-   v176 — iPad Accuracy stack matches the desktop composition
-   Keep the desktop 5° / 9° sheet angles and all three visible cards.
+   v177 — iPad Accuracy stack matches the desktop composition
+   Keep exactly three cards: front core + cyan back + yellow bottom.
+   Keep the desktop 5° / 9° sheet angles.
    A larger internal safety edge contains the rotated paint so Safari zoom
    cannot push it into the WMS or Zone cards.
    ══════════════════════════════════════════════════════════ */
@@ -16473,16 +16474,11 @@ body :is(.alert-green,.alert-amber,.alert-red,.alert-blue) {
   body.tablet-ui #dash-content .summary-accuracy-card {
     --tablet-accuracy-safe-x:56px;
     --tablet-accuracy-safe-y:42px;
+    padding:0 !important;
   }
   body.tablet-ui #dash-content .summary-accuracy-card .summary-accuracy-layer,
   body.tablet-ui #dash-content .summary-accuracy-card .summary-accuracy-core {
     border-radius:32px !important;
-  }
-  body.tablet-ui #dash-content .summary-accuracy-card .summary-accuracy-layer-mid {
-    display:block !important;
-    visibility:visible !important;
-    opacity:1 !important;
-    transform:none !important;
   }
   body.tablet-ui #dash-content .summary-accuracy-card .summary-accuracy-layer-back,
   body.tablet-ui #dash-content .summary-accuracy-card[data-accuracy-guard] .summary-accuracy-layer-back {
@@ -16502,7 +16498,7 @@ body :is(.alert-green,.alert-amber,.alert-red,.alert-blue) {
 
 </style>
 </head>
-<body data-build="v176-ipad-accuracy-desktop-stack">
+<body data-build="v177-three-layer-accuracy-stack">
 <div id="app"></div>
 
 <script>
@@ -16572,7 +16568,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v176-ipad-accuracy-desktop-stack';
+window.__CYCLE_COUNT_BUILD__ = 'v177-three-layer-accuracy-stack';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -19322,7 +19318,7 @@ function applyBrandingSettings(settings, persistLocal = true) {
     const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
     root.setProperty(`--theme-${cssKey}`, uiBranding[key]);
   });
-  document.title = `${uiBranding.systemName} v176`;
+  document.title = `${uiBranding.systemName} v177`;
   if (persistLocal) {
     try { localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(uiBranding)); } catch (_) {}
   }
@@ -20763,7 +20759,7 @@ async function protectedFunctionHeaders() {
   return {
     Authorization: `Bearer ${session.access_token}`,
     apikey: SUPA_KEY,
-    'x-client-info': 'cycle-count-v176',
+    'x-client-info': 'cycle-count-v177',
   };
 }
 
@@ -21396,7 +21392,6 @@ const rs=getComputedStyle(document.documentElement);
         <article class="summary-card summary-accuracy-card summary-accuracy-stack">
           <div class="summary-accuracy-layer summary-accuracy-layer-bottom"></div>
           <div class="summary-accuracy-layer summary-accuracy-layer-back"></div>
-          <div class="summary-accuracy-layer summary-accuracy-layer-mid"></div>
           <div class="summary-accuracy-core">
             <div class="summary-card-heading">
               <div><h2 data-i18n-skip>Accuracy %</h2></div>
@@ -28506,7 +28501,6 @@ async function loadSvDash() {
       <article class="summary-card summary-accuracy-card summary-accuracy-stack">
         <div class="summary-accuracy-layer summary-accuracy-layer-bottom"></div>
         <div class="summary-accuracy-layer summary-accuracy-layer-back"></div>
-        <div class="summary-accuracy-layer summary-accuracy-layer-mid"></div>
         <div class="summary-accuracy-core">
           <div class="summary-card-heading">
             <div>
