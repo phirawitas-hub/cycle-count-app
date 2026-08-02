@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v164 - Single Device Login Guard</title>
+<title>Cycle Count v175 - Explicit Assignment Session Selection</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -14973,9 +14973,1499 @@ body.count-keypad-open .count-handheld-page {
   body.count-keypad-open .count-handheld-page { padding-bottom:242px !important; }
 }
 
+/* v165 — Assignment Wizard: show one clear task at a time and keep Session visible. */
+.assign-page-shell {
+  max-width:1440px;
+  gap:12px !important;
+}
+.assign-page-hero {
+  padding:18px 20px !important;
+  gap:12px !important;
+}
+.assign-hero-top { align-items:center !important; }
+.assign-hero-title-copy h2 { margin:0 !important; font-size:clamp(21px,2vw,28px) !important; }
+.assign-hero-title-copy p { margin-top:3px !important; font-size:12px !important; }
+.assign-hero-eyebrow,
+.assign-hero-stat small,
+.assign-workflow-copy small { display:none !important; }
+.assign-hero-admin { white-space:nowrap; }
+.assign-hero-stats {
+  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  gap:10px !important;
+}
+.assign-hero-stat {
+  min-height:72px !important;
+  padding:11px 14px !important;
+}
+.assign-hero-stat .assign-stat-icon { width:38px !important; height:38px !important; }
+.assign-hero-stat strong { font-size:23px !important; }
+.assign-hero-stat span:not(.assign-stat-icon) { font-size:10px !important; }
+.assign-hero-progress { padding-top:0 !important; }
+.assign-workflow-nav {
+  position:sticky;
+  top:8px;
+  z-index:18;
+  display:grid !important;
+  grid-template-columns:repeat(var(--assign-step-count,4),minmax(145px,1fr)) !important;
+  gap:8px !important;
+  padding:8px !important;
+  overflow-x:auto;
+  overscroll-behavior-inline:contain;
+  scrollbar-width:thin;
+  background:color-mix(in srgb,var(--theme-card-bg) 94%,transparent) !important;
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+}
+.assign-workflow-item {
+  min-height:50px !important;
+  padding:8px 12px !important;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 12%,transparent) !important;
+  border-radius:14px !important;
+  opacity:.72;
+  transition:background .18s ease,border-color .18s ease,opacity .18s ease,transform .18s ease;
+}
+.assign-workflow-item:hover { opacity:1; transform:translateY(-1px); }
+.assign-workflow-item.is-active {
+  opacity:1;
+  color:#fff !important;
+  border-color:var(--theme-primary-color) !important;
+  background:var(--theme-primary-color) !important;
+  box-shadow:0 8px 20px color-mix(in srgb,var(--theme-primary-color) 24%,transparent) !important;
+}
+.assign-workflow-item.is-complete { opacity:1; border-color:color-mix(in srgb,var(--theme-primary-color) 35%,transparent) !important; }
+.assign-workflow-item.is-complete .assign-workflow-number { font-size:0; }
+.assign-workflow-item.is-complete .assign-workflow-number::after { content:'✓'; font-size:13px; }
+.assign-workflow-item.is-active .assign-workflow-number {
+  color:var(--theme-primary-color) !important;
+  background:#fff !important;
+}
+.assign-workflow-copy strong { font-size:12px !important; }
+.assign-step-section { scroll-margin-top:86px; }
+.assign-page-shell[data-current-step] > details.assign-step-section { display:none; }
+.assign-page-shell[data-current-step="assign-step-round1"] > #assign-step-round1,
+.assign-page-shell[data-current-step="assign-step-round23"] > #assign-step-round23,
+.assign-page-shell[data-current-step="assign-step-review"] > #assign-step-review { display:block; }
+.assign-step-section-locked { border-style:solid !important; }
+.assign-step-header { min-height:62px !important; padding:12px 16px !important; }
+.assign-step-copy > strong { font-size:14px !important; }
+.assign-step-copy > span { font-size:10px !important; }
+.assign-step-body { padding:14px 16px 16px !important; }
+.assign-config-grid { gap:10px !important; }
+.assign-config-card { min-height:66px !important; padding:10px 13px !important; }
+.assign-role-note { padding:9px 12px !important; margin-top:10px !important; font-size:10px !important; }
+.assign-zone-details { margin-top:10px !important; }
+.assign-zone-details > summary,
+.assign-round-details > summary { min-height:50px !important; padding:10px 13px !important; }
+.round1-mode-switch { margin-bottom:12px !important; }
+.round1-mode-button { min-height:44px !important; padding:9px 14px !important; font-size:11px !important; }
+.normal-free-shell,
+.annual-control-card { padding:14px !important; }
+.assign-workspace-heading { margin-bottom:10px !important; }
+.assign-workspace-heading > strong { font-size:14px !important; }
+.assign-workspace-heading > span { display:none !important; }
+.normal-free-controls,
+.normal-free-filters { gap:8px !important; }
+.normal-free-toolbar { gap:7px !important; }
+.normal-free-toolbar .btn,
+.annual-job-toolbar .btn { min-height:38px; }
+.assign-step-footer {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin-top:14px;
+  padding-top:13px;
+  border-top:1px solid color-mix(in srgb,var(--theme-primary-color) 14%,transparent);
+}
+.assign-step-footer .btn { min-width:160px; }
+.assign-step-footer .btn:last-child { margin-left:auto; }
+.assign-compact-note {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin:0 0 12px;
+  padding:9px 11px;
+  border-radius:12px;
+  color:var(--theme-muted-text-color);
+  background:color-mix(in srgb,var(--theme-primary-color) 6%,var(--theme-card-bg));
+  font-size:10px;
+  font-weight:700;
+}
+@media (max-width:1024px) {
+  .assign-page-hero { padding:14px !important; }
+  .assign-workflow-nav { grid-template-columns:repeat(var(--assign-step-count,4),minmax(132px,1fr)) !important; }
+  .assign-step-body { padding:12px !important; }
+  .assign-hero-stat { min-height:64px !important; padding:9px 10px !important; }
+  .assign-hero-stat .assign-stat-icon { display:none !important; }
+  .assign-step-footer .btn { min-width:0; }
+}
+@media (max-width:700px) {
+  .assign-hero-top { align-items:flex-start !important; }
+  .assign-hero-icon { width:42px !important; height:42px !important; }
+  .assign-hero-admin { width:auto !important; padding-inline:10px !important; }
+  .assign-hero-stats { grid-template-columns:repeat(3,minmax(0,1fr)) !important; }
+  .assign-hero-stat span:not(.assign-stat-icon) { font-size:8px !important; }
+  .assign-workflow-nav { grid-template-columns:repeat(var(--assign-step-count,4),minmax(122px,1fr)) !important; }
+  .assign-step-badge { display:none !important; }
+  .assign-config-grid { grid-template-columns:1fr !important; }
+  .assign-step-footer { flex-wrap:wrap; }
+  .assign-step-footer .btn { flex:1 1 140px; }
+}
+
+/* v166 — Modern Bento assignment workspace. */
+.assign-bento-shell {
+  --assign-progress:0%;
+  display:grid !important;
+  grid-template-columns:minmax(230px,.72fr) minmax(390px,1.45fr) minmax(245px,.82fr);
+  grid-template-areas:
+    "hero flow config"
+    "alert alert alert"
+    "workspace workspace workspace";
+  align-items:start;
+  gap:14px !important;
+  max-width:1480px;
+}
+.assign-bento-shell > .assign-page-hero { grid-area:hero; }
+.assign-bento-shell > .assign-workflow-nav { grid-area:flow; }
+.assign-bento-shell > #assign-step-session { grid-area:config; }
+.assign-bento-shell > #aa { grid-area:alert; }
+.assign-bento-shell > details.assign-step-section { grid-area:workspace; }
+.assign-bento-shell .assign-page-hero {
+  position:relative;
+  min-height:355px;
+  padding:20px !important;
+  color:#fff;
+  border:0 !important;
+  border-radius:26px !important;
+  background:linear-gradient(155deg,
+    color-mix(in srgb,var(--theme-primary-color) 76%,#fff) 0%,
+    var(--theme-primary-color) 55%,
+    color-mix(in srgb,var(--theme-primary-color) 76%,#042f34) 100%) !important;
+  box-shadow:0 22px 42px color-mix(in srgb,var(--theme-primary-color) 24%,transparent) !important;
+  overflow:hidden;
+}
+.assign-bento-shell .assign-page-hero::after {
+  content:'';
+  position:absolute;
+  width:180px;
+  height:180px;
+  right:-80px;
+  top:-70px;
+  border-radius:50%;
+  border:28px solid rgba(255,255,255,.1);
+  pointer-events:none;
+}
+.assign-bento-shell .assign-hero-top { position:relative; z-index:1; }
+.assign-bento-shell .assign-hero-icon {
+  color:var(--theme-primary-color) !important;
+  background:#fff !important;
+  box-shadow:0 10px 26px rgba(2,48,54,.18) !important;
+}
+.assign-bento-shell .assign-hero-title-copy h2,
+.assign-bento-shell .assign-hero-title-copy p,
+.assign-bento-shell .assign-hero-progress-head,
+.assign-bento-shell .assign-hero-stat strong,
+.assign-bento-shell .assign-hero-stat span { color:#fff !important; }
+.assign-bento-shell .assign-hero-title-copy h2 { font-size:20px !important; }
+.assign-bento-shell .assign-hero-title-copy p { opacity:.78; }
+.assign-bento-shell .assign-hero-admin {
+  color:var(--theme-primary-color) !important;
+  background:#fff !important;
+  border-color:transparent !important;
+}
+.assign-bento-shell .assign-hero-progress {
+  position:relative;
+  display:grid;
+  place-items:center;
+  order:2;
+  min-height:152px;
+  padding:0 !important;
+}
+.assign-bento-shell .assign-hero-progress-track {
+  position:relative;
+  width:142px !important;
+  height:142px !important;
+  border-radius:50% !important;
+  background:conic-gradient(#fff 0 var(--assign-progress),rgba(255,255,255,.2) var(--assign-progress) 100%) !important;
+  box-shadow:0 14px 30px rgba(3,49,54,.18);
+  overflow:visible !important;
+}
+.assign-bento-shell .assign-hero-progress-track::after {
+  content:'';
+  position:absolute;
+  inset:15px;
+  border-radius:50%;
+  background:color-mix(in srgb,var(--theme-primary-color) 84%,#24575b);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.18);
+}
+.assign-bento-shell .assign-hero-progress-fill { display:none !important; }
+.assign-bento-shell .assign-hero-progress-head {
+  position:absolute;
+  z-index:2;
+  inset:0;
+  display:flex !important;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:2px;
+  text-align:center;
+  pointer-events:none;
+}
+.assign-bento-shell .assign-hero-progress-head strong { font-size:27px !important; }
+.assign-bento-shell .assign-hero-progress-head span { max-width:92px; font-size:9px !important; opacity:.78; }
+.assign-bento-shell .assign-hero-stats {
+  order:3;
+  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  gap:10px !important;
+  margin-top:auto;
+}
+.assign-bento-shell .assign-hero-stat.is-total { display:none !important; }
+.assign-bento-shell .assign-hero-stat {
+  min-height:68px !important;
+  padding:10px !important;
+  border:1px solid rgba(255,255,255,.18) !important;
+  background:rgba(255,255,255,.12) !important;
+  box-shadow:none !important;
+  backdrop-filter:blur(8px);
+}
+.assign-bento-shell .assign-hero-stat .assign-stat-icon { display:none !important; }
+.assign-bento-shell .assign-hero-stat strong { font-size:23px !important; }
+.assign-bento-shell .assign-hero-stat span { font-size:8px !important; opacity:.78; }
+
+.assign-bento-shell .assign-workflow-nav {
+  position:relative !important;
+  top:auto !important;
+  z-index:2;
+  display:grid !important;
+  grid-template-columns:repeat(var(--assign-step-count,4),minmax(0,1fr)) !important;
+  gap:8px !important;
+  padding:18px !important;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 12%,transparent) !important;
+  border-radius:26px !important;
+  background:var(--theme-card-bg) !important;
+  box-shadow:0 18px 38px rgba(14,75,81,.1) !important;
+  overflow:visible !important;
+}
+.assign-bento-nav-heading {
+  grid-column:1 / -1;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:4px;
+}
+.assign-bento-eyebrow {
+  display:block;
+  color:var(--theme-muted-text-color);
+  font-size:8px;
+  font-weight:900;
+  letter-spacing:.13em;
+}
+.assign-bento-nav-heading strong { display:block; margin-top:2px; color:var(--theme-heading-color); font-size:16px; }
+.assign-bento-step-count {
+  padding:5px 9px;
+  border-radius:999px;
+  color:var(--theme-primary-color);
+  background:color-mix(in srgb,var(--theme-primary-color) 8%,var(--theme-card-bg));
+  font-size:9px;
+  font-weight:900;
+}
+.assign-bento-shell .assign-workflow-item {
+  min-height:64px !important;
+  padding:8px 5px !important;
+  flex-direction:column;
+  justify-content:center;
+  text-align:center;
+  border:0 !important;
+  border-radius:14px !important;
+  background:color-mix(in srgb,var(--theme-muted-text-color) 5%,transparent) !important;
+  box-shadow:none !important;
+}
+.assign-bento-shell .assign-workflow-item.is-active {
+  color:var(--theme-heading-color) !important;
+  background:color-mix(in srgb,var(--theme-primary-color) 10%,var(--theme-card-bg)) !important;
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--theme-primary-color) 34%,transparent) !important;
+}
+.assign-bento-shell .assign-workflow-number {
+  width:24px !important;
+  min-width:24px !important;
+  height:24px !important;
+  font-size:10px !important;
+}
+.assign-bento-shell .assign-workflow-item.is-active .assign-workflow-number {
+  color:#fff !important;
+  background:var(--theme-primary-color) !important;
+}
+.assign-bento-shell .assign-workflow-copy strong { font-size:9px !important; }
+.assign-bento-shell .round1-mode-switch {
+  grid-column:1 / -1;
+  display:grid !important;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px !important;
+  margin:6px 0 0 !important;
+  padding-top:14px;
+  border-top:1px solid color-mix(in srgb,var(--theme-primary-color) 12%,transparent);
+}
+.assign-bento-shell:not([data-current-step="assign-step-round1"]) .round1-mode-switch { display:none !important; }
+.assign-bento-shell .round1-mode-button {
+  min-height:64px !important;
+  justify-content:flex-start !important;
+  padding:12px 14px !important;
+  border-radius:16px !important;
+  text-align:left;
+}
+.assign-bento-shell .round1-mode-button span { font-size:20px; }
+
+.assign-bento-shell > #assign-step-session {
+  min-height:355px;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 12%,transparent) !important;
+  border-radius:26px !important;
+  background:var(--theme-card-bg) !important;
+  box-shadow:0 18px 38px rgba(14,75,81,.1) !important;
+  overflow:hidden;
+}
+.assign-bento-shell > #assign-step-session .assign-step-header { padding:18px 18px 8px !important; }
+.assign-bento-shell > #assign-step-session .assign-step-number { display:none !important; }
+.assign-bento-shell > #assign-step-session .assign-step-copy::before {
+  content:'SESSION SETTINGS';
+  display:block;
+  color:var(--theme-muted-text-color);
+  font-size:8px;
+  font-weight:900;
+  letter-spacing:.13em;
+}
+.assign-bento-shell > #assign-step-session .assign-step-copy > strong { font-size:16px !important; }
+.assign-bento-shell > #assign-step-session .assign-step-copy > span { display:none !important; }
+.assign-bento-shell > #assign-step-session .assign-step-body { padding:10px 18px 18px !important; }
+.assign-bento-shell .assign-config-grid { grid-template-columns:1fr !important; }
+.assign-bento-shell .assign-config-card {
+  min-height:70px !important;
+  border:0 !important;
+  border-bottom:1px solid color-mix(in srgb,var(--theme-primary-color) 12%,transparent) !important;
+  border-radius:0 !important;
+  background:transparent !important;
+  box-shadow:none !important;
+}
+.assign-bento-shell .assign-role-note { display:none !important; }
+.assign-bento-shell .assign-zone-details { border:0 !important; background:transparent !important; }
+.assign-bento-shell .assign-zone-details > summary { min-height:40px !important; padding:7px 4px !important; }
+.assign-bento-shell > #assign-step-session .assign-step-footer { display:none !important; }
+
+.assign-bento-shell > details.assign-step-section {
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 12%,transparent) !important;
+  border-radius:28px !important;
+  background:var(--theme-card-bg) !important;
+  box-shadow:0 20px 46px rgba(14,75,81,.1) !important;
+  overflow:hidden;
+}
+.assign-bento-shell > details.assign-step-section > .assign-step-header {
+  min-height:auto !important;
+  padding:18px 20px 0 !important;
+  border:0 !important;
+  background:transparent !important;
+}
+.assign-bento-shell > #assign-step-round1 > .assign-step-header { display:none !important; }
+.assign-bento-shell > details.assign-step-section > .assign-step-body { padding:18px 20px 20px !important; }
+.assign-bento-shell .normal-free-shell {
+  display:grid;
+  gap:14px;
+  padding:0 !important;
+  border:0 !important;
+  background:transparent !important;
+  box-shadow:none !important;
+}
+.assign-bento-shell .assign-workspace-heading {
+  display:block;
+  margin:0 !important;
+}
+.assign-bento-shell .assign-workspace-heading::before {
+  content:'LOCATIONS';
+  display:block;
+  color:var(--theme-muted-text-color);
+  font-size:8px;
+  font-weight:900;
+  letter-spacing:.13em;
+}
+.assign-bento-shell .assign-workspace-heading > strong { font-size:17px !important; }
+.assign-bento-shell .normal-free-controls {
+  display:grid !important;
+  grid-template-columns:minmax(220px,.7fr) minmax(260px,1.3fr) !important;
+  gap:10px !important;
+}
+.assign-bento-shell .normal-free-controls > .fg {
+  padding:12px 14px;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 12%,transparent);
+  border-radius:16px;
+  background:color-mix(in srgb,var(--theme-primary-color) 4%,var(--theme-card-bg));
+}
+.assign-bento-shell .normal-free-filters {
+  padding:12px;
+  border-radius:18px;
+  background:color-mix(in srgb,var(--theme-muted-text-color) 4%,var(--theme-card-bg));
+}
+.assign-bento-shell .normal-free-list {
+  display:grid !important;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px !important;
+  max-height:480px;
+  padding:2px !important;
+  overflow:auto;
+  border:0 !important;
+  background:transparent !important;
+}
+.assign-bento-shell .normal-free-row {
+  position:relative;
+  display:grid !important;
+  grid-template-columns:auto minmax(0,1fr) auto !important;
+  grid-template-rows:auto auto;
+  gap:8px 10px !important;
+  align-items:center;
+  min-height:112px;
+  padding:14px !important;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 12%,transparent) !important;
+  border-radius:18px !important;
+  background:var(--theme-card-bg) !important;
+  box-shadow:0 8px 18px rgba(14,75,81,.07);
+  transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease;
+}
+.assign-bento-shell .normal-free-row:hover {
+  transform:translateY(-2px);
+  border-color:color-mix(in srgb,var(--theme-primary-color) 38%,transparent) !important;
+  box-shadow:0 13px 26px rgba(14,75,81,.12);
+}
+.assign-bento-shell .normal-free-row:has(.normal-free-checkbox:checked) {
+  border-color:var(--theme-primary-color) !important;
+  background:color-mix(in srgb,var(--theme-primary-color) 7%,var(--theme-card-bg)) !important;
+  box-shadow:0 12px 25px color-mix(in srgb,var(--theme-primary-color) 14%,transparent);
+}
+.assign-bento-shell .normal-free-checkbox {
+  width:21px !important;
+  height:21px !important;
+  accent-color:var(--theme-primary-color);
+}
+.assign-bento-tile-copy { min-width:0; }
+.assign-bento-shell .normal-free-code { font-size:13px !important; }
+.assign-bento-shell .normal-free-meta { font-size:8px !important; }
+.assign-bento-tile-state { justify-self:end; }
+.assign-bento-tile-note {
+  grid-column:2 / 4;
+  min-width:0;
+  color:var(--theme-muted-text-color);
+  font-size:8px;
+  line-height:1.4;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.assign-bento-shell .normal-free-toolbar {
+  position:relative;
+  display:grid !important;
+  grid-template-columns:minmax(180px,1fr) repeat(5,auto) !important;
+  align-items:center;
+  gap:8px !important;
+  margin-top:2px;
+  padding:12px 14px !important;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 14%,transparent) !important;
+  border-radius:18px !important;
+  background:color-mix(in srgb,var(--theme-primary-color) 5%,var(--theme-card-bg)) !important;
+  box-shadow:0 10px 24px rgba(14,75,81,.08);
+}
+.assign-bento-shell .normal-free-count { font-size:10px !important; }
+.assign-bento-shell .normal-free-toolbar .btn { white-space:nowrap; }
+.assign-bento-shell .assign-step-footer { margin-top:16px; }
+.assign-bento-shell .annual-generate-grid { gap:12px !important; }
+.assign-bento-shell .annual-control-card,
+.assign-bento-shell .annual-workspace .normal-free-shell {
+  border-radius:20px !important;
+  box-shadow:none !important;
+}
+
+@media (max-width:1180px) {
+  .assign-bento-shell {
+    grid-template-columns:minmax(230px,.75fr) minmax(0,1.25fr);
+    grid-template-areas:
+      "hero flow"
+      "config config"
+      "alert alert"
+      "workspace workspace";
+  }
+  .assign-bento-shell > #assign-step-session { min-height:auto; }
+  .assign-bento-shell .assign-config-grid { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+  .assign-bento-shell .assign-zone-details { grid-column:1 / -1; }
+}
+@media (max-width:820px) {
+  .assign-bento-shell {
+    grid-template-columns:1fr;
+    grid-template-areas:"hero" "flow" "config" "alert" "workspace";
+  }
+  .assign-bento-shell .assign-page-hero { min-height:auto; }
+  .assign-bento-shell .assign-hero-progress { min-height:132px; }
+  .assign-bento-shell .assign-hero-progress-track { width:122px !important; height:122px !important; }
+  .assign-bento-shell .normal-free-list { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .assign-bento-shell .normal-free-toolbar { grid-template-columns:1fr repeat(2,minmax(0,1fr)) !important; }
+  .assign-bento-shell .normal-free-count { grid-column:1 / -1; }
+  .assign-bento-shell .normal-free-toolbar .btn { width:100%; }
+}
+@media (max-width:560px) {
+  .assign-bento-shell .assign-config-grid,
+  .assign-bento-shell .normal-free-controls,
+  .assign-bento-shell .normal-free-list { grid-template-columns:1fr !important; }
+  .assign-bento-shell .assign-workflow-nav { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+  .assign-bento-nav-heading,
+  .assign-bento-shell .round1-mode-switch { grid-column:1 / -1; }
+  .assign-bento-shell .normal-free-toolbar { grid-template-columns:1fr !important; }
+  .assign-bento-shell .normal-free-count { grid-column:auto; }
+}
+
+/* v167 — Bento hero collision fix + prominent centered actions. */
+.assign-bento-shell .assign-page-hero {
+  display:flex !important;
+  flex-direction:column !important;
+  grid-template-columns:none !important;
+  grid-template-rows:none !important;
+  grid-template-areas:none !important;
+  align-items:stretch !important;
+  justify-content:flex-start !important;
+  min-width:0 !important;
+  width:100% !important;
+  isolation:isolate;
+}
+.assign-bento-shell .assign-page-hero::before { display:none !important; }
+.assign-bento-shell .assign-page-hero::after {
+  content:'' !important;
+  inset:auto !important;
+  width:150px !important;
+  height:150px !important;
+  right:-72px !important;
+  top:-72px !important;
+  border:24px solid rgba(255,255,255,.09) !important;
+  opacity:1 !important;
+}
+.assign-bento-shell .assign-hero-top,
+.assign-bento-shell .assign-hero-stats,
+.assign-bento-shell .assign-hero-progress {
+  grid-area:auto !important;
+  width:100% !important;
+  min-width:0 !important;
+}
+.assign-bento-shell .assign-hero-top {
+  display:block !important;
+  padding:0 !important;
+}
+.assign-bento-shell .assign-hero-title {
+  display:grid !important;
+  grid-template-columns:48px minmax(0,1fr) !important;
+  align-items:center !important;
+  gap:12px !important;
+  min-width:0 !important;
+}
+.assign-bento-shell .assign-hero-icon {
+  width:48px !important;
+  height:48px !important;
+  border-radius:15px !important;
+}
+.assign-bento-shell .assign-hero-title-copy {
+  display:block !important;
+  min-width:0 !important;
+}
+.assign-bento-shell .assign-hero-title-copy h2 {
+  max-width:100% !important;
+  font-size:17px !important;
+  line-height:1.28 !important;
+  overflow-wrap:anywhere;
+}
+.assign-bento-shell .assign-hero-title-copy p {
+  max-width:100% !important;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.assign-bento-shell .assign-hero-progress {
+  align-self:auto !important;
+  align-content:normal !important;
+  margin:6px 0 !important;
+  padding:0 !important;
+  border:0 !important;
+  border-radius:0 !important;
+  background:transparent !important;
+  box-shadow:none !important;
+}
+.assign-bento-shell .assign-hero-progress-track {
+  margin:0 !important;
+  border:0 !important;
+}
+.assign-bento-shell .assign-hero-progress-head {
+  align-items:center !important;
+  color:#fff !important;
+}
+.assign-bento-shell .assign-hero-stats {
+  display:grid !important;
+  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  align-items:stretch !important;
+}
+.assign-bento-shell .assign-hero-stat {
+  display:block !important;
+  grid-template-columns:none !important;
+  min-width:0 !important;
+  text-align:center;
+}
+.assign-bento-shell .assign-hero-stat::before { display:none !important; }
+.assign-bento-shell .assign-stat-copy {
+  display:block !important;
+  min-width:0 !important;
+}
+.assign-bento-shell .assign-hero-stat strong,
+.assign-bento-shell .assign-hero-stat span {
+  display:block !important;
+  max-width:100% !important;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.assign-bento-shell .assign-oh-card {
+  display:grid !important;
+  grid-template-columns:40px minmax(0,1fr) auto !important;
+  grid-template-rows:auto auto !important;
+  align-items:center !important;
+  gap:6px 10px !important;
+}
+.assign-bento-shell .assign-oh-icon { grid-row:1 / 3; }
+.assign-bento-shell .assign-oh-copy { grid-column:2; min-width:0; }
+.assign-bento-shell .assign-oh-copy small { display:none !important; }
+.assign-bento-shell #oh-status {
+  grid-column:2;
+  grid-row:2;
+  justify-self:start;
+  max-width:100%;
+  padding:5px 8px !important;
+  font-size:7px !important;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.assign-bento-shell .assign-oh-card .assign-switch {
+  grid-column:3;
+  grid-row:1 / 3;
+}
+.assign-bento-user-manage {
+  width:100%;
+  min-height:38px;
+  margin-top:7px;
+}
+.assign-bento-shell .normal-free-toolbar {
+  display:grid !important;
+  grid-template-columns:1fr !important;
+  gap:12px !important;
+  padding:14px 16px !important;
+}
+.assign-bento-selection-summary {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.assign-bento-selection-tools {
+  display:flex;
+  align-items:center;
+  gap:6px;
+  flex-wrap:wrap;
+}
+.assign-bento-primary-actions {
+  width:min(100%,850px);
+  margin:0 auto;
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  align-items:stretch;
+  gap:12px;
+}
+.assign-bento-primary-actions .btn {
+  width:100% !important;
+  min-width:0 !important;
+  min-height:58px !important;
+  padding:10px 16px !important;
+  border-radius:17px !important;
+  font-size:13px !important;
+  font-weight:900 !important;
+  line-height:1.25 !important;
+  white-space:normal !important;
+  box-shadow:0 12px 24px color-mix(in srgb,var(--theme-heading-color) 12%,transparent) !important;
+}
+.assign-bento-primary-actions #normal-free-reassign-mode-btn {
+  color:var(--theme-secondary-text) !important;
+  border:2px solid color-mix(in srgb,var(--theme-warning-color) 42%,transparent) !important;
+  background:color-mix(in srgb,var(--theme-warning-color) 13%,var(--theme-card-bg)) !important;
+}
+.assign-bento-primary-actions #normal-free-reassign-mode-btn.btn-amber {
+  color:#fff !important;
+  border-color:var(--theme-warning-color) !important;
+  background:var(--theme-warning-color) !important;
+}
+.assign-bento-primary-actions #normal-free-print-btn {
+  color:#fff !important;
+  border-color:var(--theme-primary-color) !important;
+  background:var(--theme-primary-color) !important;
+}
+.assign-bento-primary-actions #normal-free-assign-btn {
+  color:#fff !important;
+  border-color:var(--theme-success-color) !important;
+  background:var(--theme-success-color) !important;
+}
+.assign-bento-primary-actions .btn:disabled {
+  opacity:.42 !important;
+  box-shadow:none !important;
+  cursor:not-allowed;
+}
+@media (max-width:820px) {
+  .assign-bento-primary-actions { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .assign-bento-primary-actions .btn { min-height:54px !important; font-size:11px !important; padding:9px !important; }
+}
+@media (max-width:560px) {
+  .assign-bento-primary-actions { grid-template-columns:1fr; }
+  .assign-bento-selection-summary { justify-content:center; text-align:center; }
+  .assign-bento-selection-tools { justify-content:center; width:100%; }
+}
+
+/* v168 — clean donut, modern OH control, assignee action card and top filters. */
+.assign-bento-shell { align-items:stretch !important; }
+.assign-bento-shell > .assign-page-hero,
+.assign-bento-shell > .assign-workflow-nav,
+.assign-bento-shell > #assign-step-session { height:100%; }
+.assign-bento-shell .assign-page-hero {
+  color:var(--theme-body-text-color) !important;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 12%,transparent) !important;
+  background:var(--theme-card-bg) !important;
+  box-shadow:0 20px 42px rgba(14,75,81,.1) !important;
+}
+.assign-bento-shell .assign-page-hero::after { display:none !important; }
+.assign-bento-shell .assign-hero-icon {
+  color:var(--theme-primary-color) !important;
+  background:color-mix(in srgb,var(--theme-primary-color) 10%,var(--theme-card-bg)) !important;
+  box-shadow:none !important;
+}
+.assign-bento-shell .assign-hero-title-copy h2 {
+  color:var(--theme-heading-color) !important;
+  font-size:17px !important;
+}
+.assign-bento-shell .assign-hero-title-copy p {
+  color:var(--theme-muted-text-color) !important;
+  opacity:1 !important;
+}
+.assign-bento-shell .assign-hero-progress {
+  min-height:174px !important;
+  margin:8px 0 !important;
+}
+.assign-bento-shell .assign-hero-progress-track {
+  width:158px !important;
+  height:158px !important;
+  background:conic-gradient(
+    var(--theme-primary-color) 0 var(--assign-progress),
+    color-mix(in srgb,var(--theme-primary-color) 12%,var(--theme-card-bg)) var(--assign-progress) 100%
+  ) !important;
+  box-shadow:0 16px 34px color-mix(in srgb,var(--theme-primary-color) 14%,transparent) !important;
+}
+.assign-bento-shell .assign-hero-progress-track::after {
+  inset:22px !important;
+  background:var(--theme-card-bg) !important;
+  box-shadow:none !important;
+}
+.assign-bento-shell .assign-hero-progress-head,
+.assign-bento-shell .assign-hero-progress-head strong,
+.assign-bento-shell .assign-hero-progress-head span {
+  color:var(--theme-heading-color) !important;
+}
+.assign-bento-shell .assign-hero-progress-head strong {
+  font-size:31px !important;
+  line-height:1 !important;
+}
+.assign-bento-shell .assign-hero-progress-head span {
+  margin-top:6px;
+  font-size:9px !important;
+  font-weight:900;
+  opacity:1 !important;
+}
+.assign-bento-shell .assign-hero-stat {
+  color:var(--theme-body-text-color) !important;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 13%,transparent) !important;
+  background:color-mix(in srgb,var(--theme-primary-color) 5%,var(--theme-card-bg)) !important;
+  backdrop-filter:none !important;
+}
+.assign-bento-shell .assign-hero-stat strong {
+  color:var(--theme-heading-color) !important;
+  font-size:23px !important;
+}
+.assign-bento-shell .assign-hero-stat span {
+  color:var(--theme-muted-text-color) !important;
+  font-size:8px !important;
+  opacity:1 !important;
+  white-space:normal !important;
+}
+
+.assign-bento-shell .assign-workflow-nav { align-content:start; }
+.assign-bento-shell .assign-bento-nav-filters {
+  grid-column:1 / -1;
+  display:grid !important;
+  grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+  gap:9px !important;
+  margin:4px 0 0 !important;
+  padding:14px 0 0 !important;
+  border:0 !important;
+  border-top:1px solid color-mix(in srgb,var(--theme-primary-color) 12%,transparent) !important;
+  background:transparent !important;
+}
+.assign-bento-shell .assign-bento-nav-filters[hidden] { display:none !important; }
+.assign-bento-shell:not([data-current-step="assign-step-round1"]) .assign-bento-nav-filters { display:none !important; }
+.assign-bento-shell .assign-bento-nav-filters .fg { margin:0 !important; min-width:0; }
+.assign-bento-shell .assign-bento-nav-filters label {
+  color:var(--theme-muted-text-color) !important;
+  font-size:8px !important;
+  font-weight:900 !important;
+}
+.assign-bento-shell .assign-bento-nav-filters select,
+.assign-bento-shell .assign-bento-nav-filters button { min-width:0; }
+
+.assign-bento-shell .assign-oh-card {
+  min-height:92px !important;
+  padding:14px !important;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 18%,transparent) !important;
+  border-radius:18px !important;
+  background:linear-gradient(135deg,
+    color-mix(in srgb,var(--theme-primary-color) 8%,var(--theme-card-bg)),
+    color-mix(in srgb,var(--theme-primary-color) 3%,var(--theme-card-bg))) !important;
+  box-shadow:0 10px 24px rgba(14,75,81,.07) !important;
+}
+.assign-bento-shell .assign-oh-icon {
+  width:44px !important;
+  height:44px !important;
+  border-radius:14px !important;
+  color:#fff !important;
+  background:var(--theme-primary-color) !important;
+  box-shadow:0 8px 18px color-mix(in srgb,var(--theme-primary-color) 22%,transparent);
+}
+.assign-bento-shell .assign-oh-copy strong {
+  color:var(--theme-heading-color) !important;
+  font-size:11px !important;
+  letter-spacing:.03em;
+}
+.assign-bento-shell #oh-status {
+  color:var(--theme-primary-color) !important;
+  border:0 !important;
+  background:transparent !important;
+  padding:0 !important;
+  font-size:9px !important;
+  font-weight:900 !important;
+}
+.assign-bento-shell .assign-oh-card .assign-switch {
+  width:58px !important;
+  height:32px !important;
+}
+.assign-bento-shell .assign-oh-card .assign-switch-track {
+  border:1px solid color-mix(in srgb,var(--theme-muted-text-color) 22%,transparent);
+  background:color-mix(in srgb,var(--theme-muted-text-color) 20%,var(--theme-card-bg));
+  box-shadow:inset 0 1px 3px rgba(14,75,81,.1);
+}
+.assign-bento-shell .assign-oh-card .assign-switch-track::after {
+  width:24px !important;
+  height:24px !important;
+  left:3px !important;
+  top:3px !important;
+}
+.assign-bento-shell .assign-oh-card .assign-switch input:checked + .assign-switch-track {
+  border-color:var(--theme-primary-color);
+  background:var(--theme-primary-color);
+}
+.assign-bento-shell .assign-oh-card .assign-switch input:checked + .assign-switch-track::after {
+  transform:translateX(26px) !important;
+}
+
+.assign-bento-shell .normal-free-toolbar {
+  padding:16px 18px !important;
+  border-radius:22px !important;
+}
+.assign-bento-selection-summary { order:1; }
+.assign-bento-assignee-bar {
+  order:2;
+  width:min(100%,850px);
+  margin:2px auto 0;
+  display:grid;
+  grid-template-columns:46px minmax(0,1fr);
+  align-items:center;
+  gap:12px;
+  padding:13px 15px;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 16%,transparent);
+  border-radius:18px;
+  background:var(--theme-card-bg);
+  box-shadow:0 9px 22px rgba(14,75,81,.07);
+}
+.assign-bento-assignee-icon {
+  width:46px;
+  height:46px;
+  display:grid;
+  place-items:center;
+  border-radius:15px;
+  color:#fff;
+  background:var(--theme-primary-color);
+  font-size:19px;
+  box-shadow:0 8px 18px color-mix(in srgb,var(--theme-primary-color) 22%,transparent);
+}
+.assign-bento-assignee-field { min-width:0; }
+.assign-bento-assignee-field label {
+  display:block;
+  margin:0 0 4px;
+  color:var(--theme-muted-text-color);
+  font-size:8px;
+  font-weight:900;
+  letter-spacing:.05em;
+}
+.assign-bento-assignee-field select {
+  width:100%;
+  height:42px !important;
+  color:var(--theme-heading-color);
+  font-size:12px;
+  font-weight:900;
+}
+.assign-bento-primary-actions { order:3; }
+
+@media (max-width:1180px) {
+  .assign-bento-shell .assign-bento-nav-filters { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+}
+@media (max-width:560px) {
+  .assign-bento-shell .assign-bento-nav-filters { grid-template-columns:1fr !important; }
+  .assign-bento-assignee-bar { grid-template-columns:40px minmax(0,1fr); padding:11px; }
+  .assign-bento-assignee-icon { width:40px; height:40px; }
+}
+
+/* v169 — swap command panel and filters for a clearer top-to-bottom flow. */
+.assign-bento-shell .assign-bento-nav-actions {
+  grid-column:1 / -1;
+  margin:4px 0 0 !important;
+  padding:14px 0 0 !important;
+  border:0 !important;
+  border-top:1px solid color-mix(in srgb,var(--theme-primary-color) 12%,transparent) !important;
+  border-radius:0 !important;
+  background:transparent !important;
+  box-shadow:none !important;
+}
+.assign-bento-shell .assign-bento-nav-actions[hidden],
+.assign-bento-shell:not([data-current-step="assign-step-round1"]) .assign-bento-nav-actions {
+  display:none !important;
+}
+.assign-bento-shell .assign-bento-nav-actions .assign-bento-assignee-bar {
+  width:100%;
+  padding:11px 12px;
+  border-radius:16px;
+}
+.assign-bento-shell .assign-bento-nav-actions .assign-bento-primary-actions {
+  width:100%;
+  gap:8px;
+}
+.assign-bento-shell .assign-bento-nav-actions .assign-bento-primary-actions .btn {
+  min-height:52px !important;
+  padding:9px 10px !important;
+  font-size:10px !important;
+  border-radius:15px !important;
+}
+.assign-bento-shell .assign-bento-nav-actions .assign-bento-selection-summary {
+  padding-inline:2px;
+}
+.assign-bento-shell .normal-free-shell > .assign-bento-nav-filters {
+  grid-column:auto;
+  margin:0 !important;
+  padding:14px !important;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 12%,transparent) !important;
+  border-radius:18px !important;
+  background:color-mix(in srgb,var(--theme-primary-color) 4%,var(--theme-card-bg)) !important;
+  box-shadow:0 8px 20px rgba(14,75,81,.06);
+}
+@media (max-width:1180px) {
+  .assign-bento-shell .assign-bento-nav-actions .assign-bento-primary-actions { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .assign-bento-shell .normal-free-shell > .assign-bento-nav-filters { grid-template-columns:repeat(4,minmax(0,1fr)) !important; }
+}
+@media (max-width:820px) {
+  .assign-bento-shell .normal-free-shell > .assign-bento-nav-filters { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+}
+@media (max-width:560px) {
+  .assign-bento-shell .assign-bento-nav-actions .assign-bento-primary-actions,
+  .assign-bento-shell .normal-free-shell > .assign-bento-nav-filters { grid-template-columns:1fr !important; }
+}
+
+/* v170 — readable assignment filters, richer later-round/review cards and panel swap. */
+@media (min-width:1181px) {
+  .assign-bento-shell {
+    grid-template-columns:minmax(270px,.86fr) minmax(420px,1.45fr) minmax(270px,.86fr) !important;
+    grid-template-areas:
+      "config flow hero"
+      "alert alert alert"
+      "workspace workspace workspace" !important;
+  }
+}
+@media (min-width:821px) and (max-width:1180px) {
+  .assign-bento-shell {
+    grid-template-areas:
+      "config flow"
+      "hero hero"
+      "alert alert"
+      "workspace workspace" !important;
+  }
+}
+.assign-bento-shell .assign-bento-nav-filters,
+.assign-review-filter-grid {
+  overflow:visible !important;
+}
+.assign-bento-shell > #assign-step-round1,
+.assign-bento-shell > #assign-step-review {
+  overflow:visible !important;
+}
+.assign-bento-shell .normal-free-shell > .assign-bento-nav-filters,
+.assign-review-filter-grid {
+  display:grid !important;
+  grid-template-columns:repeat(4,minmax(175px,1fr)) !important;
+  gap:12px !important;
+  padding:16px !important;
+}
+.assign-bento-shell .assign-bento-nav-filters .multi-filter-field > label,
+.assign-review-filter-grid .multi-filter-field > label {
+  display:block !important;
+  margin:0 0 7px !important;
+  color:var(--theme-heading-color) !important;
+  font-size:11px !important;
+  font-weight:900 !important;
+  line-height:1.35 !important;
+  white-space:normal !important;
+}
+.assign-bento-shell .assign-bento-nav-filters .multi-filter-trigger,
+.assign-review-filter-grid .multi-filter-trigger {
+  min-height:50px !important;
+  padding:11px 14px !important;
+  border-radius:15px !important;
+  font-size:13px !important;
+  line-height:1.35 !important;
+}
+.assign-bento-shell .assign-bento-nav-filters .multi-filter-trigger-copy,
+.assign-review-filter-grid .multi-filter-trigger-copy {
+  color:var(--theme-heading-color) !important;
+  font-size:13px !important;
+  font-weight:850 !important;
+}
+.assign-bento-shell .assign-bento-nav-filters .multi-filter-panel,
+.assign-review-filter-grid .multi-filter-panel {
+  min-width:min(280px,calc(100vw - 32px)) !important;
+  max-width:min(360px,calc(100vw - 32px)) !important;
+}
+.assign-bento-shell .assign-bento-nav-filters .multi-filter-field:nth-last-child(-n+2) .multi-filter-panel,
+.assign-review-filter-grid .multi-filter-field:nth-last-child(-n+2) .multi-filter-panel {
+  right:0;
+  left:auto;
+}
+.assign-bento-shell .normal-free-meta {
+  font-size:11px !important;
+  line-height:1.55 !important;
+  white-space:normal !important;
+  overflow-wrap:anywhere;
+}
+.assign-bento-shell .assign-bento-tile-note {
+  font-size:10px !important;
+  line-height:1.5 !important;
+  white-space:normal !important;
+  overflow:visible !important;
+}
+.assign-review-controls-v170 {
+  display:grid !important;
+  gap:12px;
+  padding:16px 20px !important;
+  overflow:visible !important;
+}
+.assign-review-controls-v170 .assign-review-sort-row {
+  display:flex;
+  justify-content:flex-end;
+  min-width:0;
+}
+.assign-review-filter-grid {
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 12%,transparent);
+  border-radius:18px;
+  background:var(--theme-card-bg);
+}
+.r23-summary-grid {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+  margin-bottom:12px;
+}
+.r23-summary-card {
+  min-width:0;
+  padding:14px;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 14%,transparent);
+  border-radius:16px;
+  background:var(--theme-card-bg);
+  text-align:center;
+}
+.r23-summary-card strong {
+  display:block;
+  color:var(--theme-heading-color);
+  font-size:23px;
+  line-height:1.1;
+}
+.r23-summary-card span {
+  display:block;
+  margin-top:5px;
+  color:var(--theme-muted-text-color);
+  font-size:10px;
+  font-weight:800;
+}
+.r23-location-list {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+  max-height:310px;
+  overflow:auto;
+}
+.r23-location-card {
+  min-width:0;
+  padding:12px;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 12%,transparent);
+  border-radius:14px;
+  background:color-mix(in srgb,var(--theme-primary-color) 4%,var(--theme-card-bg));
+}
+.r23-location-card strong {
+  display:block;
+  color:var(--theme-heading-color);
+  font-size:12px;
+  overflow-wrap:anywhere;
+}
+.r23-location-card span {
+  display:block;
+  margin-top:4px;
+  color:var(--theme-muted-text-color);
+  font-size:10px;
+  font-weight:750;
+  line-height:1.45;
+}
+.r23-location-more {
+  grid-column:1 / -1;
+  padding:9px;
+  color:var(--theme-muted-text-color);
+  font-size:10px;
+  font-weight:800;
+  text-align:center;
+}
+@media (max-width:1040px) {
+  .assign-bento-shell .normal-free-shell > .assign-bento-nav-filters,
+  .assign-review-filter-grid { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+  .r23-location-list { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:560px) {
+  .assign-bento-shell .normal-free-shell > .assign-bento-nav-filters,
+  .assign-review-filter-grid,
+  .r23-summary-grid,
+  .r23-location-list { grid-template-columns:1fr !important; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   v173 — system-wide accessible contrast and missing color coverage
+   ══════════════════════════════════════════════════════════ */
+.sidebar-logo-icon,
+.login-brand-logo,
+.brand-preview-v64 .sidebar-logo-icon {
+  color:var(--theme-sidebar-logo-text) !important;
+  background:var(--theme-sidebar-logo-bg) !important;
+}
+.sidebar-logo-icon :is(svg,path,circle,rect,line,polyline,polygon),
+.login-brand-logo :is(svg,path,circle,rect,line,polyline,polygon) {
+  color:inherit !important;
+}
+.sidebar-title { color:var(--theme-sidebar-top-text) !important; }
+.sidebar-sub { color:var(--theme-sidebar-top-text) !important; }
+.sidebar-footer { color:var(--theme-sidebar-bottom-text) !important; }
+
+/* Common card icons now have their own editable background/foreground pair. */
+body :is(.assign-hero-icon,.assign-method-icon,.assign-summary-icon,.assign-oh-icon) {
+  color:var(--theme-card-icon-text) !important;
+  background:var(--theme-card-icon-bg) !important;
+  border-color:color-mix(in srgb,var(--theme-card-icon-text) 22%,var(--theme-border-color)) !important;
+}
+body :is(.assign-hero-icon,.assign-method-icon,.assign-summary-icon,.assign-oh-icon)
+  :is(svg,path,circle,rect,line,polyline,polygon) {
+  color:inherit !important;
+}
+body .assign-hero-logo { color:var(--theme-card-icon-text) !important; }
+.assign-bento-assignee-icon {
+  color:var(--theme-primary-text) !important;
+  background:var(--theme-primary-color) !important;
+}
+
+/* Handheld was using three undefined variables in older builds. */
+.handheld-laser-bar {
+  color:var(--theme-body-text-color) !important;
+  background:color-mix(in srgb,var(--theme-card-bg) 88%,var(--theme-primary-color) 12%) !important;
+}
+.handheld-laser-icon {
+  color:var(--theme-primary-text) !important;
+  background:var(--theme-primary-color) !important;
+}
+.handheld-laser-copy strong { color:var(--theme-heading-color) !important; }
+.handheld-laser-copy span { color:var(--theme-muted-text-color) !important; }
+.handheld-laser-input {
+  color:var(--theme-input-text) !important;
+  background:var(--theme-input-bg) !important;
+  border-color:var(--theme-input-border) !important;
+}
+
+/* Gradient heroes use the contrast of the actual gradient beneath the copy. */
+.language-settings-hero { color:var(--theme-sidebar-hero-text) !important; }
+.language-settings-hero :is(small,h2,p) {
+  color:var(--theme-sidebar-hero-text) !important;
+  -webkit-text-fill-color:var(--theme-sidebar-hero-text) !important;
+}
+.language-settings-hero p { opacity:.88; }
+.language-settings-hero::after {
+  color:color-mix(in srgb,var(--theme-sidebar-hero-text) 17%,transparent) !important;
+}
+.assign-page-hero .assign-hero-eyebrow,
+.assign-page-hero .assign-hero-title :is(h2,p),
+.assign-bento-shell .assign-hero-progress-head {
+  color:var(--theme-sidebar-hero-text) !important;
+  -webkit-text-fill-color:var(--theme-sidebar-hero-text) !important;
+}
+
+/* Solid buttons and badges always use the semantic on-color. */
+body :is(.btn-blue,.btn-primary,.primary,button.primary,.action-btn.primary,.primary-btn,.apply-btn,.save-btn) {
+  color:var(--theme-primary-text) !important;
+  -webkit-text-fill-color:var(--theme-primary-text) !important;
+}
+body :is(.btn-green,.success-btn) {
+  color:var(--theme-success-contrast) !important;
+  -webkit-text-fill-color:var(--theme-success-contrast) !important;
+  background:var(--theme-success-color) !important;
+}
+body :is(.btn-amber,.warning-btn) {
+  color:var(--theme-warning-contrast) !important;
+  -webkit-text-fill-color:var(--theme-warning-contrast) !important;
+  background:var(--theme-warning-color) !important;
+}
+body :is(.btn-red,.btn-danger,.danger,.delete-btn) {
+  color:var(--theme-danger-contrast) !important;
+  -webkit-text-fill-color:var(--theme-danger-contrast) !important;
+  background:var(--theme-danger-color) !important;
+}
+body .tag.tag-green {
+  color:var(--theme-success-contrast) !important;
+  background:var(--theme-success-color) !important;
+  border-color:color-mix(in srgb,var(--theme-success-color) 72%,#000) !important;
+}
+body .tag.tag-blue {
+  color:var(--theme-primary-text) !important;
+  background:var(--theme-primary-color) !important;
+  border-color:color-mix(in srgb,var(--theme-primary-color) 72%,#000) !important;
+}
+body .tag.tag-amber {
+  color:var(--theme-warning-contrast) !important;
+  background:var(--theme-warning-color) !important;
+  border-color:color-mix(in srgb,var(--theme-warning-color) 72%,#000) !important;
+}
+body .tag.tag-red {
+  color:var(--theme-danger-contrast) !important;
+  background:var(--theme-danger-color) !important;
+  border-color:color-mix(in srgb,var(--theme-danger-color) 72%,#000) !important;
+}
+body :is(.alert-green,.alert-amber,.alert-red,.alert-blue) {
+  color:var(--theme-body-text-color) !important;
+  -webkit-text-fill-color:var(--theme-body-text-color) !important;
+}
+
+/* Auto-contrast control in Theme & Logo settings. */
+.theme-contrast-guard {
+  display:grid;
+  grid-template-columns:44px minmax(0,1fr) auto;
+  align-items:center;
+  gap:12px;
+  margin:0 0 14px;
+  padding:13px 14px;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 28%,var(--theme-border-color));
+  border-radius:17px;
+  color:var(--theme-body-text-color) !important;
+  background:color-mix(in srgb,var(--theme-primary-color) 7%,var(--theme-card-bg));
+  cursor:pointer;
+}
+.theme-contrast-guard-icon {
+  width:44px;
+  height:44px;
+  display:grid;
+  place-items:center;
+  border-radius:14px;
+  color:var(--theme-card-icon-text);
+  background:var(--theme-card-icon-bg);
+  font-size:25px;
+  font-weight:900;
+}
+.theme-contrast-guard-copy { min-width:0; }
+.theme-contrast-guard-copy strong {
+  display:block;
+  color:var(--theme-heading-color) !important;
+  font-size:13px;
+  font-weight:900;
+}
+.theme-contrast-guard-copy small {
+  display:block;
+  margin-top:3px;
+  color:var(--theme-muted-text-color) !important;
+  font-size:10px;
+  font-weight:700;
+  line-height:1.5;
+}
+.theme-contrast-guard input {
+  position:absolute;
+  inline-size:1px;
+  block-size:1px;
+  opacity:0;
+  pointer-events:none;
+}
+.theme-contrast-switch {
+  position:relative;
+  width:52px;
+  height:30px;
+  border:1px solid var(--theme-input-border);
+  border-radius:999px;
+  background:var(--theme-secondary-bg);
+  transition:.18s ease;
+}
+.theme-contrast-switch::after {
+  content:'';
+  position:absolute;
+  left:3px;
+  top:3px;
+  width:22px;
+  height:22px;
+  border-radius:50%;
+  background:var(--theme-secondary-text);
+  transition:.18s ease;
+}
+.theme-contrast-guard input:checked + .theme-contrast-switch {
+  background:var(--theme-primary-color);
+  border-color:var(--theme-primary-color);
+}
+.theme-contrast-guard input:checked + .theme-contrast-switch::after {
+  left:25px;
+  background:var(--theme-primary-text);
+}
+.theme-contrast-guard:focus-within {
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--theme-primary-color) 17%,transparent);
+}
+@media (max-width:620px) {
+  .theme-contrast-guard { grid-template-columns:38px minmax(0,1fr) auto;padding:11px;gap:9px; }
+  .theme-contrast-guard-icon { width:38px;height:38px;border-radius:12px;font-size:21px; }
+  .theme-contrast-guard-copy small { font-size:9px; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   v174 — iPad Accuracy card containment guard
+   Rotated absolute layers used to paint outside their Grid area. On Safari,
+   page zoom and fractional Grid rows amplified that overflow. The tablet card
+   now reserves an internal safety edge, clips its own paint, and keeps the
+   three-sheet look with bounded translations instead of rotation.
+   ══════════════════════════════════════════════════════════ */
+@media (min-width:769px) and (max-width:1366px) {
+  body.tablet-ui #dash-content .summary-accuracy-card {
+    --tablet-accuracy-safe-x:14px;
+    --tablet-accuracy-safe-y:11px;
+    position:relative !important;
+    z-index:1 !important;
+    box-sizing:border-box !important;
+    padding:0 var(--tablet-accuracy-safe-x) var(--tablet-accuracy-safe-y) 0 !important;
+    overflow:hidden !important;
+    contain:layout paint !important;
+    isolation:isolate !important;
+  }
+  body.tablet-ui #dash-content .summary-accuracy-card .summary-accuracy-layer {
+    inset:0 var(--tablet-accuracy-safe-x) var(--tablet-accuracy-safe-y) 0 !important;
+    max-width:calc(100% - var(--tablet-accuracy-safe-x)) !important;
+    max-height:calc(100% - var(--tablet-accuracy-safe-y)) !important;
+    transform-origin:center center !important;
+    will-change:auto !important;
+  }
+  body.tablet-ui #dash-content .summary-accuracy-card .summary-accuracy-layer-mid {
+    transform:none !important;
+  }
+  body.tablet-ui #dash-content .summary-accuracy-card .summary-accuracy-layer-back {
+    transform:translate(
+      calc(var(--tablet-accuracy-safe-x) * .42),
+      calc(var(--tablet-accuracy-safe-y) * .38)
+    ) !important;
+  }
+  body.tablet-ui #dash-content .summary-accuracy-card[data-accuracy-guard="compact"] .summary-accuracy-layer-back {
+    transform:translate(3px,3px) !important;
+  }
+  body.tablet-ui #dash-content .summary-accuracy-card[data-accuracy-guard="compact"] .summary-accuracy-layer-bottom {
+    transform:translate(6px,6px) !important;
+  }
+  body.tablet-ui #dash-content .summary-accuracy-card .summary-accuracy-layer-bottom {
+    transform:translate(
+      calc(var(--tablet-accuracy-safe-x) * .82),
+      calc(var(--tablet-accuracy-safe-y) * .76)
+    ) !important;
+  }
+  body.tablet-ui #dash-content .summary-accuracy-core {
+    width:calc(100% - var(--tablet-accuracy-safe-x)) !important;
+    height:calc(100% - var(--tablet-accuracy-safe-y)) !important;
+    max-width:calc(100% - var(--tablet-accuracy-safe-x)) !important;
+    max-height:calc(100% - var(--tablet-accuracy-safe-y)) !important;
+    flex:0 0 auto !important;
+    overflow:hidden !important;
+  }
+  body.tablet-ui #dash-content .summary-accuracy-hero {
+    min-width:0 !important;
+    min-height:0 !important;
+    overflow:hidden !important;
+  }
+  body.tablet-ui #dash-content .summary-accuracy-ring {
+    width:var(--tablet-accuracy-ring-size,122px) !important;
+    height:var(--tablet-accuracy-ring-size,122px) !important;
+    min-width:0 !important;
+    min-height:0 !important;
+    max-width:100% !important;
+    max-height:100% !important;
+    flex:0 0 var(--tablet-accuracy-ring-size,122px) !important;
+  }
+  body.tablet-ui #dash-content .summary-accuracy-breakdown {
+    min-width:0 !important;
+    max-width:100% !important;
+    flex:0 0 auto !important;
+    overflow:hidden !important;
+  }
+  body.tablet-ui #dash-content .summary-zones-card,
+  body.tablet-ui #dash-content .summary-progress-card,
+  body.tablet-ui #dash-content .summary-hourly-card-line,
+  body.tablet-ui #dash-content .summary-status-card {
+    position:relative !important;
+    z-index:2 !important;
+  }
+}
+
+/* v175: require an explicit Session choice before assignment controls become active. */
+.assign-session-help {
+  display:block;
+  margin-top:8px;
+  color:var(--text-soft,#66756d);
+  font-size:12px;
+  font-weight:700;
+}
+.assign-session-pending #as-sess {
+  border-color:var(--accent-amber,#c89b42) !important;
+  color:var(--text-soft,#66756d);
+}
+.assign-session-pending .assign-workflow-item:disabled,
+.assign-session-pending .round1-mode-switch button:disabled,
+.assign-session-pending .assign-bento-nav-actions :disabled {
+  cursor:not-allowed !important;
+  opacity:.46 !important;
+}
+.assign-session-pending .assign-step-section[aria-disabled="true"] {
+  opacity:.58;
+  filter:saturate(.65);
+}
+
 </style>
 </head>
-<body data-build="v164-single-device-login-guard">
+<body data-build="v175-explicit-assignment-session-selection">
 <div id="app"></div>
 
 <script>
@@ -15045,11 +16535,14 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v164-single-device-login-guard';
+window.__CYCLE_COUNT_BUILD__ = 'v175-explicit-assignment-session-selection';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
 let _tabletViewportFrame = 0;
+let _tabletAccuracyGuardFrame = 0;
+let _tabletAccuracyGuardObserver = null;
+let _tabletAccuracyGuardTarget = null;
 const TABLET_ZOOM_STORAGE_KEY = 'cycle_count_tablet_zoom_v1';
 const TABLET_CONTROLS_COLLAPSED_KEY = 'cycle_count_tablet_controls_collapsed_v1';
 const COUNT_SCREEN_LOCK_STORAGE_KEY = 'cycle_count_ipad_screen_lock_v1';
@@ -15123,6 +16616,64 @@ function toggleTabletViewportControls() {
   try { localStorage.setItem(TABLET_CONTROLS_COLLAPSED_KEY,isCollapsed ? 'true' : 'false'); } catch (_) {}
 }
 
+function disconnectTabletAccuracyLayoutGuard() {
+  _tabletAccuracyGuardObserver?.disconnect?.();
+  _tabletAccuracyGuardObserver = null;
+  _tabletAccuracyGuardTarget = null;
+}
+
+function setTabletAccuracyVariable(card,key,value) {
+  if (card.style.getPropertyValue(key).trim() !== value) card.style.setProperty(key,value);
+}
+
+function syncTabletAccuracyLayoutGuard() {
+  const tabletEnabled = document.body.classList.contains('tablet-ui') || syncTabletUiClass();
+  const card = tabletEnabled ? document.querySelector('#dash-content .summary-accuracy-card') : null;
+  if (!card || tabletZoomContextKey() !== 'dashboard') {
+    disconnectTabletAccuracyLayoutGuard();
+    return false;
+  }
+
+  const width = Math.max(0,card.clientWidth || card.getBoundingClientRect().width || 0);
+  const height = Math.max(0,card.clientHeight || card.getBoundingClientRect().height || 0);
+  if (!width || !height) return false;
+
+  const safeX = Math.max(10,Math.min(16,Math.round(width * .047)));
+  const safeY = Math.max(9,Math.min(14,Math.round(height * .036)));
+  const ringSize = Math.max(84,Math.min(
+    142,
+    Math.round((width - safeX) * .49),
+    Math.round((height - safeY) * .43),
+  ));
+  setTabletAccuracyVariable(card,'--tablet-accuracy-safe-x',`${safeX}px`);
+  setTabletAccuracyVariable(card,'--tablet-accuracy-safe-y',`${safeY}px`);
+  setTabletAccuracyVariable(card,'--tablet-accuracy-ring-size',`${ringSize}px`);
+
+  /* Safari sometimes rounds transformed Grid children after zoom. Detect the
+     real painted layer bounds and fall back to a tighter offset if necessary. */
+  const zones = document.querySelector('#dash-content .summary-zones-card');
+  const layerBottom = Math.max(...[...card.querySelectorAll('.summary-accuracy-layer')]
+    .map(layer => layer.getBoundingClientRect().bottom),0);
+  const zoneTop = zones?.getBoundingClientRect().top || Number.POSITIVE_INFINITY;
+  const compact = Number.isFinite(zoneTop) && layerBottom > zoneTop - 2;
+  card.dataset.accuracyGuard = compact ? 'compact' : 'active';
+
+  if (_tabletAccuracyGuardTarget !== card && typeof ResizeObserver === 'function') {
+    disconnectTabletAccuracyLayoutGuard();
+    _tabletAccuracyGuardTarget = card;
+    _tabletAccuracyGuardObserver = new ResizeObserver(() => scheduleTabletAccuracyLayoutGuard());
+    _tabletAccuracyGuardObserver.observe(card);
+    const grid = card.closest('.summary-dashboard-grid');
+    if (grid) _tabletAccuracyGuardObserver.observe(grid);
+  }
+  return true;
+}
+
+function scheduleTabletAccuracyLayoutGuard() {
+  cancelAnimationFrame(_tabletAccuracyGuardFrame);
+  _tabletAccuracyGuardFrame = requestAnimationFrame(() => syncTabletAccuracyLayoutGuard());
+}
+
 function applyTabletZoom(rawZoom,options = {}) {
   const page = Q('cnt');
   if (!page || !syncTabletUiClass()) return 1;
@@ -15145,6 +16696,7 @@ function applyTabletZoom(rawZoom,options = {}) {
     saved[tabletZoomContextKey()] = zoom;
     try { localStorage.setItem(TABLET_ZOOM_STORAGE_KEY,JSON.stringify(saved)); } catch (_) {}
   }
+  scheduleTabletAccuracyLayoutGuard();
   return zoom;
 }
 
@@ -15279,6 +16831,7 @@ const DEFAULT_BRANDING = Object.freeze({
   systemName: 'Cycle Count',
   systemSubtitle: 'Warehouse v1.0',
   language: 'th',
+  autoContrast: true,
   dashboardBg: '#F7FBFC',
   dashboardCardBg: '#FFFFFF',
   dashboardBorder: '#D9ECEE',
@@ -15364,6 +16917,7 @@ const DEFAULT_BRANDING = Object.freeze({
   menuActiveBg: '#EDF6F9',
   menuActiveText: '#006D77',
   sidebarLogoBg: '#FFFFFF',
+  sidebarLogoText: '#006D77',
   sidebarTitleText: '#FFFFFF',
   sidebarSubText: '#FFFFFF',
   sidebarDivider: '#A9D8D4',
@@ -15371,6 +16925,8 @@ const DEFAULT_BRANDING = Object.freeze({
   pageBg: '#EDF6F9',
   appFrameBg: '#FFFFFF',
   cardBg: '#FFFFFF',
+  cardIconBg: '#E3F1F3',
+  cardIconText: '#006D77',
   borderColor: '#83C5BE',
   headingColor: '#006D77',
   bodyTextColor: '#16383C',
@@ -15471,7 +17027,8 @@ const BRANDING_THEME_AREAS = Object.freeze([
   { key:'sidebar', title:'2. Sidebar และเมนูนำทาง', description:'ควบคุมพื้นหลัง โลโก้ เมนูหลัก เมนูย่อย และ Scrollbar', sections:[
     { title:'พื้นและโลโก้', fields:[
       { key:'sidebarStart', label:'พื้น Sidebar — สีบน' }, { key:'sidebarEnd', label:'พื้น Sidebar — สีล่าง' },
-      { key:'sidebarLogoBg', label:'พื้นหลังโลโก้' }, { key:'sidebarTitleText', label:'ชื่อระบบ' },
+      { key:'sidebarLogoBg', label:'พื้นหลังโลโก้' }, { key:'sidebarLogoText', label:'สีไอคอนโลโก้' },
+      { key:'sidebarTitleText', label:'ชื่อระบบ' },
       { key:'sidebarSubText', label:'ชื่อรอง/เวอร์ชัน' }, { key:'sidebarDivider', label:'เส้นแบ่งเมนู' },
       { key:'sidebarScrollbar', label:'Scrollbar' },
     ]},
@@ -15484,7 +17041,8 @@ const BRANDING_THEME_AREAS = Object.freeze([
   { key:'menus', title:'3. หน้าทำงานและแบบฟอร์ม', description:'มาตรฐานร่วมของหน้ารับงาน นับงาน Variance รายงาน Admin และฟอร์มทุกหน้า', sections:[
     { title:'พื้นหลัง การ์ด และตัวอักษร', fields:[
       { key:'pageBg', label:'พื้นหลังทุกหน้า' }, { key:'appFrameBg', label:'พื้นกรอบระบบ' },
-      { key:'cardBg', label:'พื้นหลังการ์ด/Panel' }, { key:'borderColor', label:'เส้นขอบและกรอบ' },
+      { key:'cardBg', label:'พื้นหลังการ์ด/Panel' }, { key:'cardIconBg', label:'พื้นหลังไอคอนบนการ์ด' },
+      { key:'cardIconText', label:'สีไอคอนบนการ์ด' }, { key:'borderColor', label:'เส้นขอบและกรอบ' },
       { key:'headingColor', label:'หัวข้อทุกหน้า' }, { key:'bodyTextColor', label:'ข้อความหลัก' },
       { key:'mutedTextColor', label:'ข้อความรายละเอียด' },
     ]},
@@ -17245,6 +18803,120 @@ function normalizeLogoDataUrl(value) {
     : '';
 }
 
+/* v173 — WCAG-aware theme contrast engine.
+   User-selected text colors are kept when readable. If a pair falls below
+   4.5:1, the engine chooses the clearer dark/light foreground automatically. */
+function themeHexToRgb(value) {
+  const hex = normalizeHexColor(value, '#000000').slice(1);
+  return {
+    r:parseInt(hex.slice(0,2),16),
+    g:parseInt(hex.slice(2,4),16),
+    b:parseInt(hex.slice(4,6),16),
+  };
+}
+
+function themeRelativeLuminance(value) {
+  const { r,g,b } = themeHexToRgb(value);
+  const channel = part => {
+    const normalized = part / 255;
+    return normalized <= .03928
+      ? normalized / 12.92
+      : Math.pow((normalized + .055) / 1.055, 2.4);
+  };
+  return .2126 * channel(r) + .7152 * channel(g) + .0722 * channel(b);
+}
+
+function themeContrastRatio(foreground, background) {
+  const first = themeRelativeLuminance(foreground);
+  const second = themeRelativeLuminance(background);
+  return (Math.max(first,second) + .05) / (Math.min(first,second) + .05);
+}
+
+function themeMixHex(first, second, weight = .5) {
+  const a = themeHexToRgb(first);
+  const b = themeHexToRgb(second);
+  const ratio = Math.max(0,Math.min(1,Number(weight) || 0));
+  const byte = value => Math.round(value).toString(16).padStart(2,'0').toUpperCase();
+  return `#${byte(a.r * (1-ratio) + b.r * ratio)}${byte(a.g * (1-ratio) + b.g * ratio)}${byte(a.b * (1-ratio) + b.b * ratio)}`;
+}
+
+function themeReadableForeground(preferred, backgrounds, minimum = 4.5) {
+  const surfaces = (Array.isArray(backgrounds) ? backgrounds : [backgrounds])
+    .map(color => normalizeHexColor(color, '#FFFFFF'));
+  const wanted = normalizeHexColor(preferred, '#102A2B');
+  const score = color => Math.min(...surfaces.map(surface => themeContrastRatio(color,surface)));
+  if (score(wanted) >= minimum) return wanted;
+  const candidates = ['#102A2B','#FFFFFF','#000000'];
+  return candidates.sort((left,right) => score(right) - score(left))[0];
+}
+
+function enforceBrandingContrast(settings = {}) {
+  if (settings.autoContrast === false) return settings;
+  const result = { ...settings };
+  const protect = (textKey,backgroundKeys,minimum = 4.5) => {
+    const keys = Array.isArray(backgroundKeys) ? backgroundKeys : [backgroundKeys];
+    result[textKey] = themeReadableForeground(
+      result[textKey],
+      keys.map(key => result[key]),
+      minimum,
+    );
+  };
+
+  protect('dashboardHeading','dashboardBg');
+  protect('dashboardText','dashboardCardBg');
+  protect('dashboardMuted','dashboardCardBg');
+  protect('kpiMintText','kpiMint');
+  protect('kpiSkuText','kpiSku');
+  protect('kpiBlushText','kpiBlush');
+  protect('kpiCoralText','kpiCoral');
+  protect('accuracyHeadingText','accuracyStart');
+  protect('accuracyBodyText','accuracyEnd');
+  protect('accuracyOkText','dashboardCardBg');
+  protect('accuracyGainText','dashboardCardBg');
+  protect('accuracyLostText','dashboardCardBg');
+  protect('wmsHeadingText','wmsCardBg');
+  protect('wmsBodyText','wmsCardBg');
+  protect('wmsValueText','wmsCardBg');
+  protect('wmsPendingConfirmText','wmsCardBg');
+  protect('wmsPendingText','wmsCardBg');
+  protect('wmsDoneText','wmsCardBg');
+  protect('wmsUncheckedText','wmsUncheckedBg');
+  protect('wmsCheckedText','wmsCheckedBg');
+  protect('wmsNoteText','wmsNoteBg');
+  protect('hourlyHeadingText','hourlyCardBg');
+  protect('hourlyText','hourlyCardBg');
+  result.hourlyStatText = themeReadableForeground(result.hourlyStatText,[
+    result.hourlyStatWorkBg,result.hourlyStatRegularBg,
+    result.hourlyStatOtBg,result.hourlyStatAverageBg,
+  ]);
+  protect('chartPointText','hourlyCardBg');
+  protect('zoneHeadingText','zoneCardBg');
+  protect('zoneText','zoneCardBg');
+  protect('sessionHeadingText','sessionCardBg');
+  protect('sessionText','sessionCardBg');
+  protect('sessionRowText','sessionRowBg');
+  protect('sessionActiveText','sessionActiveBg');
+  protect('sidebarLogoText','sidebarLogoBg');
+  protect('sidebarTitleText','sidebarStart');
+  protect('sidebarSubText','sidebarStart');
+  result.sidebarText = themeReadableForeground(result.sidebarText,[
+    themeMixHex(result.sidebarStart,result.sidebarEnd,.45),
+  ]);
+  protect('sidebarHoverText','sidebarHoverBg');
+  protect('menuActiveText','menuActiveBg');
+  protect('headingColor','cardBg');
+  protect('bodyTextColor','cardBg');
+  protect('mutedTextColor','cardBg');
+  protect('cardIconText','cardIconBg');
+  protect('inputText','inputBg');
+  protect('primaryText','primaryColor');
+  protect('secondaryText','secondaryBg');
+  protect('tableHeaderText','tableHeaderBg');
+  protect('tableRowText','tableRowBg');
+  protect('menuChartText','cardBg');
+  return result;
+}
+
 function normalizeBrandingSettings(input = {}) {
   const output = {};
   BRANDING_COLOR_FIELDS.forEach(({ key }) => {
@@ -17253,6 +18925,7 @@ function normalizeBrandingSettings(input = {}) {
   output.systemName = String(input?.systemName || DEFAULT_BRANDING.systemName).trim().slice(0, 60) || DEFAULT_BRANDING.systemName;
   output.systemSubtitle = String(input?.systemSubtitle || DEFAULT_BRANDING.systemSubtitle).trim().slice(0, 100) || DEFAULT_BRANDING.systemSubtitle;
   output.language = input?.language === 'en' ? 'en' : 'th';
+  output.autoContrast = input?.autoContrast !== false;
   output.printFormStyle = input?.printFormStyle === 'detailed' ? 'detailed' : 'compact';
   output.printPaperSize = ['A4','A3','Letter'].includes(input?.printPaperSize) ? input.printPaperSize : DEFAULT_BRANDING.printPaperSize;
   output.printOrientation = ['auto','portrait','landscape'].includes(input?.printOrientation) ? input.printOrientation : DEFAULT_BRANDING.printOrientation;
@@ -17272,7 +18945,7 @@ function normalizeBrandingSettings(input = {}) {
   output.updatedAt = String(input?.updatedAt || '').trim().slice(0,40);
   output.updatedBy = String(input?.updatedBy || '').trim().slice(0,100);
   output.syncVersion = Math.max(1,Math.floor(Number(input?.syncVersion) || 1));
-  return output;
+  return enforceBrandingContrast(output);
 }
 
 function themeSetColorValues(input = {}) {
@@ -17318,9 +18991,10 @@ function buildProfessionalThemeColors(definition = {}) {
     sessionRowText:text,sessionActiveBg:primary,sessionActiveText:onPrimary,
     sidebarStart:navStart,sidebarEnd:navEnd,sidebarText:navText,sidebarHoverBg:secondary,
     sidebarHoverText:onSecondary,menuActiveBg:surface,menuActiveText:text,sidebarLogoBg:surface,
+    sidebarLogoText:text,
     sidebarTitleText:navText,sidebarSubText:navText,sidebarDivider:border,
     sidebarScrollbar:secondary,
-    pageBg:page,appFrameBg:surface,cardBg:surface,borderColor:border,
+    pageBg:page,appFrameBg:surface,cardBg:surface,cardIconBg:surfaceAlt,cardIconText:text,borderColor:border,
     headingColor:text,bodyTextColor:text,mutedTextColor:muted,inputBg:surface,
     inputText:text,inputBorder:border,primaryColor:buttonBg,primaryText:buttonText,
     secondaryBg:surfaceAlt,secondaryText:text,successColor:successAction,
@@ -17585,8 +19259,8 @@ function applyBrandingSettings(settings, persistLocal = true) {
     '--sidebar-active-text': uiBranding.menuActiveText,
     '--primary-blue': uiBranding.primaryColor,
     '--primary-grad': `linear-gradient(135deg, ${uiBranding.progressStart} 0%, ${uiBranding.primaryColor} 100%)`,
-    '--accent-green': uiBranding.wmsDoneText,
-    '--accent-red': uiBranding.wmsUncheckedText,
+    '--accent-green': uiBranding.successColor,
+    '--accent-red': uiBranding.dangerColor,
     '--accent-amber': uiBranding.warningColor,
     '--text-main': uiBranding.bodyTextColor,
     '--text-muted': uiBranding.mutedTextColor,
@@ -17597,13 +19271,23 @@ function applyBrandingSettings(settings, persistLocal = true) {
     '--color-coral': uiBranding.dangerColor,
     '--v61-heading': uiBranding.headingColor,
     '--v61-detail': uiBranding.mutedTextColor,
+    /* v173 compatibility aliases + semantic contrast tokens */
+    '--theme-surface-color': uiBranding.cardBg,
+    '--theme-text-color': uiBranding.bodyTextColor,
+    '--theme-button-text-color': uiBranding.primaryText,
+    '--theme-sidebar-top-text': themeReadableForeground(uiBranding.sidebarTitleText,uiBranding.sidebarStart),
+    '--theme-sidebar-bottom-text': themeReadableForeground(uiBranding.sidebarSubText,uiBranding.sidebarEnd),
+    '--theme-sidebar-hero-text': themeReadableForeground(uiBranding.sidebarTitleText,uiBranding.sidebarStart),
+    '--theme-success-contrast': themeReadableForeground('#FFFFFF',uiBranding.successColor),
+    '--theme-warning-contrast': themeReadableForeground('#102A2B',uiBranding.warningColor),
+    '--theme-danger-contrast': themeReadableForeground('#FFFFFF',uiBranding.dangerColor),
   };
   Object.entries(variableMap).forEach(([key, value]) => root.setProperty(key, value));
   BRANDING_COLOR_FIELDS.forEach(({ key }) => {
     const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
     root.setProperty(`--theme-${cssKey}`, uiBranding[key]);
   });
-  document.title = `${uiBranding.systemName} v159`;
+  document.title = `${uiBranding.systemName} v175`;
   if (persistLocal) {
     try { localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(uiBranding)); } catch (_) {}
   }
@@ -18740,6 +20424,8 @@ function paintDashboardView(tab, cache = _dashboardViewCache) {
     <div class="${tab === 'summary' ? 'summary-dashboard-content' : 'card'}" id="dash-content">${cache.views[tab]}</div>`;
   updateDashboardNavigationUi(tab);
   scheduleTabletViewportLayout(tab === 'summary');
+  if (tab === 'summary') scheduleTabletAccuracyLayoutGuard();
+  else disconnectTabletAccuracyLayoutGuard();
   if (tab === 'wms') {
     if (Q('wms-zone')) Q('wms-zone').value = S._wmsZone || '';
     if (Q('wms-row')) Q('wms-row').value = S._wmsRow || '';
@@ -19042,7 +20728,7 @@ async function protectedFunctionHeaders() {
   return {
     Authorization: `Bearer ${session.access_token}`,
     apikey: SUPA_KEY,
-    'x-client-info': 'cycle-count-v164',
+    'x-client-info': 'cycle-count-v175',
   };
 }
 
@@ -21084,15 +22770,6 @@ function persistMyTaskFilters() {
 function setMyTaskFilter(field,value) {
   if (!MY_TASK_FILTER_FIELDS.includes(field)) return;
   S[field] = normalizeMultiFilterValues(value);
-  const downstream = {
-    _mtSession:['_mtJob','_mtStatus','_mtZone','_mtRow','_mtPos','_mtLvl'],
-    _mtJob:['_mtStatus','_mtZone','_mtRow','_mtPos','_mtLvl'],
-    _mtStatus:['_mtZone','_mtRow','_mtPos','_mtLvl'],
-    _mtZone:['_mtRow','_mtPos','_mtLvl'],
-    _mtRow:['_mtPos','_mtLvl'],
-    _mtPos:['_mtLvl'],
-  };
-  (downstream[field] || []).forEach(key => { S[key] = []; });
   persistMyTaskFilters();
   refreshMyTaskFilters();
 }
@@ -21433,19 +23110,27 @@ function refreshMyTaskFilters() {
     status:job.status || 'pending',
   }));
   const allEntries = [...cycleEntries,...jobEntries];
+  const facetEntries = (entries,excludeField='') => entries.filter(entry => {
+    if (excludeField !== '_mtSession' && !myTaskFilterMatches(S._mtSession,entry.sessionId)) return false;
+    if (excludeField !== '_mtJob' && !myTaskFilterMatches(S._mtJob,entry.jobId || '')) return false;
+    if (excludeField !== '_mtStatus' && !myTaskFilterMatches(S._mtStatus,entry.status)) return false;
+    if (excludeField !== '_mtZone' && !myTaskFilterMatches(S._mtZone,entry.zone || '')) return false;
+    if (excludeField !== '_mtRow' && !myTaskFilterMatches(S._mtRow,entry.row || '')) return false;
+    if (excludeField !== '_mtPos' && !myTaskFilterMatches(S._mtPos,entry.position || '')) return false;
+    if (excludeField !== '_mtLvl' && !myTaskFilterMatches(S._mtLvl,entry.level || '')) return false;
+    return true;
+  });
   S._mtSession = fillMyTaskOptionSelect(
     'mt-session',
-    [...allEntries]
+    [...facetEntries(allEntries,'_mtSession')]
       .sort((a,b) => a.sessionName.localeCompare(b.sessionName,'th'))
       .map(entry => ({ value:entry.sessionId,label:entry.sessionName })),
     S._mtSession,
   );
-  const sessionCycleEntries = cycleEntries.filter(entry => myTaskFilterMatches(S._mtSession,entry.sessionId));
-  const sessionJobEntries = jobEntries.filter(entry => myTaskFilterMatches(S._mtSession,entry.sessionId));
   if (Q('mt-job')) {
     S._mtJob = fillMyTaskOptionSelect(
       'mt-job',
-      [...sessionJobEntries]
+      [...facetEntries(jobEntries,'_mtJob')]
         .sort((a,b) => String(a.jobCode).localeCompare(String(b.jobCode),undefined,{numeric:true}))
         .map(entry => ({ value:entry.jobId,label:entry.jobCode })),
       S._mtJob,
@@ -21453,42 +23138,36 @@ function refreshMyTaskFilters() {
   } else {
     S._mtJob = [];
   }
-  const selectedJobEntries = sessionJobEntries.filter(entry => myTaskFilterMatches(S._mtJob,entry.jobId));
-  const statusEntries = normalizeMultiFilterValues(S._mtJob).length
-    ? selectedJobEntries
-    : [...sessionCycleEntries,...sessionJobEntries];
   const statusOrder = ['pending','in_progress','round1_done','round2_done','round3_done','completed','approved'];
   S._mtStatus = fillMyTaskOptionSelect(
     'mt-status',
     statusOrder
-      .filter(status => statusEntries.some(entry => entry.status === status))
+      .filter(status => facetEntries(allEntries,'_mtStatus').some(entry => entry.status === status))
       .map(status => ({ value:status,label:translateUiText(tagInfo(status).lbl) })),
     S._mtStatus,
   );
-  const baseEntries = normalizeMultiFilterValues(S._mtJob).length
-    ? []
-    : sessionCycleEntries.filter(entry => myTaskFilterMatches(S._mtStatus,entry.status));
+  const zoneEntries = facetEntries(cycleEntries,'_mtZone');
   S._mtZone = fillMyTaskOptionSelect(
     'mt-zone',
-    [...new Set(baseEntries.map(entry => entry.zone).filter(Boolean))].sort((a,b) => a.localeCompare(b,'th',{numeric:true})).map(value => ({value,label:value})),
+    [...new Set(zoneEntries.map(entry => entry.zone).filter(Boolean))].sort((a,b) => a.localeCompare(b,'th',{numeric:true})).map(value => ({value,label:value})),
     S._mtZone,
   );
-  const zoneEntries = baseEntries.filter(entry => myTaskFilterMatches(S._mtZone,entry.zone));
+  const rowEntries = facetEntries(cycleEntries,'_mtRow');
   S._mtRow = fillMyTaskOptionSelect(
     'mt-row',
-    [...new Set(zoneEntries.map(entry => entry.row).filter(Boolean))].sort((a,b) => a.localeCompare(b,'th',{numeric:true})).map(value => ({value,label:value})),
+    [...new Set(rowEntries.map(entry => entry.row).filter(Boolean))].sort((a,b) => a.localeCompare(b,'th',{numeric:true})).map(value => ({value,label:value})),
     S._mtRow,
   );
-  const rowEntries = zoneEntries.filter(entry => myTaskFilterMatches(S._mtRow,entry.row));
+  const positionEntries = facetEntries(cycleEntries,'_mtPos');
   S._mtPos = fillMyTaskOptionSelect(
     'mt-pos',
-    [...new Set(rowEntries.map(entry => entry.position).filter(Boolean))].sort((a,b) => a.localeCompare(b,'th',{numeric:true})).map(value => ({value,label:value})),
+    [...new Set(positionEntries.map(entry => entry.position).filter(Boolean))].sort((a,b) => a.localeCompare(b,'th',{numeric:true})).map(value => ({value,label:value})),
     S._mtPos,
   );
-  const positionEntries = rowEntries.filter(entry => myTaskFilterMatches(S._mtPos,entry.position));
+  const levelEntries = facetEntries(cycleEntries,'_mtLvl');
   S._mtLvl = fillMyTaskOptionSelect(
     'mt-lvl',
-    [...new Set(positionEntries.map(entry => entry.level).filter(Boolean))].sort((a,b) => a.localeCompare(b,'th',{numeric:true})).map(value => ({value,label:value})),
+    [...new Set(levelEntries.map(entry => entry.level).filter(Boolean))].sort((a,b) => a.localeCompare(b,'th',{numeric:true})).map(value => ({value,label:value})),
     S._mtLvl,
   );
   persistMyTaskFilters();
@@ -22648,8 +24327,6 @@ async function loadCFound() {
     ? remarkResult.data
     : COUNT_REMARK_PRESETS.map(label => ({ id:null,label }));
   window._photoMap = {};
-  const preferredSession = sessions.some(session => session.id === S.sid) ? S.sid : sessions[0].id;
-
   cnt().innerHTML = `
     <div class="card">
       <div style="font-size:20px;font-weight:800;color:var(--theme-heading-color)">＋ เจองานเพิ่ม</div>
@@ -22661,8 +24338,8 @@ async function loadCFound() {
       <div class="found-form-grid">
         <div class="fg span-2">
           <label>SESSION <span style="color:var(--accent-red)">*</span></label>
-          <select id="found_session">${sessions.map(session =>
-            `<option value="${session.id}" ${session.id===preferredSession?'selected':''}>${escapeWmsText(session.name)} · ${escapeWmsText(session.status)}</option>`
+          <select id="found_session" required><option value="" selected disabled>— เลือก Session —</option>${sessions.map(session =>
+            `<option value="${session.id}">${escapeWmsText(session.name)} · ${escapeWmsText(session.status)}</option>`
           ).join('')}</select>
         </div>
         <div class="span-2">
@@ -27520,38 +29197,42 @@ document.addEventListener('click', event => {
 function refreshWmsDependentFilters() {
   const rows = (window._wmsRows || []).filter(v => Number(v.variance) !== 0);
   const asgnInfoMap = window._wmsAsgnInfoMap || {};
+  const facetRows = (excludeKey='') => rows.filter(item => {
+    const location = asgnInfoMap[item.assignment_id]?.locations || {};
+    const userValue = item._isPending ? '_pending' : item.approved_by;
+    const statusValue = item._isPending ? 'pending' : (item.wms_fixed ? 'fixed' : 'unfixed');
+    const search = String(S._wmsLocSearch || '').trim().toLowerCase();
+    if (excludeKey !== 'Zone' && S._wmsZone && location.zone !== S._wmsZone) return false;
+    if (excludeKey !== 'Row' && S._wmsRow && String(location.row_no ?? '') !== String(S._wmsRow)) return false;
+    if (excludeKey !== 'Level' && S._wmsLevel && String(location.level ?? '') !== String(S._wmsLevel)) return false;
+    if (excludeKey !== 'User' && S._wmsUser && userValue !== S._wmsUser) return false;
+    if (excludeKey !== 'Filter' && S._wmsFilter && S._wmsFilter !== 'all' && statusValue !== S._wmsFilter) return false;
+    if (search && !String(location.code || '').toLowerCase().includes(search)) return false;
+    return true;
+  });
   const zone = fillDependentSelect(
     'wms-zone',
-    rows.map(row => asgnInfoMap[row.assignment_id]?.locations?.zone),
+    facetRows('Zone').map(row => asgnInfoMap[row.assignment_id]?.locations?.zone),
     'ทั้งหมด',
     S._wmsZone,
   );
   S._wmsZone = zone;
-  const rowValues = rows
+  const rowValues = facetRows('Row')
     .map(row => asgnInfoMap[row.assignment_id]?.locations)
-    .filter(location => location && (!zone || location.zone === zone))
+    .filter(Boolean)
     .map(location => location.row_no);
   const selectedRow = fillDependentSelect('wms-row', rowValues, 'ทั้งหมด', S._wmsRow);
   S._wmsRow = selectedRow;
-  const levels = rows
+  const levels = facetRows('Level')
     .map(row => asgnInfoMap[row.assignment_id]?.locations)
-    .filter(location => location
-      && (!zone || location.zone === zone)
-      && (!selectedRow || String(location.row_no ?? '') === String(selectedRow)))
+    .filter(Boolean)
     .map(location => location.level);
   const selectedLevel = fillDependentSelect('wms-level', levels, 'ทั้งหมด', S._wmsLevel);
   S._wmsLevel = selectedLevel;
 
-  const locationScopedRows = rows.filter(item => {
-    const location = asgnInfoMap[item.assignment_id]?.locations;
-    if (zone && location?.zone !== zone) return false;
-    if (selectedRow && String(location?.row_no ?? '') !== String(selectedRow)) return false;
-    if (selectedLevel && String(location?.level ?? '') !== String(selectedLevel)) return false;
-    return true;
-  });
   const userOptions = [];
   const seenUsers = new Set();
-  locationScopedRows.forEach(item => {
+  facetRows('User').forEach(item => {
     const value = item._isPending ? '_pending' : item.approved_by;
     if (!value || seenUsers.has(value)) return;
     seenUsers.add(value);
@@ -27568,12 +29249,7 @@ function refreshWmsDependentFilters() {
   );
   S._wmsUser = selectedUser;
 
-  const userScopedRows = locationScopedRows.filter(item => {
-    if (selectedUser === '_pending') return item._isPending;
-    if (selectedUser) return item.approved_by === selectedUser;
-    return true;
-  });
-  const availableStatuses = new Set(userScopedRows.map(item =>
+  const availableStatuses = new Set(facetRows('Filter').map(item =>
     item._isPending ? 'pending' : (item.wms_fixed ? 'fixed' : 'unfixed')
   ));
   const statusSelect = Q('wms-status');
@@ -27594,21 +29270,6 @@ function refreshWmsDependentFilters() {
 
 function updateWmsFilter(key, value) {
   S['_wms'+key] = value;
-  if (key === 'Zone') {
-    S._wmsRow = '';
-    S._wmsLevel = '';
-    S._wmsUser = '';
-    S._wmsFilter = 'all';
-  } else if (key === 'Row') {
-    S._wmsLevel = '';
-    S._wmsUser = '';
-    S._wmsFilter = 'all';
-  } else if (key === 'Level') {
-    S._wmsUser = '';
-    S._wmsFilter = 'all';
-  } else if (key === 'User') {
-    S._wmsFilter = 'all';
-  }
   if (key !== 'Filter' && key !== 'LocSearch') refreshWmsDependentFilters();
   if (key === 'Filter') {
     document.querySelectorAll('[data-wms-kpi]').forEach(card => {
@@ -28910,27 +30571,20 @@ async function loadAssignmentWorkspaceData(sessionId) {
 
 function annualAssignmentWorkspaceHtml(userOptionsHtml) {
   return `<div class="annual-workspace round1-panel" id="annual-first-round-panel" hidden>
-    <div class="annual-mode-banner">
-      <span style="font-size:20px">📦</span>
-      <span><strong>จ่ายรอบแรกตาม Annual JOB:</strong> ระบบเรียง Location และ ITEM ก่อนแบ่งงานตามจำนวนต่อ JOB
-        จากนั้นเลือกหนึ่งหรือหลาย JOB เพื่อจ่ายให้ User ได้โดยตรง</span>
-    </div>
-
     <div class="annual-generate-grid">
       <article class="annual-control-card">
-        <h3>1 · สร้างชุด Annual JOB</h3>
-        <p>การสร้างใหม่จะล้าง JOB และผู้รับงานเดิมของ Session นี้ แล้วแบ่ง Stock Snapshot ใหม่ทั้งหมด</p>
+        <h3>1 · สร้าง JOB</h3>
+        <p>สร้างใหม่จะแทนที่ JOB และผู้รับเดิมของ Session นี้</p>
         <div class="grid-2">
-          <div class="fg"><label>Location + ITEM ต่อ JOB</label><input id="annual-build-size" type="number" min="1" max="200" value="20"></div>
-          <div class="fg"><label>คำนำหน้าหมายเลขงาน</label><input id="annual-build-prefix" maxlength="20" value="JOB"></div>
+          <div class="fg"><label>รายการต่อ JOB</label><input id="annual-build-size" type="number" min="1" max="200" value="20"></div>
+          <div class="fg"><label>คำนำหน้า JOB</label><input id="annual-build-prefix" maxlength="20" value="JOB"></div>
         </div>
         <button class="btn btn-blue" id="annual-generate-btn" type="button" style="width:100%"
-          onclick="generateAnnualJobs()">⚙️ สร้าง / แบ่ง Annual JOB</button>
+          onclick="generateAnnualJobs()">สร้าง JOB</button>
         <div id="annual-generate-alert"></div>
       </article>
       <article class="annual-control-card">
-        <h3>ภาพรวมชุดงาน</h3>
-        <p>จำนวน ITEM และ JOB ของ Session ที่เลือก</p>
+        <h3>สรุป JOB</h3>
         <div class="annual-job-stats">
           <div class="annual-job-stat"><strong id="annual-stat-items">—</strong><span>LOCATION + ITEM</span></div>
           <div class="annual-job-stat"><strong id="annual-stat-jobs">—</strong><span>JOBS ทั้งหมด</span></div>
@@ -28941,8 +30595,7 @@ function annualAssignmentWorkspaceHtml(userOptionsHtml) {
 
     <div class="normal-free-shell">
       <div class="assign-workspace-heading">
-        <strong>2 · เลือก JOB เพื่อจ่ายงานรอบแรก</strong>
-        <span>เลือกได้หนึ่งหรือหลาย JOB กรองตามสถานะ แล้วมอบหมายให้ User พร้อมพิมพ์ Form Count</span>
+        <strong>2 · เลือก User และ JOB</strong>
       </div>
       <div class="annual-job-toolbar">
         <select id="annual-assign-user" aria-label="เลือก User ผู้รับ Annual JOB">${userOptionsHtml}</select>
@@ -28954,23 +30607,48 @@ function annualAssignmentWorkspaceHtml(userOptionsHtml) {
           <option value="in_progress">กำลังนับ</option>
           <option value="completed">เสร็จแล้ว</option>
         </select>
-        <button class="btn btn-ghost btn-sm" type="button" onclick="selectAnnualJobs('unassigned')">เลือก JOB ว่าง</button>
+        <button class="btn btn-ghost btn-sm" type="button" onclick="selectAnnualJobs('unassigned')">เลือกงานว่าง</button>
         <button class="btn btn-ghost btn-sm" type="button" onclick="selectAnnualJobs('all')">เลือกทั้งหมด</button>
-        <button class="btn btn-ghost btn-sm" type="button" onclick="selectAnnualJobs('none')">ล้างที่เลือก</button>
+        <button class="btn btn-ghost btn-sm" type="button" onclick="selectAnnualJobs('none')">ล้าง</button>
         <span class="annual-job-selection-count" id="annual-job-selection-count">เลือก 0 JOB</span>
-        <button class="btn btn-green btn-sm" id="annual-assign-btn" type="button" onclick="assignSelectedAnnualJobs()" disabled>✓ จ่าย JOB ที่เลือก</button>
-        <button class="btn btn-blue btn-sm" id="annual-print-btn" type="button" onclick="printSelectedAnnualJobs()" disabled>🖨️ พิมพ์ที่เลือก</button>
+        <button class="btn btn-green btn-sm" id="annual-assign-btn" type="button" onclick="assignSelectedAnnualJobs()" disabled>ยืนยันจ่ายงาน</button>
+        <button class="btn btn-blue btn-sm" id="annual-print-btn" type="button" onclick="printSelectedAnnualJobs()" disabled>พิมพ์ที่เลือก</button>
       </div>
       <div class="annual-job-list" id="annual-job-list"><div class="annual-empty">กำลังโหลด Annual JOB...</div></div>
     </div>
   </div>`;
 }
 
-function focusAssignmentStep(stepId) {
+function focusAssignmentStep(stepId, options={}) {
+  const shell = document.querySelector('.assign-page-shell');
   const target = Q(stepId);
-  if (!target) return;
-  if (target.tagName === 'DETAILS') target.open = true;
-  target.scrollIntoView({ behavior:'smooth', block:'start' });
+  if (!shell || !target) return;
+  if (stepId !== 'assign-step-session' && shell.dataset.sessionReady !== 'true') return;
+  shell.querySelectorAll('details.assign-step-section').forEach(section => {
+    section.open = section.id === stepId;
+  });
+  shell.dataset.currentStep = stepId;
+  const stepOrder = ['assign-step-session','assign-step-round1','assign-step-round23','assign-step-review']
+    .filter(id => Q(id));
+  const activeIndex = stepOrder.indexOf(stepId);
+  const stepTitles = {
+    'assign-step-session':'ตั้งค่า Session และ OH',
+    'assign-step-round1':'จ่ายงานรอบแรก',
+    'assign-step-round23':'จ่ายงานรอบถัดไป',
+    'assign-step-review':'ตรวจสอบและพิมพ์งาน',
+  };
+  const bentoTitle = Q('assign-bento-step-title');
+  const bentoCount = Q('assign-bento-step-count');
+  if (bentoTitle) bentoTitle.textContent = stepTitles[stepId] || 'มอบหมายงานตรวจนับ';
+  if (bentoCount) bentoCount.textContent = `ขั้นที่ ${Math.max(1,activeIndex + 1)} / ${stepOrder.length}`;
+  shell.querySelectorAll('.assign-workflow-item[data-step]').forEach(button => {
+    const buttonStep = button.dataset.step;
+    const buttonIndex = stepOrder.indexOf(buttonStep);
+    button.classList.toggle('is-active',buttonStep === stepId);
+    button.classList.toggle('is-complete',buttonIndex >= 0 && buttonIndex < activeIndex);
+    button.setAttribute('aria-current',buttonStep === stepId ? 'step' : 'false');
+  });
+  if (options.scroll !== false) target.scrollIntoView({ behavior:'smooth', block:'start' });
   target.classList.remove('assign-step-focus');
   requestAnimationFrame(() => {
     target.classList.add('assign-step-focus');
@@ -28987,18 +30665,17 @@ async function renderManageAssign(container) {
 
   if (!sessions?.length) { container.innerHTML = `<div class="alert alert-amber">ไม่พบ Session ที่เปิดใช้งาน กรุณาสร้างและเปิดใช้งาน Session ก่อนดำเนินการ</div>`; return; }
 
-  const sOpts = sessions.map(s=>`<option value="${s.id}"
+  const sOpts = `<option value="" selected disabled>— เลือก Session —</option>` + sessions.map(s=>`<option value="${s.id}"
     data-show-oh="${s.show_oh||false}"
     data-count-mode="${s.count_mode||'cycle'}"
     data-annual-size="${Number(s.annual_items_per_job)||20}"
     data-annual-prefix="${escapeWmsText(s.annual_job_prefix||'JOB')}"
     data-annual-title="${escapeWmsText(s.annual_form_title||s.name||'')}">${escapeWmsText(s.name)}</option>`).join('');
   const userOpts = users?.map(u=>`<option value="${u.id}">${escapeWmsText(u.name)}</option>`).join('') || '<option value="">ไม่มี User</option>';
-  const firstSess = sessions[0];
   invalidateAssignmentWorkspaceCache();
 
   container.innerHTML = `
-    <div class="assign-page-shell">
+    <div class="assign-page-shell assign-bento-shell assign-session-pending" data-current-step="assign-step-session" data-session-ready="false" style="--assign-step-count:${isAdminOrSup ? 4 : 3}">
       <header class="assign-page-hero">
         <div class="assign-hero-top">
           <div class="assign-hero-title">
@@ -29012,12 +30689,10 @@ async function renderManageAssign(container) {
               </svg>
             </span>
             <div class="assign-hero-title-copy">
-              <span class="assign-hero-eyebrow">WORK ALLOCATION CENTER</span>
-              <h2>ศูนย์จ่ายงาน Cycle Count</h2>
-              <p id="assign-active-session">${escapeWmsText(firstSess?.name || '')} · จัดลำดับงาน ตรวจสอบ และพิมพ์จากหน้าเดียว</p>
+              <h2>มอบหมายงานตรวจนับ</h2>
+              <p id="assign-active-session">ยังไม่ได้เลือก Session</p>
             </div>
           </div>
-          ${prof?.role === 'admin' ? `<button class="btn btn-sm assign-hero-admin" onclick="go('ad-users')">⚙️ จัดการ User และข้อมูลระบบ</button>` : ''}
         </div>
         <div class="assign-hero-stats" aria-label="สรุปสถานะการจ่ายงาน" aria-live="polite">
           <div class="assign-hero-stat is-total">
@@ -29031,7 +30706,6 @@ async function renderManageAssign(container) {
             <div class="assign-stat-copy">
               <strong id="assign-stat-total">—</strong>
               <span id="assign-stat-total-label">LOCATIONS ทั้งหมด</span>
-              <small>รายการที่พร้อมบริหารใน Session</small>
             </div>
           </div>
           <div class="assign-hero-stat is-assigned">
@@ -29044,8 +30718,7 @@ async function renderManageAssign(container) {
             </span>
             <div class="assign-stat-copy">
               <strong id="assign-stat-assigned">—</strong>
-              <span id="assign-stat-assigned-label">LOCATIONS ที่จ่ายแล้ว</span>
-              <small>ส่งให้ User เรียบร้อยแล้ว</small>
+              <span id="assign-stat-assigned-label">จ่ายแล้ว</span>
             </div>
           </div>
           <div class="assign-hero-stat is-remaining">
@@ -29059,8 +30732,7 @@ async function renderManageAssign(container) {
             </span>
             <div class="assign-stat-copy">
               <strong id="assign-stat-remaining">—</strong>
-              <span id="assign-stat-remaining-label">LOCATIONS คงเหลือ</span>
-              <small>ยังรอการเลือกและจ่ายงาน</small>
+              <span id="assign-stat-remaining-label">คงเหลือ</span>
             </div>
           </div>
         </div>
@@ -29075,200 +30747,273 @@ async function renderManageAssign(container) {
         </div>
       </header>
 
-      <nav class="assign-workflow-nav" aria-label="ทางลัดขั้นตอนการจ่ายงาน">
-        <button type="button" class="assign-workflow-item" onclick="focusAssignmentStep('assign-step-session')">
+      <nav class="assign-workflow-nav" aria-label="ขั้นตอนการจ่ายงาน">
+        <div class="assign-bento-nav-heading">
+          <div><span class="assign-bento-eyebrow">CURRENT FLOW</span><strong id="assign-bento-step-title">ตั้งค่า Session และ OH</strong></div>
+          <span class="assign-bento-step-count" id="assign-bento-step-count">ขั้นที่ 1 / ${isAdminOrSup ? 4 : 3}</span>
+        </div>
+        <button type="button" class="assign-workflow-item is-active" data-step="assign-step-session" aria-current="step" onclick="focusAssignmentStep('assign-step-session')">
           <span class="assign-workflow-number">1</span>
-          <span class="assign-workflow-copy"><strong>เลือก Session</strong><small>ชุดงานและ Blind Count</small></span>
+          <span class="assign-workflow-copy"><strong>ตั้งค่างาน</strong></span>
         </button>
-        <button type="button" class="assign-workflow-item" onclick="focusAssignmentStep('assign-step-round1')">
+        <button type="button" class="assign-workflow-item" data-step="assign-step-round1" aria-current="false" onclick="focusAssignmentStep('assign-step-round1')">
           <span class="assign-workflow-number">2</span>
-          <span class="assign-workflow-copy"><strong>จ่ายรอบแรก</strong><small>Location หรือ Annual JOB</small></span>
+          <span class="assign-workflow-copy"><strong>จ่ายรอบแรก</strong></span>
         </button>
-        ${isAdminOrSup ? `<button type="button" class="assign-workflow-item" onclick="focusAssignmentStep('assign-step-round23')">
+        ${isAdminOrSup ? `<button type="button" class="assign-workflow-item" data-step="assign-step-round23" onclick="focusAssignmentStep('assign-step-round23')">
           <span class="assign-workflow-number">3</span>
-          <span class="assign-workflow-copy"><strong>จ่ายรอบถัดไป</strong><small>Count 2, 3 และ Supervisor</small></span>
+          <span class="assign-workflow-copy"><strong>จ่ายรอบถัดไป</strong></span>
         </button>` : ''}
-        <button type="button" class="assign-workflow-item" onclick="focusAssignmentStep('assign-step-review')">
+        <button type="button" class="assign-workflow-item" data-step="assign-step-review" onclick="focusAssignmentStep('assign-step-review')">
           <span class="assign-workflow-number">4</span>
-          <span class="assign-workflow-copy"><strong>ตรวจสอบและพิมพ์</strong><small>เช็กงานก่อนส่งให้ User</small></span>
+          <span class="assign-workflow-copy"><strong>ตรวจสอบและพิมพ์</strong></span>
         </button>
+        <div class="round1-mode-switch" role="tablist" aria-label="วิธีจ่ายงานรอบแรก">
+          <button class="round1-mode-button active" id="round1-mode-normal" type="button"
+            onclick="setRound1AssignMode('normal')" role="tab" aria-selected="true">
+            <span>📍</span> แบบปกติ · Location
+          </button>
+          <button class="round1-mode-button" id="round1-mode-annual" type="button"
+            onclick="setRound1AssignMode('annual')" role="tab" aria-selected="false">
+            <span>📦</span> Annual JOB
+          </button>
+        </div>
+        <div class="normal-free-toolbar assign-bento-nav-actions">
+          <div class="assign-bento-assignee-bar">
+            <span class="assign-bento-assignee-icon" aria-hidden="true">👤</span>
+            <div class="assign-bento-assignee-field">
+              <label for="normal-free-user">ผู้รับมอบหมายงาน</label>
+              <select id="normal-free-user">${userOpts}</select>
+            </div>
+          </div>
+          <div class="assign-bento-selection-summary">
+            <span class="normal-free-count" id="normal-free-count">เลือก 0 Location</span>
+            <div class="assign-bento-selection-tools">
+              <button class="btn btn-ghost btn-sm" type="button" onclick="selectNormalFreeLocations('visible')">เลือกทั้งหมด</button>
+              <button class="btn btn-ghost btn-sm" type="button" onclick="selectNormalFreeLocations('none')">ล้าง</button>
+            </div>
+          </div>
+          <div class="assign-bento-primary-actions">
+            <button class="btn btn-ghost" id="normal-free-reassign-mode-btn" type="button"
+              onclick="setNormalFreeReassignMode()">โหมดจ่ายซ้ำ</button>
+            <button class="btn btn-blue" id="normal-free-print-btn" type="button"
+              onclick="printSelectedNormalRoundOneLocations()" disabled>🖨️ พิมพ์งานที่เลือก</button>
+            <button class="btn btn-green" id="normal-free-assign-btn" type="button"
+              onclick="assignSelectedNormalLocations()" disabled>✓ ยืนยันจ่ายงาน</button>
+          </div>
+        </div>
       </nav>
 
       <section class="assign-step-section assign-step-section-locked" id="assign-step-session">
         <div class="assign-step-header">
           <span class="assign-step-number">1</span>
           <div class="assign-step-copy">
-            <strong>เลือก Session และตั้งค่าการมองเห็น</strong>
-            <span>กำหนดชุดงานก่อนเริ่มจ่ายงานให้ User</span>
+            <strong>ตั้งค่างาน</strong>
+            <span>Session และการแสดง OH</span>
           </div>
-          <span class="assign-step-badge" id="assign-mode-badge">ตั้งค่าหลัก</span>
         </div>
         <div class="assign-step-body">
           <div class="assign-config-grid">
             <div class="assign-config-card">
-              <label class="assign-config-label" for="as-sess">SESSION ที่กำลังจ่ายงาน</label>
+              <label class="assign-config-label" for="as-sess">SESSION</label>
               <div class="assign-session-control">
                 <span>📁</span>
-                <select id="as-sess" onchange="handleAssignSessionChange()">${sOpts}</select>
+                <select id="as-sess" required aria-describedby="assign-session-help" onchange="handleAssignSessionChange()">${sOpts}</select>
               </div>
+              <small id="assign-session-help" class="assign-session-help">กรุณาเลือก Session ก่อนเริ่มจ่ายงาน</small>
             </div>
             ${isAdminOrSup ? `<div class="assign-config-card assign-oh-card">
               <span class="assign-oh-icon">👁️</span>
               <div class="assign-oh-copy">
-                <strong>แสดง OH ระหว่างบันทึกยอด</strong>
-                <small>เปิดให้ User ผู้รับงานเห็นยอด OH หรือปิดเพื่อทำ Blind Count</small>
+                <strong>OH Visibility</strong>
               </div>
-              <span id="oh-status" class="tag ${firstSess?.show_oh?'tag-green':'tag-gray'}">${firstSess?.show_oh?'🔓 เห็น OH':'🔒 Blind'}</span>
+              <span id="oh-status" class="tag tag-gray">เลือก Session ก่อน</span>
               <label class="assign-switch" aria-label="เปิดหรือปิดการแสดง OH">
-                <input type="checkbox" id="oh-toggle" ${firstSess?.show_oh?'checked':''} onchange="toggleOH()">
+                <input type="checkbox" id="oh-toggle" disabled onchange="toggleOH()">
                 <span class="assign-switch-track"></span>
               </label>
             </div>` : ''}
           </div>
           <div class="assign-role-note">
             <span>ℹ️</span>
-            <span><strong>User ผู้รับงาน</strong> คือบัญชีที่ใช้ล็อกอินและรับ Location ส่วน <strong>คนนับจริง</strong> จะเลือกภายในหน้าบันทึกการนับและใช้ในรายงาน ทั้งสองรายการแยกจากกัน</span>
+            <span><strong>ผู้รับงาน</strong> = บัญชี Login · <strong>คนนับจริง</strong> = ผู้ปฏิบัติงาน</span>
           </div>
           <details class="assign-zone-details" id="zoneDashDetails" ontoggle="if(this.open)refreshZoneDashboard()">
             <summary>
               <span class="assign-summary-icon">📊</span>
-              <span class="assign-summary-copy"><strong>สรุปงานแยกตาม Zone</strong><small>ตรวจสอบจำนวน Location และ User ที่ได้รับงานในแต่ละ Zone</small></span>
+              <span class="assign-summary-copy"><strong>ดูสรุปตาม Zone</strong></span>
               <span class="assign-chevron"></span>
             </summary>
             <div id="zone-dash-body"><div class="load" style="padding:20px;text-align:center">⏳ กำลังคำนวณ...</div></div>
           </details>
+          <div class="assign-step-footer">
+            <button class="btn btn-blue" id="assign-session-next" type="button" disabled onclick="focusAssignmentStep('assign-step-round1')">ต่อไป: จ่ายรอบแรก</button>
+          </div>
         </div>
       </section>
 
       <div id="aa"></div>
 
-      <details class="assign-step-section" id="assign-step-round1" open>
-        <summary class="assign-step-header">
+      <details class="assign-step-section" id="assign-step-round1" inert aria-disabled="true">
+        <summary class="assign-step-header" onclick="event.preventDefault()">
           <span class="assign-step-number">2</span>
           <div class="assign-step-copy">
             <strong>จ่ายงานรอบแรก</strong>
-            <span>เลือกวิธีจ่ายแบบ Location อิสระ หรือแบ่งเป็น Annual JOB</span>
           </div>
-          <span class="assign-step-badge" id="round1-mode-badge">ROUND 1 · NORMAL</span>
-          <span class="assign-section-chevron" aria-hidden="true"></span>
         </summary>
         <div class="assign-step-body">
-          <div class="round1-mode-switch" role="tablist" aria-label="วิธีจ่ายงานรอบแรก">
-            <button class="round1-mode-button active" id="round1-mode-normal" type="button"
-              onclick="setRound1AssignMode('normal')" role="tab" aria-selected="true">
-              <span>📍</span> แบบปกติ · เลือก Location อิสระ
-            </button>
-            <button class="round1-mode-button" id="round1-mode-annual" type="button"
-              onclick="setRound1AssignMode('annual')" role="tab" aria-selected="false">
-              <span>📦</span> Annual Count · จ่ายตาม JOB
-            </button>
-          </div>
-
           <div class="round1-panel" id="normal-first-round-panel">
-            <div class="annual-mode-banner" style="margin-bottom:12px;background:color-mix(in srgb,var(--theme-primary-color) 9%,white)">
-              <span style="font-size:19px">✓</span>
-              <span><strong>แบบปกติไม่กำหนดจำนวนตายตัว:</strong> เลือก Location ใดก็ได้ กี่รายการก็ได้ แล้วจ่ายให้ User พร้อมกัน</span>
-            </div>
             <div class="normal-free-shell">
               <div class="assign-workspace-heading">
-                <strong>จ่ายงานแบบปกติ · เลือก Location</strong>
-                <span>ค้นหาและกรองสถานะงานได้ หากต้องเปลี่ยนผู้รับงานเดิมให้เปิดโหมดจ่ายงานซ้ำและยืนยันอีกครั้งก่อนบันทึก</span>
+                <strong>เลือก Location</strong>
               </div>
-              <div class="normal-free-controls">
-                <div class="fg">
-                  <label>USER ผู้รับงานรอบ 1</label>
-                  <select id="normal-free-user">${userOpts}</select>
-                </div>
-                <div class="fg">
-                  <label>ค้นหา LOCATION</label>
-                  <input id="normal-free-search" placeholder="เช่น B-EA-001-A" oninput="handleNormalFreeFilterChange('search')">
-                </div>
-              </div>
-              <div class="normal-free-filters">
+              <div class="normal-free-filters assign-bento-nav-filters" id="assign-bento-round1-filters">
                 ${multiFilterFieldHtml('normal-free-zone',uiCopy('โซน','Zone'))}
                 ${multiFilterFieldHtml('normal-free-row',uiCopy('แถว','Row'))}
                 ${multiFilterFieldHtml('normal-free-level',uiCopy('ระดับ','Level'))}
                 ${multiFilterFieldHtml('normal-free-status',uiCopy('สถานะงาน','Work Status'))}
               </div>
-              <div class="normal-free-toolbar">
-                <span class="normal-free-count" id="normal-free-count">เลือก 0 Location</span>
-                <button class="btn btn-ghost btn-sm" type="button" onclick="selectNormalFreeLocations('visible')">เลือกทั้งหมดที่แสดง</button>
-                <button class="btn btn-ghost btn-sm" type="button" onclick="selectNormalFreeLocations('none')">ล้างที่เลือก</button>
-                <button class="btn btn-ghost btn-sm" id="normal-free-reassign-mode-btn" type="button"
-                  onclick="setNormalFreeReassignMode()">🔄 เปิดโหมดจ่ายงานซ้ำ</button>
-                <button class="btn btn-blue btn-sm" id="normal-free-print-btn" type="button"
-                  onclick="printSelectedNormalRoundOneLocations()" disabled>🖨️ พิมพ์งานที่เลือก</button>
-                <button class="btn btn-green btn-sm" id="normal-free-assign-btn" type="button"
-                  onclick="assignSelectedNormalLocations()" disabled>✓ จ่าย Location ที่เลือก</button>
-              </div>
               <div class="normal-free-list" id="normal-free-location-list">
-                <div class="annual-empty">กำลังโหลด Location ที่ยังไม่จ่ายงาน...</div>
+                <div class="annual-empty">กรุณาเลือก Session ก่อน</div>
               </div>
             </div>
           </div>
 
           ${annualAssignmentWorkspaceHtml(userOpts)}
+          <div class="assign-step-footer">
+            <button class="btn btn-ghost" type="button" onclick="focusAssignmentStep('assign-step-session')">ย้อนกลับ</button>
+            <button class="btn btn-blue" type="button" onclick="focusAssignmentStep('${isAdminOrSup ? 'assign-step-round23' : 'assign-step-review'}')">ต่อไป</button>
+          </div>
         </div>
       </details>
 
-      ${isAdminOrSup ? `<details class="assign-step-section" id="assign-step-round23">
-        <summary class="assign-step-header">
+      ${isAdminOrSup ? `<details class="assign-step-section" id="assign-step-round23" inert aria-disabled="true">
+        <summary class="assign-step-header" onclick="event.preventDefault()">
           <span class="assign-step-number">3</span>
           <div class="assign-step-copy">
             <strong>จ่ายงานรอบถัดไป</strong>
-            <span>เปลี่ยนผู้รับมอบหมายงานสำหรับรอบการนับที่ 2 รอบการนับที่ 3 หรือรอบผู้ควบคุมงาน</span>
           </div>
-          <span class="assign-step-badge">ROUND 2 / 3</span>
-          <span class="assign-section-chevron" aria-hidden="true"></span>
         </summary>
         <div class="assign-step-body">
           <details class="assign-round-details" open>
             <summary>
               <span class="assign-summary-icon">🔄</span>
-              <span class="assign-summary-copy"><strong>เปลี่ยนผู้รับมอบหมายงานรอบที่ 2/3</strong><small>ระบบจะแสดงเฉพาะงานที่พร้อมเข้าสู่รอบที่เลือก</small></span>
+              <span class="assign-summary-copy"><strong>เลือกงานและผู้รับรอบถัดไป</strong></span>
               <span class="assign-chevron"></span>
             </summary>
             <div class="assign-round-body">
               <div class="assign-filter-grid">
-                <div><label>1 · รอบงาน</label><select id="r23-round" onchange="handleR23FilterChange('round')">
+                <div><label>รอบงาน</label><select id="r23-round" onchange="handleR23FilterChange('round')">
                   <option value="round1_done">รอบ 2</option>
                   <option value="round2_done">รอบ 3</option>
                   <option value="round3_done">รอบ Supervisor</option>
                 </select></div>
-                <div><label>2 · ZONE</label><select id="r23-zone" onchange="handleR23FilterChange('zone')"><option value="">ทั้งหมด</option></select></div>
-                <div><label>3 · ROW</label><select id="r23-row" onchange="refreshR23Preview()"><option value="">ทั้งหมด</option></select></div>
+                <div><label>ZONE</label><select id="r23-zone" onchange="handleR23FilterChange('zone')"><option value="">ทั้งหมด</option></select></div>
+                <div><label>ROW</label><select id="r23-row" onchange="refreshR23Preview()"><option value="">ทั้งหมด</option></select></div>
               </div>
-              <div class="fg"><label>ผู้รับมอบหมายงานรอบถัดไป</label><select id="r23-user">${userOpts}</select></div>
-              <div id="r23-preview" class="assign-live-preview">กำลังตรวจสอบงานรอบถัดไป...</div>
-              <button class="btn btn-green" id="r23-btn" onclick="doR23Assign()" style="width:100%" disabled>🔄 เปลี่ยนผู้รับมอบหมายงาน</button>
+              <div class="fg"><label>ผู้รับงาน</label><select id="r23-user">${userOpts}</select></div>
+              <div id="r23-preview" class="assign-live-preview">กรุณาเลือก Session ก่อน</div>
+              <button class="btn btn-green" id="r23-btn" onclick="doR23Assign()" style="width:100%" disabled>ยืนยันจ่ายงาน</button>
             </div>
           </details>
+          <div class="assign-step-footer">
+            <button class="btn btn-ghost" type="button" onclick="focusAssignmentStep('assign-step-round1')">ย้อนกลับ</button>
+            <button class="btn btn-blue" type="button" onclick="focusAssignmentStep('assign-step-review')">ต่อไป</button>
+          </div>
         </div>
       </details>` : ''}
 
-      <details class="assign-step-section" id="assign-step-review">
-        <summary class="assign-step-header">
+      <details class="assign-step-section" id="assign-step-review" inert aria-disabled="true">
+        <summary class="assign-step-header" onclick="event.preventDefault()">
           <span class="assign-step-number">4</span>
           <div class="assign-step-copy">
             <strong>ตรวจสอบและพิมพ์งาน</strong>
-            <span>ดูสถานะ เลือกพิมพ์ราย Location หลาย Location หรือทั้ง Session</span>
           </div>
-          <span class="assign-step-badge">รายการที่จ่ายแล้ว</span>
-          <span class="assign-section-chevron" aria-hidden="true"></span>
         </summary>
-        <div class="assign-review-controls">${locationSortControlHtml(true)}</div>
-        <div class="assign-list-body" id="al" data-location-sort-group><div class="load" style="padding:28px;text-align:center">⏳ กำลังโหลดงานที่จ่ายแล้ว...</div></div>
+        <div class="assign-review-controls assign-review-controls-v170">
+          <div class="assign-review-filter-grid" id="assign-review-filter-grid">
+            ${multiFilterFieldHtml('assign-review-zone',uiCopy('โซน','Zone'))}
+            ${multiFilterFieldHtml('assign-review-row',uiCopy('แถว','Row'))}
+            ${multiFilterFieldHtml('assign-review-level',uiCopy('ระดับ','Level'))}
+            ${multiFilterFieldHtml('assign-review-status',uiCopy('สถานะงาน','Work Status'))}
+          </div>
+          <div class="assign-review-sort-row">${locationSortControlHtml(true)}</div>
+        </div>
+        <div class="assign-list-body" id="al" data-location-sort-group><div class="load" style="padding:28px;text-align:center">กรุณาเลือก Session ก่อน</div></div>
+        <div class="assign-step-footer">
+          <button class="btn btn-ghost" type="button" onclick="focusAssignmentStep('${isAdminOrSup ? 'assign-step-round23' : 'assign-step-round1'}')">ย้อนกลับ</button>
+        </div>
       </details>
     </div>`;
 
   handleAssignSessionChange();
+  requestAnimationFrame(() => focusAssignmentStep('assign-step-session',{ scroll:false }));
 }
 
 function updateAssignSessionHeading() {
   const select = Q('as-sess');
   const label = Q('assign-active-session');
-  const selectedText = select?.options?.[select.selectedIndex]?.textContent || 'Cycle Count';
-  if (label) label.textContent = `${selectedText} · จัดลำดับงาน ตรวจสอบ และพิมพ์จากหน้าเดียว`;
+  const selectedText = select?.value
+    ? (select.options?.[select.selectedIndex]?.textContent || 'Session')
+    : 'ยังไม่ได้เลือก Session';
+  if (label) label.textContent = selectedText;
+}
+
+function setAssignmentSessionReady(ready) {
+  const shell = document.querySelector('.assign-bento-shell');
+  const isReady = Boolean(ready);
+  if (shell) {
+    shell.dataset.sessionReady = String(isReady);
+    shell.classList.toggle('assign-session-pending',!isReady);
+  }
+
+  ['assign-step-round1','assign-step-round23','assign-step-review'].forEach(id => {
+    const section = Q(id);
+    if (!section) return;
+    section.inert = !isReady;
+    section.setAttribute('aria-disabled',String(!isReady));
+  });
+  document.querySelectorAll('.assign-workflow-item[data-step]').forEach(button => {
+    if (button.dataset.step !== 'assign-step-session') button.disabled = !isReady;
+  });
+  document.querySelectorAll('.round1-mode-switch button, .assign-bento-nav-actions button, .assign-bento-nav-actions select').forEach(control => {
+    control.disabled = !isReady;
+  });
+
+  const nextButton = Q('assign-session-next');
+  if (nextButton) nextButton.disabled = !isReady;
+  if (isReady) return;
+
+  _ohSyncRequestId++;
+  paintOHToggle(false,true);
+  const ohStatus = Q('oh-status');
+  if (ohStatus) {
+    ohStatus.textContent = 'เลือก Session ก่อน';
+    ohStatus.className = 'tag tag-gray';
+  }
+  ['assign-stat-total','assign-stat-assigned','assign-stat-remaining'].forEach(id => {
+    const node = Q(id);
+    if (node) node.textContent = '—';
+  });
+  const progressLabel = Q('assign-progress-label');
+  const progressFill = Q('assign-progress-fill');
+  const progressTrack = progressFill?.closest('.assign-hero-progress-track');
+  if (progressLabel) progressLabel.textContent = '0%';
+  if (progressFill) progressFill.style.width = '0%';
+  if (progressTrack) progressTrack.setAttribute('aria-valuenow','0');
+  if (shell) shell.style.setProperty('--assign-progress','0%');
+
+  const emptyStates = [
+    ['normal-free-location-list','กรุณาเลือก Session ก่อน'],
+    ['annual-job-list','กรุณาเลือก Session ก่อน'],
+    ['r23-preview','กรุณาเลือก Session ก่อน'],
+    ['al','กรุณาเลือก Session ก่อน'],
+    ['zone-dash-body','กรุณาเลือก Session ก่อน'],
+  ];
+  emptyStates.forEach(([id,message]) => {
+    const node = Q(id);
+    if (node) node.innerHTML = `<div class="annual-empty">${message}</div>`;
+  });
 }
 
 function selectedAssignSessionConfig() {
@@ -29298,6 +31043,8 @@ function syncAssignWorkspaceMode(preferredMode) {
   const annualPanel = Q('annual-first-round-panel');
   const normalButton = Q('round1-mode-normal');
   const annualButton = Q('round1-mode-annual');
+  const normalFilters = Q('assign-bento-round1-filters');
+  const normalActions = document.querySelector('.assign-bento-nav-actions');
   const roundBadge = Q('round1-mode-badge');
   const totalLabel = Q('assign-stat-total-label');
   const assignedLabel = Q('assign-stat-assigned-label');
@@ -29306,6 +31053,8 @@ function syncAssignWorkspaceMode(preferredMode) {
   const badge = Q('assign-mode-badge');
   if (normalPanel) normalPanel.hidden = annual;
   if (annualPanel) annualPanel.hidden = !annual;
+  if (normalFilters) normalFilters.hidden = annual;
+  if (normalActions) normalActions.hidden = annual;
   if (normalButton) {
     normalButton.classList.toggle('active',!annual);
     normalButton.setAttribute('aria-selected',String(!annual));
@@ -29315,8 +31064,8 @@ function syncAssignWorkspaceMode(preferredMode) {
     annualButton.setAttribute('aria-selected',String(annual));
   }
   if (totalLabel) totalLabel.textContent = annual ? 'ITEM ทั้งหมด' : 'LOCATIONS ทั้งหมด';
-  if (assignedLabel) assignedLabel.textContent = annual ? 'JOBS ที่จ่ายแล้ว' : 'LOCATIONS ที่จ่ายแล้ว';
-  if (remainingLabel) remainingLabel.textContent = annual ? 'JOBS ยังไม่จ่าย' : 'LOCATIONS คงเหลือ';
+  if (assignedLabel) assignedLabel.textContent = annual ? 'JOB ที่จ่ายแล้ว' : 'จ่ายแล้ว';
+  if (remainingLabel) remainingLabel.textContent = annual ? 'JOB คงเหลือ' : 'คงเหลือ';
   if (progressTitle) progressTitle.textContent = annual ? 'ความคืบหน้าการจ่าย Annual JOB' : 'ความคืบหน้าการจ่าย Location';
   if (roundBadge) roundBadge.textContent = annual ? 'ROUND 1 · ANNUAL JOB' : 'ROUND 1 · NORMAL';
   if (badge) {
@@ -29351,6 +31100,8 @@ function updateAssignWorkspaceStats(total, assigned, remaining) {
   const progressLabel = Q('assign-progress-label');
   const progressFill = Q('assign-progress-fill');
   const progressTrack = progressFill?.closest('.assign-hero-progress-track');
+  const assignShell = document.querySelector('.assign-bento-shell');
+  const progressTitle = Q('assign-progress-title');
   const annual = currentRound1AssignMode() === 'annual';
   const progressTotal = annual ? Number(assigned || 0) + Number(remaining || 0) : Number(total || 0);
   const progressValue = progressTotal > 0
@@ -29363,6 +31114,8 @@ function updateAssignWorkspaceStats(total, assigned, remaining) {
   if (progressLabel) progressLabel.textContent = progressText;
   if (progressFill) progressFill.style.width = `${progressValue}%`;
   if (progressTrack) progressTrack.setAttribute('aria-valuenow',String(Math.round(progressValue)));
+  if (assignShell) assignShell.style.setProperty('--assign-progress',`${progressValue}%`);
+  if (progressTitle) progressTitle.textContent = 'จ่ายแล้ว';
 }
 
 async function handleAssignSessionChange() {
@@ -29373,18 +31126,24 @@ async function handleAssignSessionChange() {
   const alertBox = Q('aa');
   if (alertBox) alertBox.innerHTML = '';
   const baseConfig = selectedAssignSessionConfig();
-  const savedMode = S._round1ModeBySession?.[baseConfig.sessionId];
-  const defaultMode = savedMode || (baseConfig.countMode === 'annual' ? 'annual' : 'normal');
-  const config = setRound1AssignMode(defaultMode,{ skipLoad:true });
+  const hasSession = Boolean(baseConfig.sessionId);
+  setAssignmentSessionReady(hasSession);
+  invalidateAssignmentWorkspaceCache();
   _normalFreeSelectedLocationIds = new Set();
   _normalFreeSelectedPrintLocationIds = new Set();
   _normalFreeSelectedReassignLocationIds = new Set();
   _normalFreeReassignMode = false;
   _normalFreeFilters = { zone:[],row:[],level:[],status:['unassigned'] };
+  _assignReviewFilters = { zone:[],row:[],level:[],status:[] };
   if (Q('normal-free-search')) Q('normal-free-search').value = '';
   if (Q('annual-job-filter')) Q('annual-job-filter').value = 'all';
   if (Q('r23-zone')) Q('r23-zone').value = '';
   if (Q('r23-row')) Q('r23-row').value = '';
+  if (!hasSession) return;
+
+  const savedMode = S._round1ModeBySession?.[baseConfig.sessionId];
+  const defaultMode = savedMode || (baseConfig.countMode === 'annual' ? 'annual' : 'normal');
+  const config = setRound1AssignMode(defaultMode,{ skipLoad:true });
   await syncOHToggle();
   if (selectedAssignSessionConfig().sessionId !== config.sessionId) return;
   await Promise.all([refreshLocs(),refreshBulkFilters()]);
@@ -29405,6 +31164,7 @@ let _normalAssignmentConfirmPreviousOverflow = '';
 let _normalFreeVisibleLocationIds = [];
 let _normalFreeFilteredLocationCount = 0;
 let _normalFreeFilters = { zone:[],row:[],level:[],status:['unassigned'] };
+let _assignReviewFilters = { zone:[],row:[],level:[],status:[] };
 
 async function loadAnnualJobWorkspace() {
   const config = selectedAssignSessionConfig();
@@ -30096,7 +31856,9 @@ async function renderManageDataInfo(container) {
 
 async function renderManageImport(container) {
   const { data: sessions } = await sb.from('count_sessions').select('id,name,status').in('status',['draft','active']);
-  const sessOpts = sessions?.length ? sessions.map(s=>`<option value="${s.id}">${s.name} · ${s.status}</option>`).join('') : '<option value="">ไม่มี Session</option>';
+  const sessOpts = sessions?.length
+    ? `<option value="" selected disabled>— เลือก Session —</option>` + sessions.map(s=>`<option value="${s.id}">${escapeWmsText(s.name)} · ${escapeWmsText(s.status)}</option>`).join('')
+    : '<option value="" selected>ไม่มี Session</option>';
 
   container.innerHTML = `
     <div id="ia"></div>
@@ -30111,7 +31873,7 @@ async function renderManageImport(container) {
         <div class="alert alert-blue" style="font-size:13px;margin:16px 0;line-height:1.6">
           📁 <strong>Upload Excel (.xlsx)</strong> — ดึงข้อมูลจากระบบ WMS ได้เลย<br>✅ ระบบอ่านหัวตารางอัตโนมัติ<br>🏷️ ดึง LPN / Lot / OH / AL มาแสดงตอนนับ
         </div>
-        <div class="fg"><label>SESSION</label><select id="is">${sessOpts}</select></div>
+        <div class="fg"><label>SESSION <span style="color:var(--accent-red)">*</span></label><select id="is" required onchange="refreshXlsxPreview()">${sessOpts}</select></div>
         <div class="fg"><label>กรอง LOCATION (ไม่บังคับ)</label><input id="ilocfilter" placeholder="เช่น B-EA% หรือเว้นว่างเพื่อ import ทั้งหมด" oninput="refreshXlsxPreview()"></div>
         <div class="fg"><label>เลือกไฟล์ XLSX</label>
           <input type="file" id="ixlsx" accept=".xlsx,.xls" style="padding:16px;border:none;border-radius:var(--border-radius-lg);cursor:pointer;background:var(--neu-surface);box-shadow: inset 4px 4px 8px var(--neu-shadow-dark), inset -4px -4px 8px var(--neu-shadow-light);width:100%;font-size:14px">
@@ -30157,7 +31919,7 @@ function paintOHToggle(value, disabled=false) {
     tog.disabled = Boolean(disabled);
   }
   if (st) {
-    st.textContent = value ? '🔓 เห็น OH' : '🔒 Blind Count';
+    st.textContent = value ? 'แสดง OH' : 'Blind Count';
     st.className = `tag ${value?'tag-green':'tag-gray'}`;
   }
 }
@@ -30212,18 +31974,23 @@ async function toggleOH() {
 async function refreshR23Preview() {
   const sid = Q('as-sess')?.value; const status = Q('r23-round')?.value || 'round1_done';
   const prev = Q('r23-preview'), btn = Q('r23-btn'); if (!sid || !prev || !btn) return;
-  let asgns = [];
+  let asgns = [], snapshots = [];
   try {
     const workspace = await loadAssignmentWorkspaceData(sid);
     if (Q('as-sess')?.value !== sid) return;
-    asgns = workspace.assignments.filter(assignment => assignment.status === status);
+    asgns = (workspace.assignments || []).filter(assignment => assignment.status === status);
+    snapshots = workspace.snapshots || [];
   } catch (error) {
     prev.innerHTML = `<span style="color:var(--accent-red)">${escapeWmsText(error.message)}</span>`;
     btn.disabled = true;
     return;
   }
 
-  fillDependentSelect('r23-zone', (asgns||[]).map(a => a.locations?.zone));
+  const selectedRowBeforeRefresh = Q('r23-row')?.value || '';
+  const zoneFacetAssignments = asgns.filter(assignment =>
+    !selectedRowBeforeRefresh || String(assignment.locations?.row_no ?? '') === String(selectedRowBeforeRefresh)
+  );
+  fillDependentSelect('r23-zone', zoneFacetAssignments.map(a => a.locations?.zone));
   const zone = Q('r23-zone')?.value || '';
   const zoneAssignments = (asgns||[]).filter(a => !zone || a.locations?.zone === zone);
   fillDependentSelect('r23-row', zoneAssignments.map(a => a.locations?.row_no));
@@ -30235,8 +32002,40 @@ async function refreshR23Preview() {
   });
   window._r23Asgns = filtered;
 
-  if (!filtered.length) { prev.innerHTML = `<span style="color:var(--text-muted)">ไม่มี Location ในสถานะที่เลือก</span>`; btn.disabled = true; } 
-  else { const label = { round1_done:'รอบ 2', round2_done:'รอบ 3', round3_done:'รอบ Sup' }[status]||status; prev.innerHTML = `📍 พบ <strong>${filtered.length}</strong> locations รอ${label}`; btn.disabled = false; }
+  if (!filtered.length) {
+    prev.innerHTML = `<span style="color:var(--text-muted)">ไม่มี Location ในสถานะที่เลือก</span>`;
+    btn.disabled = true;
+    return;
+  }
+  const itemCountByLocation = new Map();
+  const locationDetailById = new Map();
+  snapshots.forEach(snapshot => {
+    if (!snapshot?.location_id) return;
+    itemCountByLocation.set(snapshot.location_id,(itemCountByLocation.get(snapshot.location_id) || 0) + 1);
+    if (snapshot.locations) locationDetailById.set(snapshot.location_id,snapshot.locations);
+  });
+  const totalCountJobs = filtered.reduce(
+    (sum,assignment) => sum + Number(itemCountByLocation.get(assignment.location_id) || 0),0,
+  );
+  const visible = filtered.slice(0,60);
+  prev.innerHTML = `<div class="r23-summary-grid">
+    <div class="r23-summary-card"><strong>${filtered.length.toLocaleString(uiLocale())}</strong><span>LOCATION ที่พร้อมจ่ายรอบถัดไป</span></div>
+    <div class="r23-summary-card"><strong>${totalCountJobs.toLocaleString(uiLocale())}</strong><span>รายการงานนับทั้งหมด</span></div>
+  </div>
+  <div class="r23-location-list">
+    ${visible.map(assignment => {
+      const location = locationDetailById.get(assignment.location_id) || assignment.locations || {};
+      const count = Number(itemCountByLocation.get(assignment.location_id) || 0);
+      const detail = [location.zone,location.row_no ? `Row ${location.row_no}` : '',location.level ? `Lv.${location.level}` : '']
+        .filter(Boolean).join(' · ');
+      return `<div class="r23-location-card">
+        <strong>${escapeWmsText(location.code || '?')}</strong>
+        <span>${count.toLocaleString(uiLocale())} งานนับ${detail ? ` · ${escapeWmsText(detail)}` : ''}</span>
+      </div>`;
+    }).join('')}
+    ${filtered.length > visible.length ? `<div class="r23-location-more">และอีก ${(filtered.length-visible.length).toLocaleString(uiLocale())} Location</div>` : ''}
+  </div>`;
+  btn.disabled = false;
 }
 
 async function doR23Assign() {
@@ -30300,12 +32099,6 @@ function getNormalLocationRows() {
 }
 
 function handleR23FilterChange(key) {
-  if (key === 'round') {
-    if (Q('r23-zone')) Q('r23-zone').value = '';
-    if (Q('r23-row')) Q('r23-row').value = '';
-  } else if (key === 'zone') {
-    if (Q('r23-row')) Q('r23-row').value = '';
-  }
   refreshR23Preview();
 }
 
@@ -30321,66 +32114,56 @@ function normalFreeSearchMatches(entry, search) {
 }
 
 function handleNormalFreeFilterChange(key) {
-  const downstream = {
-    search:['zone','row','level','status'],
-    zone:['row','level','status'],
-    row:['level','status'],
-    level:['status'],
-  };
-  (downstream[key] || []).forEach(filterKey => { _normalFreeFilters[filterKey] = []; });
   refreshNormalFreeDependentFilters();
 }
 
 function handleNormalFreeMultiFilterChange(key,values) {
   _normalFreeFilters[key] = normalizeMultiFilterValues(values);
-  const downstream = {
-    zone:['row','level','status'],
-    row:['level','status'],
-    level:['status'],
-  };
-  (downstream[key] || []).forEach(filterKey => { _normalFreeFilters[filterKey] = []; });
   refreshNormalFreeDependentFilters();
 }
 
 function refreshNormalFreeDependentFilters() {
+  const sourceRows = getNormalLocationRows();
   const search = String(Q('normal-free-search')?.value || '').trim().toLowerCase();
-  const sourceRows = getNormalLocationRows().filter(entry => normalFreeSearchMatches(entry,search));
-  const locations = sourceRows.map(row => row.location);
+  const facetRows = (excludeKey='') => sourceRows.filter(entry => {
+    const location = entry.location || {};
+    const status = entry.assignment?.status || 'unassigned';
+    if (!normalFreeSearchMatches(entry,search)) return false;
+    if (excludeKey !== 'zone' && !myTaskFilterMatches(_normalFreeFilters.zone,location.zone)) return false;
+    if (excludeKey !== 'row' && !myTaskFilterMatches(_normalFreeFilters.row,String(location.row_no ?? ''))) return false;
+    if (excludeKey !== 'level' && !myTaskFilterMatches(_normalFreeFilters.level,String(location.level ?? ''))) return false;
+    if (excludeKey !== 'status' && !myTaskFilterMatches(_normalFreeFilters.status,status)) return false;
+    return true;
+  });
+  const zoneLocations = facetRows('zone').map(row => row.location);
   _normalFreeFilters.zone = setMultiFilterOptions(
     'normal-free-zone',
-    [...new Set(locations.map(location => location.zone).filter(Boolean))]
+    [...new Set(zoneLocations.map(location => location.zone).filter(Boolean))]
       .sort((a,b) => String(a).localeCompare(String(b),'th',{numeric:true}))
       .map(value => ({value,label:value})),
     _normalFreeFilters.zone,
     values => handleNormalFreeMultiFilterChange('zone',values),
   );
-  const zoneLocations = locations.filter(location => myTaskFilterMatches(_normalFreeFilters.zone,location.zone));
+  const rowLocations = facetRows('row').map(row => row.location);
   _normalFreeFilters.row = setMultiFilterOptions(
     'normal-free-row',
-    [...new Set(zoneLocations.map(location => String(location.row_no ?? '')).filter(Boolean))]
+    [...new Set(rowLocations.map(location => String(location.row_no ?? '')).filter(Boolean))]
       .sort((a,b) => a.localeCompare(b,'th',{numeric:true}))
       .map(value => ({value,label:value})),
     _normalFreeFilters.row,
     values => handleNormalFreeMultiFilterChange('row',values),
   );
-  const rowLocations = zoneLocations.filter(location => myTaskFilterMatches(_normalFreeFilters.row,String(location.row_no ?? '')));
+  const levelLocations = facetRows('level').map(row => row.location);
   _normalFreeFilters.level = setMultiFilterOptions(
     'normal-free-level',
-    [...new Set(rowLocations.map(location => String(location.level ?? '')).filter(Boolean))]
+    [...new Set(levelLocations.map(location => String(location.level ?? '')).filter(Boolean))]
       .sort((a,b) => a.localeCompare(b,'th',{numeric:true}))
       .map(value => ({value,label:value})),
     _normalFreeFilters.level,
     values => handleNormalFreeMultiFilterChange('level',values),
   );
-  const statusScopedRows = sourceRows.filter(entry => {
-    const location = entry.location;
-    if (!myTaskFilterMatches(_normalFreeFilters.zone,location.zone)) return false;
-    if (!myTaskFilterMatches(_normalFreeFilters.row,String(location.row_no ?? ''))) return false;
-    if (!myTaskFilterMatches(_normalFreeFilters.level,String(location.level ?? ''))) return false;
-    return true;
-  });
   const statusOrder = ['unassigned','pending','in_progress','round1_done','round2_done','round3_done','completed','approved'];
-  const availableStatuses = new Set(statusScopedRows.map(entry => entry.assignment?.status || 'unassigned'));
+  const availableStatuses = new Set(facetRows('status').map(entry => entry.assignment?.status || 'unassigned'));
   _normalFreeFilters.status = setMultiFilterOptions(
     'normal-free-status',
     statusOrder.filter(status => availableStatuses.has(status)).map(status => ({
@@ -30492,11 +32275,12 @@ function renderNormalFreeLocationList() {
       <input class="normal-free-checkbox" type="checkbox" value="${location.id}" ${checked} ${checkboxDisabled}
         aria-label="${ariaAction} ${escapeWmsText(location.code || '')}"
         onchange="toggleNormalFreeLocation('${location.id}',this.checked,'${selectionMode}')">
-      <span>
+      <span class="assign-bento-tile-copy">
         <span class="normal-free-code">${escapeWmsText(location.code || '?')}</span>
         <span class="normal-free-meta" style="display:block;margin-top:3px">${escapeWmsText(detail || 'ไม่ระบุรายละเอียด')}</span>
       </span>
-      <span class="normal-free-meta">${escapeWmsText(assignmentMeta)} <span class="tag ${status.cls}" style="margin-left:6px">${escapeWmsText(status.lbl)}</span></span>
+      <span class="assign-bento-tile-state tag ${status.cls}">${escapeWmsText(status.lbl)}</span>
+      <span class="assign-bento-tile-note">${escapeWmsText(assignmentMeta)}</span>
     </label>`;
   }).join('');
   syncNormalFreeSelection();
@@ -30544,20 +32328,20 @@ function syncNormalFreeSelection() {
   const reassignCount = _normalFreeSelectedReassignLocationIds.size;
   if (count) {
     count.textContent = _normalFreeReassignMode
-      ? `เลือกจ่ายงานซ้ำ ${reassignCount.toLocaleString(uiLocale())} · แสดง ${_normalFreeVisibleLocationIds.length.toLocaleString(uiLocale())} / ${_normalFreeFilteredLocationCount.toLocaleString(uiLocale())}`
-      : `เลือกจ่าย ${assignCount.toLocaleString(uiLocale())} · เลือกพิมพ์ ${printCount.toLocaleString(uiLocale())} · แสดง ${_normalFreeVisibleLocationIds.length.toLocaleString(uiLocale())} / ${_normalFreeFilteredLocationCount.toLocaleString(uiLocale())}`;
+      ? `เลือกจ่ายซ้ำ ${reassignCount.toLocaleString(uiLocale())} Location · แสดง ${_normalFreeVisibleLocationIds.length.toLocaleString(uiLocale())} / ${_normalFreeFilteredLocationCount.toLocaleString(uiLocale())}`
+      : `เลือก ${assignCount.toLocaleString(uiLocale())} Location · พิมพ์ ${printCount.toLocaleString(uiLocale())} · แสดง ${_normalFreeVisibleLocationIds.length.toLocaleString(uiLocale())} / ${_normalFreeFilteredLocationCount.toLocaleString(uiLocale())}`;
   }
   if (button) {
     const activeCount = _normalFreeReassignMode ? reassignCount : assignCount;
     button.disabled = activeCount === 0;
     button.textContent = _normalFreeReassignMode
-      ? `🔄 จ่ายงานซ้ำ${activeCount ? ` (${activeCount.toLocaleString(uiLocale())})` : ''}`
-      : `✓ จ่าย Location ที่เลือก${activeCount ? ` (${activeCount.toLocaleString(uiLocale())})` : ''}`;
+      ? `ยืนยันจ่ายซ้ำ${activeCount ? ` (${activeCount.toLocaleString(uiLocale())})` : ''}`
+      : `ยืนยันจ่ายงาน${activeCount ? ` (${activeCount.toLocaleString(uiLocale())})` : ''}`;
   }
   if (modeButton) {
     modeButton.classList.toggle('btn-amber',_normalFreeReassignMode);
     modeButton.classList.toggle('btn-ghost',!_normalFreeReassignMode);
-    modeButton.textContent = _normalFreeReassignMode ? '← กลับโหมดจ่ายงานปกติ' : '🔄 เปิดโหมดจ่ายงานซ้ำ';
+    modeButton.textContent = _normalFreeReassignMode ? 'กลับโหมดปกติ' : 'โหมดจ่ายซ้ำ';
     modeButton.setAttribute('aria-pressed',String(_normalFreeReassignMode));
   }
   syncNormalRoundOnePrintButton();
@@ -30846,17 +32630,22 @@ function getBulkAvailableLocations() {
 
 function refreshBulkDependentFilters() {
   const locations = getBulkAvailableLocations();
-  fillDependentSelect('bulk-zone', locations.map(location => location.zone));
-  const zone = Q('bulk-zone')?.value || '';
-  const zoneLocations = locations.filter(location => !zone || location.zone === zone);
-
-  fillDependentSelect('bulk-row', zoneLocations.map(location => location.row_no));
-  const row = Q('bulk-row')?.value || '';
-  const rowLocations = zoneLocations.filter(location =>
-    !row || String(location.row_no ?? '') === String(row)
-  );
-
-  fillDependentSelect('bulk-level', rowLocations.map(location => location.level));
+  const selectedRow = Q('bulk-row')?.value || '';
+  const selectedLevel = Q('bulk-level')?.value || '';
+  fillDependentSelect('bulk-zone', locations
+    .filter(location => (!selectedRow || String(location.row_no ?? '') === String(selectedRow))
+      && (!selectedLevel || String(location.level ?? '') === String(selectedLevel)))
+    .map(location => location.zone));
+  const selectedZone = Q('bulk-zone')?.value || '';
+  fillDependentSelect('bulk-row', locations
+    .filter(location => (!selectedZone || location.zone === selectedZone)
+      && (!selectedLevel || String(location.level ?? '') === String(selectedLevel)))
+    .map(location => location.row_no));
+  const refreshedRow = Q('bulk-row')?.value || '';
+  fillDependentSelect('bulk-level', locations
+    .filter(location => (!selectedZone || location.zone === selectedZone)
+      && (!refreshedRow || String(location.row_no ?? '') === String(refreshedRow)))
+    .map(location => location.level));
   refreshBulkPreview();
 }
 
@@ -30930,7 +32719,12 @@ async function refreshLocs() {
   const assignedSet = new Set(asgns.map(a => a.location_id)); const seen = new Set(); const locs = [];
   for (const s of snaps || []) { if (!seen.has(s.location_id) && s.locations) { seen.add(s.location_id); locs.push(s.locations); } }
   const free = sortRowsByLocation(locs.filter(l => !assignedSet.has(l.id)), location => location.code);
-  const sortedAssignments = sortRowsByLocation(asgns, assignment => assignment.locations?.code);
+  const locationById = new Map(locs.map(location => [location.id,location]));
+  const sortedAssignments = sortRowsByLocation(asgns, assignment => assignment.locations?.code)
+    .map(assignment => ({
+      ...assignment,
+      _location:{ ...(locationById.get(assignment.location_id) || {}),...(assignment.locations || {}) },
+    }));
   const sel = Q('as-loc');
   if (sel) {
     sel.setAttribute('data-location-sort-select','');
@@ -30942,27 +32736,114 @@ async function refreshLocs() {
   const al = Q('al'); if (!al) return;
   window._printableAssignments = sortedAssignments;
   updateAssignWorkspaceStats(locs.length, (asgns || []).length, free.length);
-  if (!asgns?.length) { al.innerHTML = `<div class="load" style="padding:20px;font-size:14px;color:var(--text-muted);text-align:center; font-weight:600;">ยังไม่มีการ Assign</div>`; return; }
+  refreshAssignmentReviewDependentFilters();
+}
 
-  const stuckCount = asgns.filter(a => !['completed','approved'].includes(a.status)).length;
+function assignmentReviewLocation(assignment) {
+  return assignment?._location || assignment?.locations || {};
+}
+
+function handleAssignmentReviewFilterChange(key,values) {
+  _assignReviewFilters[key] = normalizeMultiFilterValues(values);
+  refreshAssignmentReviewDependentFilters();
+}
+
+function refreshAssignmentReviewDependentFilters() {
+  const assignments = window._printableAssignments || [];
+  const facetAssignments = (excludeKey='') => assignments.filter(assignment => {
+    const location = assignmentReviewLocation(assignment);
+    if (excludeKey !== 'zone' && !myTaskFilterMatches(_assignReviewFilters.zone,location.zone)) return false;
+    if (excludeKey !== 'row' && !myTaskFilterMatches(_assignReviewFilters.row,String(location.row_no ?? ''))) return false;
+    if (excludeKey !== 'level' && !myTaskFilterMatches(_assignReviewFilters.level,String(location.level ?? ''))) return false;
+    if (excludeKey !== 'status' && !myTaskFilterMatches(_assignReviewFilters.status,assignment.status)) return false;
+    return true;
+  });
+  const zoneLocations = facetAssignments('zone').map(assignmentReviewLocation);
+  _assignReviewFilters.zone = setMultiFilterOptions(
+    'assign-review-zone',
+    [...new Set(zoneLocations.map(location => location.zone).filter(Boolean))]
+      .sort((a,b) => String(a).localeCompare(String(b),'th',{numeric:true}))
+      .map(value => ({ value,label:value })),
+    _assignReviewFilters.zone,
+    values => handleAssignmentReviewFilterChange('zone',values),
+  );
+  const rowLocations = facetAssignments('row').map(assignmentReviewLocation);
+  _assignReviewFilters.row = setMultiFilterOptions(
+    'assign-review-row',
+    [...new Set(rowLocations.map(location => String(location.row_no ?? '')).filter(Boolean))]
+      .sort((a,b) => a.localeCompare(b,'th',{numeric:true}))
+      .map(value => ({ value,label:value })),
+    _assignReviewFilters.row,
+    values => handleAssignmentReviewFilterChange('row',values),
+  );
+  const levelLocations = facetAssignments('level').map(assignmentReviewLocation);
+  _assignReviewFilters.level = setMultiFilterOptions(
+    'assign-review-level',
+    [...new Set(levelLocations.map(location => String(location.level ?? '')).filter(Boolean))]
+      .sort((a,b) => a.localeCompare(b,'th',{numeric:true}))
+      .map(value => ({ value,label:value })),
+    _assignReviewFilters.level,
+    values => handleAssignmentReviewFilterChange('level',values),
+  );
+  const statusOrder = ['pending','in_progress','round1_done','round2_done','round3_done','completed','approved'];
+  const availableStatuses = new Set(facetAssignments('status').map(assignment => assignment.status).filter(Boolean));
+  _assignReviewFilters.status = setMultiFilterOptions(
+    'assign-review-status',
+    statusOrder.filter(status => availableStatuses.has(status)).map(status => ({
+      value:status,
+      label:translateUiText(tagInfo(status).lbl),
+    })),
+    _assignReviewFilters.status,
+    values => handleAssignmentReviewFilterChange('status',values),
+  );
+  renderAssignmentReviewList();
+}
+
+function renderAssignmentReviewList() {
+  const al = Q('al');
+  if (!al) return;
+  const sid = Q('as-sess')?.value || '';
+  const assignments = window._printableAssignments || [];
+  const filtered = assignments.filter(assignment => {
+    const location = assignmentReviewLocation(assignment);
+    if (!myTaskFilterMatches(_assignReviewFilters.zone,location.zone)) return false;
+    if (!myTaskFilterMatches(_assignReviewFilters.row,String(location.row_no ?? ''))) return false;
+    if (!myTaskFilterMatches(_assignReviewFilters.level,String(location.level ?? ''))) return false;
+    if (!myTaskFilterMatches(_assignReviewFilters.status,assignment.status)) return false;
+    return true;
+  });
+  window._filteredPrintableAssignments = filtered;
+  if (!assignments.length) {
+    al.innerHTML = `<div class="load" style="padding:20px;font-size:14px;color:var(--text-muted);text-align:center;font-weight:600">ยังไม่มีการ Assign</div>`;
+    return;
+  }
+  if (!filtered.length) {
+    al.innerHTML = `<div class="load" style="padding:28px;font-size:14px;color:var(--text-muted);text-align:center;font-weight:700">ไม่พบงานที่ตรงกับตัวกรอง</div>`;
+    return;
+  }
+  const stuckCount = assignments.filter(a => !['completed','approved'].includes(a.status)).length;
   let html = `<div class="assign-print-toolbar">
     <label class="assign-print-check">
       <input type="checkbox" id="assign-print-all-check" onchange="toggleAllAssignedPrint(this.checked)">
       <span>เลือกทั้งหมด</span>
     </label>
-    <span class="assign-print-count" id="assign-print-count">เลือก 0 จาก ${asgns.length} Locations</span>
+    <span class="assign-print-count" id="assign-print-count">เลือก 0 จาก ${filtered.length} Locations</span>
     <button class="btn btn-ghost btn-sm" id="assign-print-selected-btn" onclick="printSelectedAssignedWork()" disabled>🖨️ พิมพ์ที่เลือก</button>
-    <button class="btn btn-blue btn-sm" onclick="printAllAssignedWork()">🖨️ พิมพ์ทั้งหมด (${asgns.length})</button>
+    <button class="btn btn-blue btn-sm" onclick="printAllAssignedWork()">🖨️ พิมพ์ตามตัวกรอง (${filtered.length})</button>
   </div>`;
   if (stuckCount > 0) { html += `<div style="padding:14px 20px;background:color-mix(in srgb,var(--theme-danger-color) 9%,var(--theme-card-bg));border-bottom:1px solid var(--theme-border-color)"><button class="btn btn-ghost btn-sm admin-delete-icon" style="color:var(--theme-danger-color)" onclick="deleteStuckAssignments()">${adminTrashIconSvg()} <span>ลบที่ยังไม่เสร็จทั้งหมด (${stuckCount})</span></button></div>`; }
-  html += sortedAssignments.map(a => {
-    const si = tagInfo(a.status); const code = (a.locations?.code || '').replace(/'/g, '');
-    return `<div class="row assignment-print-row assign-list-row" data-location-sort-code="${escapeWmsText(a.locations?.code || '')}" style="cursor:default">
-      <input class="assignment-print-select" type="checkbox" value="${a.location_id}" onchange="syncAssignedPrintSelection()" aria-label="เลือกพิมพ์ Location ${escapeWmsText(a.locations?.code || '')}">
-      <div class="row-body"><div class="row-title mono">${a.locations?.code}</div><div class="row-sub">User ผู้รับงาน: ${escapeWmsText(a.profiles?.name || 'ไม่ระบุ')}</div></div>
+  html += filtered.map(a => {
+    const si = tagInfo(a.status);
+    const location = assignmentReviewLocation(a);
+    const code = String(location.code || '').replace(/'/g, '');
+    const locationMeta = [location.zone,location.row_no ? `Row ${location.row_no}` : '',location.level ? `Lv.${location.level}` : '']
+      .filter(Boolean).join(' · ');
+    return `<div class="row assignment-print-row assign-list-row" data-location-sort-code="${escapeWmsText(location.code || '')}" style="cursor:default">
+      <input class="assignment-print-select" type="checkbox" value="${a.location_id}" onchange="syncAssignedPrintSelection()" aria-label="เลือกพิมพ์ Location ${escapeWmsText(location.code || '')}">
+      <div class="row-body"><div class="row-title mono">${escapeWmsText(location.code || '?')}</div><div class="row-sub">${escapeWmsText(locationMeta || 'ไม่ระบุรายละเอียด')} · User: ${escapeWmsText(a.profiles?.name || 'ไม่ระบุ')}</div></div>
       <span class="tag ${si.cls}">${si.lbl}</span>
       <button class="assignment-print-button" onclick='printCountForm(["${a.location_id}"],"${sid}")'
-        title="พิมพ์ฟอร์ม Location นี้" aria-label="พิมพ์ฟอร์ม Location ${escapeWmsText(a.locations?.code || '')}">🖨️</button>
+        title="พิมพ์ฟอร์ม Location นี้" aria-label="พิมพ์ฟอร์ม Location ${escapeWmsText(location.code || '')}">🖨️</button>
       <button class="admin-delete-icon" onclick="deleteAssignment('${a.id}','${code}')"
         title="ลบ Assignment นี้" aria-label="ลบ Assignment นี้"
         style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:8px;line-height:1;flex-shrink:0;transition:0.2s;">
@@ -30998,18 +32879,31 @@ function toggleAllAssignedPrint(checked) {
   syncAssignedPrintSelection();
 }
 
+function currentAssignmentReviewFilterSummary() {
+  const filters = [];
+  const append = (id,label) => {
+    const values = multiFilterSelectedLabels(id);
+    if (values.length) filters.push({ label,value:values.join(', ') });
+  };
+  append('assign-review-zone','Zone');
+  append('assign-review-row','Row');
+  append('assign-review-level','Level');
+  append('assign-review-status','สถานะ');
+  return filters;
+}
+
 function printSelectedAssignedWork() {
   const sid = Q('as-sess')?.value;
   const locationIds = selectedAssignedLocationIds();
   if (!sid || !locationIds.length) { alert('กรุณาเลือก Location ที่ต้องการพิมพ์'); return; }
-  printCountForm(locationIds, sid);
+  printCountForm(locationIds,sid,{ filterSummary:currentAssignmentReviewFilterSummary() });
 }
 
 function printAllAssignedWork() {
   const sid = Q('as-sess')?.value;
-  const locationIds = [...new Set((window._printableAssignments || []).map(row => row.location_id).filter(Boolean))];
+  const locationIds = [...new Set((window._filteredPrintableAssignments || []).map(row => row.location_id).filter(Boolean))];
   if (!sid || !locationIds.length) { alert('ยังไม่มีงานที่ Assign สำหรับพิมพ์'); return; }
-  printCountForm(locationIds, sid);
+  printCountForm(locationIds,sid,{ filterSummary:currentAssignmentReviewFilterSummary() });
 }
 
 async function doAssign() {
@@ -31759,11 +33653,8 @@ let _historyLoadRequestId = 0;
 function setHistoryFilter(key,value) {
   if (key === 'session') {
     S._histSid = value;
-    S._histCounterName = '';
-    S._histSt = '';
   } else if (key === 'counter') {
     S._histCounterName = value;
-    S._histSt = '';
   } else if (key === 'status') {
     S._histSt = value;
   }
@@ -31788,11 +33679,7 @@ async function loadAdHistory() {
     fetchPagedSupabaseRows(
       'assignments',
       'id,status,created_at,location_id,session_id,locations(code,zone),count_sessions(name)',
-      query => {
-        let filtered = query.order('created_at',{ascending:false}).order('id');
-        if (sid) filtered = filtered.eq('session_id',sid);
-        return filtered;
-      },
+      query => query.order('created_at',{ascending:false}).order('id'),
     ),
   ]);
   if (requestId !== _historyLoadRequestId) return;
@@ -31805,19 +33692,19 @@ async function loadAdHistory() {
     sid = '';
     S._histSid = '';
   }
-  let scopedAssignments = assignmentResult.data || [];
+  const allAssignments = assignmentResult.data || [];
   const [countResult,auditResult] = await Promise.all([
     fetchSupabaseRowsByValues(
       'count_records',
       'assignment_id,actual_counter_name,counted_at',
       'assignment_id',
-      scopedAssignments.map(assignment => assignment.id),
+      allAssignments.map(assignment => assignment.id),
     ),
     fetchSupabaseRowsByValues(
       'audit_log',
       'assignment_id,action,created_at',
       'assignment_id',
-      scopedAssignments.map(assignment => assignment.id),
+      allAssignments.map(assignment => assignment.id),
     ),
   ]);
   if (requestId !== _historyLoadRequestId) return;
@@ -31842,26 +33729,36 @@ async function loadAdHistory() {
   (auditResult.data || []).forEach(event =>
     rememberHistoryEvent(event.assignment_id,event.created_at,event.action === 'count_start')
   );
+  const historyFacetAssignments = (excludeKey='') => allAssignments.filter(assignment => {
+    if (excludeKey !== 'session' && sid && assignment.session_id !== sid) return false;
+    if (excludeKey !== 'counter' && counterName
+      && !(historyCounterMap[assignment.id] || []).includes(counterName)) return false;
+    if (excludeKey !== 'status' && status && assignment.status !== status) return false;
+    return true;
+  });
+  const availableSessionIds = new Set(historyFacetAssignments('session').map(assignment => assignment.session_id));
+  const availableSessions = sessions.filter(session => availableSessionIds.has(session.id));
+  if (sid && !availableSessionIds.has(sid)) {
+    sid = '';
+    S._histSid = '';
+  }
   const availableCounters = [...new Set(
-    Object.values(historyCounterMap).flat().filter(Boolean)
+    historyFacetAssignments('counter')
+      .flatMap(assignment => historyCounterMap[assignment.id] || [])
+      .filter(Boolean)
   )].sort((a,b) => a.localeCompare(b,'th',{numeric:true,sensitivity:'base'}));
   if (counterName && !availableCounters.includes(counterName)) {
     counterName = '';
     S._histCounterName = '';
   }
-  const counterScopedAssignments = counterName
-    ? scopedAssignments.filter(assignment =>
-        (historyCounterMap[assignment.id] || []).includes(counterName)
-      )
-    : scopedAssignments;
   const statusOrder = ['pending','in_progress','round1_done','round2_done','round3_done','completed','approved'];
-  const availableStatuses = new Set(counterScopedAssignments.map(assignment => assignment.status));
+  const availableStatuses = new Set(historyFacetAssignments('status').map(assignment => assignment.status));
   if (status && !availableStatuses.has(status)) {
     status = '';
     S._histSt = '';
   }
 
-  const sessionOptions = `<option value="">${uiCopy('ทุกรอบการตรวจนับ','All Count Sessions')}</option>` + sessions.map(session =>
+  const sessionOptions = `<option value="">${uiCopy('ทุกรอบการตรวจนับ','All Count Sessions')}</option>` + availableSessions.map(session =>
     `<option value="${session.id}" ${session.id===sid?'selected':''}>${escapeWmsText(session.name)}</option>`
   ).join('');
   const counterOptions = `<option value="">${uiCopy('ผู้ตรวจนับทั้งหมด','All Physical Counters')}</option>` + availableCounters.map(name =>
@@ -31895,9 +33792,12 @@ async function loadAdHistory() {
     </div>
     <div id="hist-list"><div class="load" style="text-align:center; padding:20px; font-weight:600;">⏳ กำลังค้นหา...</div></div>`;
 
-  let assignments = counterScopedAssignments.filter(assignment =>
-    !status || assignment.status === status
-  );
+  let assignments = allAssignments.filter(assignment => {
+    if (sid && assignment.session_id !== sid) return false;
+    if (counterName && !(historyCounterMap[assignment.id] || []).includes(counterName)) return false;
+    if (status && assignment.status !== status) return false;
+    return true;
+  });
   const term = searchQ.trim();
   if (term && assignments.length) {
     const termLower = term.toLowerCase();
@@ -32358,16 +34258,6 @@ async function getDeleteSessionLocations(sessionId) {
 }
 
 async function handleDeleteFilterChange(key) {
-  if (key === 'session') {
-    if (Q('del-zone')) Q('del-zone').value = '';
-    if (Q('del-row')) Q('del-row').value = '';
-    if (Q('del-code')) Q('del-code').value = '';
-  } else if (key === 'zone') {
-    if (Q('del-row')) Q('del-row').value = '';
-    if (Q('del-code')) Q('del-code').value = '';
-  } else if (key === 'row') {
-    if (Q('del-code')) Q('del-code').value = '';
-  }
   const requestId = ++_deleteFilterScopeRequestId;
   const sessionId = Q('del-session')?.value || '';
   const preview = Q('del-preview');
@@ -32391,22 +34281,35 @@ async function handleDeleteFilterChange(key) {
 
 function refreshDeleteDependentFilters() {
   const locations = window._deleteScopedLocations || [];
+  const selectedRow = Q('del-row')?.value || '';
+  const code = Q('del-code')?.value.trim() || '';
+  const zoneFacetLocations = locations.filter(location => {
+    if (selectedRow && String(location.row_no ?? '') !== String(selectedRow)) return false;
+    if (!matchesDeleteLocationCode(location.code,code)) return false;
+    return true;
+  });
   const zone = fillDependentSelect(
     'del-zone',
-    locations.map(location => location.zone),
+    zoneFacetLocations.map(location => location.zone),
     'ทั้งหมด',
     Q('del-zone')?.value,
   );
-  const zoneLocations = locations.filter(location => !zone || location.zone === zone);
+  const rowFacetLocations = locations.filter(location => {
+    if (zone && location.zone !== zone) return false;
+    if (!matchesDeleteLocationCode(location.code,code)) return false;
+    return true;
+  });
   const row = fillDependentSelect(
     'del-row',
-    zoneLocations.map(location => location.row_no),
+    rowFacetLocations.map(location => location.row_no),
     'ทั้งหมด',
     Q('del-row')?.value,
   );
-  const rowLocations = zoneLocations.filter(location =>
-    !row || String(location.row_no ?? '') === String(row)
-  );
+  const rowLocations = locations.filter(location => {
+    if (zone && location.zone !== zone) return false;
+    if (row && String(location.row_no ?? '') !== String(row)) return false;
+    return true;
+  });
   const datalist = Q('del-location-options');
   if (datalist) {
     datalist.replaceChildren();
@@ -32777,7 +34680,7 @@ function refreshXlsxPreview() {
     prev.innerHTML = renderXlsxImportPreview(analysis);
   }
   if (btn) {
-    btn.disabled = !analysis.parsed.length || Boolean(analysis.errors.length) || Boolean(analysis.rejected.length);
+    btn.disabled = !Q('is')?.value || !analysis.parsed.length || Boolean(analysis.errors.length) || Boolean(analysis.rejected.length);
   }
 }
 
@@ -33069,7 +34972,7 @@ async function renderManageBackup(container) {
   window._backupSessions = sessions || [];
   _backupParsed = null;
   _lastBackupExport = null;
-  const sessionOptions = (sessions || []).map(session =>
+  const sessionOptions = `<option value="" selected disabled>— เลือก Session —</option>` + (sessions || []).map(session =>
     `<option value="${session.id}">${escapeWmsText(session.name)} · ${escapeWmsText(session.status || '')}</option>`
   ).join('');
   const actionLabels = {
@@ -33123,11 +35026,11 @@ async function renderManageBackup(container) {
           </select>
         </div>
         <div id="backup-scope-summary">
-          ${(sessions || []).length ? `<div class="load" style="padding:15px">กำลังตรวจจำนวนข้อมูล...</div>`
+          ${(sessions || []).length ? `<div class="load" style="padding:15px">กรุณาเลือก Session ที่ต้องการ Backup</div>`
             : `<div class="alert alert-amber">ยังไม่มี Session สำหรับ Backup</div>`}
         </div>
         <button class="btn btn-blue" id="backup-export-btn" style="width:100%;margin-top:16px"
-          onclick="exportBackupExcel()" ${(sessions || []).length?'':'disabled'}>
+          onclick="exportBackupExcel()" disabled>
           ${navIconSvg('backup',18)} ดาวน์โหลด Backup Excel
         </button>
         <div style="margin-top:14px">
@@ -33200,7 +35103,12 @@ async function refreshBackupScopeSummary() {
   const requestSerial = ++_backupScopeRequestSerial;
   const container = Q('backup-scope-summary');
   const button = Q('backup-export-btn');
-  if (!container || !button || !sessionIds.length) return;
+  if (!container || !button) return;
+  if (!sessionIds.length) {
+    button.disabled = true;
+    container.innerHTML = `<div class="load" style="padding:15px">กรุณาเลือก Session ที่ต้องการ Backup</div>`;
+    return;
+  }
   button.disabled = true;
   container.innerHTML = `<div class="load" style="padding:15px">กำลังตรวจจำนวนข้อมูล...</div>`;
   let ready = false;
@@ -35530,6 +37438,16 @@ async function loadAdBranding() {
             <button class="btn btn-ghost btn-sm" type="button" onclick="toggleThemeGroups(false)">ซ่อนทั้งหมด</button>
           </div>
         </div>
+        <label class="theme-contrast-guard" for="branding-auto-contrast">
+          <span class="theme-contrast-guard-icon">◐</span>
+          <span class="theme-contrast-guard-copy">
+            <strong>ปรับสีให้อ่านง่ายอัตโนมัติ</strong>
+            <small>ถ้าสีข้อความหรือไอคอนกลืนกับพื้น ระบบจะสลับเป็นสีอ่อนหรือสีเข้มที่มี Contrast อย่างน้อย 4.5:1</small>
+          </span>
+          <input id="branding-auto-contrast" type="checkbox" ${uiBranding.autoContrast !== false ? 'checked' : ''}
+            onchange="previewBrandingDraft()">
+          <span class="theme-contrast-switch" aria-hidden="true"></span>
+        </label>
         <div id="theme-settings-groups">
           ${BRANDING_THEME_AREAS.map(themeColorAreaHtml).join('')}
         </div>
@@ -35656,6 +37574,7 @@ function collectBrandingDraft() {
     ...uiBranding,
     systemName: Q('branding-system-name')?.value || uiBranding.systemName,
     systemSubtitle: Q('branding-system-subtitle')?.value || uiBranding.systemSubtitle,
+    autoContrast: Q('branding-auto-contrast')?.checked !== false,
     logoDataUrl: _brandingDraftLogo,
   };
   BRANDING_COLOR_FIELDS.forEach(({ key, label }) => {
@@ -35764,6 +37683,7 @@ function resetBrandingDraft() {
   });
   if (Q('branding-system-name')) Q('branding-system-name').value = DEFAULT_BRANDING.systemName;
   if (Q('branding-system-subtitle')) Q('branding-system-subtitle').value = DEFAULT_BRANDING.systemSubtitle;
+  if (Q('branding-auto-contrast')) Q('branding-auto-contrast').checked = DEFAULT_BRANDING.autoContrast;
   S._activeThemeSetId = '';
   _brandingDraftLogo = '';
   removeBrandLogo();
