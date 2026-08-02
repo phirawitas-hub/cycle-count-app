@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v177 - Three-Layer Accuracy Stack</title>
+<title>Cycle Count v179 - Assignment Summary and User Dropdown Fix</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -16496,9 +16496,55 @@ body :is(.alert-green,.alert-amber,.alert-red,.alert-blue) {
   }
 }
 
+/* ══════════════════════════════════════════════════════════
+   v179 — Complete assignment summary + legible native selects.
+   ══════════════════════════════════════════════════════════ */
+body select:not([multiple]):not([size]) {
+  min-height:44px;
+  padding-top:0 !important;
+  padding-bottom:0 !important;
+  line-height:1.45 !important;
+}
+body select option {
+  line-height:1.5;
+}
+.assign-bento-shell .assign-hero-stats {
+  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  grid-template-rows:repeat(2,68px) !important;
+  align-items:stretch !important;
+}
+.assign-bento-shell .assign-hero-stat.is-assigned {
+  grid-column:1;
+  grid-row:1;
+}
+.assign-bento-shell .assign-hero-stat.is-remaining {
+  grid-column:2;
+  grid-row:1;
+}
+.assign-bento-shell .assign-hero-stat.is-total {
+  display:block !important;
+  grid-column:1 / -1;
+  grid-row:2;
+  justify-self:center;
+  width:calc((100% - 10px) / 2);
+  min-height:68px !important;
+}
+.assign-bento-shell .assign-bento-assignee-field label {
+  min-height:18px;
+  margin:0 0 6px !important;
+  overflow:visible;
+  font-size:11px !important;
+  line-height:1.6 !important;
+}
+.assign-bento-shell .assign-bento-assignee-field select {
+  height:48px !important;
+  padding:0 42px 0 16px !important;
+  line-height:1.45 !important;
+}
+
 </style>
 </head>
-<body data-build="v177-three-layer-accuracy-stack">
+<body data-build="v179-assignment-summary-user-dropdown-fix">
 <div id="app"></div>
 
 <script>
@@ -16568,7 +16614,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v177-three-layer-accuracy-stack';
+window.__CYCLE_COUNT_BUILD__ = 'v179-assignment-summary-user-dropdown-fix';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -19318,7 +19364,7 @@ function applyBrandingSettings(settings, persistLocal = true) {
     const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
     root.setProperty(`--theme-${cssKey}`, uiBranding[key]);
   });
-  document.title = `${uiBranding.systemName} v177`;
+  document.title = `${uiBranding.systemName} v179`;
   if (persistLocal) {
     try { localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(uiBranding)); } catch (_) {}
   }
@@ -20759,7 +20805,7 @@ async function protectedFunctionHeaders() {
   return {
     Authorization: `Bearer ${session.access_token}`,
     apikey: SUPA_KEY,
-    'x-client-info': 'cycle-count-v177',
+    'x-client-info': 'cycle-count-v179',
   };
 }
 
@@ -30575,20 +30621,46 @@ async function loadAssignmentWorkspaceData(sessionId) {
   const promise = Promise.all([
     fetchPagedSupabaseRows(
       'stock_snapshot',
-      'location_id,locations(id,code,zone,row_no,level,area)',
+      'location_id',
       query => query.eq('session_id',sessionId).order('id'),
     ),
     fetchPagedSupabaseRows(
       'assignments',
-      'id,session_id,location_id,assigned_to,status,created_at,locations(code,zone,row_no),profiles!assigned_to(name)',
+      'id,session_id,location_id,assigned_to,status,created_at,profiles!assigned_to(name)',
       query => query.eq('session_id',sessionId).order('id'),
     ),
-  ]).then(([snapshotResult,assignmentResult]) => {
+  ]).then(async ([snapshotResult,assignmentResult]) => {
     if (snapshotResult.error) throw snapshotResult.error;
     if (assignmentResult.error) throw assignmentResult.error;
+
+    const snapshotRows = snapshotResult.data || [];
+    const assignmentRows = assignmentResult.data || [];
+    const locationIds = [...new Set([
+      ...snapshotRows.map(row => row.location_id),
+      ...assignmentRows.map(row => row.location_id),
+    ].filter(Boolean))];
+    const locationResult = await fetchSupabaseRowsByValues(
+      'locations',
+      'id,code,zone,row_no,level,area',
+      'id',
+      locationIds,
+    );
+    if (locationResult.error) throw locationResult.error;
+
+    const locationById = new Map((locationResult.data || []).map(location => [location.id,location]));
+    const missingLocationIds = locationIds.filter(locationId => !locationById.has(locationId));
     return {
-      snapshots:snapshotResult.data || [],
-      assignments:(assignmentResult.data || []).sort((a,b) => String(a.created_at || '').localeCompare(String(b.created_at || ''))),
+      snapshots:snapshotRows.map(row => ({
+        ...row,
+        locations:locationById.get(row.location_id) || null,
+      })),
+      assignments:assignmentRows.map(row => ({
+        ...row,
+        locations:locationById.get(row.location_id) || null,
+      })).sort((a,b) => String(a.created_at || '').localeCompare(String(b.created_at || ''))),
+      locationById,
+      missingLocationIds,
+      snapshotLocationCount:new Set(snapshotRows.map(row => row.location_id).filter(Boolean)).size,
     };
   }).catch(error => {
     if (_assignWorkspaceCache?.sessionId === sessionId) _assignWorkspaceCache = null;
@@ -30700,7 +30772,12 @@ async function renderManageAssign(container) {
     data-annual-size="${Number(s.annual_items_per_job)||20}"
     data-annual-prefix="${escapeWmsText(s.annual_job_prefix||'JOB')}"
     data-annual-title="${escapeWmsText(s.annual_form_title||s.name||'')}">${escapeWmsText(s.name)}</option>`).join('');
-  const userOpts = users?.map(u=>`<option value="${u.id}">${escapeWmsText(u.name)}</option>`).join('') || '<option value="">ไม่มี User</option>';
+  const sortedUsers = [...(users || [])].sort((a,b) =>
+    String(a.name || '').localeCompare(String(b.name || ''),'th',{ numeric:true,sensitivity:'base' })
+  );
+  const userOpts = sortedUsers.length
+    ? sortedUsers.map(u=>`<option value="${u.id}">${escapeWmsText(u.name)}</option>`).join('')
+    : '<option value="">ไม่มี User</option>';
   invalidateAssignmentWorkspaceCache();
 
   container.innerHTML = `
@@ -30734,7 +30811,7 @@ async function renderManageAssign(container) {
             </span>
             <div class="assign-stat-copy">
               <strong id="assign-stat-total">—</strong>
-              <span id="assign-stat-total-label">LOCATIONS ทั้งหมด</span>
+              <span id="assign-stat-total-label">จำนวนงานทั้งหมด</span>
             </div>
           </div>
           <div class="assign-hero-stat is-assigned">
@@ -31092,7 +31169,7 @@ function syncAssignWorkspaceMode(preferredMode) {
     annualButton.classList.toggle('active',annual);
     annualButton.setAttribute('aria-selected',String(annual));
   }
-  if (totalLabel) totalLabel.textContent = annual ? 'ITEM ทั้งหมด' : 'LOCATIONS ทั้งหมด';
+  if (totalLabel) totalLabel.textContent = annual ? 'จำนวน ITEM ทั้งหมด' : 'จำนวนงานทั้งหมด';
   if (assignedLabel) assignedLabel.textContent = annual ? 'JOB ที่จ่ายแล้ว' : 'จ่ายแล้ว';
   if (remainingLabel) remainingLabel.textContent = annual ? 'JOB คงเหลือ' : 'คงเหลือ';
   if (progressTitle) progressTitle.textContent = annual ? 'ความคืบหน้าการจ่าย Annual JOB' : 'ความคืบหน้าการจ่าย Location';
@@ -31162,7 +31239,7 @@ async function handleAssignSessionChange() {
   _normalFreeSelectedPrintLocationIds = new Set();
   _normalFreeSelectedReassignLocationIds = new Set();
   _normalFreeReassignMode = false;
-  _normalFreeFilters = { zone:[],row:[],level:[],status:['unassigned'] };
+  _normalFreeFilters = { zone:[],row:[],level:[],status:[] };
   _assignReviewFilters = { zone:[],row:[],level:[],status:[] };
   if (Q('normal-free-search')) Q('normal-free-search').value = '';
   if (Q('annual-job-filter')) Q('annual-job-filter').value = 'all';
@@ -31180,6 +31257,7 @@ async function handleAssignSessionChange() {
   if (config.round1Mode === 'annual') await loadAnnualJobWorkspace();
   if (Q('r23-round')) refreshR23Preview();
   if (Q('zoneDashDetails')?.open) refreshZoneDashboard();
+  focusAssignmentStep('assign-step-round1',{ scroll:false });
 }
 
 let _annualWorkspaceJobs = [];
@@ -31192,7 +31270,7 @@ let _normalAssignmentConfirmPayload = null;
 let _normalAssignmentConfirmPreviousOverflow = '';
 let _normalFreeVisibleLocationIds = [];
 let _normalFreeFilteredLocationCount = 0;
-let _normalFreeFilters = { zone:[],row:[],level:[],status:['unassigned'] };
+let _normalFreeFilters = { zone:[],row:[],level:[],status:[] };
 let _assignReviewFilters = { zone:[],row:[],level:[],status:[] };
 
 async function loadAnnualJobWorkspace() {
@@ -32116,15 +32194,22 @@ function getNormalLocationRows() {
   const seen = new Set();
   const rows = [];
   (window._bulkSnaps || []).forEach(snapshot => {
-    const location = snapshot.locations;
-    if (!location || seen.has(location.id)) return;
-    seen.add(location.id);
+    const locationId = snapshot.location_id || snapshot.locations?.id;
+    const location = window._assignmentLocationById?.get(locationId) || snapshot.locations;
+    if (!locationId || !location || seen.has(locationId)) return;
+    seen.add(locationId);
     rows.push({
       location,
-      assignment:assignmentsByLocation.get(location.id) || null,
+      assignment:assignmentsByLocation.get(locationId) || null,
     });
   });
   return sortRowsByLocation(rows,row => row.location?.code);
+}
+
+function updateNormalAssignmentStatsFromRows() {
+  const rows = getNormalLocationRows();
+  const assigned = rows.filter(row => Boolean(row.assignment)).length;
+  updateAssignWorkspaceStats(rows.length,assigned,Math.max(0,rows.length-assigned));
 }
 
 function handleR23FilterChange(key) {
@@ -32216,7 +32301,7 @@ function setNormalFreeReassignMode(forceValue) {
   _normalFreeSelectedLocationIds.clear();
   _normalFreeSelectedPrintLocationIds.clear();
   _normalFreeSelectedReassignLocationIds.clear();
-  _normalFreeFilters.status = _normalFreeReassignMode ? [] : ['unassigned'];
+  _normalFreeFilters.status = [];
   refreshNormalFreeDependentFilters();
 }
 
@@ -32257,8 +32342,7 @@ function renderNormalFreeLocationList() {
     if (!normalFreeSearchMatches(entry,search)) return false;
     return true;
   });
-  const renderLimit = 300;
-  const displayed = filtered.slice(0,renderLimit);
+  const displayed = filtered;
   _normalFreeFilteredLocationCount = filtered.length;
   _normalFreeVisibleLocationIds = displayed.map(entry => entry.location.id);
   if (!filtered.length) {
@@ -32266,10 +32350,7 @@ function renderNormalFreeLocationList() {
     syncNormalFreeSelection();
     return;
   }
-  const limitNote = filtered.length > renderLimit
-    ? `<div class="alert alert-blue" style="margin:10px 12px;font-size:10px">แสดง ${renderLimit.toLocaleString(uiLocale())} จาก ${filtered.length.toLocaleString(uiLocale())} Location · ใช้ตัวกรองหรือช่องค้นหาเพื่อเลือกงานส่วนที่เหลือ</div>`
-    : '';
-  list.innerHTML = limitNote + displayed.map(entry => {
+  list.innerHTML = displayed.map(entry => {
     const location = entry.location;
     const assignment = entry.assignment;
     const available = !assignment;
@@ -32601,7 +32682,7 @@ async function commitSelectedNormalLocations(payload) {
   _normalFreeSelectedReassignLocationIds.clear();
   if (isReassign) {
     _normalFreeReassignMode = false;
-    _normalFreeFilters.status = ['unassigned'];
+    _normalFreeFilters.status = [];
   }
   invalidateAssignmentWorkspaceCache(sid);
   await Promise.all([refreshLocs(),refreshBulkFilters()]);
@@ -32626,6 +32707,9 @@ async function refreshBulkFilters() {
     if (Q('as-sess')?.value !== sid) return;
     snaps = workspace.snapshots;
     existing = workspace.assignments;
+    window._assignmentLocationById = workspace.locationById;
+    window._assignmentMissingLocationIds = workspace.missingLocationIds;
+    window._assignmentSnapshotLocationCount = workspace.snapshotLocationCount;
   } catch (error) {
     const preview = Q('bulk-preview');
     const button = Q('bulk-btn');
@@ -32638,6 +32722,7 @@ async function refreshBulkFilters() {
   window._bulkSnaps = snaps || [];
   window._bulkAssigned = assignedSet;
   window._bulkAssignments = existing || [];
+  updateNormalAssignmentStatsFromRows();
   syncNormalRoundOnePrintButton();
   refreshBulkDependentFilters();
   refreshNormalFreeDependentFilters();
@@ -32649,9 +32734,10 @@ function getBulkAvailableLocations() {
   const seen = new Set();
   const locations = [];
   for (const snap of snaps) {
-    const location = snap.locations;
-    if (!location || seen.has(location.id) || assignedSet.has(location.id)) continue;
-    seen.add(location.id);
+    const locationId = snap.location_id || snap.locations?.id;
+    const location = window._assignmentLocationById?.get(locationId) || snap.locations;
+    if (!locationId || !location || seen.has(locationId) || assignedSet.has(locationId)) continue;
+    seen.add(locationId);
     locations.push(location);
   }
   return sortRowsByLocation(locations, location => location.code);
@@ -32683,11 +32769,13 @@ function refreshBulkPreview() {
   const snaps = window._bulkSnaps || []; const assignedSet = window._bulkAssigned || new Set();
   const seen = new Set(); let count = 0;
   for (const s of snaps) {
-    const l = s.locations; if (!l || seen.has(l.id) || assignedSet.has(l.id)) continue;
+    const locationId = s.location_id || s.locations?.id;
+    const l = window._assignmentLocationById?.get(locationId) || s.locations;
+    if (!locationId || !l || seen.has(locationId) || assignedSet.has(locationId)) continue;
     if (zone && l.zone !== zone) continue;
     if (row && String(l.row_no ?? '') !== String(row)) continue;
     if (level && String(l.level ?? '') !== String(level)) continue;
-    seen.add(l.id); count++;
+    seen.add(locationId); count++;
   }
   const prev = Q('bulk-preview'), btn = Q('bulk-btn'); if (!prev || !btn) return;
   if (count > 0) { prev.innerHTML = `📍 จะ Assign <strong>${count} locations</strong> ให้ User ที่เลือก`; btn.disabled = false; } 
@@ -32702,11 +32790,13 @@ async function doBulkAssign() {
   const snaps = window._bulkSnaps || []; const assignedSet = window._bulkAssigned || new Set();
   const seen = new Set(), toAssign = [];
   for (const s of snaps) {
-    const l = s.locations; if (!l || seen.has(l.id) || assignedSet.has(l.id)) continue;
+    const locationId = s.location_id || s.locations?.id;
+    const l = window._assignmentLocationById?.get(locationId) || s.locations;
+    if (!locationId || !l || seen.has(locationId) || assignedSet.has(locationId)) continue;
     if (zone && l.zone !== zone) continue;
     if (row && String(l.row_no ?? '') !== String(row)) continue;
     if (level && String(l.level ?? '') !== String(level)) continue;
-    seen.add(l.id); toAssign.push({ session_id: sid, location_id: l.id, assigned_to: uid });
+    seen.add(locationId); toAssign.push({ session_id: sid, location_id: locationId, assigned_to: uid });
   }
 
   if (!toAssign.length) { al.innerHTML = `<div class="alert alert-amber">ไม่มี Location ที่จะ Assign</div>`; return; }
@@ -32739,6 +32829,9 @@ async function refreshLocs() {
     if (Q('as-sess')?.value !== sid) return;
     snaps = workspace.snapshots;
     asgns = workspace.assignments;
+    window._assignmentLocationById = workspace.locationById;
+    window._assignmentMissingLocationIds = workspace.missingLocationIds;
+    window._assignmentSnapshotLocationCount = workspace.snapshotLocationCount;
   } catch (error) {
     const al = Q('al');
     if (al) al.innerHTML = errBox(error.message);
@@ -32746,7 +32839,13 @@ async function refreshLocs() {
   }
 
   const assignedSet = new Set(asgns.map(a => a.location_id)); const seen = new Set(); const locs = [];
-  for (const s of snaps || []) { if (!seen.has(s.location_id) && s.locations) { seen.add(s.location_id); locs.push(s.locations); } }
+  for (const s of snaps || []) {
+    const locationId = s.location_id || s.locations?.id;
+    const location = window._assignmentLocationById?.get(locationId) || s.locations;
+    if (!locationId || !location || seen.has(locationId)) continue;
+    seen.add(locationId);
+    locs.push(location);
+  }
   const free = sortRowsByLocation(locs.filter(l => !assignedSet.has(l.id)), location => location.code);
   const locationById = new Map(locs.map(location => [location.id,location]));
   const sortedAssignments = sortRowsByLocation(asgns, assignment => assignment.locations?.code)
@@ -32764,7 +32863,11 @@ async function refreshLocs() {
 
   const al = Q('al'); if (!al) return;
   window._printableAssignments = sortedAssignments;
-  updateAssignWorkspaceStats(locs.length, (asgns || []).length, free.length);
+  updateAssignWorkspaceStats(locs.length,Math.max(0,locs.length-free.length),free.length);
+  const missingCount = window._assignmentMissingLocationIds?.length || 0;
+  if (missingCount) {
+    al.innerHTML = `<div class="alert alert-amber">พบ ${missingCount} Location ใน Snapshot ที่ไม่มีข้อมูลใน Location Master กรุณาตรวจสอบข้อมูลนำเข้า</div>`;
+  }
   refreshAssignmentReviewDependentFilters();
 }
 
