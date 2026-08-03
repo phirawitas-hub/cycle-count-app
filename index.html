@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v200 - Handheld Scanner Without Soft Keyboard</title>
+<title>Cycle Count v201 - Handheld IME Scanner Compatibility</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -17192,7 +17192,7 @@ body.tablet-ui .count-touch-toolbar .count-screen-lock-button { display:inline-f
 }
 </style>
 </head>
-<body data-build="v200-handheld-scanner-no-soft-keyboard">
+<body data-build="v201-handheld-ime-scanner-compatibility">
 <div id="app"></div>
 
 <script>
@@ -17262,7 +17262,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v200-handheld-scanner-no-soft-keyboard';
+window.__CYCLE_COUNT_BUILD__ = 'v201-handheld-ime-scanner-compatibility';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -24416,11 +24416,11 @@ let _hardwareScanLastAppendedAt = 0;
 let _hardwareScanLastAppendedTarget = null;
 
 function hardwareLaserCaptureHtml(id,context,instruction) {
-  // Keep a real editable text input for Keyboard Wedge/IME scanner services,
-  // but do not ask Android to open Gboard for this scanner-only destination.
-  const captureInputMode = 'none';
+  // This rugged terminal injects decoded data through Android IME and requires
+  // inputmode="text". Gboard is suppressed separately without disabling IME.
+  const captureInputMode = isNarrowHandheldTerminal() ? 'text' : 'none';
   const shouldAutofocus = context === 'task-location';
-  const buildLabel = shouldAutofocus ? ' · v200' : '';
+  const buildLabel = shouldAutofocus ? ' · v201' : '';
   return `<div class="handheld-laser-bar" data-i18n-skip
     ${shouldAutofocus ? 'onpointerdown="focusTaskLocationCapture({force:true,reconnect:true})"' : ''}>
     <span class="handheld-laser-icon">${barcodeScanIconSvg()}</span>
@@ -24431,7 +24431,7 @@ function hardwareLaserCaptureHtml(id,context,instruction) {
     <input class="handheld-laser-input" id="${escapeWmsText(id)}"
       data-hw-scan-capture="true" data-hw-scan-context="${escapeWmsText(context)}"
       inputmode="${captureInputMode}" virtualkeyboardpolicy="manual" enterkeyhint="go"
-      ${shouldAutofocus ? 'autofocus data-auto-hardware-focus="true"' : ''}
+      ${shouldAutofocus ? 'data-auto-hardware-focus="true"' : ''}
       autocomplete="off" autocapitalize="characters" spellcheck="false"
       aria-label="${escapeWmsText(uiCopy('ช่องรับข้อมูลจากเลเซอร์ Handheld','Handheld Laser Input'))}"
       placeholder="${escapeWmsText(uiCopy('กดปุ่มยิง Barcode ได้ทันที','Press the Hardware Scan Button'))}">
@@ -24611,10 +24611,12 @@ function hideHandheldVirtualKeyboard() {
 
 function suppressHandheldScannerSoftKeyboard(target) {
   if (!target?.dataset?.hwScanCapture || !isNarrowHandheldTerminal()) return;
-  target.setAttribute('inputmode','none');
+  // Do not change this to "none": the tested iScan service stops publishing
+  // Location text when its editable IME destination is disabled.
+  target.setAttribute('inputmode','text');
   target.setAttribute('virtualkeyboardpolicy','manual');
-  // Chrome exposes this API on some rugged Android builds. Other builds
-  // simply ignore it and still respect inputmode="none".
+  // Removing native autofocus and synthetic click avoids repeated Gboard
+  // opens; supported Chrome builds also close it through this manual policy.
   hideHandheldVirtualKeyboard();
 }
 
