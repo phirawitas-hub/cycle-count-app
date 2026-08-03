@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v196 - Persistent Handheld Scanner Connection</title>
+<title>Cycle Count v199 - Safe WMS Reimport and Delete Filters</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -17148,17 +17148,40 @@ body.tablet-ui .count-touch-toolbar .count-screen-lock-button { display:inline-f
   border-color:var(--theme-primary-color);
   background:var(--theme-primary-color);
 }
-@media (max-width:480px), (max-width:600px) and (max-height:760px) {
+@media (max-width:760px) {
   .task-list-actions-outside { margin-bottom:8px; }
   .task-list-actions-outside .found-work-button { width:100%; flex:1 1 100%; }
   .task-filter-collapsible > summary { min-height:52px; padding:9px 10px; gap:8px; }
   .task-filter-toggle-icon { width:34px; height:34px; flex-basis:34px; border-radius:11px; }
-  .task-filter-toggle-text strong { font-size:11px; }
-  .task-filter-toggle-text small { font-size:8px; }
-  .task-filter-toggle-state { gap:4px; font-size:9px; }
+  .task-filter-toggle-text strong { font-size:14px; line-height:1.35; }
+  .task-filter-toggle-text small { font-size:11px; line-height:1.45; }
+  .task-filter-toggle-state { gap:4px; font-size:11px; }
   .task-filter-body { padding:10px; }
   .task-filter-sort-row { margin-bottom:10px; }
   .task-filter-sort-row .location-sort-control { width:100%; }
+  .task-filter-collapsible .multi-filter-field > label {
+    font-size:13px !important;
+    line-height:1.4 !important;
+  }
+  .task-filter-collapsible .multi-filter-trigger,
+  .task-filter-collapsible .multi-filter-trigger-copy {
+    font-size:14px !important;
+    line-height:1.4 !important;
+  }
+  .task-filter-collapsible .multi-filter-option {
+    min-height:42px;
+    padding:9px 10px;
+    font-size:13px !important;
+    line-height:1.4 !important;
+  }
+  .task-filter-collapsible .multi-filter-empty,
+  .task-filter-collapsible .multi-filter-actions button,
+  .task-filter-sort-row .location-sort-label,
+  .task-filter-sort-row .location-sort-button {
+    font-size:12px !important;
+    line-height:1.35 !important;
+  }
+  .task-filter-collapsible .multi-filter-actions button { min-height:40px; }
   .count-touch-toolbar { gap:6px; margin-top:8px; }
   .count-keypad-toggle-button { min-height:38px; padding:6px 9px; font-size:9px; }
   .count-numeric-keypad {
@@ -17169,7 +17192,7 @@ body.tablet-ui .count-touch-toolbar .count-screen-lock-button { display:inline-f
 }
 </style>
 </head>
-<body data-build="v196-persistent-handheld-scanner-connection">
+<body data-build="v199-safe-wms-reimport-delete-filters">
 <div id="app"></div>
 
 <script>
@@ -17239,7 +17262,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v196-persistent-handheld-scanner-connection';
+window.__CYCLE_COUNT_BUILD__ = 'v199-safe-wms-reimport-delete-filters';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -24398,7 +24421,7 @@ function hardwareLaserCaptureHtml(id,context,instruction) {
   // injecting the decoded Location even when the field appears focused.
   const captureInputMode = isNarrowHandheldTerminal() ? 'text' : 'none';
   const shouldAutofocus = context === 'task-location';
-  const buildLabel = shouldAutofocus ? ' · v196' : '';
+  const buildLabel = shouldAutofocus ? ' · v199' : '';
   return `<div class="handheld-laser-bar" data-i18n-skip
     ${shouldAutofocus ? 'onpointerdown="focusTaskLocationCapture({force:true,reconnect:true})"' : ''}>
     <span class="handheld-laser-icon">${barcodeScanIconSvg()}</span>
@@ -24624,7 +24647,12 @@ function focusTaskLocationCapture({ force=false,reconnect=false }={}) {
   focusHardwareScanTarget(target);
   // iScan sends decoded text to the focused edit box. On this Android
   // terminal a second focus after click makes that IME connection reliable.
-  try { target.click(); } catch (_) {}
+  // Never synthesize that click while a filter list is open: the click lands
+  // outside .multi-filter and would immediately close the list on handheld.
+  const multiFilterOpen = Boolean(document.querySelector('.multi-filter.open'));
+  if (!multiFilterOpen) {
+    try { target.click(); } catch (_) {}
+  }
   focusHardwareScanTarget(target);
   const connected = document.activeElement === target;
   if (connected) {
@@ -24745,7 +24773,8 @@ function startHardwareCapturePolling(targetId) {
     const now = Date.now();
     if (targetId === 'task_hardware_scan'
         && now >= _taskLocationFocusHoldUntil
-        && !Q('scanOverlay')) {
+        && !Q('scanOverlay')
+        && !document.querySelector('.multi-filter.open')) {
       const active = document.activeElement;
       const activeTag = String(active?.tagName || '').toLowerCase();
       const activeType = String(active?.type || '').toLowerCase();
@@ -24841,6 +24870,9 @@ document.addEventListener('pointerdown',event => {
 document.addEventListener('pointerup',event => {
   if (S?.page !== 'c-tasks') return;
   if (event.target?.closest?.('#task_hardware_scan,.handheld-laser-bar')) return;
+  // Keep the filter open while the user is choosing options. Reconnect the
+  // scanner only after an outside tap closes the filter.
+  if (event.target?.closest?.('.multi-filter')) return;
   // Once a tap/click has completed, reconnect the Android scanner IME to the
   // capture field. This does not close the filter; it only restores the text
   // destination used by the physical scan button.
@@ -32371,6 +32403,22 @@ function invalidateAssignmentWorkspaceCache(sessionId) {
   if (!sessionId || _assignWorkspaceCache?.sessionId === sessionId) _assignWorkspaceCache = null;
 }
 
+// v198 — Some imported Location masters contain a valid Location code but
+// leave row_no / level blank. Assignment filters must still be able to use
+// the Row and Level encoded in codes such as B-EA-001-A. This enriches only
+// the client-side workspace object; it never updates the Location master.
+function assignmentLocationWithDerivedMeta(location={}) {
+  const code = String(location.code || '').trim();
+  const parsed = warehouseLocationCodeParts(code);
+  const storedRow = String(location.row_no ?? '').trim();
+  const storedLevel = String(location.level ?? '').trim();
+  return {
+    ...location,
+    row_no:storedRow || parsed.row || '',
+    level:storedLevel || parsed.level || '',
+  };
+}
+
 async function loadAssignmentWorkspaceData(sessionId) {
   if (_assignWorkspaceCache?.sessionId === sessionId && _assignWorkspaceCache.promise) {
     return _assignWorkspaceCache.promise;
@@ -32404,7 +32452,8 @@ async function loadAssignmentWorkspaceData(sessionId) {
     );
     if (locationResult.error) throw locationResult.error;
 
-    const locationById = new Map((locationResult.data || []).map(location => [location.id,location]));
+    const assignmentLocations = (locationResult.data || []).map(assignmentLocationWithDerivedMeta);
+    const locationById = new Map(assignmentLocations.map(location => [location.id,location]));
     const missingLocationIds = locationIds.filter(locationId => !locationById.has(locationId));
     return {
       snapshots:snapshotRows.map(row => ({
@@ -33739,7 +33788,9 @@ async function renderManageImport(container) {
       </summary>
       <div class="admin-master-group-body">
         <div class="alert alert-blue" style="font-size:13px;margin:16px 0;line-height:1.6">
-          📁 <strong>Upload Excel (.xlsx)</strong> — ดึงข้อมูลจากระบบ WMS ได้เลย<br>✅ ระบบอ่านหัวตารางอัตโนมัติ<br>🏷️ ดึง LPN / Lot / OH / AL มาแสดงตอนนับ
+          📁 <strong>Upload Excel (.xlsx)</strong> — ดึงข้อมูลจากระบบ WMS ได้เลย<br>✅ ระบบอ่านหัวตารางอัตโนมัติ<br>🏷️ ดึง LPN / Lot / OH / AL มาแสดงตอนนับ<br>
+          🔄 Import ซ้ำใน Session เดิมแบบปลอดภัย: Match ด้วย <strong>Location + LPN + Item + Lot</strong>
+          และอัปเดต OH/AL เฉพาะ Location ที่ยังไม่เริ่มนับ
         </div>
         <div class="fg"><label>SESSION <span style="color:var(--accent-red)">*</span></label><select id="is" required onchange="refreshXlsxPreview()">${sessOpts}</select></div>
         <div class="fg"><label>กรอง LOCATION (ไม่บังคับ)</label><input id="ilocfilter" placeholder="เช่น B-EA% หรือเว้นว่างเพื่อ import ทั้งหมด" oninput="refreshXlsxPreview()"></div>
@@ -33754,7 +33805,7 @@ async function renderManageImport(container) {
     ${canImportWms() ? `<details class="admin-master-group">
       <summary>
         <span>${adminTrashIconSvg()}</span>
-        <span class="admin-master-group-title">ลบ Location ตาม Zone / Row / Session</span>
+        <span class="admin-master-group-title">ลบ Location ตาม Zone / Row / สถานะงาน / Session</span>
         <span class="admin-master-group-hint">เปิด / ปิด</span>
         <span class="admin-master-group-chevron">⌄</span>
       </summary>
@@ -33769,8 +33820,13 @@ async function renderManageImport(container) {
         <div class="grid-3" style="margin-bottom:14px">
           <div class="fg" style="margin:0"><label>ZONE</label><select id="del-zone" onchange="handleDeleteFilterChange('zone')"><option value="">ทั้งหมด</option></select></div>
           <div class="fg" style="margin:0"><label>ROW</label><select id="del-row" onchange="handleDeleteFilterChange('row')"><option value="">ทั้งหมด</option></select></div>
+          <div class="fg" style="margin:0"><label>สถานะงาน</label><select id="del-status" onchange="handleDeleteFilterChange('status')" disabled><option value="">ทั้งหมด</option></select></div>
           <div class="fg" style="margin:0"><label>LOCATION</label><input id="del-code" list="del-location-options" placeholder="เช่น B-EA-001-A" oninput="refreshDeleteZonePreview()"><datalist id="del-location-options"></datalist></div>
         </div>
+        <button class="btn btn-ghost" id="del-uncounted-btn" type="button"
+          aria-pressed="false" onclick="toggleDeleteOnlyUncounted()" style="width:100%;margin-bottom:14px" disabled>
+          ○ เลือกเฉพาะงานที่ยังไม่เริ่มนับอัตโนมัติ
+        </button>
         <div id="del-preview" style="font-size:13px;color:var(--accent-red);margin-bottom:14px;font-weight:800"></div>
         <div id="del-alert"></div>
         <button class="btn btn-red admin-delete-icon" id="del-btn" onclick="doDeleteByZoneRow()"
@@ -36090,6 +36146,7 @@ async function deleteSess(id, name) {
 
 let _deleteFilterScopeRequestId = 0;
 let _deleteFilterLoadingSession = false;
+let _deleteOnlyUncounted = false;
 const _deleteSessionLocationCache = new Map();
 
 async function loadDeleteZoneFilters() {
@@ -36101,7 +36158,7 @@ async function loadDeleteZoneFilters() {
     ),
     fetchPagedSupabaseRows(
       'count_sessions',
-      'id,name,created_at',
+      'id,name,status,created_at',
       query => query.order('created_at',{ascending:false}),
     ),
   ]);
@@ -36111,9 +36168,10 @@ async function loadDeleteZoneFilters() {
     if (preview) preview.innerHTML = `<span style="color:var(--accent-red)">${escapeWmsText(error.message)}</span>`;
     return;
   }
-  window._deleteFilterLocations = locationResult.data || [];
+  window._deleteFilterLocations = (locationResult.data || []).map(assignmentLocationWithDerivedMeta);
   window._deleteScopedLocations = window._deleteFilterLocations;
   _deleteSessionLocationCache.clear();
+  _deleteOnlyUncounted = false;
   const sEl = Q('del-session');
   if (sEl) {
     sEl.innerHTML = (prof?.role === 'supervisor'
@@ -36133,7 +36191,7 @@ async function getDeleteSessionLocations(sessionId) {
   if (_deleteSessionLocationCache.has(sessionId)) {
     return _deleteSessionLocationCache.get(sessionId);
   }
-  const [snapshotResult,assignmentResult] = await Promise.all([
+  const [snapshotResult,assignmentResult,annualItemResult] = await Promise.all([
     fetchPagedSupabaseRows(
       'stock_snapshot',
       'location_id,item_id',
@@ -36141,22 +36199,105 @@ async function getDeleteSessionLocations(sessionId) {
     ),
     fetchPagedSupabaseRows(
       'assignments',
-      'location_id',
+      'id,location_id,status',
+      query => query.eq('session_id',sessionId).order('location_id'),
+    ),
+    fetchPagedSupabaseRows(
+      'annual_count_job_items',
+      'job_id,location_id',
       query => query.eq('session_id',sessionId).order('location_id'),
     ),
   ]);
-  if (snapshotResult.error || assignmentResult.error) {
-    throw (snapshotResult.error || assignmentResult.error);
+  if (snapshotResult.error || assignmentResult.error || annualItemResult.error) {
+    throw (snapshotResult.error || assignmentResult.error || annualItemResult.error);
   }
+  const assignments = assignmentResult.data || [];
+  const assignmentIds = assignments.map(row => row.id).filter(Boolean);
+  const annualItems = annualItemResult.data || [];
+  const annualJobIds = [...new Set(annualItems.map(row => row.job_id).filter(Boolean))];
+  const [countResult,annualJobResult] = await Promise.all([
+    assignmentIds.length
+      ? fetchSupabaseRowsByValues('count_records','assignment_id','assignment_id',assignmentIds)
+      : Promise.resolve({data:[],error:null}),
+    annualJobIds.length
+      ? fetchSupabaseRowsByValues('annual_count_jobs','id,status','id',annualJobIds)
+      : Promise.resolve({data:[],error:null}),
+  ]);
+  if (countResult.error || annualJobResult.error) throw (countResult.error || annualJobResult.error);
+  const countRows = countResult.data || [];
+  const annualJobById = new Map((annualJobResult.data || []).map(row => [row.id,row]));
+  const annualStatusByLocation = new Map();
+  annualItems.forEach(item => {
+    const status = annualJobById.get(item.job_id)?.status || '';
+    if (!status) return;
+    const previous = annualStatusByLocation.get(item.location_id) || '';
+    const priority = {pending:1,in_progress:2,completed:3};
+    if (!previous || (priority[status] || 0) > (priority[previous] || 0)) {
+      annualStatusByLocation.set(item.location_id,status);
+    }
+  });
   const locationIds = new Set([
     ...(snapshotResult.data || []).map(row => row.location_id),
-    ...(assignmentResult.data || []).map(row => row.location_id),
+    ...assignments.map(row => row.location_id),
+    ...annualItems.map(row => row.location_id),
   ].filter(Boolean));
-  const scoped = (window._deleteFilterLocations || []).filter(location =>
-    locationIds.has(location.id)
-  );
+  const assignmentByLocation = new Map(assignments.map(row => [row.location_id,row]));
+  const countedAssignmentIds = new Set(countRows.map(row => row.assignment_id).filter(Boolean));
+  const scoped = (window._deleteFilterLocations || [])
+    .filter(location => locationIds.has(location.id))
+    .map(location => {
+      const assignment = assignmentByLocation.get(location.id) || null;
+      const annualStatus = annualStatusByLocation.get(location.id) || '';
+      const assignmentStatus = assignment?.status || '';
+      const effectiveStatus = assignmentStatus === 'pending' && annualStatus && annualStatus !== 'pending'
+        ? annualStatus
+        : (assignmentStatus || annualStatus || 'unassigned');
+      return {
+        ...location,
+        _deleteAssignmentId:assignment?.id || '',
+        _deleteAssignmentStatus:effectiveStatus,
+        _deleteHasCount:Boolean(assignment?.id && countedAssignmentIds.has(assignment.id)),
+      };
+    });
   _deleteSessionLocationCache.set(sessionId,scoped);
   return scoped;
+}
+
+function deleteWorkStatusLabel(status='') {
+  if (status === 'unassigned') return 'ยังไม่ได้มอบหมายงาน';
+  return tagInfo(status).lbl || status;
+}
+
+function deleteLocationIsNotStarted(location={}) {
+  const status = location._deleteAssignmentStatus || 'unassigned';
+  return !location._deleteHasCount && ['unassigned','pending'].includes(status);
+}
+
+function syncDeleteUncountedControl() {
+  const sessionId = Q('del-session')?.value || '';
+  const button = Q('del-uncounted-btn');
+  const status = Q('del-status');
+  if (status) status.disabled = !sessionId;
+  if (!button) return;
+  if (!sessionId) _deleteOnlyUncounted = false;
+  button.disabled = !sessionId;
+  button.setAttribute('aria-pressed',String(_deleteOnlyUncounted));
+  button.classList.toggle('btn-blue',_deleteOnlyUncounted);
+  button.classList.toggle('btn-ghost',!_deleteOnlyUncounted);
+  button.textContent = _deleteOnlyUncounted
+    ? '✓ เลือกเฉพาะงานที่ยังไม่เริ่มนับอัตโนมัติ: เปิด'
+    : '○ เลือกเฉพาะงานที่ยังไม่เริ่มนับอัตโนมัติ: ปิด';
+}
+
+function toggleDeleteOnlyUncounted() {
+  if (!Q('del-session')?.value) {
+    alert('กรุณาเลือก Session ก่อนใช้ตัวเลือกงานที่ยังไม่เริ่มนับ');
+    return;
+  }
+  _deleteOnlyUncounted = !_deleteOnlyUncounted;
+  syncDeleteUncountedControl();
+  refreshDeleteDependentFilters();
+  refreshDeleteZonePreview();
 }
 
 async function handleDeleteFilterChange(key) {
@@ -36164,6 +36305,11 @@ async function handleDeleteFilterChange(key) {
   const sessionId = Q('del-session')?.value || '';
   const preview = Q('del-preview');
   const button = Q('del-btn');
+  if (key === 'session') {
+    _deleteOnlyUncounted = false;
+    if (Q('del-status')) Q('del-status').value = '';
+  }
+  syncDeleteUncountedControl();
   _deleteFilterLoadingSession = true;
   if (preview && sessionId) preview.innerHTML = '<span style="color:var(--text-muted)">⏳ กำลังโหลด Location ของ Session...</span>';
   if (button) button.disabled = true;
@@ -36183,11 +36329,18 @@ async function handleDeleteFilterChange(key) {
 
 function refreshDeleteDependentFilters() {
   const locations = window._deleteScopedLocations || [];
+  const selectedZone = Q('del-zone')?.value || '';
   const selectedRow = Q('del-row')?.value || '';
+  const selectedStatus = Q('del-status')?.value || '';
   const code = Q('del-code')?.value.trim() || '';
-  const zoneFacetLocations = locations.filter(location => {
-    if (selectedRow && String(location.row_no ?? '') !== String(selectedRow)) return false;
+  const baseLocations = locations.filter(location => {
+    if (_deleteOnlyUncounted && !deleteLocationIsNotStarted(location)) return false;
     if (!matchesDeleteLocationCode(location.code,code)) return false;
+    return true;
+  });
+  const zoneFacetLocations = baseLocations.filter(location => {
+    if (selectedRow && String(location.row_no ?? '') !== String(selectedRow)) return false;
+    if (selectedStatus && (location._deleteAssignmentStatus || 'unassigned') !== selectedStatus) return false;
     return true;
   });
   const zone = fillDependentSelect(
@@ -36196,9 +36349,9 @@ function refreshDeleteDependentFilters() {
     'ทั้งหมด',
     Q('del-zone')?.value,
   );
-  const rowFacetLocations = locations.filter(location => {
+  const rowFacetLocations = baseLocations.filter(location => {
     if (zone && location.zone !== zone) return false;
-    if (!matchesDeleteLocationCode(location.code,code)) return false;
+    if (selectedStatus && (location._deleteAssignmentStatus || 'unassigned') !== selectedStatus) return false;
     return true;
   });
   const row = fillDependentSelect(
@@ -36207,9 +36360,22 @@ function refreshDeleteDependentFilters() {
     'ทั้งหมด',
     Q('del-row')?.value,
   );
-  const rowLocations = locations.filter(location => {
+  const statusFacetLocations = baseLocations.filter(location => {
     if (zone && location.zone !== zone) return false;
     if (row && String(location.row_no ?? '') !== String(row)) return false;
+    return true;
+  });
+  const status = fillDependentOptionSelect(
+    'del-status',
+    [...new Set(statusFacetLocations.map(location => location._deleteAssignmentStatus || 'unassigned'))]
+      .map(value => ({ value,label:deleteWorkStatusLabel(value) })),
+    'ทั้งหมด',
+    selectedStatus,
+  );
+  const rowLocations = baseLocations.filter(location => {
+    if (zone && location.zone !== zone) return false;
+    if (row && String(location.row_no ?? '') !== String(row)) return false;
+    if (status && (location._deleteAssignmentStatus || 'unassigned') !== status) return false;
     return true;
   });
   const datalist = Q('del-location-options');
@@ -36242,10 +36408,13 @@ function matchesDeleteLocationCode(locationCode, pattern) {
 function getDeleteMatchedLocations() {
   const zone = Q('del-zone')?.value || '';
   const row = Q('del-row')?.value || '';
+  const status = Q('del-status')?.value || '';
   const code = Q('del-code')?.value.trim() || '';
   return (window._deleteScopedLocations || []).filter(location => {
     if (zone && location.zone !== zone) return false;
     if (row && String(location.row_no ?? '') !== String(row)) return false;
+    if (status && (location._deleteAssignmentStatus || 'unassigned') !== status) return false;
+    if (_deleteOnlyUncounted && !deleteLocationIsNotStarted(location)) return false;
     if (!matchesDeleteLocationCode(location.code,code)) return false;
     return true;
   });
@@ -36259,7 +36428,7 @@ function buildDelLocQuery(zone, row, code, selectCols, selectOpts) {
 
 async function refreshDeleteZonePreview() {
   refreshDeleteDependentFilters();
-  const sid = Q('del-session')?.value || ''; const zone = Q('del-zone')?.value || ''; const row = Q('del-row')?.value || ''; const code = Q('del-code')?.value.trim() || '';
+  const sid = Q('del-session')?.value || ''; const zone = Q('del-zone')?.value || ''; const row = Q('del-row')?.value || ''; const status = Q('del-status')?.value || ''; const code = Q('del-code')?.value.trim() || '';
   const prev = Q('del-preview'), btn = Q('del-btn'); if (!prev || !btn) return;
   if (prof?.role === 'supervisor' && !sid) {
     prev.innerHTML = '<span style="color:var(--text-muted);font-weight:600">Supervisor กรุณาเลือก Session ก่อนลบ</span>';
@@ -36271,20 +36440,33 @@ async function refreshDeleteZonePreview() {
     btn.disabled = true;
     return;
   }
-  if (!zone && !row && !code) { prev.innerHTML = `<span style="color:var(--text-muted);font-weight:600">เลือกอย่างน้อย 1 เงื่อนไข</span>`; btn.disabled = true; return; }
+  if (!zone && !row && !status && !code && !_deleteOnlyUncounted) { prev.innerHTML = `<span style="color:var(--text-muted);font-weight:600">เลือกอย่างน้อย 1 เงื่อนไข</span>`; btn.disabled = true; return; }
   const count = getDeleteMatchedLocations().length;
   if (!count) { prev.innerHTML = `<span style="color:var(--text-muted);font-weight:600">ไม่พบ Location ที่ตรงเงื่อนไข</span>`; btn.disabled = true; } 
-  else { const scope = sid ? 'เฉพาะ Session ที่เลือก' : 'ทุก Session (ลบออกจากระบบจริง)'; prev.innerHTML = `⚠️ จะลบ <strong>${count.toLocaleString()} locations</strong> — ${scope}`; btn.disabled = false; }
+  else {
+    const scope = sid ? 'เฉพาะ Session ที่เลือก' : 'ทุก Session (ลบออกจากระบบจริง)';
+    const statusText = status ? ` · ${escapeWmsText(deleteWorkStatusLabel(status))}` : '';
+    const uncountedText = _deleteOnlyUncounted ? ' · เฉพาะงานที่ยังไม่เริ่มนับ' : '';
+    prev.innerHTML = `⚠️ จะลบ <strong>${count.toLocaleString()} locations</strong> — ${scope}${statusText}${uncountedText}`;
+    btn.disabled = false;
+  }
 }
 
 async function doDeleteByZoneRow() {
-  const sid = Q('del-session')?.value || ''; const zone = Q('del-zone')?.value || ''; const row = Q('del-row')?.value || ''; const code = Q('del-code')?.value.trim() || '';
+  const sid = Q('del-session')?.value || ''; const zone = Q('del-zone')?.value || ''; const row = Q('del-row')?.value || ''; const status = Q('del-status')?.value || ''; const code = Q('del-code')?.value.trim() || '';
   if (prof?.role === 'supervisor' && !sid) {
     alert('Supervisor กรุณาเลือก Session ก่อนลบ Location');
     return;
   }
-  if (!zone && !row && !code) return;
-  const label = [zone, row, code].filter(Boolean).join(' / '); if (!confirm(`ยืนยันลบ: "${label}"`)) return;
+  if (!zone && !row && !status && !code && !_deleteOnlyUncounted) return;
+  const label = [
+    zone,
+    row && `Row ${row}`,
+    status && deleteWorkStatusLabel(status),
+    code,
+    _deleteOnlyUncounted && 'ยังไม่เริ่มนับ',
+  ].filter(Boolean).join(' / ');
+  if (!confirm(`ยืนยันลบ: "${label}"`)) return;
   const btn = Q('del-btn'), al = Q('del-alert'); btn.disabled = true; al.innerHTML = `<div class="alert alert-blue">⏳ กำลังค้นหา Location ที่ตรงเงื่อนไข...</div>`;
   const locs = getDeleteMatchedLocations();
   if (!locs?.length) { al.innerHTML = `<div class="alert alert-amber">ไม่พบ Location ที่ตรงเงื่อนไข</div>`; btn.disabled = false; return; }
@@ -36629,6 +36811,49 @@ async function fetchImportedScopeRows(table,columns,sessionId,locationIds) {
   return output;
 }
 
+function wmsImportDetailMatchKey(row={}) {
+  return [
+    row.location_id || '',
+    row.item_id || '',
+    importCodeKey(row.license_plate),
+    importCodeKey(row.lot),
+  ].join('|');
+}
+
+function wmsImportQtyEqual(left,right) {
+  const a = left === null || left === undefined || left === '' ? null : Number(left);
+  const b = right === null || right === undefined || right === '' ? null : Number(right);
+  if (a === null || b === null) return a === b;
+  return Number.isFinite(a) && Number.isFinite(b) && Math.abs(a-b) <= 0.000001;
+}
+
+function wmsImportLocationIsProtected(assignment,countedAssignmentIds) {
+  if (!assignment) return false;
+  if (countedAssignmentIds.has(assignment.id)) return true;
+  return assignment.status !== 'pending';
+}
+
+function wmsImportChangePreview(changes,limit=8) {
+  const visible = (changes || []).slice(0,limit);
+  const lines = visible.map(change =>
+    `${change.location} · ${change.item}: OH ${change.oldOH} → ${change.newOH}${change.alChanged ? ` · AL ${change.oldAL} → ${change.newAL}` : ''}`
+  );
+  if ((changes || []).length > visible.length) lines.push(`… และอีก ${(changes.length-visible.length).toLocaleString(uiLocale())} รายการ`);
+  return lines.join('\n');
+}
+
+function wmsImportDetailChangePreview(changes,limit=6) {
+  const visible = (changes || []).slice(0,limit);
+  const lines = visible.map(change => {
+    const identity = `${change.location} · ${change.item} · LPN ${change.lpn || '—'} · Lot ${change.lot || '—'}`;
+    return change.type === 'new'
+      ? `${identity}: เพิ่มใหม่ QTY ${change.newQty}`
+      : `${identity}: QTY ${change.oldQty} → ${change.newQty}${change.metaChanged ? ' · Status/UOM เปลี่ยน' : ''}`;
+  });
+  if ((changes || []).length > visible.length) lines.push(`… และอีก ${(changes.length-visible.length).toLocaleString(uiLocale())} รายการ`);
+  return lines.join('\n');
+}
+
 async function doImportXlsx() {
   if (!canImportWms()) {
     alert('เมนู Import WMS ใช้ได้เฉพาะ Admin และ Supervisor เท่านั้น');
@@ -36720,7 +36945,7 @@ async function doImportXlsx() {
     }
 
     const snapMap = new Map();
-    const detailsList = [];
+    const importedDetailMap = new Map();
     parsedRows.forEach(row => {
       const locId = locIdMap.get(importCodeKey(row.locCode));
       const itemId = itemIdMap.get(importCodeKey(row.itemCode));
@@ -36736,8 +36961,11 @@ async function doImportXlsx() {
         });
       }
       snapMap.get(key).onhand_qty += Number(row.onhand) || 0;
+      if (snapMap.get(key).al_qty === null || snapMap.get(key).al_qty === undefined) {
+        snapMap.get(key).al_qty = row.alQty;
+      }
       if (!row.isEmptyLocation && (row.lpn || row.lot || row.invStatus || row.uom)) {
-        detailsList.push({
+        const detail = {
           session_id:sid,
           location_id:locId,
           item_id:itemId,
@@ -36746,27 +36974,185 @@ async function doImportXlsx() {
           inventory_status:row.invStatus || null,
           qty:Number(row.onhand) || 0,
           uom:row.uom || null,
-        });
+        };
+        const detailKey = wmsImportDetailMatchKey(detail);
+        if (!importedDetailMap.has(detailKey)) {
+          importedDetailMap.set(detailKey,detail);
+        } else {
+          const current = importedDetailMap.get(detailKey);
+          current.qty += detail.qty;
+          if (detail.inventory_status) current.inventory_status = detail.inventory_status;
+          if (detail.uom) current.uom = detail.uom;
+        }
       }
     });
 
     const snapList = Array.from(snapMap.values());
+    const importedDetailsList = Array.from(importedDetailMap.values());
     const importedLocationIds = [...new Set(snapList.map(row => row.location_id).filter(Boolean))];
     const BATCH = 200;
-    al.innerHTML = `<div class="alert alert-blue">⏳ กำลังบันทึก Stock Snapshot (${snapList.length.toLocaleString()} รายการ)...</div>`;
-    for (let start = 0; start < snapList.length; start += BATCH) {
-      const rows = snapList.slice(start,start + BATCH);
-      if (prof?.role === 'supervisor') {
-        await invokeWmsImportAction('upsert_snapshots',sid,{ rows });
+    al.innerHTML = `<div class="alert alert-blue">⏳ กำลังตรวจข้อมูลเดิมและสถานะการนับ...</div>`;
+    const [existingSnapshots,existingDetails,existingAssignments,existingAnnualItems] = await Promise.all([
+      fetchImportedScopeRows('stock_snapshot',['id','location_id','item_id','onhand_qty','al_qty'],sid,importedLocationIds),
+      fetchImportedScopeRows('stock_snapshot_detail',['id','location_id','item_id','license_plate','lot','inventory_status','qty','uom'],sid,importedLocationIds),
+      fetchImportedScopeRows('assignments',['id','location_id','status'],sid,importedLocationIds),
+      fetchImportedScopeRows('annual_count_job_items',['job_id','location_id'],sid,importedLocationIds),
+    ]);
+    const assignmentIds = existingAssignments.map(row => row.id).filter(Boolean);
+    const annualJobIds = [...new Set(existingAnnualItems.map(row => row.job_id).filter(Boolean))];
+    const [countResult,annualJobResult] = await Promise.all([
+      assignmentIds.length
+        ? fetchSupabaseRowsByValues('count_records','assignment_id','assignment_id',assignmentIds)
+        : Promise.resolve({data:[],error:null}),
+      annualJobIds.length
+        ? fetchSupabaseRowsByValues('annual_count_jobs','id,status','id',annualJobIds)
+        : Promise.resolve({data:[],error:null}),
+    ]);
+    if (countResult.error || annualJobResult.error) throw (countResult.error || annualJobResult.error);
+    const existingCountRows = countResult.data || [];
+    const countedAssignmentIds = new Set(existingCountRows.map(row => row.assignment_id).filter(Boolean));
+    const assignmentByLocation = new Map(existingAssignments.map(row => [row.location_id,row]));
+    const annualJobById = new Map((annualJobResult.data || []).map(row => [row.id,row]));
+    const startedAnnualLocationIds = new Set(existingAnnualItems
+      .filter(item => {
+        const status = annualJobById.get(item.job_id)?.status || 'pending';
+        return status !== 'pending';
+      })
+      .map(item => item.location_id)
+      .filter(Boolean));
+    const protectedLocationIds = new Set(importedLocationIds.filter(locationId =>
+      wmsImportLocationIsProtected(assignmentByLocation.get(locationId),countedAssignmentIds)
+      || startedAnnualLocationIds.has(locationId)
+    ));
+    const safeLocationIds = new Set(importedLocationIds.filter(locationId => !protectedLocationIds.has(locationId)));
+    const safeSnapList = snapList.filter(row => safeLocationIds.has(row.location_id));
+    const safeImportedDetails = importedDetailsList.filter(row => safeLocationIds.has(row.location_id));
+    const protectedImportRows = parsedRows.filter(row =>
+      protectedLocationIds.has(locIdMap.get(importCodeKey(row.locCode)))
+    ).length;
+
+    const existingSnapshotMap = new Map(existingSnapshots.map(row => [`${row.location_id}|${row.item_id}`,row]));
+    const locationCodeById = new Map((dbLocs || []).map(row => [row.id,row.code || row.id]));
+    const itemCodeById = new Map((dbItems || []).map(row => [row.id,row.code || row.id]));
+    const displayQty = value => value === null || value === undefined || value === ''
+      ? '—'
+      : Number(value).toLocaleString(uiLocale(),{maximumFractionDigits:2});
+    let newSnapshotCount = 0;
+    let updatedSnapshotCount = 0;
+    let unchangedSnapshotCount = 0;
+    const snapshotChanges = [];
+    safeSnapList.forEach(expected => {
+      const current = existingSnapshotMap.get(`${expected.location_id}|${expected.item_id}`);
+      if (!current) {
+        newSnapshotCount++;
+        return;
+      }
+      const ohChanged = !wmsImportQtyEqual(current.onhand_qty,expected.onhand_qty);
+      const alChanged = !wmsImportQtyEqual(current.al_qty,expected.al_qty);
+      if (ohChanged || alChanged) {
+        updatedSnapshotCount++;
+        snapshotChanges.push({
+          location:locationCodeById.get(expected.location_id) || expected.location_id,
+          item:itemCodeById.get(expected.item_id) || expected.item_id,
+          oldOH:displayQty(current.onhand_qty),
+          newOH:displayQty(expected.onhand_qty),
+          oldAL:displayQty(current.al_qty),
+          newAL:displayQty(expected.al_qty),
+          alChanged,
+        });
       } else {
-        const { error } = await sb.from('stock_snapshot')
-          .upsert(rows,{ onConflict:'session_id,location_id,item_id' });
-        if (error) throw error;
+        unchangedSnapshotCount++;
+      }
+    });
+
+    const mergedDetailMap = new Map();
+    existingDetails.filter(row => safeLocationIds.has(row.location_id)).forEach(row => {
+      const key = wmsImportDetailMatchKey(row);
+      if (!mergedDetailMap.has(key)) {
+        mergedDetailMap.set(key,{
+          session_id:sid,
+          location_id:row.location_id,
+          item_id:row.item_id,
+          license_plate:row.license_plate || null,
+          lot:row.lot || null,
+          inventory_status:row.inventory_status || null,
+          qty:0,
+          uom:row.uom || null,
+        });
+      }
+      const merged = mergedDetailMap.get(key);
+      merged.qty += Number(row.qty) || 0;
+      if (!merged.inventory_status && row.inventory_status) merged.inventory_status = row.inventory_status;
+      if (!merged.uom && row.uom) merged.uom = row.uom;
+    });
+    let newDetailCount = 0;
+    let updatedDetailCount = 0;
+    let unchangedDetailCount = 0;
+    const detailChanges = [];
+    safeImportedDetails.forEach(incoming => {
+      const key = wmsImportDetailMatchKey(incoming);
+      const current = mergedDetailMap.get(key);
+      if (!current) {
+        newDetailCount++;
+        detailChanges.push({
+          type:'new',
+          location:locationCodeById.get(incoming.location_id) || incoming.location_id,
+          item:itemCodeById.get(incoming.item_id) || incoming.item_id,
+          lpn:incoming.license_plate || '',
+          lot:incoming.lot || '',
+          newQty:displayQty(incoming.qty),
+        });
+        mergedDetailMap.set(key,{...incoming});
+        return;
+      }
+      const nextStatus = incoming.inventory_status || current.inventory_status || null;
+      const nextUom = incoming.uom || current.uom || null;
+      const qtyChanged = !wmsImportQtyEqual(current.qty,incoming.qty);
+      const metaChanged = importCodeKey(current.inventory_status) !== importCodeKey(nextStatus)
+        || importCodeKey(current.uom) !== importCodeKey(nextUom);
+      const changed = qtyChanged || metaChanged;
+      if (changed) {
+        updatedDetailCount++;
+        detailChanges.push({
+          type:'updated',
+          location:locationCodeById.get(incoming.location_id) || incoming.location_id,
+          item:itemCodeById.get(incoming.item_id) || incoming.item_id,
+          lpn:incoming.license_plate || current.license_plate || '',
+          lot:incoming.lot || current.lot || '',
+          oldQty:displayQty(current.qty),
+          newQty:displayQty(incoming.qty),
+          metaChanged,
+        });
+      }
+      else unchangedDetailCount++;
+      mergedDetailMap.set(key,{
+        ...current,
+        license_plate:incoming.license_plate || current.license_plate || null,
+        lot:incoming.lot || current.lot || null,
+        inventory_status:nextStatus,
+        qty:Number(incoming.qty) || 0,
+        uom:nextUom,
+      });
+    });
+    const mergedDetailsList = Array.from(mergedDetailMap.values());
+
+    if (safeSnapList.length) {
+      al.innerHTML = `<div class="alert alert-blue">⏳ กำลังเพิ่ม/อัปเดต Stock Snapshot (${safeSnapList.length.toLocaleString()} รายการ)...</div>`;
+      for (let start = 0; start < safeSnapList.length; start += BATCH) {
+        const rows = safeSnapList.slice(start,start + BATCH);
+        if (prof?.role === 'supervisor') {
+          await invokeWmsImportAction('upsert_snapshots',sid,{ rows });
+        } else {
+          const { error } = await sb.from('stock_snapshot')
+            .upsert(rows,{ onConflict:'session_id,location_id,item_id' });
+          if (error) throw error;
+        }
       }
     }
 
-    for (let start = 0; start < importedLocationIds.length; start += BATCH) {
-      const locationIds = importedLocationIds.slice(start,start + BATCH);
+    const safeLocationIdList = [...safeLocationIds];
+    for (let start = 0; start < safeLocationIdList.length; start += BATCH) {
+      const locationIds = safeLocationIdList.slice(start,start + BATCH);
       if (prof?.role === 'supervisor') {
         await invokeWmsImportAction('replace_detail_scope',sid,{ location_ids:locationIds });
       } else {
@@ -36777,10 +37163,10 @@ async function doImportXlsx() {
         if (error) throw error;
       }
     }
-    if (detailsList.length) {
-      al.innerHTML = `<div class="alert alert-blue">⏳ กำลังบันทึกรายละเอียด (${detailsList.length.toLocaleString()} แถว)...</div>`;
-      for (let start = 0; start < detailsList.length; start += BATCH) {
-        const rows = detailsList.slice(start,start + BATCH);
+    if (mergedDetailsList.length) {
+      al.innerHTML = `<div class="alert alert-blue">⏳ กำลังบันทึกรายละเอียด LPN/Lot แบบ Merge (${mergedDetailsList.length.toLocaleString()} แถว)...</div>`;
+      for (let start = 0; start < mergedDetailsList.length; start += BATCH) {
+        const rows = mergedDetailsList.slice(start,start + BATCH);
         if (prof?.role === 'supervisor') {
           await invokeWmsImportAction('insert_details',sid,{ rows });
         } else {
@@ -36791,64 +37177,61 @@ async function doImportXlsx() {
     }
 
     al.innerHTML = `<div class="alert alert-blue">⏳ กำลังตรวจยอดหลัง Import...</div>`;
-    let [savedSnapshots,savedDetails] = await Promise.all([
-      fetchImportedScopeRows('stock_snapshot',['id','location_id','item_id','onhand_qty'],sid,importedLocationIds),
-      fetchImportedScopeRows('stock_snapshot_detail',['id','location_id','item_id','license_plate','qty'],sid,importedLocationIds),
+    const [savedSnapshots,savedDetails] = await Promise.all([
+      fetchImportedScopeRows('stock_snapshot',['id','location_id','item_id','onhand_qty','al_qty'],sid,safeLocationIdList),
+      fetchImportedScopeRows('stock_snapshot_detail',['id','location_id','item_id','license_plate','lot','inventory_status','qty','uom'],sid,safeLocationIdList),
     ]);
-    const expectedPairKeys = new Set(snapList.map(row => `${row.location_id}|${row.item_id}`));
-    const staleSnapshotIds = savedSnapshots
-      .filter(row => !expectedPairKeys.has(`${row.location_id}|${row.item_id}`))
-      .map(row => row.id)
-      .filter(Boolean);
-    for (let start = 0; start < staleSnapshotIds.length; start += BATCH) {
-      const ids = staleSnapshotIds.slice(start,start + BATCH);
-      if (prof?.role === 'supervisor') {
-        await invokeWmsImportAction('delete_stale_snapshots',sid,{ ids });
-      } else {
-        const { error } = await sb.from('stock_snapshot')
-          .delete()
-          .eq('session_id',sid)
-          .in('id',ids);
-        if (error) throw error;
-      }
-    }
-    if (staleSnapshotIds.length) {
-      savedSnapshots = savedSnapshots.filter(row => expectedPairKeys.has(`${row.location_id}|${row.item_id}`));
-    }
-    if (savedSnapshots.length !== snapList.length) {
-      throw new Error(`ตรวจยอดหลัง Import ไม่ผ่าน: Stock Snapshot ต้องได้ ${snapList.length} รายการ แต่พบ ${savedSnapshots.length}`);
-    }
     const savedSnapshotMap = new Map(savedSnapshots.map(row => [`${row.location_id}|${row.item_id}`,row]));
-    const snapshotMismatch = snapList.find(expected => {
+    const snapshotMismatch = safeSnapList.find(expected => {
       const actual = savedSnapshotMap.get(`${expected.location_id}|${expected.item_id}`);
-      return !actual || Math.abs((Number(actual.onhand_qty) || 0) - expected.onhand_qty) > 0.000001;
+      return !actual
+        || !wmsImportQtyEqual(actual.onhand_qty,expected.onhand_qty)
+        || !wmsImportQtyEqual(actual.al_qty,expected.al_qty);
     });
-    if (snapshotMismatch) throw new Error('ตรวจยอดหลัง Import ไม่ผ่าน: Stock Snapshot หรือ OH ไม่ตรงกับไฟล์');
-    if (savedDetails.length !== detailsList.length) {
-      throw new Error(`ตรวจยอดหลัง Import ไม่ผ่าน: รายละเอียดต้องได้ ${detailsList.length} แถว แต่พบ ${savedDetails.length}`);
-    }
-    const expectedDistinctLP = new Set(detailsList.map(row => importCodeKey(row.license_plate))).size;
-    const actualDistinctLP = new Set(savedDetails.map(row => importCodeKey(row.license_plate))).size;
-    if (actualDistinctLP !== expectedDistinctLP) {
-      throw new Error(`ตรวจยอดหลัง Import ไม่ผ่าน: License Plate ต้องได้ ${expectedDistinctLP} แต่พบ ${actualDistinctLP}`);
-    }
+    if (snapshotMismatch) throw new Error('ตรวจยอดหลัง Import ไม่ผ่าน: Stock Snapshot, OH หรือ AL ไม่ตรงกับไฟล์');
+    const savedDetailMap = new Map();
+    savedDetails.forEach(row => {
+      const key = wmsImportDetailMatchKey(row);
+      savedDetailMap.set(key,(savedDetailMap.get(key) || 0) + (Number(row.qty) || 0));
+    });
+    const detailMismatch = mergedDetailsList.find(expected =>
+      !savedDetailMap.has(wmsImportDetailMatchKey(expected))
+      || !wmsImportQtyEqual(savedDetailMap.get(wmsImportDetailMatchKey(expected)),expected.qty)
+    );
+    if (detailMismatch) throw new Error('ตรวจยอดหลัง Import ไม่ผ่าน: รายละเอียด Location + LPN + Item + Lot ไม่ตรงกับข้อมูลที่บันทึก');
 
     const metrics = analysis.metrics;
-    al.innerHTML = `<div class="alert alert-green" style="line-height:1.65">
-      ✅ Import และตรวจยอดสำเร็จ<br>
-      Item ${metrics.items.toLocaleString()} · Location ${metrics.locations.toLocaleString()} ·
-      License Plate ${metrics.licensePlates.toLocaleString()} · SUM OH ${Number(metrics.sumOH).toLocaleString(uiLocale(),{ maximumFractionDigits:2 })}
-      ${metrics.emptyLocations ? `<br>Location ว่างที่สร้างงานนับได้ ${metrics.emptyLocations.toLocaleString()} Location` : ''}
+    const ohChangePreview = wmsImportChangePreview(snapshotChanges);
+    const detailChangePreview = wmsImportDetailChangePreview(detailChanges);
+    const changePreview = [
+      ohChangePreview && `OH/AL ที่เปลี่ยน:\n${ohChangePreview}`,
+      detailChangePreview && `LPN/Lot ที่เปลี่ยน:\n${detailChangePreview}`,
+    ].filter(Boolean).join('\n\n');
+    al.innerHTML = `<div class="alert alert-green" style="line-height:1.7">
+      ✅ Import แบบ Merge และตรวจยอดสำเร็จ<br>
+      อ่านจากไฟล์ ${metrics.rows.toLocaleString(uiLocale())} แถว · ${metrics.locations.toLocaleString(uiLocale())} Location · SUM OH ${Number(metrics.sumOH).toLocaleString(uiLocale(),{maximumFractionDigits:2})}<br>
+      เพิ่ม Snapshot ใหม่ <strong>${newSnapshotCount.toLocaleString(uiLocale())}</strong> ·
+      อัปเดต OH/AL <strong>${updatedSnapshotCount.toLocaleString(uiLocale())}</strong> ·
+      ค่าเดิมไม่เปลี่ยน <strong>${unchangedSnapshotCount.toLocaleString(uiLocale())}</strong><br>
+      เพิ่ม LPN/Lot ใหม่ <strong>${newDetailCount.toLocaleString(uiLocale())}</strong> ·
+      อัปเดต LPN/Lot <strong>${updatedDetailCount.toLocaleString(uiLocale())}</strong> ·
+      ข้าม Location ที่เริ่มนับแล้ว <strong>${protectedLocationIds.size.toLocaleString(uiLocale())}</strong>
+      ${changePreview ? `<div style="margin-top:10px;white-space:pre-line;font-size:11px">${escapeWmsText(changePreview)}</div>` : ''}
     </div>`;
-    showActionSuccess('Import ข้อมูลและตรวจสอบยอดหลังบันทึกครบถ้วนแล้ว', {
-      title:'Import สำเร็จ',
+    showActionSuccess('Import ซ้ำแบบปลอดภัยและตรวจสอบข้อมูลเรียบร้อยแล้ว', {
+      title:'Import / Update WMS สำเร็จ',
+      detail:changePreview || 'ไม่พบ OH/AL ที่เปลี่ยนแปลง รายการใหม่ถูกเพิ่มและรายการเดิมยังคงอยู่',
       facts:[
-        {label:'Item',value:metrics.items.toLocaleString(uiLocale())},
-        {label:'Location',value:metrics.locations.toLocaleString(uiLocale())},
-        {label:'License Plate',value:metrics.licensePlates.toLocaleString(uiLocale())},
-        {label:'SUM OH',value:Number(metrics.sumOH).toLocaleString(uiLocale(),{maximumFractionDigits:2})},
+        {label:'Snapshot ใหม่',value:newSnapshotCount.toLocaleString(uiLocale())},
+        {label:'OH/AL อัปเดต',value:updatedSnapshotCount.toLocaleString(uiLocale())},
+        {label:'LPN/Lot ใหม่',value:newDetailCount.toLocaleString(uiLocale())},
+        {label:'LPN/Lot อัปเดต',value:updatedDetailCount.toLocaleString(uiLocale())},
+        {label:'ไม่เปลี่ยน',value:(unchangedSnapshotCount+unchangedDetailCount).toLocaleString(uiLocale())},
+        {label:'ข้ามหลังเริ่มนับ',value:`${protectedLocationIds.size.toLocaleString(uiLocale())} Location · ${protectedImportRows.toLocaleString(uiLocale())} แถว`},
       ],
     });
+    _deleteSessionLocationCache.delete(sid);
+    invalidateAssignmentWorkspaceCache(sid);
     _xlsxRawRows = null;
     _xlsxParsed = null;
     _xlsxImportAnalysis = null;
