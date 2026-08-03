@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v185 - Reliable Handheld Scan and Count Autofocus</title>
+<title>Cycle Count v186 - Handheld Scan Decoder and Round Autofocus</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -16848,7 +16848,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v185-reliable-handheld-scan-focus';
+window.__CYCLE_COUNT_BUILD__ = 'v186-handheld-decoder-round-focus';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -23705,6 +23705,11 @@ let _hardwareCapturePollTimer = null;
 let _hardwareCapturePollValue = '';
 let _hardwareCapturePollChangedAt = 0;
 let _hardwareScanNavigationPending = false;
+let _hardwareScanLastRawEventAt = 0;
+let _hardwareScanLastAppendedCharacter = '';
+let _hardwareScanLastAppendedSource = '';
+let _hardwareScanLastAppendedAt = 0;
+let _hardwareScanLastAppendedTarget = null;
 
 function hardwareLaserCaptureHtml(id,context,instruction) {
   // Rugged scanners that work through an Android IME need a real text input
@@ -23740,6 +23745,10 @@ function resetHardwareScanBuffer() {
   _hardwareScanMaxGap = 0;
   _hardwareScanTarget = null;
   _hardwareScanNumberOriginalValue = '';
+  _hardwareScanLastAppendedCharacter = '';
+  _hardwareScanLastAppendedSource = '';
+  _hardwareScanLastAppendedAt = 0;
+  _hardwareScanLastAppendedTarget = null;
 }
 
 function commitHardwareScanBufferWithoutSuffix() {
@@ -23853,9 +23862,18 @@ function focusHardwareScanTarget(targetOrId,{ select=true }={}) {
 }
 
 function isNarrowHandheldTerminal() {
+  const viewportWidth = window.visualViewport?.width || window.innerWidth || 0;
+  const screenWidth = Number(window.screen?.width || 0);
+  const screenHeight = Number(window.screen?.height || 0);
+  const shortScreenSide = screenWidth && screenHeight
+    ? Math.min(screenWidth,screenHeight)
+    : (screenWidth || screenHeight || 0);
+  const androidHandheld = /Android/i.test(navigator.userAgent)
+    && (viewportWidth <= 1100 || (shortScreenSide > 0 && shortScreenSide <= 900));
   return Boolean(
     window.matchMedia?.('(max-width:760px)').matches
-    || (/Android/i.test(navigator.userAgent) && window.innerWidth <= 900)
+    || viewportWidth <= 760
+    || androidHandheld
   );
 }
 
@@ -23890,8 +23908,16 @@ function prepareHandheldCountEntry({ force=false }={}) {
   }
   if (S?.page !== 'c-count') return false;
   focusHardwareScanTarget(firstInput);
+  // Android rugged terminals can report an element as active without moving
+  // the hardware keyboard cursor. A click + second focus binds the physical
+  // keypad to this Count field for rounds 1, 2 and 3 alike.
+  try { firstInput.click(); } catch (_) {}
+  focusHardwareScanTarget(firstInput);
+  try {
+    firstInput.setSelectionRange?.(0,String(firstInput.value || '').length);
+  } catch (_) {}
   if (isTabletUiDevice()) openCountNumericKeypad(firstInput);
-  firstInput.scrollIntoView({ block:'center',behavior:'smooth' });
+  firstInput.scrollIntoView({ block:'center',behavior:'auto' });
   return document.activeElement === firstInput;
 }
 
@@ -23903,11 +23929,17 @@ function scheduleHandheldCountEntryFocus() {
   // cover Android layout/IME timing, but stop as soon as a Count field owns
   // focus so the user's position is never moved.
   prepareHandheldCountEntry({ force:true });
-  [60,220,620,1200].forEach(delay => {
+  requestAnimationFrame(() => {
+    if (token !== _handheldCountFocusToken || S?.page !== 'c-count') return;
+    if (!document.activeElement?.classList?.contains('cqty')) {
+      prepareHandheldCountEntry({ force:true });
+    }
+  });
+  [60,180,420,850,1500,2500].forEach(delay => {
     _handheldCountFocusTimers.push(setTimeout(() => {
       if (token !== _handheldCountFocusToken || S?.page !== 'c-count') return;
       if (document.activeElement?.classList?.contains('cqty')) return;
-      prepareHandheldCountEntry({ force:false });
+      prepareHandheldCountEntry({ force:true });
     },delay));
   });
 }
@@ -24097,12 +24129,32 @@ function hardwareScanTerminalEvent(event) {
     || legacyCode === 13 || legacyCode === 9;
 }
 
+function hardwareScanLegacyCharacter(event) {
+  const legacyCode = Number(event?.which || event?.keyCode || event?.charCode || 0);
+  if (legacyCode >= 48 && legacyCode <= 57) return String.fromCharCode(legacyCode);
+  if (legacyCode >= 65 && legacyCode <= 90) return String.fromCharCode(legacyCode);
+  if (legacyCode >= 96 && legacyCode <= 105) return String(legacyCode - 96);
+  const legacyCharacters = {
+    32:' ', 106:'*', 107:'+', 109:'-', 110:'.', 111:'/',
+    173:'-', 186:';', 187:'=', 188:',', 189:'-', 190:'.',
+    191:'/', 192:'`', 219:'[', 220:'\\', 221:']', 222:"'",
+  };
+  return legacyCharacters[legacyCode] || '';
+}
+
 function hardwareScanCharacterFromEvent(event) {
   const key = String(event?.key || '');
-  if (key.length === 1) return key;
+  const legacyCharacter = hardwareScanLegacyCharacter(event);
+  const unreliableAndroidKey = event?.isComposing
+    || ['Unidentified','Process','Dead'].includes(key);
 
-  // Android keyboard-wedge services sometimes report key="Unidentified"
-  // while still exposing a useful KeyboardEvent.code or legacy keyCode.
+  // The terminal shown in the field test reports code="KeyA" for every
+  // barcode character. Never trust KeyboardEvent.code while key is unknown;
+  // use the real legacy/keypress value or the text inserted into the field.
+  if (unreliableAndroidKey) return legacyCharacter;
+  if (key.length === 1) return key;
+  if (legacyCharacter) return legacyCharacter;
+
   const code = String(event?.code || '');
   if (/^Key[A-Z]$/.test(code)) return code.slice(3);
   if (/^Digit[0-9]$/.test(code)) return code.slice(5);
@@ -24114,18 +24166,7 @@ function hardwareScanCharacterFromEvent(event) {
     BracketRight:']', Backquote:'`', Space:' ', NumpadDivide:'/',
     NumpadMultiply:'*',
   };
-  if (codeCharacters[code] !== undefined) return codeCharacters[code];
-
-  const legacyCode = Number(event?.which || event?.keyCode || event?.charCode || 0);
-  if (legacyCode >= 48 && legacyCode <= 57) return String.fromCharCode(legacyCode);
-  if (legacyCode >= 65 && legacyCode <= 90) return String.fromCharCode(legacyCode);
-  if (legacyCode >= 96 && legacyCode <= 105) return String(legacyCode - 96);
-  const legacyCharacters = {
-    32:' ', 106:'*', 107:'+', 109:'-', 110:'.', 111:'/',
-    173:'-', 186:';', 187:'=', 188:',', 189:'-', 190:'.',
-    191:'/', 192:'`', 219:'[', 220:'\\', 221:']', 222:"'",
-  };
-  return legacyCharacters[legacyCode] || '';
+  return codeCharacters[code] || '';
 }
 
 function commitHardwareCaptureTarget(target,fallbackValue='') {
@@ -24149,12 +24190,64 @@ function scheduleHardwareCaptureCommit(target,fallbackValue='',delay=HANDHELD_SC
   return true;
 }
 
+function appendHardwareScanCharacter(target,scanCharacter,source='keydown') {
+  if (!scanCharacter) return false;
+  const numericTarget = Boolean(target?.matches?.('input[type="number"]'));
+  const captureTarget = Boolean(target?.dataset?.hwScanCapture);
+  const now = performance.now();
+
+  // keydown, keypress and keyup can describe the same physical character.
+  // Drop only a cross-event duplicate; repeated characters from the barcode
+  // itself (for example 001) remain intact because they share one source.
+  const crossEventDuplicate = source !== _hardwareScanLastAppendedSource
+    && scanCharacter === _hardwareScanLastAppendedCharacter
+    && target === _hardwareScanLastAppendedTarget
+    && now - _hardwareScanLastAppendedAt < 100;
+  if (crossEventDuplicate) return false;
+
+  const sameTarget = !_hardwareScanTarget || _hardwareScanTarget === target;
+  const gap = _hardwareScanLastKeyAt ? now - _hardwareScanLastKeyAt : 0;
+  if (!sameTarget || (gap && gap > HANDHELD_SCAN_CONFIG.maxInterKeyMs)) resetHardwareScanBuffer();
+  if (!_hardwareScanStartedAt) {
+    _hardwareScanStartedAt = now;
+    if (numericTarget) _hardwareScanNumberOriginalValue = target?.value || '';
+  }
+  if (_hardwareScanLastKeyAt) {
+    _hardwareScanMaxGap = Math.max(_hardwareScanMaxGap,now - _hardwareScanLastKeyAt);
+  }
+  _hardwareScanLastKeyAt = now;
+  _hardwareScanTarget = target;
+  _hardwareScanBuffer += scanCharacter;
+  _hardwareScanLastAppendedCharacter = scanCharacter;
+  _hardwareScanLastAppendedSource = source;
+  _hardwareScanLastAppendedAt = now;
+  _hardwareScanLastAppendedTarget = target;
+
+  if (captureTarget) {
+    clearTimeout(_hardwareScanCommitTimer);
+    _hardwareScanCommitTimer = setTimeout(() => {
+      if (commitHardwareCaptureTarget(target)) return;
+      commitHardwareScanBufferWithoutSuffix();
+    },HANDHELD_SCAN_CONFIG.inputCommitDelayMs);
+    return true;
+  }
+  clearTimeout(_hardwareScanCommitTimer);
+  _hardwareScanCommitTimer = setTimeout(commitHardwareScanBufferWithoutSuffix,140);
+  return true;
+}
+
 function handleHardwareLaserKeydown(event) {
   if (!hardwareScanOperationalPage() || Q('scanOverlay')) return;
   if (event.ctrlKey || event.altKey || event.metaKey) return;
   const target = event.target instanceof HTMLElement ? event.target : null;
   const numericTarget = Boolean(target?.matches('input[type="number"]'));
   const captureTarget = Boolean(target?.dataset?.hwScanCapture);
+  const terminalKey = hardwareScanTerminalEvent(event);
+  const unknownWedgeKey = ['Unidentified','Process'].includes(String(event.key || ''))
+    || Number(event.which || event.keyCode || 0) === 229;
+  if (!terminalKey && (captureTarget || unknownWedgeKey)) {
+    _hardwareScanLastRawEventAt = Date.now();
+  }
   if (event.isComposing && !captureTarget) return;
   if (target?.matches('textarea,select,[contenteditable="true"]')) {
     resetHardwareScanBuffer();
@@ -24165,8 +24258,20 @@ function handleHardwareLaserKeydown(event) {
     resetHardwareScanBuffer();
     return;
   }
-  const terminalKey = hardwareScanTerminalEvent(event);
   if (terminalKey) {
+    const recentScannerActivity = Date.now() - _hardwareScanLastRawEventAt < 1800;
+    const suppressTaskTerminator = S?.page === 'c-tasks' && (
+      captureTarget
+      || _hardwareScanBuffer.length > 0
+      || (isNarrowHandheldTerminal() && recentScannerActivity)
+    );
+    // Scanner suffix Enter/OK must never activate the currently focused UI
+    // button. This was the reason a Location scan could open "เจองานเพิ่ม".
+    if (suppressTaskTerminator) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+    }
     clearTimeout(_hardwareScanInputCommitTimer);
     _hardwareScanInputCommitTimer = null;
     const elapsed = _hardwareScanStartedAt ? performance.now() - _hardwareScanStartedAt : 0;
@@ -24191,40 +24296,45 @@ function handleHardwareLaserKeydown(event) {
       event.preventDefault();
       event.stopPropagation();
       routeHardwareLaserScan(candidate,target);
+    } else if (suppressTaskTerminator) {
+      setTimeout(() => focusHardwareScanTarget('task_hardware_scan'),40);
     }
     resetHardwareScanBuffer();
+    _hardwareScanLastRawEventAt = 0;
     return;
   }
   const scanCharacter = hardwareScanCharacterFromEvent(event);
   if (!scanCharacter || (event.repeat && !captureTarget)) return;
-  const now = performance.now();
-  const sameTarget = !_hardwareScanTarget || _hardwareScanTarget === target;
-  const gap = _hardwareScanLastKeyAt ? now - _hardwareScanLastKeyAt : 0;
-  if (!sameTarget || (gap && gap > HANDHELD_SCAN_CONFIG.maxInterKeyMs)) resetHardwareScanBuffer();
-  if (!_hardwareScanStartedAt) {
-    _hardwareScanStartedAt = now;
-    if (numericTarget) _hardwareScanNumberOriginalValue = target.value || '';
-  }
-  if (_hardwareScanLastKeyAt) _hardwareScanMaxGap = Math.max(_hardwareScanMaxGap,now - _hardwareScanLastKeyAt);
-  _hardwareScanLastKeyAt = now;
-  _hardwareScanTarget = target;
-  _hardwareScanBuffer += scanCharacter;
-  // Allow the dedicated capture field to retain every character. Older builds
-  // prevented the default key action, so a slow scanner could leave only a
-  // partial timing buffer and Location navigation never ran.
-  if (captureTarget) {
-    clearTimeout(_hardwareScanCommitTimer);
-    _hardwareScanCommitTimer = setTimeout(() => {
-      if (commitHardwareCaptureTarget(target)) return;
-      commitHardwareScanBufferWithoutSuffix();
-    },HANDHELD_SCAN_CONFIG.inputCommitDelayMs);
-    return;
-  }
-  clearTimeout(_hardwareScanCommitTimer);
-  _hardwareScanCommitTimer = setTimeout(commitHardwareScanBufferWithoutSuffix,140);
+  appendHardwareScanCharacter(target,scanCharacter,'keydown');
 }
 
 document.addEventListener('keydown',handleHardwareLaserKeydown,true);
+function handleHardwareLaserSecondaryKeyEvent(event,source) {
+  if (!hardwareScanOperationalPage() || Q('scanOverlay') || hardwareScanTerminalEvent(event)) return;
+  if (event.ctrlKey || event.altKey || event.metaKey) return;
+  const target = event.target instanceof HTMLElement ? event.target : null;
+  const numericTarget = Boolean(target?.matches('input[type="number"]'));
+  const captureTarget = Boolean(target?.dataset?.hwScanCapture);
+  const scanTarget = Boolean(captureTarget || target?.dataset?.hwScanRole);
+  if (hardwareScanEditableTarget(target) && !scanTarget && !numericTarget) return;
+
+  if (captureTarget && source === 'keyup') {
+    const fieldValue = normalizeHardwareScanValue(target.value || '');
+    if (fieldValue.length >= HANDHELD_SCAN_CONFIG.minLength) {
+      scheduleHardwareCaptureCommit(target,fieldValue);
+    }
+  }
+  const scanCharacter = hardwareScanCharacterFromEvent(event);
+  if (!scanCharacter) return;
+  _hardwareScanLastRawEventAt = Date.now();
+  appendHardwareScanCharacter(target,scanCharacter,source);
+}
+document.addEventListener('keypress',event => {
+  handleHardwareLaserSecondaryKeyEvent(event,'keypress');
+},true);
+document.addEventListener('keyup',event => {
+  handleHardwareLaserSecondaryKeyEvent(event,'keyup');
+},true);
 document.addEventListener('input',event => {
   const target = event.target instanceof HTMLElement ? event.target : null;
   if (!hardwareScanOperationalPage() || !target?.dataset?.hwScanCapture) return;
