@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v183 - Reliable Handheld Scan and Round Focus</title>
+<title>Cycle Count v184 - Handheld Direct Open and Count Autofocus</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -16761,7 +16761,7 @@ body.login-page-active .lcard {
   }
 }
 
-/* v183 — Reliable rugged-handheld scan routing and count-round autofocus. */
+/* v184 — Rugged-handheld direct task open and persistent count-round autofocus. */
 @media (max-width:760px) {
   .count-handheld-page .handheld-laser-bar {
     display:none !important;
@@ -16778,7 +16778,7 @@ body.login-page-active .lcard {
 }
 </style>
 </head>
-<body data-build="v183-handheld-scan-round-focus">
+<body data-build="v184-handheld-direct-open-focus">
 <div id="app"></div>
 
 <script>
@@ -16848,7 +16848,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v183-handheld-scan-round-focus';
+window.__CYCLE_COUNT_BUILD__ = 'v184-handheld-direct-open-focus';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -19638,7 +19638,7 @@ function applyBrandingSettings(settings, persistLocal = true) {
     const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
     root.setProperty(`--theme-${cssKey}`, uiBranding[key]);
   });
-  document.title = `${uiBranding.systemName} v183`;
+  document.title = `${uiBranding.systemName} v184`;
   if (persistLocal) {
     try { localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(uiBranding)); } catch (_) {}
   }
@@ -21079,7 +21079,7 @@ async function protectedFunctionHeaders() {
   return {
     Authorization: `Bearer ${session.access_token}`,
     apikey: SUPA_KEY,
-    'x-client-info': 'cycle-count-v183',
+    'x-client-info': 'cycle-count-v184',
   };
 }
 
@@ -23698,8 +23698,17 @@ let _hardwareScanFeedbackTimer = null;
 let _hardwareScanCommitTimer = null;
 let _hardwareScanInputCommitTimer = null;
 let _handheldCountFocusTimers = [];
+let _handheldCountFocusToken = 0;
+let _hardwareCapturePollTimer = null;
+let _hardwareCapturePollValue = '';
+let _hardwareCapturePollChangedAt = 0;
 
 function hardwareLaserCaptureHtml(id,context,instruction) {
+  // Rugged scanners that work through an Android IME need a real text input
+  // connection. inputmode="none" prevents several scanner services from
+  // injecting the decoded Location even when the field appears focused.
+  const captureInputMode = isNarrowHandheldTerminal() ? 'text' : 'none';
+  const shouldAutofocus = context === 'task-location';
   return `<div class="handheld-laser-bar" data-i18n-skip>
     <span class="handheld-laser-icon">${barcodeScanIconSvg()}</span>
     <span class="handheld-laser-copy">
@@ -23708,7 +23717,9 @@ function hardwareLaserCaptureHtml(id,context,instruction) {
     </span>
     <input class="handheld-laser-input" id="${escapeWmsText(id)}"
       data-hw-scan-capture="true" data-hw-scan-context="${escapeWmsText(context)}"
-      inputmode="none" autocomplete="off" autocapitalize="characters" spellcheck="false"
+      inputmode="${captureInputMode}" enterkeyhint="go" virtualkeyboardpolicy="manual"
+      ${shouldAutofocus ? 'autofocus data-auto-hardware-focus="true"' : ''}
+      autocomplete="off" autocapitalize="characters" spellcheck="false"
       aria-label="${escapeWmsText(uiCopy('ช่องรับข้อมูลจากเลเซอร์ Handheld','Handheld Laser Input'))}"
       placeholder="${escapeWmsText(uiCopy('กดปุ่มยิง Barcode ได้ทันที','Press the Hardware Scan Button'))}"
       onfocus="this.select()">
@@ -23823,9 +23834,12 @@ function handheldScanFeedback(kind,title,value='',detail='') {
 
 function focusHardwareScanTarget(targetOrId,{ select=true }={}) {
   const target = typeof targetOrId === 'string' ? Q(targetOrId) : targetOrId;
-  if (!target || target.disabled || target.offsetParent === null) return false;
+  if (!target || target.disabled || target.hidden || target.closest?.('[hidden]')) return false;
   try { target.focus({ preventScroll:true }); } catch (_) { target.focus(); }
   if (select) target.select?.();
+  if (target.dataset?.hwScanCapture && isNarrowHandheldTerminal()) {
+    try { navigator.virtualKeyboard?.hide?.(); } catch (_) {}
+  }
   return true;
 }
 
@@ -23837,6 +23851,7 @@ function isNarrowHandheldTerminal() {
 }
 
 function clearHandheldCountFocusTimers() {
+  _handheldCountFocusToken += 1;
   _handheldCountFocusTimers.forEach(timer => clearTimeout(timer));
   _handheldCountFocusTimers = [];
 }
@@ -23844,13 +23859,15 @@ function clearHandheldCountFocusTimers() {
 function prepareHandheldCountEntry({ force=false }={}) {
   if (!isNarrowHandheldTerminal() || S?.page !== 'c-count') return false;
   const inputs = [...document.querySelectorAll('.count-handheld-page .cqty')]
-    .filter(input => !input.disabled && input.offsetParent !== null);
+    .filter(input => !input.disabled && !input.hidden && !input.closest('[hidden]'));
   inputs.forEach(input => {
     input.setAttribute('inputmode','none');
     input.setAttribute('enterkeyhint','next');
     input.setAttribute('data-handheld-count-entry','true');
   });
-  const firstInput = inputs.find(input => String(input.value || '').trim() === '') || inputs[0];
+  const firstInput = inputs.find(input => input.dataset.countInitialFocus === 'true')
+    || inputs.find(input => String(input.value || '').trim() === '')
+    || inputs[0];
   if (!firstInput) return false;
   const active = document.activeElement;
   if (!force && active && active !== document.body && active !== document.documentElement) {
@@ -23861,23 +23878,66 @@ function prepareHandheldCountEntry({ force=false }={}) {
   if (S?.page !== 'c-count') return false;
   focusHardwareScanTarget(firstInput);
   firstInput.scrollIntoView({ block:'center',behavior:'smooth' });
-  return true;
+  return document.activeElement === firstInput;
 }
 
 function scheduleHandheldCountEntryFocus() {
   clearHandheldCountFocusTimers();
   if (!isNarrowHandheldTerminal() || S?.page !== 'c-count') return;
-  [90,340,820].forEach((delay,index) => {
+  const token = _handheldCountFocusToken;
+  // First attempt is synchronous with the completed render. Further attempts
+  // cover Android layout/IME timing, but stop as soon as a Count field owns
+  // focus so the user's position is never moved.
+  prepareHandheldCountEntry({ force:true });
+  [60,220,620,1200].forEach(delay => {
     _handheldCountFocusTimers.push(setTimeout(() => {
-      if (S?.page !== 'c-count') return;
-      prepareHandheldCountEntry({ force:index === 0 });
+      if (token !== _handheldCountFocusToken || S?.page !== 'c-count') return;
+      if (document.activeElement?.classList?.contains('cqty')) return;
+      prepareHandheldCountEntry({ force:false });
     },delay));
   });
+}
+
+function stopHardwareCapturePolling() {
+  clearInterval(_hardwareCapturePollTimer);
+  _hardwareCapturePollTimer = null;
+  _hardwareCapturePollValue = '';
+  _hardwareCapturePollChangedAt = 0;
+}
+
+function startHardwareCapturePolling(targetId) {
+  stopHardwareCapturePolling();
+  if (!isNarrowHandheldTerminal() || !targetId) return;
+  _hardwareCapturePollTimer = setInterval(() => {
+    if (!hardwareScanOperationalPage() || S?.page === 'c-count') {
+      stopHardwareCapturePolling();
+      return;
+    }
+    const target = Q(targetId);
+    if (!target) {
+      stopHardwareCapturePolling();
+      return;
+    }
+    const value = normalizeHardwareScanValue(target.value || '');
+    if (value !== _hardwareCapturePollValue) {
+      _hardwareCapturePollValue = value;
+      _hardwareCapturePollChangedAt = Date.now();
+      return;
+    }
+    if (value.length < HANDHELD_SCAN_CONFIG.minLength || !_hardwareCapturePollChangedAt) return;
+    if (Date.now() - _hardwareCapturePollChangedAt < HANDHELD_SCAN_CONFIG.inputCommitDelayMs + 80) return;
+    target.value = '';
+    resetHardwareScanBuffer();
+    _hardwareCapturePollValue = '';
+    _hardwareCapturePollChangedAt = 0;
+    routeHardwareLaserScan(value,target);
+  },100);
 }
 
 function activateHardwareLaserScanner() {
   if (!isNarrowHandheldTerminal()) return;
   if (S?.page === 'c-count') {
+    stopHardwareCapturePolling();
     scheduleHandheldCountEntryFocus();
     return;
   }
@@ -23887,7 +23947,13 @@ function activateHardwareLaserScanner() {
     : S?.page === 'c-found'
       ? 'found_hardware_scan'
       : '';
-  if (targetId) setTimeout(() => focusHardwareScanTarget(targetId),120);
+  if (targetId) {
+    startHardwareCapturePolling(targetId);
+    // Focus immediately after render and once more after mobile layout settles.
+    focusHardwareScanTarget(targetId);
+    setTimeout(() => focusHardwareScanTarget(targetId),120);
+    setTimeout(() => restoreHandheldLocationFocus(),520);
+  }
 }
 
 function restoreHandheldLocationFocus() {
@@ -24485,23 +24551,50 @@ function onTaskLocationScanned(text,fromHardwareLaser=false) {
   const code = normalizeHardwareScanValue(text);
   const codeKey = hardwareScanCompareKey(code);
   const tasks = window._myTasks || [];
-  const match = tasks.find(a => hardwareScanCompareKey(a.locations?.code || '') === codeKey);
+  const selectedSessions = new Set(
+    normalizeMultiFilterValues(S?._mtSession).map(hardwareScanCompareKey)
+  );
+  const taskMatches = tasks.filter(a =>
+    hardwareScanCompareKey(a.locations?.code || '') === codeKey
+  );
+  const actionableTasks = taskMatches.filter(a =>
+    !['completed','approved'].includes(a.status)
+  );
+  // The same Location may exist in several Sessions. Prefer the selected
+  // Session, then an Active Session, instead of stopping at an old completed
+  // assignment that happens to be first in the array.
+  const match = actionableTasks.find(a => selectedSessions.size && (
+      selectedSessions.has(hardwareScanCompareKey(a.session_id || ''))
+      || selectedSessions.has(hardwareScanCompareKey(a.count_sessions?.name || ''))
+    ))
+    || actionableTasks.find(a => a.count_sessions?.status === 'active')
+    || actionableTasks[0];
   if (match) {
-    if (['completed','approved'].includes(match.status)) {
-      handheldScanFeedback('warning',uiCopy('Location นี้นับเสร็จแล้ว','Location Already Completed'),code,uiCopy('เลือก Location อื่นเพื่อเริ่มงาน','Scan another Location to continue'));
-      setTimeout(() => focusHardwareScanTarget('task_hardware_scan'),80);
-      return;
-    }
     handheldScanFeedback('success',uiCopy('พบ Location ที่ได้รับมอบหมาย','Assigned Location Found'),code,uiCopy('กำลังเปิดหน้าบันทึกการนับ','Opening the physical count page'));
     go('c-count', { aid: match.id });
     return;
   }
-  const annualItem = (window._myAnnualJobItems || []).find(item =>
+  const annualJobsById = Object.fromEntries(
+    (window._myAnnualJobs || []).map(job => [String(job.id),job])
+  );
+  const annualMatches = (window._myAnnualJobItems || []).filter(item =>
     hardwareScanCompareKey(item.locations?.code || '') === codeKey
   );
+  const annualItem = annualMatches.find(item => {
+    const job = annualJobsById[String(item.job_id)];
+    return job && job.status !== 'completed' && (!selectedSessions.size || (
+      selectedSessions.has(hardwareScanCompareKey(job.session_id || ''))
+      || selectedSessions.has(hardwareScanCompareKey(job.count_sessions?.name || ''))
+    ));
+  }) || annualMatches.find(item => annualJobsById[String(item.job_id)]?.status !== 'completed');
   if (annualItem) {
     handheldScanFeedback('success',uiCopy('พบ Location ใน JOB','Job Location Found'),code,uiCopy('กำลังเปิดหน้าบันทึกการนับ','Opening the physical count page'));
     openAnnualJobCount(annualItem.job_id,annualItem.id);
+    return;
+  }
+  if (taskMatches.length || annualMatches.length) {
+    handheldScanFeedback('warning',uiCopy('Location นี้นับเสร็จแล้ว','Location Already Completed'),code,uiCopy('เลือก Location อื่นเพื่อเริ่มงาน','Scan another Location to continue'));
+    setTimeout(() => focusHardwareScanTarget('task_hardware_scan'),80);
     return;
   }
   handheldScanFeedback('error',uiCopy('ไม่พบ Location ในงานที่ได้รับมอบหมาย','Location Not Found in Assigned Work'),code,uiCopy('ตรวจสอบรหัสหรือแจ้งหัวหน้างาน','Check the code or contact your supervisor'));
@@ -25245,6 +25338,9 @@ async function loadCCount() {
       .map(detail => normalizeHardwareScanValue(detail.license_plate || ''))
       .filter(Boolean)
       .join('|');
+    const initialCountFocusAttr = items === ''
+      ? 'autofocus data-count-initial-focus="true"'
+      : '';
     items += `<div class="citem-wrap"
       data-hw-item-id="${escapeWmsText(String(it.id))}"
       data-hw-item-code="${escapeWmsText(it?.code || '')}"
@@ -25302,6 +25398,7 @@ async function loadCCount() {
           <span class="count-qty-label">COUNT R${round}</span>
           <input type="text" class="cqty ${v !== undefined ? 'ok' : ''}"
             id="q_${it.id}" inputmode="decimal" enterkeyhint="next"
+            ${initialCountFocusAttr}
             pattern="[0-9]*[.]?[0-9]*" autocomplete="off"
             value="${v !== undefined ? v : ''}" placeholder="0"
             oninput="normalizeCountQtyInput(this);this.classList.toggle('ok',this.value!=='')"
