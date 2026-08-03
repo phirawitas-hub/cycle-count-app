@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v188 - Countable Status Scan Routing</title>
+<title>Cycle Count v195 - Reliable Handheld Location Capture</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -16776,9 +16776,393 @@ body.login-page-active .lcard {
     box-shadow:0 0 0 4px color-mix(in srgb,var(--theme-primary-color) 18%,transparent) !important;
   }
 }
+
+/* v189 — keep the dashboard Session filter inside its card at every viewport. */
+.summary-page-header,
+.summary-header-actions,
+.dashboard-filter-strip,
+.dashboard-session-filter,
+.dashboard-session-filter .dashboard-filter-copy {
+  min-width:0 !important;
+  max-width:100% !important;
+}
+.dashboard-session-filter {
+  overflow:hidden;
+}
+.dashboard-session-filter .dashboard-filter-copy {
+  overflow:hidden;
+}
+.dashboard-session-filter select {
+  display:block;
+  max-width:100% !important;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+.dashboard-session-only-strip {
+  width:100% !important;
+  min-width:0 !important;
+  max-width:100% !important;
+  overflow:hidden !important;
+}
+.dashboard-session-only-strip > .dashboard-session-filter {
+  width:100% !important;
+  min-width:0 !important;
+  max-width:100% !important;
+  flex:1 1 auto !important;
+}
+.dashboard-session-empty-state {
+  min-height:220px;
+  padding:40px 24px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  text-align:center;
+  color:var(--theme-muted-text-color);
+}
+.dashboard-session-empty-state strong {
+  color:var(--theme-heading-color);
+  font-size:17px;
+}
+.dashboard-session-empty-state span {
+  font-size:13px;
+  font-weight:600;
+}
+@media (max-width:700px) {
+  .dashboard-filter-strip {
+    width:100% !important;
+    min-width:0 !important;
+    max-width:100% !important;
+  }
+  .dashboard-filter-strip > .dashboard-session-filter,
+  .summary-header-actions > .dashboard-session-filter {
+    width:100% !important;
+    min-width:0 !important;
+    max-width:100% !important;
+    flex:0 0 48px !important;
+  }
+}
+
+/* v190 — pin every live dashboard filter label inside its 48px control.
+   Explicit tracks avoid old Android/Chrome native-select baseline drift. */
+.summary-page-header:not(.a4-v2-header) .dashboard-filter-control,
+.dashboard-filter-strip .dashboard-filter-control {
+  -webkit-text-size-adjust:100% !important;
+  text-size-adjust:100% !important;
+}
+.summary-page-header:not(.a4-v2-header) .dashboard-filter-copy,
+.dashboard-filter-strip .dashboard-filter-copy {
+  position:relative !important;
+  display:block !important;
+  height:36px !important;
+  min-height:36px !important;
+  max-height:36px !important;
+  align-self:center !important;
+  overflow:hidden !important;
+  transform:none !important;
+}
+.summary-page-header:not(.a4-v2-header) .dashboard-filter-label,
+.dashboard-filter-strip .dashboard-filter-label {
+  position:absolute !important;
+  top:1px !important;
+  right:0 !important;
+  left:0 !important;
+  width:auto !important;
+  height:10px !important;
+  min-height:10px !important;
+  max-height:10px !important;
+  margin:0 !important;
+  padding:0 !important;
+  overflow:hidden !important;
+  line-height:10px !important;
+  white-space:nowrap !important;
+  text-overflow:ellipsis !important;
+  transform:none !important;
+}
+.summary-page-header:not(.a4-v2-header) .dashboard-session-filter select,
+.dashboard-filter-strip .dashboard-session-filter select {
+  position:absolute !important;
+  top:11px !important;
+  right:0 !important;
+  bottom:auto !important;
+  left:0 !important;
+  width:100% !important;
+  max-width:100% !important;
+  height:24px !important;
+  margin:0 !important;
+  transform:none !important;
+}
+.summary-page-header:not(.a4-v2-header) .dashboard-date-value,
+.dashboard-filter-strip .dashboard-date-value {
+  position:absolute !important;
+  top:14px !important;
+  right:0 !important;
+  bottom:auto !important;
+  left:0 !important;
+  height:19px !important;
+  max-height:19px !important;
+  margin:0 !important;
+  overflow:hidden !important;
+  line-height:19px !important;
+  white-space:nowrap !important;
+  text-overflow:ellipsis !important;
+  transform:none !important;
+}
+
+/* v193 — Location context lives inside the first Count item card. */
+.count-location-item-banner {
+  padding:18px 26px 16px;
+  display:grid;
+  grid-template-columns:42px minmax(0,1fr);
+  align-items:center;
+  gap:13px;
+  border-bottom:1px solid rgba(0,109,119,.13);
+  background:#f2f8f5;
+  background:linear-gradient(135deg,
+    color-mix(in srgb,var(--theme-primary-color) 10%,var(--theme-card-bg)) 0%,
+    color-mix(in srgb,var(--theme-card-bg) 96%,white) 100%);
+}
+.count-location-item-icon {
+  width:42px;
+  height:42px;
+  display:grid;
+  place-items:center;
+  border-radius:14px;
+  color:#fff;
+  background:var(--theme-primary-color);
+  box-shadow:0 7px 16px color-mix(in srgb,var(--theme-primary-color) 25%,transparent);
+}
+.count-location-item-icon svg {
+  width:21px;
+  height:21px;
+  display:block;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.count-location-item-copy { min-width:0; }
+.count-location-item-label,
+.count-item-section-label {
+  display:block;
+  color:var(--theme-muted-text-color);
+  font-size:9px;
+  font-weight:900;
+  line-height:1.15;
+  letter-spacing:.10em;
+}
+.count-location-item-code {
+  display:block;
+  margin-top:3px;
+  color:var(--theme-heading-color);
+  font:900 22px/1.15 'Fredoka','Mitr',ui-monospace,monospace;
+  overflow-wrap:anywhere;
+}
+.count-location-item-meta {
+  display:block;
+  margin-top:4px;
+  color:var(--theme-muted-text-color);
+  font-size:12px;
+  font-weight:700;
+  line-height:1.35;
+  overflow-wrap:anywhere;
+}
+.count-item-identity {
+  padding-bottom:10px;
+  border-bottom:1px dashed rgba(0,109,119,.18);
+  border-bottom:1px dashed color-mix(in srgb,var(--theme-border-color) 66%,transparent);
+}
+.count-item-section-label { margin-bottom:5px; }
+.count-item-identity + .citem-detail-scroll { margin-top:12px; }
+
+@media (max-width:480px), (max-width:600px) and (max-height:760px) {
+  .count-header-card .count-context-tags { margin-top:0 !important; }
+  .count-location-item-banner {
+    padding:10px 10px 9px !important;
+    grid-template-columns:34px minmax(0,1fr);
+    gap:9px;
+  }
+  .count-location-item-icon {
+    width:34px;
+    height:34px;
+    border-radius:11px;
+  }
+  .count-location-item-icon svg { width:18px; height:18px; }
+  .count-location-item-label,
+  .count-item-section-label { font-size:8px; }
+  .count-location-item-code {
+    margin-top:2px;
+    font-size:17px;
+    line-height:1.12;
+  }
+  .count-location-item-meta {
+    margin-top:2px;
+    font-size:10px;
+    line-height:1.3;
+  }
+  .count-item-identity {
+    padding-bottom:7px;
+    border-bottom-color:color-mix(in srgb,var(--theme-border-color) 54%,transparent);
+  }
+  .count-item-section-label { margin-bottom:4px; }
+}
+
+/* v194 — Assigned-work filters collapse by default and auxiliary actions stay visible. */
+.task-list-actions-outside {
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  gap:10px;
+  margin:0 0 12px;
+}
+.task-filter-collapsible {
+  padding:0 !important;
+  overflow:visible !important;
+}
+.task-filter-collapsible > summary {
+  min-height:58px;
+  padding:12px 18px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  list-style:none;
+  cursor:pointer;
+  user-select:none;
+}
+.task-filter-collapsible > summary::-webkit-details-marker { display:none; }
+.task-filter-toggle-copy {
+  min-width:0;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  color:var(--theme-heading-color);
+}
+.task-filter-toggle-icon {
+  width:36px;
+  height:36px;
+  flex:0 0 36px;
+  display:grid;
+  place-items:center;
+  border-radius:12px;
+  color:var(--theme-primary-color);
+  background:#eef6f3;
+  background:color-mix(in srgb,var(--theme-primary-color) 9%,var(--theme-card-bg));
+}
+.task-filter-toggle-icon svg {
+  width:18px;
+  height:18px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.task-filter-toggle-text strong {
+  display:block;
+  font-size:13px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+}
+.task-filter-toggle-text small {
+  display:block;
+  margin-top:2px;
+  color:var(--theme-muted-text-color);
+  font-size:10px;
+  font-weight:700;
+}
+.task-filter-toggle-state {
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:var(--theme-primary-color);
+  font-size:10px;
+  font-weight:900;
+}
+.task-filter-toggle-state::before { content:'เปิดตัวกรอง'; }
+.task-filter-collapsible[open] .task-filter-toggle-state::before { content:'ซ่อนตัวกรอง'; }
+.task-filter-toggle-state svg {
+  width:17px;
+  height:17px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:2.2;
+  transition:transform .18s ease;
+}
+.task-filter-collapsible[open] .task-filter-toggle-state svg { transform:rotate(180deg); }
+.task-filter-collapsible[open] > summary {
+  border-bottom:1px solid color-mix(in srgb,var(--theme-border-color) 56%,transparent);
+}
+.task-filter-body { padding:14px 18px 18px; }
+.task-filter-sort-row {
+  display:flex;
+  justify-content:flex-end;
+  margin-bottom:14px;
+}
+
+/* v194 — The in-app Count keypad can be used on every device. */
+.count-touch-toolbar {
+  display:flex;
+  flex-wrap:wrap;
+}
+.count-touch-toolbar .count-screen-lock-button { display:none; }
+body.tablet-ui .count-touch-toolbar .count-screen-lock-button { display:inline-flex; }
+.count-keypad-toggle-button {
+  min-height:40px;
+  padding:7px 12px;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 22%,transparent);
+  border-radius:13px;
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  color:var(--theme-primary-color);
+  background:#f3f8f6;
+  background:color-mix(in srgb,var(--theme-primary-color) 7%,var(--theme-card-bg));
+  box-shadow:0 7px 16px rgba(13,74,80,.12);
+  font:800 11px 'Mitr',sans-serif;
+  cursor:pointer;
+}
+.count-keypad-toggle-button svg {
+  width:17px;
+  height:17px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.count-keypad-toggle-button.is-enabled {
+  color:#fff;
+  border-color:var(--theme-primary-color);
+  background:var(--theme-primary-color);
+}
+@media (max-width:480px), (max-width:600px) and (max-height:760px) {
+  .task-list-actions-outside { margin-bottom:8px; }
+  .task-list-actions-outside .found-work-button { width:100%; flex:1 1 100%; }
+  .task-filter-collapsible > summary { min-height:52px; padding:9px 10px; gap:8px; }
+  .task-filter-toggle-icon { width:34px; height:34px; flex-basis:34px; border-radius:11px; }
+  .task-filter-toggle-text strong { font-size:11px; }
+  .task-filter-toggle-text small { font-size:8px; }
+  .task-filter-toggle-state { gap:4px; font-size:9px; }
+  .task-filter-body { padding:10px; }
+  .task-filter-sort-row { margin-bottom:10px; }
+  .task-filter-sort-row .location-sort-control { width:100%; }
+  .count-touch-toolbar { gap:6px; margin-top:8px; }
+  .count-keypad-toggle-button { min-height:38px; padding:6px 9px; font-size:9px; }
+  .count-numeric-keypad {
+    width:min(330px,calc(100vw - 12px));
+    bottom:max(6px,env(safe-area-inset-bottom));
+    border-radius:18px;
+  }
+}
 </style>
 </head>
-<body data-build="v184-handheld-direct-open-focus">
+<body data-build="v195-reliable-handheld-location-capture">
 <div id="app"></div>
 
 <script>
@@ -16848,7 +17232,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v188-countable-status-scan-routing';
+window.__CYCLE_COUNT_BUILD__ = 'v195-reliable-handheld-location-capture';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -16859,6 +17243,7 @@ let _tabletAccuracyGuardTarget = null;
 const TABLET_ZOOM_STORAGE_KEY = 'cycle_count_tablet_zoom_v1';
 const TABLET_CONTROLS_COLLAPSED_KEY = 'cycle_count_tablet_controls_collapsed_v1';
 const COUNT_SCREEN_LOCK_STORAGE_KEY = 'cycle_count_ipad_screen_lock_v1';
+const COUNT_NUMERIC_KEYPAD_STORAGE_KEY = 'cycle_count_numeric_keypad_enabled_v1';
 let _countKeypadInput = null;
 let _countLastTouchAt = 0;
 let _countLastTouchX = 0;
@@ -19751,6 +20136,7 @@ let _navStack = [];
 let _dashboardViewCache = null;
 let _dashboardLoadInFlight = null;
 const DASHBOARD_CACHE_TTL_MS = 60000;
+const DASHBOARD_SESSION_STORAGE_PREFIX = 'cycle_count_dashboard_session_v1';
 const WAREHOUSE_LAYOUT_STORAGE_KEY = 'cycle_count_warehouse_layout_v1';
 const WAREHOUSE_LAYOUT_DRAFT_STORAGE_KEY = 'cycle_count_warehouse_layout_draft_v1';
 const WAREHOUSE_LAYOUT_SETTING_KEY = 'warehouse_layout_v1';
@@ -19801,6 +20187,33 @@ function currentPageTitle(page,currentRole=prof?.role || 'counter') {
 
 function invalidateDashboardCache() {
   _dashboardViewCache = null;
+}
+
+function dashboardSessionStorageKey() {
+  return `${DASHBOARD_SESSION_STORAGE_PREFIX}:${me?.id || 'anonymous'}`;
+}
+
+function readRememberedDashboardSession() {
+  try {
+    return String(localStorage.getItem(dashboardSessionStorageKey()) || '');
+  } catch (_) {
+    return '';
+  }
+}
+
+function rememberDashboardSession(sessionId = '') {
+  try {
+    const key = dashboardSessionStorageKey();
+    if (sessionId) localStorage.setItem(key,String(sessionId));
+    else localStorage.removeItem(key);
+  } catch (_) {}
+}
+
+function resolveDashboardSessionId(sessions = [], stateSessionId = '', rememberedSessionId = '') {
+  const activeIds = new Set(sessions.map(session => String(session?.id || '')));
+  return [stateSessionId,rememberedSessionId]
+    .map(value => String(value || ''))
+    .find(value => value && activeIds.has(value)) || '';
 }
 
 function dashboardFilterIconSvg(type) {
@@ -20537,7 +20950,7 @@ function dashboardSessionControlHtml(tab, sessionOptionsHtml) {
     </div>`;
   }
   if (tab === 'layout') {
-    return `<div class="card dashboard-filter-strip">
+    return `<div class="card dashboard-filter-strip dashboard-session-only-strip">
       <label class="dashboard-filter-control dashboard-session-filter" title="เลือก Session สำหรับตรวจ Layout">
         <span class="dashboard-filter-icon">${dashboardFilterIconSvg('session')}</span>
         <span class="dashboard-filter-copy">
@@ -20851,10 +21264,11 @@ async function runPageLoaderWithTimeout(loader,pageRequestScope) {
 
 function changeDashboardSession(sessionId) {
   const nextSessionId = String(sessionId || '');
+  S._dashSid = nextSessionId;
+  rememberDashboardSession(nextSessionId);
   if (!nextSessionId) return Promise.resolve();
   beginPageRequestScope();
   _dashboardLoadInFlight = null;
-  S._dashSid = nextSessionId;
   invalidateDashboardCache();
   const target = cnt();
   if (target) target.innerHTML = dashboardLoadingHtml();
@@ -23319,31 +23733,49 @@ async function loadCTasks() {
     else S[field] = normalizeMultiFilterValues(S[field]);
   });
 
+  // A completed Count returns here first so the list is refreshed from the
+  // server. Only then do we choose the next still-countable Location using
+  // the same filters and A→Z / Z→A direction the user selected.
+  if (await continueToNextMyTaskAfterCount()) return;
+
   const done = asgns.filter(a => ['completed','approved'].includes(a.status)).length
     + annualJobs.filter(job => job.status === 'completed').length;
   const total = asgns.length + annualJobs.length;
   const pct = total ? Math.round(done / total * 100) : 0;
   const jobFilterHtml = annualJobs.length ? multiFilterFieldHtml('mt-job','JOB') : '';
   const normalHtml = (asgns.length || annualJobs.length) ? `
-    <div class="card task-filter-card">
-      <div class="task-filter-head">
-        <div style="font-size:13px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em">🔍 กรองงาน Cycle Count</div>
-        <div class="task-filter-actions">
-          <button class="found-work-button" type="button"
-            onclick="go('c-found',{sid:normalizeMultiFilterValues(S._mtSession)[0]||''})">＋ เจองานเพิ่ม</button>
-          ${locationSortControlHtml(true)}
+    <div class="task-list-actions-outside">
+      <button class="found-work-button" type="button"
+        onclick="go('c-found',{sid:normalizeMultiFilterValues(S._mtSession)[0]||''})">＋ เจองานเพิ่ม</button>
+    </div>
+    <details class="card task-filter-card task-filter-collapsible">
+      <summary>
+        <span class="task-filter-toggle-copy">
+          <span class="task-filter-toggle-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M4 5h16M7 12h10M10 19h4"></path></svg>
+          </span>
+          <span class="task-filter-toggle-text">
+            <strong>กรองงาน Cycle Count</strong>
+            <small>แตะเพื่อเลือก Session สถานะ Zone แถว ตำแหน่ง หรือระดับ</small>
+          </span>
+        </span>
+        <span class="task-filter-toggle-state" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"></path></svg>
+        </span>
+      </summary>
+      <div class="task-filter-body">
+        <div class="task-filter-sort-row">${locationSortControlHtml(true)}</div>
+        <div class="grid-3">
+          ${jobFilterHtml}
+          ${multiFilterFieldHtml('mt-session',uiCopy('รอบการตรวจนับ','Count Session'))}
+          ${multiFilterFieldHtml('mt-status',uiCopy('สถานะงาน','Work Status'))}
+          ${multiFilterFieldHtml('mt-zone',uiCopy('โซน','Zone'))}
+          ${multiFilterFieldHtml('mt-row',uiCopy('แถว','Row'))}
+          ${multiFilterFieldHtml('mt-pos',uiCopy('ตำแหน่ง','Position'))}
+          ${multiFilterFieldHtml('mt-lvl',uiCopy('ระดับ','Level'))}
         </div>
       </div>
-      <div class="grid-3">
-        ${jobFilterHtml}
-        ${multiFilterFieldHtml('mt-session',uiCopy('รอบการตรวจนับ','Count Session'))}
-        ${multiFilterFieldHtml('mt-status',uiCopy('สถานะงาน','Work Status'))}
-        ${multiFilterFieldHtml('mt-zone',uiCopy('โซน','Zone'))}
-        ${multiFilterFieldHtml('mt-row',uiCopy('แถว','Row'))}
-        ${multiFilterFieldHtml('mt-pos',uiCopy('ตำแหน่ง','Position'))}
-        ${multiFilterFieldHtml('mt-lvl',uiCopy('ระดับ','Level'))}
-      </div>
-    </div>
+    </details>
     <div class="card card-flush" id="mt-list" data-location-sort-group></div>` : '';
 
   cnt().innerHTML = `
@@ -23443,7 +23875,7 @@ async function openAnnualJobCount(jobId,jobItemId) {
   const item = (window._myAnnualJobItems || []).find(row => row.job_id === jobId && row.id === jobItemId);
   if (!job || !item?.location_id) {
     alert('ไม่พบข้อมูล JOB หรือ Location ที่ต้องนับ กรุณาโหลดหน้าใหม่');
-    return;
+    return false;
   }
   try {
     const assignments = await ensureAnnualJobAssignments([jobId],job.assigned_to || me?.id);
@@ -23452,8 +23884,10 @@ async function openAnnualJobCount(jobId,jobItemId) {
     );
     if (!assignment) throw new Error('ไม่พบ Assignment สำหรับ Location นี้');
     go('c-count',{ aid:assignment.id,jid:job.id,jitemid:item.id });
+    return true;
   } catch (error) {
     alert(`เปิดหน้าบันทึกการนับไม่ได้: ${error.message || error}\n\nกรุณาให้หัวหน้ากดจ่าย JOB นี้ใหม่อีกครั้ง`);
+    return false;
   }
 }
 
@@ -23469,6 +23903,214 @@ function fillMyTaskOptionSelect(id,options,selectedValues=[]) {
 function myTaskFilterMatches(selectedValues,value) {
   const selected = normalizeMultiFilterValues(selectedValues);
   return !selected.length || selected.includes(String(value ?? ''));
+}
+
+function myTaskNavigationFilterSnapshot(source = S) {
+  return Object.fromEntries(
+    MY_TASK_FILTER_FIELDS.map(field => [field,normalizeMultiFilterValues(source?.[field])])
+  );
+}
+
+function myCycleTaskMatchesNavigationFilters(assignment,filters = {}) {
+  const location = assignment?.locations || {};
+  const parts = String(location.code || '').split('-');
+  if (!myTaskFilterMatches(filters._mtSession,assignment?.session_id)) return false;
+  if (!myTaskFilterMatches(filters._mtStatus,assignment?.status)) return false;
+  if (!myTaskFilterMatches(filters._mtZone,location.zone)) return false;
+  if (!myTaskFilterMatches(filters._mtRow,String(location.row_no ?? parts[1] ?? ''))) return false;
+  if (!myTaskFilterMatches(filters._mtPos,parts[2] || '')) return false;
+  if (!myTaskFilterMatches(filters._mtLvl,String(location.level ?? parts[3] ?? ''))) return false;
+  return true;
+}
+
+function myTaskNavigationUsesAnnualJobs(filters = {}) {
+  const assignments = window._myTasks || [];
+  const annualJobs = window._myAnnualJobs || [];
+  const sessionFilter = normalizeMultiFilterValues(filters._mtSession);
+  const jobFilter = normalizeMultiFilterValues(filters._mtJob);
+  const hasCycleInSession = assignments.some(assignment =>
+    myTaskFilterMatches(sessionFilter,assignment.session_id)
+  );
+  const hasJobsInSession = annualJobs.some(job =>
+    myTaskFilterMatches(sessionFilter,job.session_id)
+  );
+  return jobFilter.length > 0 || (!hasCycleInSession && hasJobsInSession);
+}
+
+function orderedCycleCountNavigationTargets(filters = {},direction = locationSortDirection) {
+  if (myTaskNavigationUsesAnnualJobs(filters)) return [];
+  return sortRowsByLocation(
+    (window._myTasks || []).filter(assignment =>
+      myCycleTaskMatchesNavigationFilters(assignment,filters)
+    ),
+    assignment => assignment.locations?.code,
+    direction,
+  ).map(assignment => ({
+    kind:'cycle',
+    assignmentId:String(assignment.id || ''),
+    locationId:String(assignment.location_id || ''),
+    locationCode:String(assignment.locations?.code || ''),
+    canOpen:assignmentCanOpenCount(assignment.status),
+  }));
+}
+
+function orderedAnnualCountNavigationTargets(filters = {},direction = locationSortDirection) {
+  if (!myTaskNavigationUsesAnnualJobs(filters)) return [];
+  const assignments = window._myTasks || [];
+  const annualItems = window._myAnnualJobItems || [];
+  const assignmentByScope = new Map(assignments.map(assignment => [
+    annualAssignmentKey(assignment.session_id,assignment.location_id),
+    assignment,
+  ]));
+  const jobs = (window._myAnnualJobs || [])
+    .filter(job => {
+      if (!myTaskFilterMatches(filters._mtJob,job.id)) return false;
+      if (!myTaskFilterMatches(filters._mtSession,job.session_id)) return false;
+      if (!myTaskFilterMatches(filters._mtStatus,job.status)) return false;
+      return true;
+    })
+    .sort((left,right) => Number(left.job_no || 0) - Number(right.job_no || 0));
+
+  const targets = [];
+  jobs.forEach(job => {
+    const orderedItems = annualItems
+      .filter(item => item.job_id === job.id)
+      .sort((left,right) => {
+        const orderDiff = Number(left.sort_order || 0) - Number(right.sort_order || 0);
+        if (orderDiff) return orderDiff;
+        return compareLocationCodes(left.locations?.code,right.locations?.code,direction);
+      });
+    const groupsByLocation = new Map();
+    orderedItems.forEach(item => {
+      const key = item.location_id || item.locations?.code || item.id;
+      if (!groupsByLocation.has(key)) {
+        groupsByLocation.set(key,{ location:item.locations || {},items:[] });
+      }
+      groupsByLocation.get(key).items.push(item);
+    });
+    const groups = sortRowsByLocation(
+      [...groupsByLocation.values()],
+      group => group.location?.code,
+      direction,
+    );
+    groups.forEach(group => {
+      const item = group.items[0];
+      const assignment = assignmentByScope.get(
+        annualAssignmentKey(job.session_id,item?.location_id)
+      );
+      targets.push({
+        kind:'annual',
+        assignmentId:String(assignment?.id || ''),
+        annualJobId:String(job.id || ''),
+        annualJobItemId:String(item?.id || ''),
+        locationId:String(item?.location_id || ''),
+        locationCode:String(group.location?.code || ''),
+        canOpen:!assignment || assignmentCanOpenCount(assignment.status),
+      });
+    });
+  });
+  return targets;
+}
+
+function nextCountNavigationTarget(request = {}) {
+  const filters = request.filters || myTaskNavigationFilterSnapshot();
+  const direction = request.sortDirection === 'desc' ? 'desc' : 'asc';
+  const targets = myTaskNavigationUsesAnnualJobs(filters)
+    ? orderedAnnualCountNavigationTargets(filters,direction)
+    : orderedCycleCountNavigationTargets(filters,direction);
+  if (!targets.length) return null;
+
+  const currentAssignmentId = String(request.assignmentId || '');
+  const currentAnnualJobId = String(request.annualJobId || '');
+  const currentLocationId = String(request.locationId || '');
+  const isCurrent = target => currentAnnualJobId
+    ? target.kind === 'annual'
+      && target.annualJobId === currentAnnualJobId
+      && target.locationId === currentLocationId
+    : Boolean(currentAssignmentId) && target.assignmentId === currentAssignmentId;
+  const currentIndex = targets.findIndex(isCurrent);
+  const orderedAfterCurrent = currentIndex >= 0
+    ? [...targets.slice(currentIndex + 1),...targets.slice(0,currentIndex)]
+    : targets;
+  return orderedAfterCurrent.find(target => target.canOpen && !isCurrent(target)) || null;
+}
+
+async function continueToNextMyTaskAfterCount() {
+  const request = S?._autoOpenNextCount;
+  if (!request) return false;
+  delete S._autoOpenNextCount;
+  const target = nextCountNavigationTarget(request);
+  if (!target) {
+    showActionSuccessToast(
+      'ไม่มี Location ที่ยังนับได้ภายใต้ตัวกรองและลำดับปัจจุบัน',
+      { title:'ครบรายการที่เลือก',duration:3400 },
+    );
+    return false;
+  }
+  showActionSuccessToast(
+    `กำลังเปิด Location ถัดไป: ${target.locationCode || 'ไม่ระบุ Location'}`,
+    { title:'ไปงานถัดไป',duration:1800 },
+  );
+  if (target.kind === 'annual') {
+    return openAnnualJobCount(target.annualJobId,target.annualJobItemId);
+  }
+  go('c-count',{ aid:target.assignmentId });
+  return true;
+}
+
+function returnToMyTasksAndOpenNextCount(aid,assignment,annualJobId='') {
+  const request = buildNextCountNavigationRequest(aid,assignment,annualJobId);
+  go('c-tasks',{
+    _autoOpenNextCount:request,
+  });
+}
+
+function latestMyTaskNavigationState() {
+  for (let index = _navStack.length - 1; index >= 0; index -= 1) {
+    if (_navStack[index]?.page === 'c-tasks') return _navStack[index];
+  }
+  return null;
+}
+
+function buildNextCountNavigationRequest(aid,assignment,annualJobId='') {
+  // A Handheld reaches Count through the scanner and keeps its exact task-list
+  // filters in the navigation stack. Prefer that live state over browser
+  // storage, whose value can be stale or restricted on older Android Chrome.
+  const filterSource = latestMyTaskNavigationState() || readMyTaskFilters();
+  return {
+    assignmentId:String(aid || ''),
+    annualJobId:String(annualJobId || ''),
+    annualJobItemId:String(S?.jitemid || ''),
+    locationId:String(assignment?.location_id || window._countFoundContext?.locationId || ''),
+    locationCode:String(window._countFoundContext?.locationCode || ''),
+    filters:myTaskNavigationFilterSnapshot(filterSource),
+    sortDirection:locationSortDirection,
+  };
+}
+
+async function openNextCountFromCachedTasks(aid,assignment,newStatus,annualJobId='') {
+  const cachedTasks = window._myTasks || [];
+  if (!cachedTasks.length) return false;
+
+  // Keep the just-saved Location out of the candidate set immediately. This
+  // path avoids the expensive full task-list reload that can time out on a
+  // rugged Handheld; loadCCount still revalidates the chosen Assignment and
+  // its Count rows against the server before showing the next form.
+  const currentTask = cachedTasks.find(task => String(task.id) === String(aid));
+  if (currentTask) currentTask.status = newStatus;
+  const request = buildNextCountNavigationRequest(aid,assignment,annualJobId);
+  const target = nextCountNavigationTarget(request);
+  if (!target) return false;
+
+  showActionSuccessToast(
+    `กำลังเปิด Location ถัดไป: ${target.locationCode || 'ไม่ระบุ Location'}`,
+    { title:'ไปงานถัดไป',duration:1800 },
+  );
+  if (target.kind === 'annual') {
+    return openAnnualJobCount(target.annualJobId,target.annualJobItemId);
+  }
+  go('c-count',{ aid:target.assignmentId });
+  return true;
 }
 
 function refreshMyTaskFilters() {
@@ -23609,8 +24251,12 @@ function renderMyTasks() {
         }
         locationGroupMap.get(locationKey).items.push(item);
       });
-      const itemRows = locationGroups.length
-        ? locationGroups.map((group,index) => {
+      const orderedLocationGroups = sortRowsByLocation(
+        locationGroups,
+        group => group.location?.code,
+      );
+      const itemRows = orderedLocationGroups.length
+        ? orderedLocationGroups.map((group,index) => {
             const item = group.items[0];
             const location = group.location;
             const productCodes = group.items
@@ -23642,7 +24288,7 @@ function renderMyTasks() {
         <div class="my-job-work-header">
           <div class="row-body">
             <div class="row-title mono">${escapeWmsText(job.job_code || `JOB ${job.job_no}`)}</div>
-            <div class="row-sub">${escapeWmsText(job.count_sessions?.name || 'ไม่ระบุ Session')} · ${locationGroups.length.toLocaleString(uiLocale())} Location · ${jobItems.length.toLocaleString(uiLocale())} ITEM</div>
+            <div class="row-sub">${escapeWmsText(job.count_sessions?.name || 'ไม่ระบุ Session')} · ${orderedLocationGroups.length.toLocaleString(uiLocale())} Location · ${jobItems.length.toLocaleString(uiLocale())} ITEM</div>
           </div>
           <span class="tag ${status.cls}">${status.lbl}</span>
         </div>
@@ -23697,6 +24343,11 @@ const HANDHELD_SCAN_CONFIG = Object.freeze({
   // Commit shortly after the scanner stops typing. This is longer than the
   // accepted inter-key gap, so a Location is never opened from a partial code.
   inputCommitDelayMs:280,
+  // Location wedges on older Android/IME builds may pause between chunks.
+  // Unknown/partial task scans wait longer, while an exact assigned Location
+  // can be accepted immediately.
+  taskInputCommitDelayMs:900,
+  taskTerminatorGraceMs:180,
   duplicateWindowMs:1100,
 });
 let _hardwareScanBuffer = '';
@@ -23714,6 +24365,7 @@ let _handheldCountFocusTimers = [];
 let _handheldCountFocusToken = 0;
 let _taskLocationFocusTimers = [];
 let _taskLocationFocusToken = 0;
+let _taskLocationFocusHoldUntil = 0;
 let _hardwareCapturePollTimer = null;
 let _hardwareCapturePollValue = '';
 let _hardwareCapturePollChangedAt = 0;
@@ -23730,7 +24382,7 @@ function hardwareLaserCaptureHtml(id,context,instruction) {
   // injecting the decoded Location even when the field appears focused.
   const captureInputMode = isNarrowHandheldTerminal() ? 'text' : 'none';
   const shouldAutofocus = context === 'task-location';
-  const buildLabel = shouldAutofocus ? ' · v188' : '';
+  const buildLabel = shouldAutofocus ? ' · v195' : '';
   return `<div class="handheld-laser-bar" data-i18n-skip>
     <span class="handheld-laser-icon">${barcodeScanIconSvg()}</span>
     <span class="handheld-laser-copy">
@@ -23770,10 +24422,11 @@ function commitHardwareScanBufferWithoutSuffix() {
   const numericTarget = Boolean(target?.matches?.('input[type="number"]'));
   const originalNumericValue = _hardwareScanNumberOriginalValue;
   const elapsed = _hardwareScanStartedAt ? performance.now() - _hardwareScanStartedAt : 0;
-  const valid = _hardwareScanBuffer.length >= 4
+  const exactTaskValue = exactAssignedTaskLocationScanValue(_hardwareScanBuffer);
+  const valid = Boolean(exactTaskValue) || (_hardwareScanBuffer.length >= 4
     && elapsed <= HANDHELD_SCAN_CONFIG.maxDurationMs
-    && _hardwareScanMaxGap <= HANDHELD_SCAN_CONFIG.maxInterKeyMs;
-  const value = valid ? _hardwareScanBuffer : '';
+    && _hardwareScanMaxGap <= HANDHELD_SCAN_CONFIG.maxInterKeyMs);
+  const value = exactTaskValue || (valid ? _hardwareScanBuffer : '');
   resetHardwareScanBuffer();
   if (value && numericTarget) {
     target.value = originalNumericValue;
@@ -23794,6 +24447,50 @@ function hardwareScanCompareKey(value='') {
     .replace(/[‐‑‒–—−]/g,'-')
     .replace(/\s+/g,'')
     .toUpperCase();
+}
+
+function assignedTaskLocationScanKeys() {
+  const keys = new Set();
+  (window._myTasks || []).forEach(assignment => {
+    const key = hardwareScanCompareKey(assignment?.locations?.code || '');
+    if (key) keys.add(key);
+  });
+  (window._myAnnualJobItems || []).forEach(item => {
+    const key = hardwareScanCompareKey(item?.locations?.code || '');
+    if (key) keys.add(key);
+  });
+  return keys;
+}
+
+function exactAssignedTaskLocationScanValue(...candidates) {
+  if (S?.page !== 'c-tasks') return '';
+  const assignedKeys = assignedTaskLocationScanKeys();
+  if (!assignedKeys.size) return '';
+  for (const candidate of candidates) {
+    const value = normalizeHardwareScanValue(candidate || '');
+    if (!value) continue;
+    const candidateKeys = hardwareScanCandidateKeys(value);
+    if ([...candidateKeys].some(key => assignedKeys.has(key))) return value;
+  }
+  return '';
+}
+
+function bestHardwareCaptureValue(target,fieldValue='',fallbackValue='') {
+  const field = normalizeHardwareScanValue(fieldValue);
+  const fallback = normalizeHardwareScanValue(fallbackValue);
+  if (target?.id === 'task_hardware_scan') {
+    const exact = exactAssignedTaskLocationScanValue(field,fallback);
+    if (exact) return exact;
+  }
+  return field.length >= fallback.length ? field : fallback;
+}
+
+function hardwareCaptureCommitDelay(target,value='',requestedDelay=HANDHELD_SCAN_CONFIG.inputCommitDelayMs) {
+  const delay = Math.max(0,Number(requestedDelay) || 0);
+  if (target?.id !== 'task_hardware_scan') return delay;
+  return exactAssignedTaskLocationScanValue(value)
+    ? Math.min(delay,80)
+    : Math.max(delay,HANDHELD_SCAN_CONFIG.taskInputCommitDelayMs);
 }
 
 function hardwareScanOperationalPage() {
@@ -23899,6 +24596,7 @@ function clearTaskLocationFocusTimers() {
 
 function focusTaskLocationCapture({ force=false }={}) {
   if (S?.page !== 'c-tasks' || Q('scanOverlay')) return false;
+  if (!force && Date.now() < _taskLocationFocusHoldUntil) return false;
   const target = Q('task_hardware_scan');
   if (!target) return false;
   const active = document.activeElement;
@@ -23972,7 +24670,7 @@ function prepareHandheldCountEntry({ force=false }={}) {
   try {
     firstInput.setSelectionRange?.(0,String(firstInput.value || '').length);
   } catch (_) {}
-  if (isTabletUiDevice()) openCountNumericKeypad(firstInput);
+  if (countNumericKeypadEnabled()) openCountNumericKeypad(firstInput);
   firstInput.scrollIntoView({ block:'center',behavior:'auto' });
   return document.activeElement === firstInput;
 }
@@ -24020,6 +24718,21 @@ function startHardwareCapturePolling(targetId) {
       stopHardwareCapturePolling();
       return;
     }
+    if (targetId === 'task_hardware_scan'
+        && Date.now() >= _taskLocationFocusHoldUntil
+      && document.activeElement !== target
+      && !Q('scanOverlay')) {
+      const active = document.activeElement;
+      const activeTag = String(active?.tagName || '').toLowerCase();
+      const activeType = String(active?.type || '').toLowerCase();
+      const userTextEntry = active?.isContentEditable
+        || activeTag === 'textarea'
+        || activeTag === 'select'
+        || (activeTag === 'input'
+          && active?.id !== 'task_hardware_scan'
+          && ['text','search','password','number'].includes(activeType));
+      if (!userTextEntry) focusTaskLocationCapture({ force:true });
+    }
     const value = normalizeHardwareScanValue(target.value || '');
     if (value !== _hardwareCapturePollValue) {
       _hardwareCapturePollValue = value;
@@ -24027,7 +24740,14 @@ function startHardwareCapturePolling(targetId) {
       return;
     }
     if (value.length < HANDHELD_SCAN_CONFIG.minLength || !_hardwareCapturePollChangedAt) return;
-    if (Date.now() - _hardwareCapturePollChangedAt < HANDHELD_SCAN_CONFIG.inputCommitDelayMs + 80) return;
+    const exactTaskLocation = targetId === 'task_hardware_scan'
+      && exactAssignedTaskLocationScanValue(value);
+    const settleDelay = exactTaskLocation
+      ? 100
+      : targetId === 'task_hardware_scan'
+        ? HANDHELD_SCAN_CONFIG.taskInputCommitDelayMs + 100
+        : HANDHELD_SCAN_CONFIG.inputCommitDelayMs + 80;
+    if (Date.now() - _hardwareCapturePollChangedAt < settleDelay) return;
     target.value = '';
     resetHardwareScanBuffer();
     _hardwareCapturePollValue = '';
@@ -24078,7 +24798,22 @@ document.addEventListener('pointerdown',event => {
   if (S?.page !== 'c-tasks') return;
   if (event.target?.closest?.('#task_hardware_scan,.handheld-laser-bar')) return;
   // Do not steal focus after the user deliberately selects a filter/button.
+  _taskLocationFocusHoldUntil = Date.now() + 420;
   clearTaskLocationFocusTimers();
+},true);
+
+document.addEventListener('pointerup',event => {
+  if (S?.page !== 'c-tasks') return;
+  if (event.target?.closest?.('#task_hardware_scan,.handheld-laser-bar')) return;
+  // Once a tap/click has completed, reconnect the Android scanner IME to the
+  // capture field. This does not close the filter; it only restores the text
+  // destination used by the physical scan button.
+  const token = _taskLocationFocusToken;
+  setTimeout(() => {
+    if (token !== _taskLocationFocusToken || S?.page !== 'c-tasks' || Q('scanOverlay')) return;
+    _taskLocationFocusHoldUntil = 0;
+    focusTaskLocationCapture({ force:true });
+  },220);
 },true);
 
 document.addEventListener('focusout',event => {
@@ -24244,7 +24979,7 @@ function commitHardwareCaptureTarget(target,fallbackValue='') {
   if (!target?.dataset?.hwScanCapture || !hardwareScanOperationalPage()) return false;
   const fieldValue = normalizeHardwareScanValue(target.value || '');
   const fallback = normalizeHardwareScanValue(fallbackValue);
-  const value = fieldValue.length >= fallback.length ? fieldValue : fallback;
+  const value = bestHardwareCaptureValue(target,fieldValue,fallback);
   if (value.length < HANDHELD_SCAN_CONFIG.minLength) return false;
   target.value = '';
   resetHardwareScanBuffer();
@@ -24254,9 +24989,11 @@ function commitHardwareCaptureTarget(target,fallbackValue='') {
 function scheduleHardwareCaptureCommit(target,fallbackValue='',delay=HANDHELD_SCAN_CONFIG.inputCommitDelayMs) {
   if (!target?.dataset?.hwScanCapture || !hardwareScanOperationalPage()) return false;
   clearTimeout(_hardwareScanInputCommitTimer);
+  const currentValue = bestHardwareCaptureValue(target,target.value || '',fallbackValue);
+  const commitDelay = hardwareCaptureCommitDelay(target,currentValue,delay);
   _hardwareScanInputCommitTimer = setTimeout(
     () => commitHardwareCaptureTarget(target,fallbackValue),
-    Math.max(0,Number(delay) || 0),
+    commitDelay,
   );
   return true;
 }
@@ -24296,14 +25033,24 @@ function appendHardwareScanCharacter(target,scanCharacter,source='keydown') {
 
   if (captureTarget) {
     clearTimeout(_hardwareScanCommitTimer);
+    const commitDelay = hardwareCaptureCommitDelay(
+      target,
+      bestHardwareCaptureValue(target,target?.value || '',_hardwareScanBuffer),
+      HANDHELD_SCAN_CONFIG.inputCommitDelayMs,
+    );
     _hardwareScanCommitTimer = setTimeout(() => {
       if (commitHardwareCaptureTarget(target)) return;
       commitHardwareScanBufferWithoutSuffix();
-    },HANDHELD_SCAN_CONFIG.inputCommitDelayMs);
+    },commitDelay);
     return true;
   }
   clearTimeout(_hardwareScanCommitTimer);
-  _hardwareScanCommitTimer = setTimeout(commitHardwareScanBufferWithoutSuffix,140);
+  const bufferCommitDelay = S?.page === 'c-tasks'
+    ? (exactAssignedTaskLocationScanValue(_hardwareScanBuffer)
+      ? 80
+      : HANDHELD_SCAN_CONFIG.taskInputCommitDelayMs)
+    : 140;
+  _hardwareScanCommitTimer = setTimeout(commitHardwareScanBufferWithoutSuffix,bufferCommitDelay);
   return true;
 }
 
@@ -24350,12 +25097,15 @@ function handleHardwareLaserKeydown(event) {
       && elapsed <= HANDHELD_SCAN_CONFIG.maxDurationMs
       && _hardwareScanMaxGap <= HANDHELD_SCAN_CONFIG.maxInterKeyMs;
     const fieldValue = scanTarget ? normalizeHardwareScanValue(target?.value || '') : '';
-    // The capture input contains the authoritative complete barcode. This
-    // avoids dropping a Location when a rugged scanner types more slowly than
-    // desktop USB scanners.
-    const candidate = captureTarget
-      ? (fieldValue.length >= _hardwareScanBuffer.length ? fieldValue : _hardwareScanBuffer)
-      : (fastBuffer ? _hardwareScanBuffer : fieldValue);
+    // Prefer whichever source is an exact assigned Location. Android IMEs can
+    // expose a correct field value while key events still report repeated or
+    // unidentified characters of the same length.
+    const exactTaskCandidate = captureTarget && target?.id === 'task_hardware_scan'
+      ? exactAssignedTaskLocationScanValue(fieldValue,_hardwareScanBuffer)
+      : '';
+    const candidate = exactTaskCandidate || (captureTarget
+      ? bestHardwareCaptureValue(target,fieldValue,_hardwareScanBuffer)
+      : (fastBuffer ? _hardwareScanBuffer : fieldValue));
     const numericBarcode = numericTarget && fastBuffer && candidate.length >= 4;
     if (numericBarcode) {
       event.preventDefault();
@@ -24363,6 +25113,22 @@ function handleHardwareLaserKeydown(event) {
       target.value = _hardwareScanNumberOriginalValue;
       target.dispatchEvent(new Event('input',{ bubbles:true }));
       routeHardwareLaserScan(candidate,target);
+    } else if (captureTarget && target?.id === 'task_hardware_scan'
+        && candidate.length >= HANDHELD_SCAN_CONFIG.minLength && !exactTaskCandidate) {
+      // Enter/OK can arrive before the IME publishes its final composed text.
+      // Give the field one short grace period, then choose the exact Location
+      // from the late field value or the captured fallback.
+      event.preventDefault();
+      event.stopPropagation();
+      const lateTarget = target;
+      const fallbackCandidate = candidate;
+      resetHardwareScanBuffer();
+      _hardwareScanInputCommitTimer = setTimeout(
+        () => commitHardwareCaptureTarget(lateTarget,fallbackCandidate),
+        HANDHELD_SCAN_CONFIG.taskTerminatorGraceMs,
+      );
+      _hardwareScanLastRawEventAt = 0;
+      return;
     } else if (!numericTarget && candidate.length >= HANDHELD_SCAN_CONFIG.minLength) {
       event.preventDefault();
       event.stopPropagation();
@@ -24859,6 +25625,22 @@ function lockTaskScanNavigation() {
   return true;
 }
 
+function runTaskScanNavigation(action,afterHardwareInput=false) {
+  const run = () => {
+    if (S?.page !== 'c-tasks') {
+      _hardwareScanNavigationPending = false;
+      return false;
+    }
+    action();
+    return true;
+  };
+  if (!afterHardwareInput) return run();
+  // Leave the Android IME/keyboard event stack before replacing the page DOM.
+  // Some rugged WebViews otherwise acknowledge the scan but drop navigation.
+  setTimeout(run,40);
+  return true;
+}
+
 function onTaskLocationScanned(text,fromHardwareLaser=false) {
   const code = normalizeHardwareScanValue(text);
   const codeKeys = hardwareScanCandidateKeys(code);
@@ -24882,7 +25664,7 @@ function onTaskLocationScanned(text,fromHardwareLaser=false) {
   if (match) {
     handheldScanFeedback('success',uiCopy('พบ Location ที่ได้รับมอบหมาย','Assigned Location Found'),code,uiCopy('กำลังเปิดหน้าบันทึกการนับ','Opening the physical count page'));
     if (!lockTaskScanNavigation()) return;
-    go('c-count', { aid: match.id });
+    runTaskScanNavigation(() => go('c-count', { aid: match.id }),fromHardwareLaser);
     return;
   }
   const annualJobsById = Object.fromEntries(
@@ -24901,11 +25683,13 @@ function onTaskLocationScanned(text,fromHardwareLaser=false) {
   if (annualItem) {
     handheldScanFeedback('success',uiCopy('พบ Location ใน JOB','Job Location Found'),code,uiCopy('กำลังเปิดหน้าบันทึกการนับ','Opening the physical count page'));
     if (!lockTaskScanNavigation()) return;
-    Promise.resolve(openAnnualJobCount(annualItem.job_id,annualItem.id)).finally(() => {
-      if (S?.page !== 'c-tasks') return;
-      _hardwareScanNavigationPending = false;
-      activateHardwareLaserScanner();
-    });
+    runTaskScanNavigation(() => {
+      Promise.resolve(openAnnualJobCount(annualItem.job_id,annualItem.id)).finally(() => {
+        if (S?.page !== 'c-tasks') return;
+        _hardwareScanNavigationPending = false;
+        activateHardwareLaserScanner();
+      });
+    },fromHardwareLaser);
     return;
   }
   if (taskMatches.length || annualMatches.length) {
@@ -25688,15 +26472,28 @@ async function loadCCount() {
       .map(detail => normalizeHardwareScanValue(detail.license_plate || ''))
       .filter(Boolean)
       .join('|');
-    const initialCountFocusAttr = items === ''
+    const firstCountItem = items === '';
+    const initialCountFocusAttr = firstCountItem
       ? 'autofocus data-count-initial-focus="true"'
       : '';
     items += `<div class="citem-wrap"
       data-hw-item-id="${escapeWmsText(String(it.id))}"
       data-hw-item-code="${escapeWmsText(it?.code || '')}"
       data-hw-lp-codes="${escapeWmsText(hardwareLpCodes)}">
+      ${firstCountItem ? `<div class="count-location-item-banner">
+        <span class="count-location-item-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z"></path><circle cx="12" cy="10" r="2.2"></circle></svg>
+        </span>
+        <div class="count-location-item-copy">
+          <span class="count-location-item-label">LOCATION</span>
+          <strong class="count-location-item-code mono" data-i18n-skip>${escapeWmsText(l.code || '')}</strong>
+          ${sub ? `<span class="count-location-item-meta" data-i18n-skip>${escapeWmsText(sub)}</span>` : ''}
+        </div>
+      </div>` : ''}
       <div class="citem">
         <div class="citem-info">
+          <div class="count-item-identity">
+            <span class="count-item-section-label">ITEM</span>
           ${emptyLocation
             ? `<div class="citem-code"><span class="tag tag-blue">Location ว่าง</span></div>
                <div class="citem-desc">ถ้ายังว่างให้กรอก QTY = 0 · ถ้าพบสินค้าจริงให้สแกน Location / LPN / Item แล้วกรอก QTY</div>
@@ -25741,6 +26538,7 @@ async function loadCCount() {
                </div>`
             : `<div class="citem-code" data-i18n-skip>${escapeWmsText(it?.code || '')}</div>
                <div class="citem-desc" data-i18n-skip>${escapeWmsText(it?.description || '')}</div>`}
+          </div>
           ${detHtml}
         </div>
         <button class="item-toggle ${hasExtra?'has':''}" id="tg_${it.id}" onclick="toggleExtra('${it.id}')" title="หมายเหตุ/รูป">📝</button>
@@ -25805,9 +26603,7 @@ async function loadCCount() {
 
   cnt().innerHTML = `<div class="count-handheld-page" data-hw-location-code="${escapeWmsText(l.code || '')}">
     <div class="card count-header-card">
-      <div class="mono count-header-location" style="font-size:22px;font-weight:800;color:var(--text-main)">${l.code}</div>
-      <div class="count-header-meta" style="font-size:14px;color:var(--text-muted);margin-top:4px; font-weight:600;">${sub}</div>
-      <div class="count-context-tags" style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
+      <div class="count-context-tags" style="display:flex;gap:10px;flex-wrap:wrap">
         <span class="tag tag-blue">รอบที่ ${round}</span>
         <span class="tag tag-gray">${asgn.count_sessions.name}</span>
         ${annualMode ? `<span class="tag tag-green">${escapeWmsText(annualJob.job_code)}</span>` : ''}
@@ -25909,7 +26705,7 @@ function countScreenLockEnabled() {
 }
 
 function countTouchToolbarHtml() {
-  return `<div class="count-touch-toolbar" aria-label="เครื่องมือสำหรับนับงานบน iPad">
+  return `<div class="count-touch-toolbar" aria-label="เครื่องมือสำหรับกรอกยอดนับ">
     <button type="button" class="count-screen-lock-button" id="countScreenLockButton"
       onclick="toggleCountScreenLock()" aria-pressed="true">
       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -25917,6 +26713,14 @@ function countTouchToolbarHtml() {
         <path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
       </svg>
       <span id="countScreenLockLabel">ล็อกหน้าจอ: เปิด</span>
+    </button>
+    <button type="button" class="count-keypad-toggle-button" id="countKeypadToggleButton"
+      onclick="toggleCountNumericKeypad()" aria-pressed="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3" y="3" width="18" height="18" rx="3"></rect>
+        <path d="M7 8h.01M12 8h.01M17 8h.01M7 12h.01M12 12h.01M17 12h.01M7 16h.01M12 16h5"></path>
+      </svg>
+      <span id="countKeypadToggleLabel">แป้นตัวเลข: ปิด</span>
     </button>
   </div>`;
 }
@@ -25935,6 +26739,68 @@ function toggleCountScreenLock() {
   const next = !countScreenLockEnabled();
   try { localStorage.setItem(COUNT_SCREEN_LOCK_STORAGE_KEY,next ? 'true' : 'false'); } catch (_) {}
   updateCountScreenLockUi();
+}
+
+function countNumericKeypadEnabled() {
+  try {
+    const stored = localStorage.getItem(COUNT_NUMERIC_KEYPAD_STORAGE_KEY);
+    if (stored === 'true' || stored === 'false') return stored === 'true';
+  } catch (_) {}
+  // Rugged Handheld terminals already have physical number keys. Keep the
+  // on-screen keypad off until the user explicitly needs it as a backup.
+  return !isNarrowHandheldTerminal();
+}
+
+function countNumericKeypadNeedsReadOnly() {
+  return isTabletUiDevice() || isNarrowHandheldTerminal();
+}
+
+function updateCountNumericKeypadToggleUi() {
+  const enabled = countNumericKeypadEnabled();
+  const button = Q('countKeypadToggleButton');
+  const label = Q('countKeypadToggleLabel');
+  button?.classList.toggle('is-enabled',enabled);
+  button?.setAttribute('aria-pressed',String(enabled));
+  if (label) label.textContent = enabled ? 'แป้นตัวเลข: เปิด' : 'แป้นตัวเลข: ปิด';
+  document.body.classList.toggle('count-keypad-enabled',enabled && S?.page === 'c-count');
+  return enabled;
+}
+
+function applyCountNumericKeypadMode() {
+  const enabled = updateCountNumericKeypadToggleUi();
+  const keepSoftKeyboardHidden = isNarrowHandheldTerminal();
+  const readOnly = enabled && countNumericKeypadNeedsReadOnly();
+  document.querySelectorAll('.count-handheld-page .cqty').forEach(input => {
+    input.readOnly = readOnly;
+    input.setAttribute('inputmode',readOnly || keepSoftKeyboardHidden ? 'none' : 'decimal');
+    input.classList.toggle('custom-keypad-ready',enabled);
+    if (enabled) {
+      input.setAttribute('aria-haspopup','dialog');
+      input.setAttribute('aria-label',`${input.closest('.citem-wrap')?.querySelector('.citem-code')?.textContent?.trim() || 'ITEM'} จำนวนที่นับได้`);
+    } else {
+      input.removeAttribute('aria-haspopup');
+    }
+    if (!input.dataset.keypadSyncBound) {
+      input.dataset.keypadSyncBound = 'true';
+      input.addEventListener('input',() => {
+        if (_countKeypadInput === input) updateCountNumericKeypadDisplay();
+      });
+    }
+  });
+  return enabled;
+}
+
+function toggleCountNumericKeypad() {
+  const next = !countNumericKeypadEnabled();
+  try { localStorage.setItem(COUNT_NUMERIC_KEYPAD_STORAGE_KEY,next ? 'true' : 'false'); } catch (_) {}
+  if (!next) closeCountNumericKeypad({ blur:false });
+  applyCountNumericKeypadMode();
+  if (!next) return;
+  const input = document.querySelector('.count-handheld-page .cqty[data-count-initial-focus="true"]')
+    || document.querySelector('.count-handheld-page .cqty');
+  if (!input) return;
+  focusHardwareScanTarget(input);
+  openCountNumericKeypad(input);
 }
 
 function normalizeCountQtyInput(input) {
@@ -25998,9 +26864,9 @@ function updateCountNumericKeypadDisplay() {
 }
 
 function openCountNumericKeypad(input) {
-  if (!isTabletUiDevice() || !input?.classList?.contains('cqty')) return false;
-  input.readOnly = true;
-  input.setAttribute('inputmode','none');
+  if (!countNumericKeypadEnabled() || !input?.classList?.contains('cqty')) return false;
+  input.readOnly = countNumericKeypadNeedsReadOnly();
+  input.setAttribute('inputmode',input.readOnly ? 'none' : 'decimal');
   document.querySelectorAll('.cqty.custom-keypad-active').forEach(field => field.classList.remove('custom-keypad-active'));
   _countKeypadInput = input;
   input.classList.add('custom-keypad-active');
@@ -26063,19 +26929,13 @@ function removeCountNumericKeypad() {
 
 function initializeCountTouchControls() {
   updateCountScreenLockUi();
-  if (!isTabletUiDevice()) return;
-  document.querySelectorAll('.count-handheld-page .cqty').forEach(input => {
-    input.readOnly = true;
-    input.setAttribute('inputmode','none');
-    input.classList.add('custom-keypad-ready');
-    input.setAttribute('aria-haspopup','dialog');
-    input.setAttribute('aria-label',`${input.closest('.citem-wrap')?.querySelector('.citem-code')?.textContent?.trim() || 'ITEM'} จำนวนที่นับได้`);
-  });
+  applyCountNumericKeypadMode();
 }
 
 function teardownCountTouchControls() {
   removeCountNumericKeypad();
   document.body.classList.remove('count-screen-locked');
+  document.body.classList.remove('count-keypad-enabled');
 }
 
 document.addEventListener('gesturestart',event => {
@@ -26118,7 +26978,7 @@ function focusNextCountField(currentInput) {
   const currentIndex = inputs.indexOf(currentInput);
   const nextInput = inputs[currentIndex + 1];
   if (nextInput) {
-    if (isTabletUiDevice()) {
+    if (countNumericKeypadEnabled()) {
       openCountNumericKeypad(nextInput);
       return;
     }
@@ -26618,7 +27478,8 @@ async function submitCount(aid, round, idsStr, annualJobId='') {
         title:'บันทึกการนับสำเร็จ',
         duration:3200,
       });
-    go('c-tasks');
+    if (await openNextCountFromCachedTasks(aid,asgn,newStatus,annualJobId)) return;
+    returnToMyTasksAndOpenNextCount(aid,asgn,annualJobId);
   } else if (anyPending) {
     alert(`⚠️ ยอดไม่ตรงกับระบบ — กรุณานับรอบที่ ${round+1} อีกครั้งอย่างระมัดระวัง`);
     go('c-count', annualJobId
@@ -26626,7 +27487,8 @@ async function submitCount(aid, round, idsStr, annualJobId='') {
       : { aid });
   } else {
     alert('⚠️ ยอดไม่ตรงกับระบบ — ส่ง Supervisor ตรวจสอบแล้ว');
-    go('c-tasks');
+    if (await openNextCountFromCachedTasks(aid,asgn,newStatus,annualJobId)) return;
+    returnToMyTasksAndOpenNextCount(aid,asgn,annualJobId);
   }
 }
 
@@ -28623,6 +29485,8 @@ async function loadSvDash() {
     loadScope !== _activePageRequestController ||
     loadScope?.signal?.aborted ||
     S?.page !== 'sv-dash';
+  const tab = S._dashTab || _dashTab || 'summary';
+  _dashTab = tab;
 
   const { data: sessions, error:sessionsError } = await sb.from('count_sessions')
     .select('id,name').eq('status','active').order('created_at',{ascending:false});
@@ -28637,13 +29501,28 @@ async function loadSvDash() {
     </div>`; return;
   }
 
-  const requestedSessionId = String(S._dashSid || '');
-  const curSid = sessions.some(session => session.id === requestedSessionId)
-    ? requestedSessionId
-    : sessions[0].id;
+  const rememberedSessionId = readRememberedDashboardSession();
+  const curSid = resolveDashboardSessionId(sessions,S._dashSid,rememberedSessionId);
   S._dashSid = curSid;
-  const curName = sessions.find(s=>s.id===curSid)?.name || sessions[0].name;
-  const sessOpts = sessions.map(s=>`<option value="${s.id}" ${s.id===curSid?'selected':''}>${escapeWmsText(s.name)}</option>`).join('');
+  if (curSid) rememberDashboardSession(curSid);
+  else if (rememberedSessionId) rememberDashboardSession('');
+  const curName = sessions.find(session => String(session.id) === curSid)?.name || '';
+  const sessOpts = `<option value="" ${curSid ? '' : 'selected'} disabled>— เลือก Session —</option>`
+    + sessions.map(session => `<option value="${session.id}" ${String(session.id)===curSid?'selected':''}>${escapeWmsText(session.name)}</option>`).join('');
+
+  if (!curSid) {
+    cnt().innerHTML = `${dashboardSessionControlHtml(tab,sessOpts)}
+      <div class="${tab === 'summary' ? 'summary-dashboard-content' : 'card'}" id="dash-content">
+        <div class="dashboard-session-empty-state">
+          <strong>เลือก Session เพื่อแสดงข้อมูล</strong>
+          <span>ระบบจะจำ Session ที่เลือกไว้จนกว่าคุณจะเปลี่ยนเอง</span>
+        </div>
+      </div>`;
+    updateDashboardNavigationUi(tab);
+    scheduleTabletViewportLayout(false);
+    disconnectTabletAccuracyLayoutGuard();
+    return;
+  }
   await loadWarehouseLayoutConfig();
   if (isStaleLoad()) return;
 
@@ -29330,8 +30209,6 @@ async function loadSvDash() {
       : '🎉 ไม่มี Variance ที่ต้องตรวจสอบตอนนี้'
   }</div>`;
 
-  const tab = S._dashTab || _dashTab;
-  _dashTab = tab;
   let varianceReportRows = '';
   const recentVars = sortRowsByLocation(
     allWmsRows.filter(v => +v.variance !== 0),
