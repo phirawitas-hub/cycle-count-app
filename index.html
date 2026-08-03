@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v186 - Handheld Scan Decoder and Round Autofocus</title>
+<title>Cycle Count v187 - Login Scan Ready and Reliable Count Navigation</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -16848,7 +16848,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v186-handheld-decoder-round-focus';
+window.__CYCLE_COUNT_BUILD__ = 'v187-login-scan-ready-reliable-navigation';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -23701,6 +23701,8 @@ let _hardwareScanCommitTimer = null;
 let _hardwareScanInputCommitTimer = null;
 let _handheldCountFocusTimers = [];
 let _handheldCountFocusToken = 0;
+let _taskLocationFocusTimers = [];
+let _taskLocationFocusToken = 0;
 let _hardwareCapturePollTimer = null;
 let _hardwareCapturePollValue = '';
 let _hardwareCapturePollChangedAt = 0;
@@ -23877,6 +23879,48 @@ function isNarrowHandheldTerminal() {
   );
 }
 
+function clearTaskLocationFocusTimers() {
+  _taskLocationFocusToken += 1;
+  _taskLocationFocusTimers.forEach(timer => clearTimeout(timer));
+  _taskLocationFocusTimers = [];
+}
+
+function focusTaskLocationCapture({ force=false }={}) {
+  if (S?.page !== 'c-tasks' || Q('scanOverlay')) return false;
+  const target = Q('task_hardware_scan');
+  if (!target) return false;
+  const active = document.activeElement;
+  if (!force && active && active !== document.body && active !== document.documentElement && active !== target) {
+    return false;
+  }
+  focusHardwareScanTarget(target);
+  // iScan sends decoded text to the focused edit box. On this Android
+  // terminal a second focus after click makes that IME connection reliable.
+  try { target.click(); } catch (_) {}
+  focusHardwareScanTarget(target);
+  return document.activeElement === target;
+}
+
+function scheduleTaskLocationScanFocus() {
+  clearTaskLocationFocusTimers();
+  if (S?.page !== 'c-tasks') return;
+  const token = _taskLocationFocusToken;
+  focusTaskLocationCapture({ force:true });
+  requestAnimationFrame(() => {
+    if (token !== _taskLocationFocusToken || S?.page !== 'c-tasks') return;
+    if (document.activeElement?.id !== 'task_hardware_scan') {
+      focusTaskLocationCapture({ force:true });
+    }
+  });
+  [80,220,520,1000,1800,3000].forEach(delay => {
+    _taskLocationFocusTimers.push(setTimeout(() => {
+      if (token !== _taskLocationFocusToken || S?.page !== 'c-tasks') return;
+      if (document.activeElement?.id === 'task_hardware_scan') return;
+      focusTaskLocationCapture({ force:true });
+    },delay));
+  });
+}
+
 function clearHandheldCountFocusTimers() {
   _handheldCountFocusToken += 1;
   _handheldCountFocusTimers.forEach(timer => clearTimeout(timer));
@@ -23982,13 +24026,17 @@ function startHardwareCapturePolling(targetId) {
 
 function activateHardwareLaserScanner() {
   if (S?.page === 'c-count') {
+    clearTaskLocationFocusTimers();
     stopHardwareCapturePolling();
     scheduleHandheldCountEntryFocus();
     _hardwareScanNavigationPending = false;
     return;
   }
   _hardwareScanNavigationPending = false;
-  if (!isNarrowHandheldTerminal()) return;
+  if (!isNarrowHandheldTerminal()) {
+    clearTaskLocationFocusTimers();
+    return;
+  }
   clearHandheldCountFocusTimers();
   const targetId = S?.page === 'c-tasks'
     ? 'task_hardware_scan'
@@ -23997,10 +24045,12 @@ function activateHardwareLaserScanner() {
       : '';
   if (targetId) {
     startHardwareCapturePolling(targetId);
-    // Focus immediately after render and once more after mobile layout settles.
-    focusHardwareScanTarget(targetId);
-    setTimeout(() => focusHardwareScanTarget(targetId),120);
-    setTimeout(() => restoreHandheldLocationFocus(),520);
+    if (targetId === 'task_hardware_scan') scheduleTaskLocationScanFocus();
+    else {
+      clearTaskLocationFocusTimers();
+      focusHardwareScanTarget(targetId);
+      setTimeout(() => focusHardwareScanTarget(targetId),120);
+    }
   }
 }
 
@@ -24009,17 +24059,26 @@ function restoreHandheldLocationFocus() {
   const active = document.activeElement;
   if (active && active !== document.body && active !== document.documentElement
       && !active.matches?.('#task_hardware_scan')) return;
-  focusHardwareScanTarget('task_hardware_scan');
+  focusTaskLocationCapture();
 }
+
+document.addEventListener('pointerdown',event => {
+  if (S?.page !== 'c-tasks') return;
+  if (event.target?.closest?.('#task_hardware_scan,.handheld-laser-bar')) return;
+  // Do not steal focus after the user deliberately selects a filter/button.
+  clearTaskLocationFocusTimers();
+},true);
 
 document.addEventListener('focusout',event => {
   if (event.target?.id !== 'task_hardware_scan') return;
   setTimeout(restoreHandheldLocationFocus,90);
 },true);
 document.addEventListener('visibilitychange',() => {
-  if (!document.hidden) setTimeout(restoreHandheldLocationFocus,120);
+  if (!document.hidden && S?.page === 'c-tasks') setTimeout(scheduleTaskLocationScanFocus,120);
 });
-window.addEventListener('pageshow',() => setTimeout(restoreHandheldLocationFocus,120));
+window.addEventListener('pageshow',() => {
+  if (S?.page === 'c-tasks') setTimeout(scheduleTaskLocationScanFocus,120);
+});
 
 function assignHardwareScanToField(input,value,role='') {
   if (!input) return false;
@@ -25327,11 +25386,24 @@ async function loadCCount() {
   let jitemid = S.jitemid || '';
   let annualMode = Boolean(jid && jitemid);
 
-  const { data: asgn } = await sb.from('assignments')
+  const assignmentResult = await sb.from('assignments')
     .select('id,status,location_id,session_id,locations(code,zone,area,row_no,level),count_sessions(name)')
     .eq('id', aid).single();
+  let asgn = assignmentResult.data;
+  if (!asgn) {
+    // Assigned Work has already been loaded for the authenticated user. Keep
+    // that safe copy as a fallback for a brief direct-read/RLS delay instead
+    // of bouncing a successful Location scan back to the task list.
+    asgn = (window._myTasks || []).find(task => String(task.id) === String(aid)) || null;
+  }
 
-  if (!asgn) { go('c-tasks'); return; }
+  if (!asgn) {
+    cnt().innerHTML = `<div class="card">
+      <div class="alert alert-red">เปิด Assignment นี้ไม่ได้ กรุณากลับไปสแกน Location อีกครั้ง</div>
+      <button type="button" class="btn btn-blue" style="margin-top:14px" onclick="go('c-tasks')">กลับไปงานที่ได้รับมอบหมาย</button>
+    </div>`;
+    return;
+  }
 
   // ป้องกัน route ของ JOB หลุดเมื่อย้อนกลับ/สแกน/รีโหลด:
   // ตรวจจากฐานข้อมูลซ้ำว่า Location นี้อยู่ใน JOB ของ User ปัจจุบันหรือไม่
@@ -25395,13 +25467,15 @@ async function loadCCount() {
     }
   }
 
-  let round = annualMode ? 1 : nextRound(asgn.status);
-  if (!round) { go('c-tasks'); return; }
+  // The status stored on assignments can lag behind the actual Count rows.
+  // Determine the next round from the records below so a valid scanned task
+  // is never acknowledged and immediately redirected back to Assigned Work.
+  let round = annualMode ? 1 : null;
 
   const l   = asgn.locations;
   const sub = [l.zone, l.area, l.row_no && 'Row '+l.row_no, l.level && 'Lv.'+l.level].filter(Boolean).join(' · ');
 
-  const [{ data: rawSnaps }, { data: rawDetails }, { data: sessInfo }, { data: counterNames }, { data: countRemarkRows }, rules] = await Promise.all([
+  const [{ data: rawSnaps }, { data: rawDetails }, { data: sessInfo }, { data: counterNames }, { data: countRemarkRows }, rules, existingCountsResult] = await Promise.all([
     sb.from('stock_snapshot')
       .select('item_id,onhand_qty,al_qty,items(id,code,description)')
       .eq('session_id', asgn.session_id)
@@ -25414,12 +25488,41 @@ async function loadCCount() {
     sb.from('counter_names').select('id,name').order('name'),
     sb.from('remark_options').select('id,label').eq('context','count').order('label'),
     getSessionRules(asgn.session_id),
+    sb.from('count_records')
+      .select('item_id,round,count_qty,remark,photo_url')
+      .eq('assignment_id',aid)
+      .order('round'),
   ]);
   // การนับแบบ JOB ใช้ขอบเขตงานระดับ Location เหมือนงานปกติ:
   // โหลดสินค้ากับรายละเอียดทั้งหมดของ Location ไม่ตัดเหลือเฉพาะ ITEM ที่ใช้แบ่ง JOB
   const snaps = rawSnaps || [];
   const details = rawDetails || [];
   const annualItemIds = new Set(snaps.map(item => item.item_id).filter(Boolean));
+  if (existingCountsResult.error) {
+    cnt().innerHTML = errBox(existingCountsResult.error.message);
+    return;
+  }
+  const allExistingCountRows = existingCountsResult.data || [];
+  const scopedCountRows = annualMode
+    ? allExistingCountRows.filter(record => annualItemIds.has(record.item_id))
+    : allExistingCountRows;
+  const roundsByItem = {};
+  scopedCountRows.forEach(record => {
+    roundsByItem[record.item_id] = roundsByItem[record.item_id] || {};
+    roundsByItem[record.item_id][record.round] = Number(record.count_qty);
+  });
+
+  if (!annualMode) {
+    const workflow = deriveAssignmentWorkflowStatus(snaps,roundsByItem,rules,asgn.status);
+    round = nextRound(workflow.effectiveStatus);
+    if (!round) {
+      const completed = workflow.itemStatuses.length > 0
+        && workflow.itemStatuses.every(status => status === 'OK' || status === 'Diff');
+      if (completed) alert('รายการใน Location นี้นับครบแล้ว');
+      go('c-tasks');
+      return;
+    }
+  }
 
   window._counterNames = counterNames || [];
   window._countRemarkOptions = countRemarkRows?.length
@@ -25443,21 +25546,7 @@ async function loadCCount() {
   let prev = [];
   let allPhotoRecs = [];
   if (annualMode) {
-    const { data: annualCounts,error:annualCountError } = await sb.from('count_records')
-      .select('item_id,round,count_qty,remark,photo_url')
-      .eq('assignment_id',aid)
-      .in('item_id',[...annualItemIds])
-      .order('round');
-    if (annualCountError) {
-      cnt().innerHTML = errBox(annualCountError.message);
-      return;
-    }
-    const countRows = annualCounts || [];
-    const roundsByItem = {};
-    countRows.forEach(record => {
-      roundsByItem[record.item_id] = roundsByItem[record.item_id] || {};
-      roundsByItem[record.item_id][record.round] = Number(record.count_qty);
-    });
+    const countRows = scopedCountRows;
     const itemStatuses = snaps.map(snapshot => {
       const counted = roundsByItem[snapshot.item_id] || {};
       return computeItemStatus(snapshot.onhand_qty,counted[1],counted[2],counted[3],rules);
@@ -25472,14 +25561,8 @@ async function loadCCount() {
     prev = countRows.filter(record => Number(record.round) === round);
     allPhotoRecs = countRows.filter(record => record.photo_url);
   } else {
-    const [prevResult,photoResult] = await Promise.all([
-      sb.from('count_records')
-        .select('item_id,count_qty,remark,photo_url').eq('assignment_id', aid).eq('round', round),
-      sb.from('count_records')
-        .select('item_id,round,photo_url').eq('assignment_id', aid).not('photo_url', 'is', null).order('round'),
-    ]);
-    prev = prevResult.data || [];
-    allPhotoRecs = photoResult.data || [];
+    prev = scopedCountRows.filter(record => Number(record.round) === round);
+    allPhotoRecs = scopedCountRows.filter(record => record.photo_url);
   }
   const prevMap = Object.fromEntries(prev?.map(r => [r.item_id, r]) || []);
 
