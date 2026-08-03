@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v182 - Handheld Scan-to-Count Workflow</title>
+<title>Cycle Count v183 - Reliable Handheld Scan and Round Focus</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -16761,7 +16761,7 @@ body.login-page-active .lcard {
   }
 }
 
-/* v182 — Rugged handheld scan-to-count workflow. */
+/* v183 — Reliable rugged-handheld scan routing and count-round autofocus. */
 @media (max-width:760px) {
   .count-handheld-page .handheld-laser-bar {
     display:none !important;
@@ -16778,7 +16778,7 @@ body.login-page-active .lcard {
 }
 </style>
 </head>
-<body data-build="v182-handheld-scan-to-count">
+<body data-build="v183-handheld-scan-round-focus">
 <div id="app"></div>
 
 <script>
@@ -16848,7 +16848,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v182-handheld-scan-to-count';
+window.__CYCLE_COUNT_BUILD__ = 'v183-handheld-scan-round-focus';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -19638,7 +19638,7 @@ function applyBrandingSettings(settings, persistLocal = true) {
     const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
     root.setProperty(`--theme-${cssKey}`, uiBranding[key]);
   });
-  document.title = `${uiBranding.systemName} v182`;
+  document.title = `${uiBranding.systemName} v183`;
   if (persistLocal) {
     try { localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(uiBranding)); } catch (_) {}
   }
@@ -21079,7 +21079,7 @@ async function protectedFunctionHeaders() {
   return {
     Authorization: `Bearer ${session.access_token}`,
     apikey: SUPA_KEY,
-    'x-client-info': 'cycle-count-v182',
+    'x-client-info': 'cycle-count-v183',
   };
 }
 
@@ -23678,8 +23678,12 @@ function renderMyTasks() {
 
 const HANDHELD_SCAN_CONFIG = Object.freeze({
   minLength:2,
-  maxInterKeyMs:90,
-  maxDurationMs:1600,
+  // Dedicated Handheld terminals do not all emit HID keys at the same speed.
+  // Keep the global scanner detector tolerant, while the dedicated capture
+  // field below always uses its complete value instead of timing alone.
+  maxInterKeyMs:240,
+  maxDurationMs:5000,
+  inputCommitDelayMs:520,
   duplicateWindowMs:1100,
 });
 let _hardwareScanBuffer = '';
@@ -23693,6 +23697,7 @@ let _hardwareScanLastAcceptedAt = 0;
 let _hardwareScanFeedbackTimer = null;
 let _hardwareScanCommitTimer = null;
 let _hardwareScanInputCommitTimer = null;
+let _handheldCountFocusTimers = [];
 
 function hardwareLaserCaptureHtml(id,context,instruction) {
   return `<div class="handheld-laser-bar" data-i18n-skip>
@@ -23831,7 +23836,12 @@ function isNarrowHandheldTerminal() {
   );
 }
 
-function prepareHandheldCountEntry() {
+function clearHandheldCountFocusTimers() {
+  _handheldCountFocusTimers.forEach(timer => clearTimeout(timer));
+  _handheldCountFocusTimers = [];
+}
+
+function prepareHandheldCountEntry({ force=false }={}) {
   if (!isNarrowHandheldTerminal() || S?.page !== 'c-count') return false;
   const inputs = [...document.querySelectorAll('.count-handheld-page .cqty')]
     .filter(input => !input.disabled && input.offsetParent !== null);
@@ -23842,20 +23852,36 @@ function prepareHandheldCountEntry() {
   });
   const firstInput = inputs.find(input => String(input.value || '').trim() === '') || inputs[0];
   if (!firstInput) return false;
-  setTimeout(() => {
-    if (S?.page !== 'c-count') return;
-    focusHardwareScanTarget(firstInput);
-    firstInput.scrollIntoView({ block:'center',behavior:'smooth' });
-  },120);
+  const active = document.activeElement;
+  if (!force && active && active !== document.body && active !== document.documentElement) {
+    // A successful first focus must not be moved to the next empty item by a
+    // delayed retry, and a user's manual selection must never be stolen.
+    if (active.classList?.contains('cqty') || !active.matches?.('[data-hw-scan-capture="true"]')) return true;
+  }
+  if (S?.page !== 'c-count') return false;
+  focusHardwareScanTarget(firstInput);
+  firstInput.scrollIntoView({ block:'center',behavior:'smooth' });
   return true;
+}
+
+function scheduleHandheldCountEntryFocus() {
+  clearHandheldCountFocusTimers();
+  if (!isNarrowHandheldTerminal() || S?.page !== 'c-count') return;
+  [90,340,820].forEach((delay,index) => {
+    _handheldCountFocusTimers.push(setTimeout(() => {
+      if (S?.page !== 'c-count') return;
+      prepareHandheldCountEntry({ force:index === 0 });
+    },delay));
+  });
 }
 
 function activateHardwareLaserScanner() {
   if (!isNarrowHandheldTerminal()) return;
   if (S?.page === 'c-count') {
-    prepareHandheldCountEntry();
+    scheduleHandheldCountEntryFocus();
     return;
   }
+  clearHandheldCountFocusTimers();
   const targetId = S?.page === 'c-tasks'
     ? 'task_hardware_scan'
     : S?.page === 'c-found'
@@ -23988,19 +24014,27 @@ function handleHardwareLaserKeydown(event) {
     resetHardwareScanBuffer();
     return;
   }
-  const scanTarget = Boolean(target?.dataset?.hwScanCapture || target?.dataset?.hwScanRole);
+  const captureTarget = Boolean(target?.dataset?.hwScanCapture);
+  const scanTarget = Boolean(captureTarget || target?.dataset?.hwScanRole);
   if (hardwareScanEditableTarget(target) && !scanTarget && !numericTarget) {
     resetHardwareScanBuffer();
     return;
   }
   const terminalKey = event.key === 'Enter' || event.key === 'Tab';
   if (terminalKey) {
+    clearTimeout(_hardwareScanInputCommitTimer);
+    _hardwareScanInputCommitTimer = null;
     const elapsed = _hardwareScanStartedAt ? performance.now() - _hardwareScanStartedAt : 0;
     const fastBuffer = _hardwareScanBuffer.length >= HANDHELD_SCAN_CONFIG.minLength
       && elapsed <= HANDHELD_SCAN_CONFIG.maxDurationMs
       && _hardwareScanMaxGap <= HANDHELD_SCAN_CONFIG.maxInterKeyMs;
     const fieldValue = scanTarget ? normalizeHardwareScanValue(target?.value || '') : '';
-    const candidate = fastBuffer ? _hardwareScanBuffer : fieldValue;
+    // The capture input contains the authoritative complete barcode. This
+    // avoids dropping a Location when a rugged scanner types more slowly than
+    // desktop USB scanners.
+    const candidate = captureTarget
+      ? (fieldValue || _hardwareScanBuffer)
+      : (fastBuffer ? _hardwareScanBuffer : fieldValue);
     const numericBarcode = numericTarget && fastBuffer && candidate.length >= 4;
     if (numericBarcode) {
       event.preventDefault();
@@ -24029,7 +24063,14 @@ function handleHardwareLaserKeydown(event) {
   _hardwareScanLastKeyAt = now;
   _hardwareScanTarget = target;
   _hardwareScanBuffer += event.key;
-  if (target?.dataset?.hwScanCapture) event.preventDefault();
+  // Allow the dedicated capture field to retain every character. Older builds
+  // prevented the default key action, so a slow scanner could leave only a
+  // partial timing buffer and Location navigation never ran.
+  if (captureTarget) {
+    clearTimeout(_hardwareScanCommitTimer);
+    _hardwareScanCommitTimer = null;
+    return;
+  }
   clearTimeout(_hardwareScanCommitTimer);
   _hardwareScanCommitTimer = setTimeout(commitHardwareScanBufferWithoutSuffix,140);
 }
@@ -24039,13 +24080,13 @@ document.addEventListener('input',event => {
   const target = event.target instanceof HTMLElement ? event.target : null;
   if (!hardwareScanOperationalPage() || !target?.dataset?.hwScanCapture) return;
   const value = normalizeHardwareScanValue(target.value || '');
-  if (value.length < 4) return;
+  if (value.length < HANDHELD_SCAN_CONFIG.minLength) return;
   clearTimeout(_hardwareScanInputCommitTimer);
   _hardwareScanInputCommitTimer = setTimeout(() => {
     const committed = normalizeHardwareScanValue(target.value || '');
     target.value = '';
-    if (committed.length >= 4) routeHardwareLaserScan(committed,target);
-  },100);
+    if (committed.length >= HANDHELD_SCAN_CONFIG.minLength) routeHardwareLaserScan(committed,target);
+  },HANDHELD_SCAN_CONFIG.inputCommitDelayMs);
 },true);
 
 let _scannerCallback = null;
@@ -24441,9 +24482,10 @@ function openScanner() {
 }
 
 function onTaskLocationScanned(text,fromHardwareLaser=false) {
-  const code = (text || '').trim().toUpperCase();
+  const code = normalizeHardwareScanValue(text);
+  const codeKey = hardwareScanCompareKey(code);
   const tasks = window._myTasks || [];
-  const match = tasks.find(a => a.locations?.code?.toUpperCase() === code);
+  const match = tasks.find(a => hardwareScanCompareKey(a.locations?.code || '') === codeKey);
   if (match) {
     if (['completed','approved'].includes(match.status)) {
       handheldScanFeedback('warning',uiCopy('Location นี้นับเสร็จแล้ว','Location Already Completed'),code,uiCopy('เลือก Location อื่นเพื่อเริ่มงาน','Scan another Location to continue'));
@@ -24455,7 +24497,7 @@ function onTaskLocationScanned(text,fromHardwareLaser=false) {
     return;
   }
   const annualItem = (window._myAnnualJobItems || []).find(item =>
-    item.locations?.code?.toUpperCase() === code
+    hardwareScanCompareKey(item.locations?.code || '') === codeKey
   );
   if (annualItem) {
     handheldScanFeedback('success',uiCopy('พบ Location ใน JOB','Job Location Found'),code,uiCopy('กำลังเปิดหน้าบันทึกการนับ','Opening the physical count page'));
@@ -25372,8 +25414,10 @@ async function loadCCount() {
 
   window._selectedCounters = new Set((window._lastPickedCounterNames||[]).filter(n => (window._counterNames||[]).some(c=>c.name===n)));
   renderCounterPicker();
-  activateHardwareLaserScanner();
   initializeCountTouchControls();
+  // Initialize the current round first, then focus its first Count field.
+  // This runs for Count 1, Count 2 and Count 3 alike.
+  activateHardwareLaserScanner();
 
   if (annualMode && annualJob.status === 'pending') {
     const { data:startedJobs,error:startJobError } = await sb.from('annual_count_jobs')
