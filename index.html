@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v181 - Handheld Login & Supervisor Import</title>
+<title>Cycle Count v182 - Handheld Scan-to-Count Workflow</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -16760,9 +16760,25 @@ body.login-page-active .lcard {
     min-height:48px !important;
   }
 }
+
+/* v182 — Rugged handheld scan-to-count workflow. */
+@media (max-width:760px) {
+  .count-handheld-page .handheld-laser-bar {
+    display:none !important;
+  }
+  .cqty[data-handheld-count-entry="true"]:focus {
+    border-color:var(--theme-primary-color) !important;
+    box-shadow:0 0 0 4px color-mix(in srgb,var(--theme-primary-color) 22%,transparent),
+      inset 2px 2px 5px var(--neu-shadow-dark) !important;
+  }
+  #task_hardware_scan:focus {
+    border-color:var(--theme-primary-color) !important;
+    box-shadow:0 0 0 4px color-mix(in srgb,var(--theme-primary-color) 18%,transparent) !important;
+  }
+}
 </style>
 </head>
-<body data-build="v181-handheld-login-supervisor-import">
+<body data-build="v182-handheld-scan-to-count">
 <div id="app"></div>
 
 <script>
@@ -16832,7 +16848,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v181-handheld-login-supervisor-import';
+window.__CYCLE_COUNT_BUILD__ = 'v182-handheld-scan-to-count';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -19622,7 +19638,7 @@ function applyBrandingSettings(settings, persistLocal = true) {
     const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
     root.setProperty(`--theme-${cssKey}`, uiBranding[key]);
   });
-  document.title = `${uiBranding.systemName} v181`;
+  document.title = `${uiBranding.systemName} v182`;
   if (persistLocal) {
     try { localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(uiBranding)); } catch (_) {}
   }
@@ -21063,7 +21079,7 @@ async function protectedFunctionHeaders() {
   return {
     Authorization: `Bearer ${session.access_token}`,
     apikey: SUPA_KEY,
-    'x-client-info': 'cycle-count-v181',
+    'x-client-info': 'cycle-count-v182',
   };
 }
 
@@ -23808,19 +23824,62 @@ function focusHardwareScanTarget(targetOrId,{ select=true }={}) {
   return true;
 }
 
+function isNarrowHandheldTerminal() {
+  return Boolean(
+    window.matchMedia?.('(max-width:760px)').matches
+    || (/Android/i.test(navigator.userAgent) && window.innerWidth <= 900)
+  );
+}
+
+function prepareHandheldCountEntry() {
+  if (!isNarrowHandheldTerminal() || S?.page !== 'c-count') return false;
+  const inputs = [...document.querySelectorAll('.count-handheld-page .cqty')]
+    .filter(input => !input.disabled && input.offsetParent !== null);
+  inputs.forEach(input => {
+    input.setAttribute('inputmode','none');
+    input.setAttribute('enterkeyhint','next');
+    input.setAttribute('data-handheld-count-entry','true');
+  });
+  const firstInput = inputs.find(input => String(input.value || '').trim() === '') || inputs[0];
+  if (!firstInput) return false;
+  setTimeout(() => {
+    if (S?.page !== 'c-count') return;
+    focusHardwareScanTarget(firstInput);
+    firstInput.scrollIntoView({ block:'center',behavior:'smooth' });
+  },120);
+  return true;
+}
+
 function activateHardwareLaserScanner() {
-  const narrowTerminal = window.matchMedia?.('(max-width:760px)').matches
-    || (/Android/i.test(navigator.userAgent) && window.innerWidth <= 900);
-  if (!narrowTerminal) return;
+  if (!isNarrowHandheldTerminal()) return;
+  if (S?.page === 'c-count') {
+    prepareHandheldCountEntry();
+    return;
+  }
   const targetId = S?.page === 'c-tasks'
     ? 'task_hardware_scan'
     : S?.page === 'c-found'
       ? 'found_hardware_scan'
-      : S?.page === 'c-count'
-        ? 'count_hardware_scan'
-        : '';
+      : '';
   if (targetId) setTimeout(() => focusHardwareScanTarget(targetId),120);
 }
+
+function restoreHandheldLocationFocus() {
+  if (!isNarrowHandheldTerminal() || S?.page !== 'c-tasks' || Q('scanOverlay')) return;
+  const active = document.activeElement;
+  if (active && active !== document.body && active !== document.documentElement
+      && !active.matches?.('#task_hardware_scan')) return;
+  focusHardwareScanTarget('task_hardware_scan');
+}
+
+document.addEventListener('focusout',event => {
+  if (event.target?.id !== 'task_hardware_scan') return;
+  setTimeout(restoreHandheldLocationFocus,90);
+},true);
+document.addEventListener('visibilitychange',() => {
+  if (!document.hidden) setTimeout(restoreHandheldLocationFocus,120);
+});
+window.addEventListener('pageshow',() => setTimeout(restoreHandheldLocationFocus,120));
 
 function assignHardwareScanToField(input,value,role='') {
   if (!input) return false;
@@ -24880,6 +24939,7 @@ async function submitFoundWork() {
 }
 
 async function loadCCount() {
+  window._hardwareScanReturnInputId = '';
   const { aid } = S;
   let jid = S.jid || '';
   let jitemid = S.jitemid || '';
@@ -25578,6 +25638,19 @@ function focusNextCountField(currentInput) {
   }
   closeCountNumericKeypad();
   const submitButton = Q('cb');
+  if (isNarrowHandheldTerminal()) {
+    const allComplete = inputs.length > 0 && inputs.every(input => String(input.value || '').trim() !== '');
+    if (allComplete && submitButton && !submitButton.disabled) {
+      handheldScanFeedback(
+        'success',
+        uiCopy('กรอก Count ครบแล้ว','All Count Values Entered'),
+        '',
+        uiCopy('กำลังยืนยันผลการตรวจนับ','Submitting the physical count'),
+      );
+      setTimeout(() => submitButton.click(),120);
+      return;
+    }
+  }
   submitButton?.focus({ preventScroll:true });
   submitButton?.scrollIntoView({ block:'end', behavior:'smooth' });
 }
@@ -32276,7 +32349,7 @@ async function renderManageImport(container) {
       </div>
     </details>
 
-    ${prof?.role === 'admin' ? `<details class="admin-master-group">
+    ${canImportWms() ? `<details class="admin-master-group">
       <summary>
         <span>${adminTrashIconSvg()}</span>
         <span class="admin-master-group-title">ลบ Location ตาม Zone / Row / Session</span>
@@ -32284,8 +32357,13 @@ async function renderManageImport(container) {
         <span class="admin-master-group-chevron">⌄</span>
       </summary>
       <div class="admin-master-group-body">
-        <div class="alert alert-amber" style="font-size:13px;line-height:1.6;margin-top:16px">⚠️ เลือก Session = ลบเฉพาะข้อมูลใน Session นั้น<br>เว้น Session ว่าง = ลบ Location ออกจากระบบจริงทุก Session</div>
-        <div class="fg"><label>SESSION (ไม่บังคับ)</label><select id="del-session" onchange="handleDeleteFilterChange('session')"><option value="">กำลังโหลด...</option></select></div>
+        <div class="alert alert-amber" style="font-size:13px;line-height:1.6;margin-top:16px">
+          ⚠️ เลือก Session = ลบเฉพาะข้อมูลใน Session นั้น
+          ${prof?.role === 'admin'
+            ? '<br>Admin สามารถเว้น Session ว่างเพื่อลบ Location ออกจากระบบจริงทุก Session'
+            : '<br>Supervisor ต้องเลือก Session ก่อนลบ เพื่อป้องกันการลบ Location Master โดยไม่ตั้งใจ'}
+        </div>
+        <div class="fg"><label>SESSION ${prof?.role === 'supervisor' ? '<span style="color:var(--accent-red)">*</span>' : '(ไม่บังคับ)'}</label><select id="del-session" onchange="handleDeleteFilterChange('session')"><option value="">กำลังโหลด...</option></select></div>
         <div class="grid-3" style="margin-bottom:14px">
           <div class="fg" style="margin:0"><label>ZONE</label><select id="del-zone" onchange="handleDeleteFilterChange('zone')"><option value="">ทั้งหมด</option></select></div>
           <div class="fg" style="margin:0"><label>ROW</label><select id="del-row" onchange="handleDeleteFilterChange('row')"><option value="">ทั้งหมด</option></select></div>
@@ -32299,7 +32377,7 @@ async function renderManageImport(container) {
     </details>` : ''}`;
 
   Q('ixlsx')?.addEventListener('change', readXlsxFile);
-  if (prof?.role === 'admin') loadDeleteZoneFilters();
+  if (canImportWms()) loadDeleteZoneFilters();
 }
 
 let _ohSyncRequestId = 0;
@@ -34091,7 +34169,7 @@ async function loadAdHistory() {
   const [sessionResult,assignmentResult] = await Promise.all([
     fetchPagedSupabaseRows(
       'count_sessions',
-      'id,name,created_at',
+      'id,name,status,created_at',
       query => query.order('created_at',{ascending:false}),
     ),
     fetchPagedSupabaseRows(
@@ -34636,8 +34714,12 @@ async function loadDeleteZoneFilters() {
   _deleteSessionLocationCache.clear();
   const sEl = Q('del-session');
   if (sEl) {
-    sEl.innerHTML = '<option value="">ทุก Session (ลบ Location ออกจากระบบจริง)</option>' +
-      (sessionResult.data || []).map(session =>
+    sEl.innerHTML = (prof?.role === 'supervisor'
+      ? '<option value="" selected disabled>— เลือก Session ก่อนลบ —</option>'
+      : '<option value="">ทุก Session (ลบ Location ออกจากระบบจริง)</option>') +
+      (sessionResult.data || [])
+        .filter(session => prof?.role !== 'supervisor' || ['draft','active'].includes(session.status))
+        .map(session =>
         `<option value="${session.id}">${escapeWmsText(session.name)}</option>`
       ).join('');
   }
@@ -34777,6 +34859,11 @@ async function refreshDeleteZonePreview() {
   refreshDeleteDependentFilters();
   const sid = Q('del-session')?.value || ''; const zone = Q('del-zone')?.value || ''; const row = Q('del-row')?.value || ''; const code = Q('del-code')?.value.trim() || '';
   const prev = Q('del-preview'), btn = Q('del-btn'); if (!prev || !btn) return;
+  if (prof?.role === 'supervisor' && !sid) {
+    prev.innerHTML = '<span style="color:var(--text-muted);font-weight:600">Supervisor กรุณาเลือก Session ก่อนลบ</span>';
+    btn.disabled = true;
+    return;
+  }
   if (_deleteFilterLoadingSession) {
     prev.innerHTML = '<span style="color:var(--text-muted)">⏳ กำลังโหลด Location ของ Session...</span>';
     btn.disabled = true;
@@ -34790,6 +34877,10 @@ async function refreshDeleteZonePreview() {
 
 async function doDeleteByZoneRow() {
   const sid = Q('del-session')?.value || ''; const zone = Q('del-zone')?.value || ''; const row = Q('del-row')?.value || ''; const code = Q('del-code')?.value.trim() || '';
+  if (prof?.role === 'supervisor' && !sid) {
+    alert('Supervisor กรุณาเลือก Session ก่อนลบ Location');
+    return;
+  }
   if (!zone && !row && !code) return;
   const label = [zone, row, code].filter(Boolean).join(' / '); if (!confirm(`ยืนยันลบ: "${label}"`)) return;
   const btn = Q('del-btn'), al = Q('del-alert'); btn.disabled = true; al.innerHTML = `<div class="alert alert-blue">⏳ กำลังค้นหา Location ที่ตรงเงื่อนไข...</div>`;
@@ -34798,6 +34889,21 @@ async function doDeleteByZoneRow() {
 
   const locIds = locs.map(l => l.id); const BATCH = 200;
   try {
+    if (prof?.role === 'supervisor') {
+      al.innerHTML = `<div class="alert alert-blue">⏳ กำลังลบข้อมูล ${locs.length.toLocaleString(uiLocale())} Location ใน Session ที่เลือก...</div>`;
+      for (let i=0; i<locIds.length; i+=BATCH) {
+        await invokeWmsImportAction('delete_location_scope',sid,{
+          location_ids:locIds.slice(i,i+BATCH),
+        });
+      }
+      al.innerHTML = `<div class="alert alert-green">✅ ลบข้อมูลใน Session เรียบร้อยแล้ว (${locs.length} locations)</div>`;
+      showActionSuccess('ลบข้อมูล Location เฉพาะ Session ที่เลือกเรียบร้อยแล้ว', {
+        title:'ลบข้อมูลสำเร็จ',
+        facts:[{label:'Location ที่ลบ',value:locs.length.toLocaleString(uiLocale())}],
+      });
+      setTimeout(() => { loadDeleteZoneFilters(); },1500);
+      return;
+    }
     al.innerHTML = `<div class="alert alert-blue">⏳ [1/6] ค้นหา Assignment...</div>`;
     let asgnIds = [];
     for (let i = 0; i < locIds.length; i += BATCH) {
