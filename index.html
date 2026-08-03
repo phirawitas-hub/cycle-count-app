@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v199 - Safe WMS Reimport and Delete Filters</title>
+<title>Cycle Count v200 - Handheld Scanner Without Soft Keyboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -17192,7 +17192,7 @@ body.tablet-ui .count-touch-toolbar .count-screen-lock-button { display:inline-f
 }
 </style>
 </head>
-<body data-build="v199-safe-wms-reimport-delete-filters">
+<body data-build="v200-handheld-scanner-no-soft-keyboard">
 <div id="app"></div>
 
 <script>
@@ -17262,7 +17262,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v199-safe-wms-reimport-delete-filters';
+window.__CYCLE_COUNT_BUILD__ = 'v200-handheld-scanner-no-soft-keyboard';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -24416,12 +24416,11 @@ let _hardwareScanLastAppendedAt = 0;
 let _hardwareScanLastAppendedTarget = null;
 
 function hardwareLaserCaptureHtml(id,context,instruction) {
-  // Rugged scanners that work through an Android IME need a real text input
-  // connection. inputmode="none" prevents several scanner services from
-  // injecting the decoded Location even when the field appears focused.
-  const captureInputMode = isNarrowHandheldTerminal() ? 'text' : 'none';
+  // Keep a real editable text input for Keyboard Wedge/IME scanner services,
+  // but do not ask Android to open Gboard for this scanner-only destination.
+  const captureInputMode = 'none';
   const shouldAutofocus = context === 'task-location';
-  const buildLabel = shouldAutofocus ? ' · v199' : '';
+  const buildLabel = shouldAutofocus ? ' · v200' : '';
   return `<div class="handheld-laser-bar" data-i18n-skip
     ${shouldAutofocus ? 'onpointerdown="focusTaskLocationCapture({force:true,reconnect:true})"' : ''}>
     <span class="handheld-laser-icon">${barcodeScanIconSvg()}</span>
@@ -24431,12 +24430,11 @@ function hardwareLaserCaptureHtml(id,context,instruction) {
     </span>
     <input class="handheld-laser-input" id="${escapeWmsText(id)}"
       data-hw-scan-capture="true" data-hw-scan-context="${escapeWmsText(context)}"
-      inputmode="${captureInputMode}" enterkeyhint="go"
+      inputmode="${captureInputMode}" virtualkeyboardpolicy="manual" enterkeyhint="go"
       ${shouldAutofocus ? 'autofocus data-auto-hardware-focus="true"' : ''}
       autocomplete="off" autocapitalize="characters" spellcheck="false"
       aria-label="${escapeWmsText(uiCopy('ช่องรับข้อมูลจากเลเซอร์ Handheld','Handheld Laser Input'))}"
-      placeholder="${escapeWmsText(uiCopy('กดปุ่มยิง Barcode ได้ทันที','Press the Hardware Scan Button'))}"
-      onfocus="this.select()">
+      placeholder="${escapeWmsText(uiCopy('กดปุ่มยิง Barcode ได้ทันที','Press the Hardware Scan Button'))}">
   </div>`;
 }
 
@@ -24601,16 +24599,56 @@ function handheldScanFeedback(kind,title,value='',detail='') {
   handheldScanSignal(safeKind);
 }
 
+function hideHandheldVirtualKeyboard() {
+  if (!isNarrowHandheldTerminal()) return;
+  const hide = () => {
+    try { navigator.virtualKeyboard?.hide?.(); } catch (_) {}
+  };
+  hide();
+  requestAnimationFrame(hide);
+  setTimeout(hide,80);
+}
+
+function suppressHandheldScannerSoftKeyboard(target) {
+  if (!target?.dataset?.hwScanCapture || !isNarrowHandheldTerminal()) return;
+  target.setAttribute('inputmode','none');
+  target.setAttribute('virtualkeyboardpolicy','manual');
+  // Chrome exposes this API on some rugged Android builds. Other builds
+  // simply ignore it and still respect inputmode="none".
+  hideHandheldVirtualKeyboard();
+}
+
 function focusHardwareScanTarget(targetOrId,{ select=true }={}) {
   const target = typeof targetOrId === 'string' ? Q(targetOrId) : targetOrId;
   if (!target || target.disabled || target.hidden || target.closest?.('[hidden]')) return false;
+  suppressHandheldScannerSoftKeyboard(target);
   try { target.focus({ preventScroll:true }); } catch (_) { target.focus(); }
-  if (select) target.select?.();
-  if (target.dataset?.hwScanCapture && target.id !== 'task_hardware_scan' && isNarrowHandheldTerminal()) {
-    try { navigator.virtualKeyboard?.hide?.(); } catch (_) {}
+  if (select && !target.dataset?.hwScanCapture) target.select?.();
+  else if (target.dataset?.hwScanCapture) {
+    try {
+      const end = String(target.value || '').length;
+      target.setSelectionRange?.(end,end);
+    } catch (_) {}
   }
+  suppressHandheldScannerSoftKeyboard(target);
   return true;
 }
+
+document.addEventListener('focusin',event => {
+  const target = event.target instanceof HTMLElement ? event.target : null;
+  if (target?.dataset?.hwScanCapture) suppressHandheldScannerSoftKeyboard(target);
+},true);
+
+document.addEventListener('pointerdown',event => {
+  const target = event.target instanceof HTMLElement
+    ? event.target.closest?.('[data-hw-scan-capture="true"]')
+    : null;
+  if (!target || !isNarrowHandheldTerminal()) return;
+  // Stop Android's native tap-to-type path, then focus the same editable input
+  // programmatically so the hardware scanner remains the only text source.
+  event.preventDefault();
+  focusHardwareScanTarget(target);
+},true);
 
 function isNarrowHandheldTerminal() {
   const viewportWidth = window.visualViewport?.width || window.innerWidth || 0;
@@ -24645,14 +24683,9 @@ function focusTaskLocationCapture({ force=false,reconnect=false }={}) {
   }
   if (reconnect && document.activeElement === target) target.blur();
   focusHardwareScanTarget(target);
-  // iScan sends decoded text to the focused edit box. On this Android
-  // terminal a second focus after click makes that IME connection reliable.
-  // Never synthesize that click while a filter list is open: the click lands
-  // outside .multi-filter and would immediately close the list on handheld.
-  const multiFilterOpen = Boolean(document.querySelector('.multi-filter.open'));
-  if (!multiFilterOpen) {
-    try { target.click(); } catch (_) {}
-  }
+  // A synthetic click reopened Gboard every time the scanner connection was
+  // refreshed. A second programmatic focus is enough for Keyboard Wedge and
+  // keeps the task Location input connected without showing the soft keyboard.
   focusHardwareScanTarget(target);
   const connected = document.activeElement === target;
   if (connected) {
@@ -24712,12 +24745,14 @@ function prepareHandheldCountEntry({ force=false }={}) {
     if (active.classList?.contains('cqty') || !active.matches?.('[data-hw-scan-capture="true"]')) return true;
   }
   if (S?.page !== 'c-count') return false;
+  if (narrowHandheld) hideHandheldVirtualKeyboard();
   focusHardwareScanTarget(firstInput);
   // Android rugged terminals can report an element as active without moving
   // the hardware keyboard cursor. A click + second focus binds the physical
   // keypad to this Count field for rounds 1, 2 and 3 alike.
   try { firstInput.click(); } catch (_) {}
   focusHardwareScanTarget(firstInput);
+  if (narrowHandheld) hideHandheldVirtualKeyboard();
   try {
     firstInput.setSelectionRange?.(0,String(firstInput.value || '').length);
   } catch (_) {}
