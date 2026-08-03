@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v184 - Handheld Direct Open and Count Autofocus</title>
+<title>Cycle Count v185 - Reliable Handheld Scan and Count Autofocus</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -16848,7 +16848,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v184-handheld-direct-open-focus';
+window.__CYCLE_COUNT_BUILD__ = 'v185-reliable-handheld-scan-focus';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -23683,7 +23683,9 @@ const HANDHELD_SCAN_CONFIG = Object.freeze({
   // field below always uses its complete value instead of timing alone.
   maxInterKeyMs:240,
   maxDurationMs:5000,
-  inputCommitDelayMs:520,
+  // Commit shortly after the scanner stops typing. This is longer than the
+  // accepted inter-key gap, so a Location is never opened from a partial code.
+  inputCommitDelayMs:280,
   duplicateWindowMs:1100,
 });
 let _hardwareScanBuffer = '';
@@ -23702,6 +23704,7 @@ let _handheldCountFocusToken = 0;
 let _hardwareCapturePollTimer = null;
 let _hardwareCapturePollValue = '';
 let _hardwareCapturePollChangedAt = 0;
+let _hardwareScanNavigationPending = false;
 
 function hardwareLaserCaptureHtml(id,context,instruction) {
   // Rugged scanners that work through an Android IME need a real text input
@@ -23729,6 +23732,8 @@ function hardwareLaserCaptureHtml(id,context,instruction) {
 function resetHardwareScanBuffer() {
   clearTimeout(_hardwareScanCommitTimer);
   _hardwareScanCommitTimer = null;
+  clearTimeout(_hardwareScanInputCommitTimer);
+  _hardwareScanInputCommitTimer = null;
   _hardwareScanBuffer = '';
   _hardwareScanStartedAt = 0;
   _hardwareScanLastKeyAt = 0;
@@ -23761,7 +23766,11 @@ function normalizeHardwareScanValue(value='') {
 }
 
 function hardwareScanCompareKey(value='') {
-  return normalizeHardwareScanValue(value).toUpperCase();
+  return normalizeHardwareScanValue(value)
+    .normalize('NFKC')
+    .replace(/[‐‑‒–—−]/g,'-')
+    .replace(/\s+/g,'')
+    .toUpperCase();
 }
 
 function hardwareScanOperationalPage() {
@@ -23857,16 +23866,20 @@ function clearHandheldCountFocusTimers() {
 }
 
 function prepareHandheldCountEntry({ force=false }={}) {
-  if (!isNarrowHandheldTerminal() || S?.page !== 'c-count') return false;
+  if (S?.page !== 'c-count') return false;
+  const narrowHandheld = isNarrowHandheldTerminal();
   const inputs = [...document.querySelectorAll('.count-handheld-page .cqty')]
     .filter(input => !input.disabled && !input.hidden && !input.closest('[hidden]'));
-  inputs.forEach(input => {
-    input.setAttribute('inputmode','none');
-    input.setAttribute('enterkeyhint','next');
-    input.setAttribute('data-handheld-count-entry','true');
-  });
+  if (narrowHandheld) {
+    inputs.forEach(input => {
+      input.setAttribute('inputmode','none');
+      input.setAttribute('enterkeyhint','next');
+      input.setAttribute('data-handheld-count-entry','true');
+    });
+  }
+  // Every newly rendered Count round starts at the first quantity field,
+  // including a previously saved draft whose first value is already present.
   const firstInput = inputs.find(input => input.dataset.countInitialFocus === 'true')
-    || inputs.find(input => String(input.value || '').trim() === '')
     || inputs[0];
   if (!firstInput) return false;
   const active = document.activeElement;
@@ -23877,13 +23890,14 @@ function prepareHandheldCountEntry({ force=false }={}) {
   }
   if (S?.page !== 'c-count') return false;
   focusHardwareScanTarget(firstInput);
+  if (isTabletUiDevice()) openCountNumericKeypad(firstInput);
   firstInput.scrollIntoView({ block:'center',behavior:'smooth' });
   return document.activeElement === firstInput;
 }
 
 function scheduleHandheldCountEntryFocus() {
   clearHandheldCountFocusTimers();
-  if (!isNarrowHandheldTerminal() || S?.page !== 'c-count') return;
+  if (S?.page !== 'c-count') return;
   const token = _handheldCountFocusToken;
   // First attempt is synchronous with the completed render. Further attempts
   // cover Android layout/IME timing, but stop as soon as a Count field owns
@@ -23935,12 +23949,14 @@ function startHardwareCapturePolling(targetId) {
 }
 
 function activateHardwareLaserScanner() {
-  if (!isNarrowHandheldTerminal()) return;
   if (S?.page === 'c-count') {
     stopHardwareCapturePolling();
     scheduleHandheldCountEntryFocus();
+    _hardwareScanNavigationPending = false;
     return;
   }
+  _hardwareScanNavigationPending = false;
+  if (!isNarrowHandheldTerminal()) return;
   clearHandheldCountFocusTimers();
   const targetId = S?.page === 'c-tasks'
     ? 'task_hardware_scan'
@@ -24050,6 +24066,7 @@ function handleCountHardwareScan(value,target=null) {
 }
 
 function routeHardwareLaserScan(rawValue,target=null) {
+  if (_hardwareScanNavigationPending) return true;
   const value = normalizeHardwareScanValue(rawValue);
   if (value.length < HANDHELD_SCAN_CONFIG.minLength) return false;
   const now = Date.now();
@@ -24071,22 +24088,84 @@ function routeHardwareLaserScan(rawValue,target=null) {
   return false;
 }
 
+function hardwareScanTerminalEvent(event) {
+  const key = String(event?.key || '');
+  const code = String(event?.code || '');
+  const legacyCode = Number(event?.which || event?.keyCode || 0);
+  return key === 'Enter' || key === 'Tab'
+    || code === 'Enter' || code === 'NumpadEnter' || code === 'Tab'
+    || legacyCode === 13 || legacyCode === 9;
+}
+
+function hardwareScanCharacterFromEvent(event) {
+  const key = String(event?.key || '');
+  if (key.length === 1) return key;
+
+  // Android keyboard-wedge services sometimes report key="Unidentified"
+  // while still exposing a useful KeyboardEvent.code or legacy keyCode.
+  const code = String(event?.code || '');
+  if (/^Key[A-Z]$/.test(code)) return code.slice(3);
+  if (/^Digit[0-9]$/.test(code)) return code.slice(5);
+  if (/^Numpad[0-9]$/.test(code)) return code.slice(6);
+  const codeCharacters = {
+    Minus:'-', NumpadSubtract:'-', Equal:'=', NumpadAdd:'+',
+    Period:'.', NumpadDecimal:'.', Comma:',', Slash:'/',
+    Backslash:'\\', Semicolon:';', Quote:"'", BracketLeft:'[',
+    BracketRight:']', Backquote:'`', Space:' ', NumpadDivide:'/',
+    NumpadMultiply:'*',
+  };
+  if (codeCharacters[code] !== undefined) return codeCharacters[code];
+
+  const legacyCode = Number(event?.which || event?.keyCode || event?.charCode || 0);
+  if (legacyCode >= 48 && legacyCode <= 57) return String.fromCharCode(legacyCode);
+  if (legacyCode >= 65 && legacyCode <= 90) return String.fromCharCode(legacyCode);
+  if (legacyCode >= 96 && legacyCode <= 105) return String(legacyCode - 96);
+  const legacyCharacters = {
+    32:' ', 106:'*', 107:'+', 109:'-', 110:'.', 111:'/',
+    173:'-', 186:';', 187:'=', 188:',', 189:'-', 190:'.',
+    191:'/', 192:'`', 219:'[', 220:'\\', 221:']', 222:"'",
+  };
+  return legacyCharacters[legacyCode] || '';
+}
+
+function commitHardwareCaptureTarget(target,fallbackValue='') {
+  if (!target?.dataset?.hwScanCapture || !hardwareScanOperationalPage()) return false;
+  const fieldValue = normalizeHardwareScanValue(target.value || '');
+  const fallback = normalizeHardwareScanValue(fallbackValue);
+  const value = fieldValue.length >= fallback.length ? fieldValue : fallback;
+  if (value.length < HANDHELD_SCAN_CONFIG.minLength) return false;
+  target.value = '';
+  resetHardwareScanBuffer();
+  return routeHardwareLaserScan(value,target);
+}
+
+function scheduleHardwareCaptureCommit(target,fallbackValue='',delay=HANDHELD_SCAN_CONFIG.inputCommitDelayMs) {
+  if (!target?.dataset?.hwScanCapture || !hardwareScanOperationalPage()) return false;
+  clearTimeout(_hardwareScanInputCommitTimer);
+  _hardwareScanInputCommitTimer = setTimeout(
+    () => commitHardwareCaptureTarget(target,fallbackValue),
+    Math.max(0,Number(delay) || 0),
+  );
+  return true;
+}
+
 function handleHardwareLaserKeydown(event) {
   if (!hardwareScanOperationalPage() || Q('scanOverlay')) return;
-  if (event.ctrlKey || event.altKey || event.metaKey || event.isComposing) return;
+  if (event.ctrlKey || event.altKey || event.metaKey) return;
   const target = event.target instanceof HTMLElement ? event.target : null;
   const numericTarget = Boolean(target?.matches('input[type="number"]'));
+  const captureTarget = Boolean(target?.dataset?.hwScanCapture);
+  if (event.isComposing && !captureTarget) return;
   if (target?.matches('textarea,select,[contenteditable="true"]')) {
     resetHardwareScanBuffer();
     return;
   }
-  const captureTarget = Boolean(target?.dataset?.hwScanCapture);
   const scanTarget = Boolean(captureTarget || target?.dataset?.hwScanRole);
   if (hardwareScanEditableTarget(target) && !scanTarget && !numericTarget) {
     resetHardwareScanBuffer();
     return;
   }
-  const terminalKey = event.key === 'Enter' || event.key === 'Tab';
+  const terminalKey = hardwareScanTerminalEvent(event);
   if (terminalKey) {
     clearTimeout(_hardwareScanInputCommitTimer);
     _hardwareScanInputCommitTimer = null;
@@ -24099,7 +24178,7 @@ function handleHardwareLaserKeydown(event) {
     // avoids dropping a Location when a rugged scanner types more slowly than
     // desktop USB scanners.
     const candidate = captureTarget
-      ? (fieldValue || _hardwareScanBuffer)
+      ? (fieldValue.length >= _hardwareScanBuffer.length ? fieldValue : _hardwareScanBuffer)
       : (fastBuffer ? _hardwareScanBuffer : fieldValue);
     const numericBarcode = numericTarget && fastBuffer && candidate.length >= 4;
     if (numericBarcode) {
@@ -24116,7 +24195,8 @@ function handleHardwareLaserKeydown(event) {
     resetHardwareScanBuffer();
     return;
   }
-  if (event.key.length !== 1 || event.repeat) return;
+  const scanCharacter = hardwareScanCharacterFromEvent(event);
+  if (!scanCharacter || (event.repeat && !captureTarget)) return;
   const now = performance.now();
   const sameTarget = !_hardwareScanTarget || _hardwareScanTarget === target;
   const gap = _hardwareScanLastKeyAt ? now - _hardwareScanLastKeyAt : 0;
@@ -24128,13 +24208,16 @@ function handleHardwareLaserKeydown(event) {
   if (_hardwareScanLastKeyAt) _hardwareScanMaxGap = Math.max(_hardwareScanMaxGap,now - _hardwareScanLastKeyAt);
   _hardwareScanLastKeyAt = now;
   _hardwareScanTarget = target;
-  _hardwareScanBuffer += event.key;
+  _hardwareScanBuffer += scanCharacter;
   // Allow the dedicated capture field to retain every character. Older builds
   // prevented the default key action, so a slow scanner could leave only a
   // partial timing buffer and Location navigation never ran.
   if (captureTarget) {
     clearTimeout(_hardwareScanCommitTimer);
-    _hardwareScanCommitTimer = null;
+    _hardwareScanCommitTimer = setTimeout(() => {
+      if (commitHardwareCaptureTarget(target)) return;
+      commitHardwareScanBufferWithoutSuffix();
+    },HANDHELD_SCAN_CONFIG.inputCommitDelayMs);
     return;
   }
   clearTimeout(_hardwareScanCommitTimer);
@@ -24146,13 +24229,35 @@ document.addEventListener('input',event => {
   const target = event.target instanceof HTMLElement ? event.target : null;
   if (!hardwareScanOperationalPage() || !target?.dataset?.hwScanCapture) return;
   const value = normalizeHardwareScanValue(target.value || '');
-  if (value.length < HANDHELD_SCAN_CONFIG.minLength) return;
-  clearTimeout(_hardwareScanInputCommitTimer);
-  _hardwareScanInputCommitTimer = setTimeout(() => {
-    const committed = normalizeHardwareScanValue(target.value || '');
-    target.value = '';
-    if (committed.length >= HANDHELD_SCAN_CONFIG.minLength) routeHardwareLaserScan(committed,target);
-  },HANDHELD_SCAN_CONFIG.inputCommitDelayMs);
+  if (value.length >= HANDHELD_SCAN_CONFIG.minLength) scheduleHardwareCaptureCommit(target,value);
+},true);
+document.addEventListener('beforeinput',event => {
+  const target = event.target instanceof HTMLElement ? event.target : null;
+  if (!hardwareScanOperationalPage() || !target?.dataset?.hwScanCapture || !event.data) return;
+  // The timeout runs after the browser applies beforeinput to the field. The
+  // event payload remains a fallback for scanner IMEs that never update value.
+  scheduleHardwareCaptureCommit(target,event.data);
+},true);
+document.addEventListener('compositionend',event => {
+  const target = event.target instanceof HTMLElement ? event.target : null;
+  if (!hardwareScanOperationalPage() || !target?.dataset?.hwScanCapture) return;
+  scheduleHardwareCaptureCommit(target,event.data || '',0);
+},true);
+document.addEventListener('textInput',event => {
+  const target = event.target instanceof HTMLElement ? event.target : null;
+  if (!hardwareScanOperationalPage() || !target?.dataset?.hwScanCapture || !event.data) return;
+  scheduleHardwareCaptureCommit(target,event.data);
+},true);
+document.addEventListener('paste',event => {
+  const target = event.target instanceof HTMLElement ? event.target : null;
+  if (!hardwareScanOperationalPage() || !target?.dataset?.hwScanCapture) return;
+  const pasted = event.clipboardData?.getData('text') || '';
+  setTimeout(() => commitHardwareCaptureTarget(target,pasted),0);
+},true);
+document.addEventListener('change',event => {
+  const target = event.target instanceof HTMLElement ? event.target : null;
+  if (!hardwareScanOperationalPage() || !target?.dataset?.hwScanCapture) return;
+  commitHardwareCaptureTarget(target);
 },true);
 
 let _scannerCallback = null;
@@ -24547,15 +24652,41 @@ function openScanner() {
   openBarcodeScanner({ title:'สแกน Location', onDetected:onTaskLocationScanned });
 }
 
+function hardwareScanCandidateKeys(value='') {
+  const raw = String(value || '').normalize('NFKC');
+  const values = [raw,...raw.split(/[\r\n\t]+/)]
+    .map(item => item.trim())
+    .filter(Boolean);
+  const keys = new Set();
+  values.forEach(item => {
+    keys.add(hardwareScanCompareKey(item));
+    // Some Android scanner services prepend an AIM symbology identifier such
+    // as ]Q3 or ]d2. It is scanner metadata, not part of the Location code.
+    keys.add(hardwareScanCompareKey(item.replace(/^\][A-Z0-9]{2}/i,'')));
+    keys.add(hardwareScanCompareKey(item.replace(/^["']|["']$/g,'')));
+  });
+  keys.delete('');
+  return keys;
+}
+
+function lockTaskScanNavigation() {
+  if (_hardwareScanNavigationPending) return false;
+  _hardwareScanNavigationPending = true;
+  stopHardwareCapturePolling();
+  resetHardwareScanBuffer();
+  Q('task_hardware_scan')?.blur?.();
+  return true;
+}
+
 function onTaskLocationScanned(text,fromHardwareLaser=false) {
   const code = normalizeHardwareScanValue(text);
-  const codeKey = hardwareScanCompareKey(code);
+  const codeKeys = hardwareScanCandidateKeys(code);
   const tasks = window._myTasks || [];
   const selectedSessions = new Set(
     normalizeMultiFilterValues(S?._mtSession).map(hardwareScanCompareKey)
   );
   const taskMatches = tasks.filter(a =>
-    hardwareScanCompareKey(a.locations?.code || '') === codeKey
+    codeKeys.has(hardwareScanCompareKey(a.locations?.code || ''))
   );
   const actionableTasks = taskMatches.filter(a =>
     !['completed','approved'].includes(a.status)
@@ -24571,6 +24702,7 @@ function onTaskLocationScanned(text,fromHardwareLaser=false) {
     || actionableTasks[0];
   if (match) {
     handheldScanFeedback('success',uiCopy('พบ Location ที่ได้รับมอบหมาย','Assigned Location Found'),code,uiCopy('กำลังเปิดหน้าบันทึกการนับ','Opening the physical count page'));
+    if (!lockTaskScanNavigation()) return;
     go('c-count', { aid: match.id });
     return;
   }
@@ -24578,7 +24710,7 @@ function onTaskLocationScanned(text,fromHardwareLaser=false) {
     (window._myAnnualJobs || []).map(job => [String(job.id),job])
   );
   const annualMatches = (window._myAnnualJobItems || []).filter(item =>
-    hardwareScanCompareKey(item.locations?.code || '') === codeKey
+    codeKeys.has(hardwareScanCompareKey(item.locations?.code || ''))
   );
   const annualItem = annualMatches.find(item => {
     const job = annualJobsById[String(item.job_id)];
@@ -24589,7 +24721,12 @@ function onTaskLocationScanned(text,fromHardwareLaser=false) {
   }) || annualMatches.find(item => annualJobsById[String(item.job_id)]?.status !== 'completed');
   if (annualItem) {
     handheldScanFeedback('success',uiCopy('พบ Location ใน JOB','Job Location Found'),code,uiCopy('กำลังเปิดหน้าบันทึกการนับ','Opening the physical count page'));
-    openAnnualJobCount(annualItem.job_id,annualItem.id);
+    if (!lockTaskScanNavigation()) return;
+    Promise.resolve(openAnnualJobCount(annualItem.job_id,annualItem.id)).finally(() => {
+      if (S?.page !== 'c-tasks') return;
+      _hardwareScanNavigationPending = false;
+      activateHardwareLaserScanner();
+    });
     return;
   }
   if (taskMatches.length || annualMatches.length) {
