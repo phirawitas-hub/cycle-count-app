@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v187 - Login Scan Ready and Reliable Count Navigation</title>
+<title>Cycle Count v188 - Countable Status Scan Routing</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -16848,7 +16848,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v187-login-scan-ready-reliable-navigation';
+window.__CYCLE_COUNT_BUILD__ = 'v188-countable-status-scan-routing';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -22919,6 +22919,17 @@ function tagInfo(s) {
   }[s]) || { cls:'tag-gray', lbl: s };
 }
 
+function assignmentNextCountRound(status='') {
+  if (['pending','in_progress'].includes(status)) return 1;
+  if (status === 'round1_done') return 2;
+  if (status === 'round2_done') return 3;
+  return null;
+}
+
+function assignmentCanOpenCount(status='') {
+  return assignmentNextCountRound(status) !== null;
+}
+
 function paintLogin() {
   Q('app').innerHTML = `
     <div class="lbox">
@@ -23661,7 +23672,7 @@ function renderMyTasks() {
   for (const a of filtered) {
     const l   = a.locations;
     const si  = tagInfo(a.status);
-    const can = !['completed','approved'].includes(a.status);
+    const can = assignmentCanOpenCount(a.status);
     const sub = [l.zone, l.area, l.row_no && 'Row '+l.row_no, l.level && 'Lv.'+l.level].filter(Boolean).join(' · ');
     html += `<div class="row ${can?'click':''}" data-location-sort-code="${escapeWmsText(l.code || '')}" ${can?`onclick="go('c-count',{aid:'${a.id}'})"`:''}>
       <div class="row-body">
@@ -23719,11 +23730,12 @@ function hardwareLaserCaptureHtml(id,context,instruction) {
   // injecting the decoded Location even when the field appears focused.
   const captureInputMode = isNarrowHandheldTerminal() ? 'text' : 'none';
   const shouldAutofocus = context === 'task-location';
+  const buildLabel = shouldAutofocus ? ' · v188' : '';
   return `<div class="handheld-laser-bar" data-i18n-skip>
     <span class="handheld-laser-icon">${barcodeScanIconSvg()}</span>
     <span class="handheld-laser-copy">
       <strong>${escapeWmsText(uiCopy('เลเซอร์ Handheld พร้อมใช้งาน','Handheld Laser Ready'))}</strong>
-      <span>${escapeWmsText(instruction)}</span>
+      <span>${escapeWmsText(instruction)}${buildLabel}</span>
     </span>
     <input class="handheld-laser-input" id="${escapeWmsText(id)}"
       data-hw-scan-capture="true" data-hw-scan-context="${escapeWmsText(context)}"
@@ -24857,9 +24869,7 @@ function onTaskLocationScanned(text,fromHardwareLaser=false) {
   const taskMatches = tasks.filter(a =>
     codeKeys.has(hardwareScanCompareKey(a.locations?.code || ''))
   );
-  const actionableTasks = taskMatches.filter(a =>
-    !['completed','approved'].includes(a.status)
-  );
+  const actionableTasks = taskMatches.filter(a => assignmentCanOpenCount(a.status));
   // The same Location may exist in several Sessions. Prefer the selected
   // Session, then an Active Session, instead of stopping at an old completed
   // assignment that happens to be first in the array.
@@ -24899,7 +24909,17 @@ function onTaskLocationScanned(text,fromHardwareLaser=false) {
     return;
   }
   if (taskMatches.length || annualMatches.length) {
-    handheldScanFeedback('warning',uiCopy('Location นี้นับเสร็จแล้ว','Location Already Completed'),code,uiCopy('เลือก Location อื่นเพื่อเริ่มงาน','Scan another Location to continue'));
+    const reviewTask = taskMatches.find(a => a.status === 'round3_done');
+    if (reviewTask) {
+      handheldScanFeedback(
+        'warning',
+        uiCopy('Location นี้ส่งให้หัวหน้างานตรวจสอบแล้ว','Location Sent for Supervisor Review'),
+        code,
+        uiCopy('ไม่มีรอบนับถัดไป กรุณาเลือก Location ที่มีสถานะรอเริ่มหรือรอนับรอบถัดไป','There is no next count round. Scan a pending or recount Location'),
+      );
+    } else {
+      handheldScanFeedback('warning',uiCopy('Location นี้นับเสร็จแล้ว','Location Already Completed'),code,uiCopy('เลือก Location อื่นเพื่อเริ่มงาน','Scan another Location to continue'));
+    }
     setTimeout(() => focusHardwareScanTarget('task_hardware_scan'),80);
     return;
   }
@@ -26611,10 +26631,7 @@ async function submitCount(aid, round, idsStr, annualJobId='') {
 }
 
 function nextRound(st) {
-  if (['pending','in_progress'].includes(st)) return 1;
-  if (st === 'round1_done') return 2;
-  if (st === 'round2_done') return 3;
-  return null;
+  return assignmentNextCountRound(st);
 }
 
 async function refreshAnnualJobsForLocation(sessionId,locationId,fallbackJobId='') {
