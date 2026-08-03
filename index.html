@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v180 - Adjustable App Typography</title>
+<title>Cycle Count v181 - Handheld Login & Supervisor Import</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -16704,9 +16704,65 @@ body select option {
   .typography-scale-grid { grid-template-columns:1fr; }
 }
 
+/* ══════════════════════════════════════════════════════════
+   v181 — Handheld login viewport safety
+   Login/reset screens must remain vertically scrollable even though
+   the narrow-terminal work shell intentionally locks body scrolling.
+   ══════════════════════════════════════════════════════════ */
+html.login-page-active,
+body.login-page-active {
+  height:auto !important;
+  min-height:100% !important;
+  overflow-x:hidden !important;
+  overflow-y:auto !important;
+  overscroll-behavior-y:auto !important;
+  -webkit-overflow-scrolling:touch;
+}
+body.login-page-active .app-container {
+  display:block !important;
+  width:100% !important;
+  height:auto !important;
+  min-height:100svh !important;
+  overflow:visible !important;
+  padding:0 !important;
+}
+body.login-page-active .lbox {
+  width:100% !important;
+  height:auto !important;
+  min-height:100svh !important;
+  overflow:visible !important;
+  align-items:flex-start !important;
+  padding:max(14px,env(safe-area-inset-top)) 12px max(28px,env(safe-area-inset-bottom)) !important;
+}
+body.login-page-active .lcard {
+  width:min(100%,440px) !important;
+  max-height:none !important;
+  margin:auto !important;
+  overflow:visible !important;
+  transform:none !important;
+}
+@media (max-width:480px), (max-height:720px) {
+  body.login-page-active .lcard {
+    border-radius:24px !important;
+    padding:22px 18px 24px !important;
+  }
+  body.login-page-active .lcard > div:first-child {
+    margin-bottom:18px !important;
+  }
+  body.login-page-active .login-brand-logo {
+    width:76px !important;
+    height:76px !important;
+  }
+  body.login-page-active .fg {
+    margin-bottom:12px !important;
+  }
+  body.login-page-active .fg input {
+    min-height:48px !important;
+  }
+}
 </style>
 </head>
-<body data-build="v180-adjustable-app-typography">
+<body data-build="v181-handheld-login-supervisor-import">
 <div id="app"></div>
 
 <script>
@@ -16776,7 +16832,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v180-adjustable-app-typography';
+window.__CYCLE_COUNT_BUILD__ = 'v181-handheld-login-supervisor-import';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -19566,7 +19622,7 @@ function applyBrandingSettings(settings, persistLocal = true) {
     const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
     root.setProperty(`--theme-${cssKey}`, uiBranding[key]);
   });
-  document.title = `${uiBranding.systemName} v180`;
+  document.title = `${uiBranding.systemName} v181`;
   if (persistLocal) {
     try { localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(uiBranding)); } catch (_) {}
   }
@@ -21007,7 +21063,7 @@ async function protectedFunctionHeaders() {
   return {
     Authorization: `Bearer ${session.access_token}`,
     apikey: SUPA_KEY,
-    'x-client-info': 'cycle-count-v180',
+    'x-client-info': 'cycle-count-v181',
   };
 }
 
@@ -21185,15 +21241,27 @@ function home() {
   return 'login';
 }
 
-// SUPERVISOR may work only in these five functional areas:
-// Summary, Assigned Tasks, Variance, WMS Adjustment and Count Assignment.
+// SUPERVISOR may work in operational areas plus WMS Import.
 const SUPERVISOR_ALLOWED_PAGES = new Set([
   'sv-dash',
   'c-tasks','c-count','c-found',
   'sv-list','sv-detail','sv-found',
-  'ad-manage','ad-assign',
+  'ad-manage','ad-assign','ad-import',
 ]);
 const SUPERVISOR_ALLOWED_DASHBOARD_TABS = new Set(['summary','variance','wms']);
+const SUPERVISOR_ALLOWED_MANAGE_TABS = new Set(['assign','import']);
+
+function canImportWms() {
+  return ['admin','supervisor'].includes(prof?.role);
+}
+
+async function invokeWmsImportAction(action, sessionId, payload={}) {
+  const { data, error } = await sb.functions.invoke('wms-import', {
+    body:{ action, session_id:sessionId, ...payload },
+  });
+  if (error || !data?.ok) throw new Error(data?.error || error?.message || 'Import WMS ไม่สำเร็จ');
+  return data;
+}
 
 function normalizeRoleNavigation(page, extra={}) {
   const normalizedExtra = { ...extra };
@@ -21203,6 +21271,10 @@ function normalizeRoleNavigation(page, extra={}) {
   if (normalizedPage === 'ad-assign') {
     normalizedPage = 'ad-manage';
     normalizedExtra._manageTab = 'assign';
+  }
+  if (normalizedPage === 'ad-import') {
+    normalizedPage = 'ad-manage';
+    normalizedExtra._manageTab = 'import';
   }
 
   if (!SUPERVISOR_ALLOWED_PAGES.has(normalizedPage)) {
@@ -21217,7 +21289,12 @@ function normalizeRoleNavigation(page, extra={}) {
       ? requestedTab
       : 'summary';
   }
-  if (normalizedPage === 'ad-manage') normalizedExtra._manageTab = 'assign';
+  if (normalizedPage === 'ad-manage') {
+    const requestedManageTab = normalizedExtra._manageTab || S?._manageTab || _manageTab || 'assign';
+    normalizedExtra._manageTab = SUPERVISOR_ALLOWED_MANAGE_TABS.has(requestedManageTab)
+      ? requestedManageTab
+      : 'assign';
+  }
 
   return { page:normalizedPage, extra:normalizedExtra };
 }
@@ -21733,7 +21810,9 @@ function render() {
   const renderRequestId = ++_renderRequestSerial;
   const pageRequestScope = beginPageRequestScope();
   const tabletUi = syncTabletUiClass();
-  document.body.classList.toggle('app-shell-mode', !['login','reset-password'].includes(page));
+  const isLoginPage = ['login','reset-password'].includes(page);
+  document.body.classList.toggle('app-shell-mode', !isLoginPage);
+  document.body.classList.toggle('login-page-active', isLoginPage);
   if (page === 'login') { paintLogin(); return; }
   if (page === 'reset-password') { paintResetPassword(); return; }
 
@@ -21775,7 +21854,8 @@ function render() {
       { id:'supervisor-tasks', name:uiCopy('งานที่ได้รับมอบหมาย','Assigned Work'), icon:navIconSvg('tasks'), action:"goPrimary('c-tasks')", matchPages:['c-tasks','c-count','c-found'] },
       { id:'supervisor-variance', name:uiCopy('ผลต่างสินค้าคงคลัง','Inventory Variance'), icon:navIconSvg('variance'), action:"openDashboardMenu('variance')", matchPages:['sv-dash','sv-list','sv-detail','sv-found'], matchTab:'variance' },
       { id:'supervisor-wms', name:uiCopy('ปรับปรุงยอด WMS','WMS Inventory Adjustment'), icon:navIconSvg('wms'), action:"openDashboardMenu('wms')", matchPage:'sv-dash', matchTab:'wms' },
-      { id:'supervisor-assign', name:uiCopy('มอบหมายงานตรวจนับ','Count Work Assignment'), icon:navIconSvg('assign'), action:"openManageMenu('assign')", matchPage:'ad-manage', matchTab:'assign' }
+      { id:'supervisor-assign', name:uiCopy('มอบหมายงานตรวจนับ','Count Work Assignment'), icon:navIconSvg('assign'), action:"openManageMenu('assign')", matchPage:'ad-manage', matchTab:'assign' },
+      { id:'supervisor-import', name:uiCopy('นำเข้าข้อมูล WMS','Import WMS Data'), icon:navIconSvg('import'), action:"openManageMenu('import')", matchPage:'ad-manage', matchTab:'import' }
     ],
     admin: [
       { group: 'dashboard', name: 'สรุปภาพรวม', icon: navIconSvg('summary'), children: [
@@ -22054,8 +22134,8 @@ function openDashboardMenu(tab) {
   render();
 }
 function openManageMenu(tab) {
-  if (prof?.role === 'supervisor' && tab !== 'assign') {
-    alert('บัญชี Supervisor เข้าถึงได้เฉพาะเมนูมอบหมายงานตรวจนับ');
+  if (prof?.role === 'supervisor' && !SUPERVISOR_ALLOWED_MANAGE_TABS.has(tab)) {
+    alert('บัญชี Supervisor ไม่มีสิทธิ์เข้าถึงเมนูนี้');
     return;
   }
   _navStack = [];
@@ -30408,7 +30488,7 @@ let _manageTab = 'sessions';
 async function loadAdManage() {
   if (!['admin','supervisor'].includes(prof?.role)) { goPrimary('c-tasks'); return; }
   let tab = S._manageTab || _manageTab;
-  if (prof?.role === 'supervisor') tab = 'assign';
+  if (prof?.role === 'supervisor' && !SUPERVISOR_ALLOWED_MANAGE_TABS.has(tab)) tab = 'assign';
   S._manageTab = tab;
   _manageTab = tab;
   const hostClass = tab === 'assign' ? 'assign-manage-host' : 'card';
@@ -32164,6 +32244,10 @@ async function renderManageDataInfo(container) {
 }
 
 async function renderManageImport(container) {
+  if (!canImportWms()) {
+    container.innerHTML = `<div class="alert alert-red">เมนู Import WMS ใช้ได้เฉพาะ Admin และ Supervisor เท่านั้น</div>`;
+    return;
+  }
   const { data: sessions } = await sb.from('count_sessions').select('id,name,status').in('status',['draft','active']);
   const sessOpts = sessions?.length
     ? `<option value="" selected disabled>— เลือก Session —</option>` + sessions.map(s=>`<option value="${s.id}">${escapeWmsText(s.name)} · ${escapeWmsText(s.status)}</option>`).join('')
@@ -32192,7 +32276,7 @@ async function renderManageImport(container) {
       </div>
     </details>
 
-    <details class="admin-master-group">
+    ${prof?.role === 'admin' ? `<details class="admin-master-group">
       <summary>
         <span>${adminTrashIconSvg()}</span>
         <span class="admin-master-group-title">ลบ Location ตาม Zone / Row / Session</span>
@@ -32212,10 +32296,10 @@ async function renderManageImport(container) {
         <button class="btn btn-red admin-delete-icon" id="del-btn" onclick="doDeleteByZoneRow()"
           style="width:100%" disabled>${adminTrashIconSvg()} <span>ลบทั้งหมดที่เลือก</span></button>
       </div>
-    </details>`;
+    </details>` : ''}`;
 
   Q('ixlsx')?.addEventListener('change', readXlsxFile);
-  loadDeleteZoneFilters();
+  if (prof?.role === 'admin') loadDeleteZoneFilters();
 }
 
 let _ohSyncRequestId = 0;
@@ -35038,6 +35122,10 @@ async function fetchImportedScopeRows(table,columns,sessionId,locationIds) {
 }
 
 async function doImportXlsx() {
+  if (!canImportWms()) {
+    alert('เมนู Import WMS ใช้ได้เฉพาะ Admin และ Supervisor เท่านั้น');
+    return;
+  }
   const sid = Q('is')?.value;
   const al = Q('ia');
   const btn = Q('ibtn');
@@ -35087,19 +35175,37 @@ async function doImportXlsx() {
       }
     });
 
-    const { data:dbLocs,error:eLoc } = await sb.from('locations')
-      .upsert(Array.from(uniqueLocsMap.values()),{ onConflict:'code' })
-      .select('id,code');
-    if (eLoc) throw eLoc;
+    const masterLocations = Array.from(uniqueLocsMap.values());
+    const masterItems = Array.from(uniqueItemsMap.values());
+    let dbLocs = [];
+    let dbItems = [];
+    if (prof?.role === 'supervisor') {
+      const maxMaster = Math.max(masterLocations.length,masterItems.length);
+      for (let start = 0; start < maxMaster; start += 200) {
+        const result = await invokeWmsImportAction('upsert_master',sid,{
+          locations:masterLocations.slice(start,start + 200),
+          items:masterItems.slice(start,start + 200),
+        });
+        dbLocs.push(...(result.locations || []));
+        dbItems.push(...(result.items || []));
+      }
+    } else {
+      const locationResult = await sb.from('locations')
+        .upsert(masterLocations,{ onConflict:'code' })
+        .select('id,code');
+      if (locationResult.error) throw locationResult.error;
+      dbLocs = locationResult.data || [];
+      const itemResult = await sb.from('items')
+        .upsert(masterItems,{ onConflict:'code' })
+        .select('id,code');
+      if (itemResult.error) throw itemResult.error;
+      dbItems = itemResult.data || [];
+    }
     const locIdMap = new Map((dbLocs || []).map(row => [importCodeKey(row.code),row.id]));
     if (locIdMap.size !== uniqueLocsMap.size) {
       throw new Error(`Location บันทึกไม่ครบ: ต้องได้ ${uniqueLocsMap.size} แต่ได้ ${locIdMap.size}`);
     }
 
-    const { data:dbItems,error:eItem } = await sb.from('items')
-      .upsert(Array.from(uniqueItemsMap.values()),{ onConflict:'code' })
-      .select('id,code');
-    if (eItem) throw eItem;
     const itemIdMap = new Map((dbItems || []).map(row => [importCodeKey(row.code),row.id]));
     if (itemIdMap.size !== uniqueItemsMap.size) {
       throw new Error(`Item บันทึกไม่ครบ: ต้องได้ ${uniqueItemsMap.size} แต่ได้ ${itemIdMap.size}`);
@@ -35141,23 +35247,38 @@ async function doImportXlsx() {
     const BATCH = 200;
     al.innerHTML = `<div class="alert alert-blue">⏳ กำลังบันทึก Stock Snapshot (${snapList.length.toLocaleString()} รายการ)...</div>`;
     for (let start = 0; start < snapList.length; start += BATCH) {
-      const { error } = await sb.from('stock_snapshot')
-        .upsert(snapList.slice(start,start + BATCH),{ onConflict:'session_id,location_id,item_id' });
-      if (error) throw error;
+      const rows = snapList.slice(start,start + BATCH);
+      if (prof?.role === 'supervisor') {
+        await invokeWmsImportAction('upsert_snapshots',sid,{ rows });
+      } else {
+        const { error } = await sb.from('stock_snapshot')
+          .upsert(rows,{ onConflict:'session_id,location_id,item_id' });
+        if (error) throw error;
+      }
     }
 
     for (let start = 0; start < importedLocationIds.length; start += BATCH) {
-      const { error } = await sb.from('stock_snapshot_detail')
-        .delete()
-        .eq('session_id',sid)
-        .in('location_id',importedLocationIds.slice(start,start + BATCH));
-      if (error) throw error;
+      const locationIds = importedLocationIds.slice(start,start + BATCH);
+      if (prof?.role === 'supervisor') {
+        await invokeWmsImportAction('replace_detail_scope',sid,{ location_ids:locationIds });
+      } else {
+        const { error } = await sb.from('stock_snapshot_detail')
+          .delete()
+          .eq('session_id',sid)
+          .in('location_id',locationIds);
+        if (error) throw error;
+      }
     }
     if (detailsList.length) {
       al.innerHTML = `<div class="alert alert-blue">⏳ กำลังบันทึกรายละเอียด (${detailsList.length.toLocaleString()} แถว)...</div>`;
       for (let start = 0; start < detailsList.length; start += BATCH) {
-        const { error } = await sb.from('stock_snapshot_detail').insert(detailsList.slice(start,start + BATCH));
-        if (error) throw error;
+        const rows = detailsList.slice(start,start + BATCH);
+        if (prof?.role === 'supervisor') {
+          await invokeWmsImportAction('insert_details',sid,{ rows });
+        } else {
+          const { error } = await sb.from('stock_snapshot_detail').insert(rows);
+          if (error) throw error;
+        }
       }
     }
 
@@ -35172,11 +35293,16 @@ async function doImportXlsx() {
       .map(row => row.id)
       .filter(Boolean);
     for (let start = 0; start < staleSnapshotIds.length; start += BATCH) {
-      const { error } = await sb.from('stock_snapshot')
-        .delete()
-        .eq('session_id',sid)
-        .in('id',staleSnapshotIds.slice(start,start + BATCH));
-      if (error) throw error;
+      const ids = staleSnapshotIds.slice(start,start + BATCH);
+      if (prof?.role === 'supervisor') {
+        await invokeWmsImportAction('delete_stale_snapshots',sid,{ ids });
+      } else {
+        const { error } = await sb.from('stock_snapshot')
+          .delete()
+          .eq('session_id',sid)
+          .in('id',ids);
+        if (error) throw error;
+      }
     }
     if (staleSnapshotIds.length) {
       savedSnapshots = savedSnapshots.filter(row => expectedPairKeys.has(`${row.location_id}|${row.item_id}`));
