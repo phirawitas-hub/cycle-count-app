@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v195 - Reliable Handheld Location Capture</title>
+<title>Cycle Count v196 - Persistent Handheld Scanner Connection</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -232,8 +232,13 @@ body{
 .top-out-btn {
   background: var(--neu-surface); border: none; color: var(--accent-red);
   padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 700; cursor: pointer;
+  display:inline-flex; align-items:center; justify-content:center; gap:7px;
   box-shadow: 5px 5px 10px var(--neu-shadow-dark), -5px -5px 10px var(--neu-shadow-light);
   transition: all 0.2s ease;
+}
+.top-out-btn svg {
+  width:18px; height:18px; flex:0 0 18px; display:block;
+  fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;
 }
 .top-out-btn:active { box-shadow: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light); }
 
@@ -13996,7 +14001,9 @@ margin-top:8px;
     border-radius:12px !important;
     font-size:0 !important;
   }
-  .top-out-btn::before { content:'ออก'; font-size:11px; font-weight:900; }
+  .top-out-btn span { display:none !important; }
+  .top-out-btn svg { width:20px !important; height:20px !important; flex-basis:20px !important; }
+  .top-out-btn::before { content:none !important; display:none !important; }
 
   .page-content {
     padding:8px 8px calc(18px + env(safe-area-inset-bottom)) !important;
@@ -17162,7 +17169,7 @@ body.tablet-ui .count-touch-toolbar .count-screen-lock-button { display:inline-f
 }
 </style>
 </head>
-<body data-build="v195-reliable-handheld-location-capture">
+<body data-build="v196-persistent-handheld-scanner-connection">
 <div id="app"></div>
 
 <script>
@@ -17232,7 +17239,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v195-reliable-handheld-location-capture';
+window.__CYCLE_COUNT_BUILD__ = 'v196-persistent-handheld-scanner-connection';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -22445,7 +22452,13 @@ function render() {
               <div class="user-avatar ${profileAvatar ? 'has-photo' : ''}">${profileAvatarHtml}</div>
               <span class="user-name">${prof?.name || ''}</span>
             </div>
-            <button class="top-out-btn" onclick="doLogout()">ออกจากระบบ</button>
+            <button class="top-out-btn" onclick="doLogout()" aria-label="ออกจากระบบ" title="ออกจากระบบ">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5"></path>
+                <path d="m15 8 4 4-4 4M19 12H8"></path>
+              </svg>
+              <span>ออกจากระบบ</span>
+            </button>
           </div>
         </header>
 
@@ -24348,6 +24361,7 @@ const HANDHELD_SCAN_CONFIG = Object.freeze({
   // can be accepted immediately.
   taskInputCommitDelayMs:900,
   taskTerminatorGraceMs:180,
+  taskConnectionRefreshMs:1800,
   duplicateWindowMs:1100,
 });
 let _hardwareScanBuffer = '';
@@ -24366,6 +24380,8 @@ let _handheldCountFocusToken = 0;
 let _taskLocationFocusTimers = [];
 let _taskLocationFocusToken = 0;
 let _taskLocationFocusHoldUntil = 0;
+let _taskLocationLastConnectionAt = 0;
+let _taskLocationLastInputAt = 0;
 let _hardwareCapturePollTimer = null;
 let _hardwareCapturePollValue = '';
 let _hardwareCapturePollChangedAt = 0;
@@ -24382,8 +24398,9 @@ function hardwareLaserCaptureHtml(id,context,instruction) {
   // injecting the decoded Location even when the field appears focused.
   const captureInputMode = isNarrowHandheldTerminal() ? 'text' : 'none';
   const shouldAutofocus = context === 'task-location';
-  const buildLabel = shouldAutofocus ? ' · v195' : '';
-  return `<div class="handheld-laser-bar" data-i18n-skip>
+  const buildLabel = shouldAutofocus ? ' · v196' : '';
+  return `<div class="handheld-laser-bar" data-i18n-skip
+    ${shouldAutofocus ? 'onpointerdown="focusTaskLocationCapture({force:true,reconnect:true})"' : ''}>
     <span class="handheld-laser-icon">${barcodeScanIconSvg()}</span>
     <span class="handheld-laser-copy">
       <strong>${escapeWmsText(uiCopy('เลเซอร์ Handheld พร้อมใช้งาน','Handheld Laser Ready'))}</strong>
@@ -24391,7 +24408,7 @@ function hardwareLaserCaptureHtml(id,context,instruction) {
     </span>
     <input class="handheld-laser-input" id="${escapeWmsText(id)}"
       data-hw-scan-capture="true" data-hw-scan-context="${escapeWmsText(context)}"
-      inputmode="${captureInputMode}" enterkeyhint="go" virtualkeyboardpolicy="manual"
+      inputmode="${captureInputMode}" enterkeyhint="go"
       ${shouldAutofocus ? 'autofocus data-auto-hardware-focus="true"' : ''}
       autocomplete="off" autocapitalize="characters" spellcheck="false"
       aria-label="${escapeWmsText(uiCopy('ช่องรับข้อมูลจากเลเซอร์ Handheld','Handheld Laser Input'))}"
@@ -24566,7 +24583,7 @@ function focusHardwareScanTarget(targetOrId,{ select=true }={}) {
   if (!target || target.disabled || target.hidden || target.closest?.('[hidden]')) return false;
   try { target.focus({ preventScroll:true }); } catch (_) { target.focus(); }
   if (select) target.select?.();
-  if (target.dataset?.hwScanCapture && isNarrowHandheldTerminal()) {
+  if (target.dataset?.hwScanCapture && target.id !== 'task_hardware_scan' && isNarrowHandheldTerminal()) {
     try { navigator.virtualKeyboard?.hide?.(); } catch (_) {}
   }
   return true;
@@ -24594,7 +24611,7 @@ function clearTaskLocationFocusTimers() {
   _taskLocationFocusTimers = [];
 }
 
-function focusTaskLocationCapture({ force=false }={}) {
+function focusTaskLocationCapture({ force=false,reconnect=false }={}) {
   if (S?.page !== 'c-tasks' || Q('scanOverlay')) return false;
   if (!force && Date.now() < _taskLocationFocusHoldUntil) return false;
   const target = Q('task_hardware_scan');
@@ -24603,19 +24620,25 @@ function focusTaskLocationCapture({ force=false }={}) {
   if (!force && active && active !== document.body && active !== document.documentElement && active !== target) {
     return false;
   }
+  if (reconnect && document.activeElement === target) target.blur();
   focusHardwareScanTarget(target);
   // iScan sends decoded text to the focused edit box. On this Android
   // terminal a second focus after click makes that IME connection reliable.
   try { target.click(); } catch (_) {}
   focusHardwareScanTarget(target);
-  return document.activeElement === target;
+  const connected = document.activeElement === target;
+  if (connected) {
+    _taskLocationLastConnectionAt = Date.now();
+    target.dataset.scannerConnected = 'true';
+  }
+  return connected;
 }
 
 function scheduleTaskLocationScanFocus() {
   clearTaskLocationFocusTimers();
   if (S?.page !== 'c-tasks') return;
   const token = _taskLocationFocusToken;
-  focusTaskLocationCapture({ force:true });
+  focusTaskLocationCapture({ force:true,reconnect:true });
   requestAnimationFrame(() => {
     if (token !== _taskLocationFocusToken || S?.page !== 'c-tasks') return;
     if (document.activeElement?.id !== 'task_hardware_scan') {
@@ -24718,10 +24741,11 @@ function startHardwareCapturePolling(targetId) {
       stopHardwareCapturePolling();
       return;
     }
+    const value = normalizeHardwareScanValue(target.value || '');
+    const now = Date.now();
     if (targetId === 'task_hardware_scan'
-        && Date.now() >= _taskLocationFocusHoldUntil
-      && document.activeElement !== target
-      && !Q('scanOverlay')) {
+        && now >= _taskLocationFocusHoldUntil
+        && !Q('scanOverlay')) {
       const active = document.activeElement;
       const activeTag = String(active?.tagName || '').toLowerCase();
       const activeType = String(active?.type || '').toLowerCase();
@@ -24731,9 +24755,21 @@ function startHardwareCapturePolling(targetId) {
         || (activeTag === 'input'
           && active?.id !== 'task_hardware_scan'
           && ['text','search','password','number'].includes(activeType));
-      if (!userTextEntry) focusTaskLocationCapture({ force:true });
+      if (active !== target && !userTextEntry) {
+        focusTaskLocationCapture({ force:true,reconnect:true });
+      } else if (active === target
+          && !value
+          && !_hardwareScanBuffer
+          && !_hardwareScanNavigationPending
+          && now - _taskLocationLastInputAt > 700
+          && now - _hardwareScanLastRawEventAt > 700
+          && now - _taskLocationLastConnectionAt >= HANDHELD_SCAN_CONFIG.taskConnectionRefreshMs) {
+        // document.activeElement can still point at this input after Android
+        // has silently detached the foreground editor. Refresh the connection
+        // while idle so the next physical trigger has a live destination.
+        focusTaskLocationCapture({ force:true,reconnect:true });
+      }
     }
-    const value = normalizeHardwareScanValue(target.value || '');
     if (value !== _hardwareCapturePollValue) {
       _hardwareCapturePollValue = value;
       _hardwareCapturePollChangedAt = Date.now();
@@ -24812,7 +24848,7 @@ document.addEventListener('pointerup',event => {
   setTimeout(() => {
     if (token !== _taskLocationFocusToken || S?.page !== 'c-tasks' || Q('scanOverlay')) return;
     _taskLocationFocusHoldUntil = 0;
-    focusTaskLocationCapture({ force:true });
+    focusTaskLocationCapture({ force:true,reconnect:true });
   },220);
 },true);
 
@@ -25175,6 +25211,7 @@ document.addEventListener('keyup',event => {
 document.addEventListener('input',event => {
   const target = event.target instanceof HTMLElement ? event.target : null;
   if (!hardwareScanOperationalPage() || !target?.dataset?.hwScanCapture) return;
+  if (target.id === 'task_hardware_scan') _taskLocationLastInputAt = Date.now();
   const value = normalizeHardwareScanValue(target.value || '');
   if (value.length >= HANDHELD_SCAN_CONFIG.minLength) scheduleHardwareCaptureCommit(target,value);
 },true);
