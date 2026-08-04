@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v201 - Handheld IME Scanner Compatibility</title>
+<title>Cycle Count v202 - V199 Scanner with Keyboard Toggle</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -14305,6 +14305,32 @@ margin-top:8px;
 }
 .handheld-laser-input::placeholder { color:var(--theme-muted-text-color); opacity:.86; }
 
+/* v202 — optional soft-keyboard control built on the unchanged v199 scanner input. */
+.handheld-keyboard-toggle {
+  flex:0 0 auto;
+  min-height:40px;
+  padding:7px 11px;
+  border:1.5px solid color-mix(in srgb,var(--theme-primary-color) 42%,transparent);
+  border-radius:12px;
+  background:var(--theme-surface-color);
+  color:var(--theme-heading-color);
+  font-family:inherit;
+  font-size:10px;
+  font-weight:900;
+  line-height:1.15;
+  white-space:nowrap;
+  cursor:pointer;
+  touch-action:manipulation;
+}
+.handheld-keyboard-toggle.is-off {
+  color:var(--theme-primary-text);
+  background:var(--theme-primary-color);
+}
+.handheld-keyboard-toggle:focus-visible {
+  outline:3px solid color-mix(in srgb,var(--theme-primary-color) 24%,transparent);
+  outline-offset:2px;
+}
+
 .handheld-scan-feedback {
   position:fixed;
   z-index:2600;
@@ -14377,7 +14403,7 @@ margin-top:8px;
 @media (max-width:620px) {
   .handheld-laser-bar {
     display:grid;
-    grid-template-columns:36px minmax(0,1fr);
+    grid-template-columns:36px minmax(0,1fr) auto;
     gap:7px 9px;
     margin-top:9px;
     padding:8px;
@@ -14385,6 +14411,12 @@ margin-top:8px;
   }
   .handheld-laser-copy { min-width:0; }
   .handheld-laser-input { grid-column:1 / -1; width:100%; height:44px !important; }
+  .handheld-keyboard-toggle {
+    min-width:66px;
+    min-height:38px;
+    padding:6px 8px;
+    font-size:10px;
+  }
   .handheld-scan-feedback { width:calc(100vw - 24px); padding:16px 13px; }
   .handheld-scan-feedback strong { font-size:16px; }
 }
@@ -17192,7 +17224,7 @@ body.tablet-ui .count-touch-toolbar .count-screen-lock-button { display:inline-f
 }
 </style>
 </head>
-<body data-build="v201-handheld-ime-scanner-compatibility">
+<body data-build="v202-v199-scanner-keyboard-toggle">
 <div id="app"></div>
 
 <script>
@@ -17262,7 +17294,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v201-handheld-ime-scanner-compatibility';
+window.__CYCLE_COUNT_BUILD__ = 'v202-v199-scanner-keyboard-toggle';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -24415,12 +24447,103 @@ let _hardwareScanLastAppendedSource = '';
 let _hardwareScanLastAppendedAt = 0;
 let _hardwareScanLastAppendedTarget = null;
 
+const HANDHELD_SOFT_KEYBOARD_STORAGE_KEY = 'cycle_count_handheld_soft_keyboard';
+let _handheldSoftKeyboardEnabled = (() => {
+  try {
+    const saved = localStorage.getItem(HANDHELD_SOFT_KEYBOARD_STORAGE_KEY);
+    // V199 behavior remains the default. Only a deliberate press on this
+    // device activates keyboard suppression.
+    return saved !== 'off';
+  } catch (_) {
+    return true;
+  }
+})();
+
+function handheldSoftKeyboardEnabled() {
+  return _handheldSoftKeyboardEnabled !== false;
+}
+
+function persistHandheldSoftKeyboardPreference() {
+  try {
+    localStorage.setItem(
+      HANDHELD_SOFT_KEYBOARD_STORAGE_KEY,
+      handheldSoftKeyboardEnabled() ? 'on' : 'off'
+    );
+  } catch (_) {}
+}
+
+function handheldKeyboardToggleLabel() {
+  return handheldSoftKeyboardEnabled()
+    ? uiCopy('⌨ แป้นพิมพ์: เปิด','⌨ Keyboard: On')
+    : uiCopy('⌨ แป้นพิมพ์: ปิด','⌨ Keyboard: Off');
+}
+
+function refreshHandheldKeyboardToggle() {
+  document.querySelectorAll('[data-handheld-keyboard-toggle="true"]').forEach(button => {
+    const enabled = handheldSoftKeyboardEnabled();
+    button.classList.toggle('is-off',!enabled);
+    button.setAttribute('aria-pressed',String(!enabled));
+    button.setAttribute(
+      'aria-label',
+      enabled
+        ? uiCopy('กดเพื่อปิดแป้นพิมพ์บนจอ','Turn off on-screen keyboard')
+        : uiCopy('กดเพื่อเปิดแป้นพิมพ์บนจอ','Turn on on-screen keyboard')
+    );
+    button.textContent = handheldKeyboardToggleLabel();
+  });
+}
+
+function requestHideHandheldSoftKeyboard() {
+  if (handheldSoftKeyboardEnabled()) return;
+  try { navigator.virtualKeyboard?.hide?.(); } catch (_) {}
+  // Repeat after the focus/click cycle. This changes only virtual-keyboard
+  // visibility; the V199 input stays editable with inputmode="text" so the
+  // iScan/IME wedge can continue sending the Location.
+  requestAnimationFrame(() => {
+    try { navigator.virtualKeyboard?.hide?.(); } catch (_) {}
+  });
+  setTimeout(() => {
+    if (handheldSoftKeyboardEnabled()) return;
+    try { navigator.virtualKeyboard?.hide?.(); } catch (_) {}
+  },80);
+}
+
+function applyHandheldSoftKeyboardPreference(target=Q('task_hardware_scan')) {
+  if (!target || target.id !== 'task_hardware_scan') return;
+  if (handheldSoftKeyboardEnabled()) {
+    target.removeAttribute('virtualkeyboardpolicy');
+  } else {
+    // Chromium browsers that support VirtualKeyboardPolicy will keep the
+    // focused editor connected to the scanner without opening Gboard.
+    target.setAttribute('virtualkeyboardpolicy','manual');
+    requestHideHandheldSoftKeyboard();
+  }
+}
+
+function toggleHandheldSoftKeyboard() {
+  _handheldSoftKeyboardEnabled = !handheldSoftKeyboardEnabled();
+  persistHandheldSoftKeyboardPreference();
+  refreshHandheldKeyboardToggle();
+  const target = Q('task_hardware_scan');
+  applyHandheldSoftKeyboardPreference(target);
+  if (!target) return;
+  // Reuse the exact V199 reconnect path in both modes. Keyboard-off changes
+  // only the browser's virtual-keyboard visibility, never the scan connection.
+  focusTaskLocationCapture({ force:true,reconnect:true });
+  if (!handheldSoftKeyboardEnabled()) {
+    // Do not blur, make readonly, or change inputmode: those actions can sever
+    // the Android scanner IME. Only request that the soft keyboard be hidden.
+    requestHideHandheldSoftKeyboard();
+  }
+}
+
 function hardwareLaserCaptureHtml(id,context,instruction) {
-  // This rugged terminal injects decoded data through Android IME and requires
-  // inputmode="text". Gboard is suppressed separately without disabling IME.
+  // Rugged scanners that work through an Android IME need a real text input
+  // connection. inputmode="none" prevents several scanner services from
+  // injecting the decoded Location even when the field appears focused.
   const captureInputMode = isNarrowHandheldTerminal() ? 'text' : 'none';
   const shouldAutofocus = context === 'task-location';
-  const buildLabel = shouldAutofocus ? ' · v201' : '';
+  const buildLabel = shouldAutofocus ? ' · v202' : '';
   return `<div class="handheld-laser-bar" data-i18n-skip
     ${shouldAutofocus ? 'onpointerdown="focusTaskLocationCapture({force:true,reconnect:true})"' : ''}>
     <span class="handheld-laser-icon">${barcodeScanIconSvg()}</span>
@@ -24428,13 +24551,22 @@ function hardwareLaserCaptureHtml(id,context,instruction) {
       <strong>${escapeWmsText(uiCopy('เลเซอร์ Handheld พร้อมใช้งาน','Handheld Laser Ready'))}</strong>
       <span>${escapeWmsText(instruction)}${buildLabel}</span>
     </span>
+    ${shouldAutofocus ? `<button type="button" class="handheld-keyboard-toggle ${handheldSoftKeyboardEnabled() ? '' : 'is-off'}"
+      data-handheld-keyboard-toggle="true"
+      aria-pressed="${String(!handheldSoftKeyboardEnabled())}"
+      aria-label="${escapeWmsText(handheldSoftKeyboardEnabled()
+        ? uiCopy('กดเพื่อปิดแป้นพิมพ์บนจอ','Turn off on-screen keyboard')
+        : uiCopy('กดเพื่อเปิดแป้นพิมพ์บนจอ','Turn on on-screen keyboard'))}"
+      onpointerdown="event.preventDefault();event.stopPropagation()"
+      onclick="event.preventDefault();event.stopPropagation();toggleHandheldSoftKeyboard()">${escapeWmsText(handheldKeyboardToggleLabel())}</button>` : ''}
     <input class="handheld-laser-input" id="${escapeWmsText(id)}"
       data-hw-scan-capture="true" data-hw-scan-context="${escapeWmsText(context)}"
-      inputmode="${captureInputMode}" virtualkeyboardpolicy="manual" enterkeyhint="go"
-      ${shouldAutofocus ? 'data-auto-hardware-focus="true"' : ''}
+      inputmode="${captureInputMode}" ${shouldAutofocus && !handheldSoftKeyboardEnabled() ? 'virtualkeyboardpolicy="manual"' : ''} enterkeyhint="go"
+      ${shouldAutofocus ? `${handheldSoftKeyboardEnabled() ? 'autofocus ' : ''}data-auto-hardware-focus="true"` : ''}
       autocomplete="off" autocapitalize="characters" spellcheck="false"
       aria-label="${escapeWmsText(uiCopy('ช่องรับข้อมูลจากเลเซอร์ Handheld','Handheld Laser Input'))}"
-      placeholder="${escapeWmsText(uiCopy('กดปุ่มยิง Barcode ได้ทันที','Press the Hardware Scan Button'))}">
+      placeholder="${escapeWmsText(uiCopy('กดปุ่มยิง Barcode ได้ทันที','Press the Hardware Scan Button'))}"
+      onfocus="this.select()">
   </div>`;
 }
 
@@ -24599,58 +24731,17 @@ function handheldScanFeedback(kind,title,value='',detail='') {
   handheldScanSignal(safeKind);
 }
 
-function hideHandheldVirtualKeyboard() {
-  if (!isNarrowHandheldTerminal()) return;
-  const hide = () => {
-    try { navigator.virtualKeyboard?.hide?.(); } catch (_) {}
-  };
-  hide();
-  requestAnimationFrame(hide);
-  setTimeout(hide,80);
-}
-
-function suppressHandheldScannerSoftKeyboard(target) {
-  if (!target?.dataset?.hwScanCapture || !isNarrowHandheldTerminal()) return;
-  // Do not change this to "none": the tested iScan service stops publishing
-  // Location text when its editable IME destination is disabled.
-  target.setAttribute('inputmode','text');
-  target.setAttribute('virtualkeyboardpolicy','manual');
-  // Removing native autofocus and synthetic click avoids repeated Gboard
-  // opens; supported Chrome builds also close it through this manual policy.
-  hideHandheldVirtualKeyboard();
-}
-
 function focusHardwareScanTarget(targetOrId,{ select=true }={}) {
   const target = typeof targetOrId === 'string' ? Q(targetOrId) : targetOrId;
   if (!target || target.disabled || target.hidden || target.closest?.('[hidden]')) return false;
-  suppressHandheldScannerSoftKeyboard(target);
   try { target.focus({ preventScroll:true }); } catch (_) { target.focus(); }
-  if (select && !target.dataset?.hwScanCapture) target.select?.();
-  else if (target.dataset?.hwScanCapture) {
-    try {
-      const end = String(target.value || '').length;
-      target.setSelectionRange?.(end,end);
-    } catch (_) {}
+  if (select) target.select?.();
+  if (target.dataset?.hwScanCapture && target.id !== 'task_hardware_scan' && isNarrowHandheldTerminal()) {
+    try { navigator.virtualKeyboard?.hide?.(); } catch (_) {}
   }
-  suppressHandheldScannerSoftKeyboard(target);
+  if (target.id === 'task_hardware_scan') applyHandheldSoftKeyboardPreference(target);
   return true;
 }
-
-document.addEventListener('focusin',event => {
-  const target = event.target instanceof HTMLElement ? event.target : null;
-  if (target?.dataset?.hwScanCapture) suppressHandheldScannerSoftKeyboard(target);
-},true);
-
-document.addEventListener('pointerdown',event => {
-  const target = event.target instanceof HTMLElement
-    ? event.target.closest?.('[data-hw-scan-capture="true"]')
-    : null;
-  if (!target || !isNarrowHandheldTerminal()) return;
-  // Stop Android's native tap-to-type path, then focus the same editable input
-  // programmatically so the hardware scanner remains the only text source.
-  event.preventDefault();
-  focusHardwareScanTarget(target);
-},true);
 
 function isNarrowHandheldTerminal() {
   const viewportWidth = window.visualViewport?.width || window.innerWidth || 0;
@@ -24685,10 +24776,16 @@ function focusTaskLocationCapture({ force=false,reconnect=false }={}) {
   }
   if (reconnect && document.activeElement === target) target.blur();
   focusHardwareScanTarget(target);
-  // A synthetic click reopened Gboard every time the scanner connection was
-  // refreshed. A second programmatic focus is enough for Keyboard Wedge and
-  // keeps the task Location input connected without showing the soft keyboard.
+  // iScan sends decoded text to the focused edit box. On this Android
+  // terminal a second focus after click makes that IME connection reliable.
+  // Never synthesize that click while a filter list is open: the click lands
+  // outside .multi-filter and would immediately close the list on handheld.
+  const multiFilterOpen = Boolean(document.querySelector('.multi-filter.open'));
+  if (!multiFilterOpen) {
+    try { target.click(); } catch (_) {}
+  }
   focusHardwareScanTarget(target);
+  requestHideHandheldSoftKeyboard();
   const connected = document.activeElement === target;
   if (connected) {
     _taskLocationLastConnectionAt = Date.now();
@@ -24747,14 +24844,12 @@ function prepareHandheldCountEntry({ force=false }={}) {
     if (active.classList?.contains('cqty') || !active.matches?.('[data-hw-scan-capture="true"]')) return true;
   }
   if (S?.page !== 'c-count') return false;
-  if (narrowHandheld) hideHandheldVirtualKeyboard();
   focusHardwareScanTarget(firstInput);
   // Android rugged terminals can report an element as active without moving
   // the hardware keyboard cursor. A click + second focus binds the physical
   // keypad to this Count field for rounds 1, 2 and 3 alike.
   try { firstInput.click(); } catch (_) {}
   focusHardwareScanTarget(firstInput);
-  if (narrowHandheld) hideHandheldVirtualKeyboard();
   try {
     firstInput.setSelectionRange?.(0,String(firstInput.value || '').length);
   } catch (_) {}
