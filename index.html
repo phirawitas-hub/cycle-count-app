@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v205 - WMS Status Filter Fix</title>
+<title>Cycle Count v206 - WMS Approval Data Fix</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -17250,7 +17250,7 @@ body.tablet-ui .count-touch-toolbar .count-screen-lock-button { display:inline-f
 }
 </style>
 </head>
-<body data-build="v205-wms-status-filter-fix">
+<body data-build="v206-wms-approval-data-fix">
 <div id="app"></div>
 
 <script>
@@ -17320,7 +17320,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v205-wms-status-filter-fix';
+window.__CYCLE_COUNT_BUILD__ = 'v206-wms-approval-data-fix';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -30019,7 +30019,11 @@ async function loadSvDash() {
   try {
     const { data: vaData, error: vaErr } = await fetchSupabaseRowsByValues(
       'variance_approvals',
-      'id,assignment_id,item_id,final_qty,variance,resolution,supervisor_note,approved_by,approved_at,created_at,wms_fixed,wms_fixed_at,wms_fixed_by',
+      // variance_approvals records their confirmation time in approved_at.
+      // Requesting a non-existent created_at column makes every batch fail
+      // with HTTP 400 and causes confirmed DIFF rows to be misclassified as
+      // pending confirmation, leaving both WMS review counters at zero.
+      'id,assignment_id,item_id,final_qty,variance,resolution,supervisor_note,approved_by,approved_at,wms_fixed,wms_fixed_at,wms_fixed_by',
       'assignment_id',
       allAsgnIds,
     );
@@ -30038,7 +30042,9 @@ async function loadSvDash() {
           wms_fixed: v.wms_fixed ?? false,
           wms_fixed_at: v.wms_fixed_at ?? null,
           wms_fixed_by: v.wms_fixed_by ?? null,
-          created_at: v.created_at ?? null,
+          // Keep the shared downstream sort/display field without requiring
+          // a created_at column from the database schema.
+          created_at: v.approved_at ?? null,
           _fromVA: true
         }));
     }
