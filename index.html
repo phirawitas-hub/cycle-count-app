@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v204 - DIFF OH Reimport with Confirmed Lock</title>
+<title>Cycle Count v205 - WMS Status Filter Fix</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -17250,7 +17250,7 @@ body.tablet-ui .count-touch-toolbar .count-screen-lock-button { display:inline-f
 }
 </style>
 </head>
-<body data-build="v204-diff-oh-reimport-confirmed-lock">
+<body data-build="v205-wms-status-filter-fix">
 <div id="app"></div>
 
 <script>
@@ -17320,7 +17320,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v204-diff-oh-reimport-confirmed-lock';
+window.__CYCLE_COUNT_BUILD__ = 'v205-wms-status-filter-fix';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -24569,7 +24569,7 @@ function hardwareLaserCaptureHtml(id,context,instruction) {
   // injecting the decoded Location even when the field appears focused.
   const captureInputMode = isNarrowHandheldTerminal() ? 'text' : 'none';
   const shouldAutofocus = context === 'task-location';
-  const buildLabel = shouldAutofocus ? ' · v204' : '';
+  const buildLabel = shouldAutofocus ? ' · v205' : '';
   return `<div class="handheld-laser-bar" data-i18n-skip
     ${shouldAutofocus ? 'onpointerdown="focusTaskLocationCapture({force:true,reconnect:true})"' : ''}>
     <span class="handheld-laser-icon">${barcodeScanIconSvg()}</span>
@@ -31475,18 +31475,16 @@ function refreshWmsDependentFilters() {
   );
   S._wmsUser = selectedUser;
 
-  const availableStatuses = new Set(facetRows('Filter').map(item =>
-    item._isPending ? 'pending' : (item.wms_fixed ? 'fixed' : 'unfixed')
-  ));
   const statusSelect = Q('wms-status');
   if (statusSelect) {
+    // Status is a direct view filter. Keep every option selectable even when
+    // the current combination has zero matching rows; an empty list is valid.
     [...statusSelect.options].forEach(option => {
-      option.disabled = option.value !== 'all' && !availableStatuses.has(option.value);
+      option.disabled = false;
     });
+    const allowedStatuses = new Set(['unfixed','fixed','pending','all']);
     const preferredStatus = S._wmsFilter || 'unfixed';
-    S._wmsFilter = preferredStatus === 'all' || availableStatuses.has(preferredStatus)
-      ? preferredStatus
-      : 'all';
+    S._wmsFilter = allowedStatuses.has(preferredStatus) ? preferredStatus : 'all';
     statusSelect.value = S._wmsFilter;
     document.querySelectorAll('[data-wms-kpi]').forEach(card => {
       card.classList.toggle('active', card.dataset.wmsKpi === S._wmsFilter);
@@ -31505,6 +31503,13 @@ function updateWmsFilter(key, value) {
   renderWmsList();
 }
 
+function wmsRowMatchesStatus(item,filterStatus='unfixed') {
+  if (filterStatus === 'all') return true;
+  if (filterStatus === 'pending') return Boolean(item?._isPending);
+  if (filterStatus === 'fixed') return !item?._isPending && Boolean(item?.wms_fixed);
+  return !item?._isPending && !item?.wms_fixed;
+}
+
 function renderWmsList() {
   const container = Q('wms-list');
   if (!container) return;
@@ -31518,10 +31523,7 @@ function renderWmsList() {
   const searchLoc = (S._wmsLocSearch || '').trim().toLowerCase();
 
   const filtered = sortRowsByLocation(wmsRows.filter(v => {
-    if (filterStatus === 'unfixed' && v.wms_fixed) return false;
-    if (filterStatus === 'fixed' && !v.wms_fixed) return false;
-    if (filterStatus === 'pending' && !v._isPending) return false;
-    if (filterStatus !== 'all' && filterStatus !== 'pending' && v._isPending) return false;
+    if (!wmsRowMatchesStatus(v,filterStatus)) return false;
     const loc = asgnInfoMap[v.assignment_id]?.locations;
     if (filterZone && loc?.zone !== filterZone) return false;
     if (filterRow && String(loc?.row_no ?? '') !== String(filterRow)) return false;
