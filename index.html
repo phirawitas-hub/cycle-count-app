@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v203 - Complete Work Tracking and Supervisor Menu Fix</title>
+<title>Cycle Count v204 - DIFF OH Reimport with Confirmed Lock</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -17250,7 +17250,7 @@ body.tablet-ui .count-touch-toolbar .count-screen-lock-button { display:inline-f
 }
 </style>
 </head>
-<body data-build="v203-complete-work-tracking-supervisor-menu-fix">
+<body data-build="v204-diff-oh-reimport-confirmed-lock">
 <div id="app"></div>
 
 <script>
@@ -17320,7 +17320,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v203-complete-work-tracking-supervisor-menu-fix';
+window.__CYCLE_COUNT_BUILD__ = 'v204-diff-oh-reimport-confirmed-lock';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -24569,7 +24569,7 @@ function hardwareLaserCaptureHtml(id,context,instruction) {
   // injecting the decoded Location even when the field appears focused.
   const captureInputMode = isNarrowHandheldTerminal() ? 'text' : 'none';
   const shouldAutofocus = context === 'task-location';
-  const buildLabel = shouldAutofocus ? ' · v203' : '';
+  const buildLabel = shouldAutofocus ? ' · v204' : '';
   return `<div class="handheld-laser-bar" data-i18n-skip
     ${shouldAutofocus ? 'onpointerdown="focusTaskLocationCapture({force:true,reconnect:true})"' : ''}>
     <span class="handheld-laser-icon">${barcodeScanIconSvg()}</span>
@@ -34153,7 +34153,7 @@ async function renderManageImport(container) {
         <div class="alert alert-blue" style="font-size:13px;margin:16px 0;line-height:1.6">
           📁 <strong>Upload Excel (.xlsx)</strong> — ดึงข้อมูลจากระบบ WMS ได้เลย<br>✅ ระบบอ่านหัวตารางอัตโนมัติ<br>🏷️ ดึง LPN / Lot / OH / AL มาแสดงตอนนับ<br>
           🔄 Import ซ้ำใน Session เดิมแบบปลอดภัย: Match ด้วย <strong>Location + LPN + Item + Lot</strong>
-          และอัปเดต OH/AL เฉพาะ Location ที่ยังไม่เริ่มนับ
+          และอัปเดต OH/AL ได้รวมถึงงานที่กำลังนับหรือเป็น DIFF โดยจะล็อกงานที่หัวหน้าคอนเฟิร์มแล้ว
         </div>
         <div class="fg"><label>SESSION <span style="color:var(--accent-red)">*</span></label><select id="is" required onchange="refreshXlsxPreview()">${sessOpts}</select></div>
         <div class="fg"><label>กรอง LOCATION (ไม่บังคับ)</label><input id="ilocfilter" placeholder="เช่น B-EA% หรือเว้นว่างเพื่อ import ทั้งหมด" oninput="refreshXlsxPreview()"></div>
@@ -37190,10 +37190,12 @@ function wmsImportQtyEqual(left,right) {
   return Number.isFinite(a) && Number.isFinite(b) && Math.abs(a-b) <= 0.000001;
 }
 
-function wmsImportLocationIsProtected(assignment,countedAssignmentIds) {
+function wmsImportLocationIsProtected(assignment,confirmedAssignmentIds) {
   if (!assignment) return false;
-  if (countedAssignmentIds.has(assignment.id)) return true;
-  return assignment.status !== 'pending';
+  // A physical count or DIFF alone must not freeze OH on a later WMS import.
+  // Only a supervisor confirmation (approval row/status) locks this location.
+  if (confirmedAssignmentIds.has(assignment.id)) return true;
+  return assignment.status === 'approved';
 }
 
 function wmsImportChangePreview(changes,limit=8) {
@@ -37363,17 +37365,23 @@ async function doImportXlsx() {
     ]);
     const assignmentIds = existingAssignments.map(row => row.id).filter(Boolean);
     const annualJobIds = [...new Set(existingAnnualItems.map(row => row.job_id).filter(Boolean))];
-    const [countResult,annualJobResult] = await Promise.all([
+    const [countResult,approvalResult,annualJobResult] = await Promise.all([
       assignmentIds.length
         ? fetchSupabaseRowsByValues('count_records','assignment_id','assignment_id',assignmentIds)
+        : Promise.resolve({data:[],error:null}),
+      assignmentIds.length
+        ? fetchSupabaseRowsByValues('variance_approvals','assignment_id','assignment_id',assignmentIds)
         : Promise.resolve({data:[],error:null}),
       annualJobIds.length
         ? fetchSupabaseRowsByValues('annual_count_jobs','id,status','id',annualJobIds)
         : Promise.resolve({data:[],error:null}),
     ]);
-    if (countResult.error || annualJobResult.error) throw (countResult.error || annualJobResult.error);
+    if (countResult.error || approvalResult.error || annualJobResult.error) {
+      throw (countResult.error || approvalResult.error || annualJobResult.error);
+    }
     const existingCountRows = countResult.data || [];
     const countedAssignmentIds = new Set(existingCountRows.map(row => row.assignment_id).filter(Boolean));
+    const confirmedAssignmentIds = new Set((approvalResult.data || []).map(row => row.assignment_id).filter(Boolean));
     const assignmentByLocation = new Map(existingAssignments.map(row => [row.location_id,row]));
     const annualJobById = new Map((annualJobResult.data || []).map(row => [row.id,row]));
     const startedAnnualLocationIds = new Set(existingAnnualItems
@@ -37383,15 +37391,32 @@ async function doImportXlsx() {
       })
       .map(item => item.location_id)
       .filter(Boolean));
-    const protectedLocationIds = new Set(importedLocationIds.filter(locationId =>
-      wmsImportLocationIsProtected(assignmentByLocation.get(locationId),countedAssignmentIds)
-      || startedAnnualLocationIds.has(locationId)
+    const confirmedProtectedLocationIds = new Set(importedLocationIds.filter(locationId =>
+      wmsImportLocationIsProtected(assignmentByLocation.get(locationId),confirmedAssignmentIds)
     ));
+    const annualProtectedLocationIds = new Set(importedLocationIds.filter(locationId =>
+      startedAnnualLocationIds.has(locationId)
+    ));
+    const protectedLocationIds = new Set([
+      ...confirmedProtectedLocationIds,
+      ...annualProtectedLocationIds,
+    ]);
     const safeLocationIds = new Set(importedLocationIds.filter(locationId => !protectedLocationIds.has(locationId)));
+    const countedOrDiffLocationIds = new Set(importedLocationIds.filter(locationId => {
+      if (!safeLocationIds.has(locationId)) return false;
+      const assignment = assignmentByLocation.get(locationId);
+      return Boolean(assignment && (
+        countedAssignmentIds.has(assignment.id)
+        || ['in_progress','round1_done','round2_done','round3_done','completed'].includes(assignment.status)
+      ));
+    }));
     const safeSnapList = snapList.filter(row => safeLocationIds.has(row.location_id));
     const safeImportedDetails = importedDetailsList.filter(row => safeLocationIds.has(row.location_id));
-    const protectedImportRows = parsedRows.filter(row =>
-      protectedLocationIds.has(locIdMap.get(importCodeKey(row.locCode)))
+    const confirmedProtectedImportRows = parsedRows.filter(row =>
+      confirmedProtectedLocationIds.has(locIdMap.get(importCodeKey(row.locCode)))
+    ).length;
+    const annualProtectedImportRows = parsedRows.filter(row =>
+      annualProtectedLocationIds.has(locIdMap.get(importCodeKey(row.locCode)))
     ).length;
 
     const existingSnapshotMap = new Map(existingSnapshots.map(row => [`${row.location_id}|${row.item_id}`,row]));
@@ -37578,7 +37603,8 @@ async function doImportXlsx() {
       ค่าเดิมไม่เปลี่ยน <strong>${unchangedSnapshotCount.toLocaleString(uiLocale())}</strong><br>
       เพิ่ม LPN/Lot ใหม่ <strong>${newDetailCount.toLocaleString(uiLocale())}</strong> ·
       อัปเดต LPN/Lot <strong>${updatedDetailCount.toLocaleString(uiLocale())}</strong> ·
-      ข้าม Location ที่เริ่มนับแล้ว <strong>${protectedLocationIds.size.toLocaleString(uiLocale())}</strong>
+      อัปเดตงานที่เริ่มนับ/DIFF <strong>${countedOrDiffLocationIds.size.toLocaleString(uiLocale())}</strong> Location ·
+      ล็อกงานที่คอนเฟิร์มแล้ว <strong>${confirmedProtectedLocationIds.size.toLocaleString(uiLocale())}</strong> Location
       ${changePreview ? `<div style="margin-top:10px;white-space:pre-line;font-size:11px">${escapeWmsText(changePreview)}</div>` : ''}
     </div>`;
     showActionSuccess('Import ซ้ำแบบปลอดภัยและตรวจสอบข้อมูลเรียบร้อยแล้ว', {
@@ -37590,7 +37616,9 @@ async function doImportXlsx() {
         {label:'LPN/Lot ใหม่',value:newDetailCount.toLocaleString(uiLocale())},
         {label:'LPN/Lot อัปเดต',value:updatedDetailCount.toLocaleString(uiLocale())},
         {label:'ไม่เปลี่ยน',value:(unchangedSnapshotCount+unchangedDetailCount).toLocaleString(uiLocale())},
-        {label:'ข้ามหลังเริ่มนับ',value:`${protectedLocationIds.size.toLocaleString(uiLocale())} Location · ${protectedImportRows.toLocaleString(uiLocale())} แถว`},
+        {label:'งานนับ/DIFF ที่อัปเดต',value:`${countedOrDiffLocationIds.size.toLocaleString(uiLocale())} Location`},
+        {label:'ล็อกหลังคอนเฟิร์ม',value:`${confirmedProtectedLocationIds.size.toLocaleString(uiLocale())} Location · ${confirmedProtectedImportRows.toLocaleString(uiLocale())} แถว`},
+        ...(annualProtectedLocationIds.size ? [{label:'ล็อก Annual ที่เริ่มแล้ว',value:`${annualProtectedLocationIds.size.toLocaleString(uiLocale())} Location · ${annualProtectedImportRows.toLocaleString(uiLocale())} แถว`}] : []),
       ],
     });
     _deleteSessionLocationCache.delete(sid);
