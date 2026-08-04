@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v202 - V199 Scanner with Keyboard Toggle</title>
+<title>Cycle Count v203 - Complete Work Tracking and Supervisor Menu Fix</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -777,6 +777,14 @@ select { appearance: none; background-image: url('data:image/svg+xml;charset=US-
   background: var(--neu-surface);
   box-shadow: 12px 16px 34px rgba(0,109,119,.18), -5px -5px 16px rgba(255,255,255,.86);
   text-align: left;
+}
+.wms-note-menu.is-viewport-menu {
+  position:fixed !important;
+  z-index:3600 !important;
+  right:auto !important;
+  margin:0 !important;
+  overflow-y:auto;
+  overscroll-behavior:contain;
 }
 .wms-note-menu[hidden] { display: none; }
 .wms-note-menu-title {
@@ -11073,13 +11081,15 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
 .work-tracker-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .work-tracker-heading h2{margin:0;color:var(--text-main);font-size:22px}
 .work-tracker-heading p{margin:5px 0 0;color:var(--text-muted);font-weight:600}
-.work-tracker-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.work-tracker-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 .work-tracker-kpi{border:1px solid rgba(0,120,128,.12);border-radius:18px;background:#fff;padding:16px;box-shadow:0 8px 22px rgba(14,94,104,.07)}
 .work-tracker-kpi span{display:block;color:var(--text-muted);font-size:12px;font-weight:700}
 .work-tracker-kpi strong{display:block;margin-top:6px;color:var(--text-main);font-size:26px;font-family:'Fredoka',sans-serif}
 .work-tracker-kpi.pending strong{color:#bd7300}
 .work-tracker-kpi.counted strong{color:#007c83}
 .work-tracker-kpi.variance strong{color:#d65d48}
+.work-tracker-kpi.supervisor strong{color:#7756b5}
+.work-tracker-kpi.wms strong{color:#9b6816}
 .work-tracker-kpi.completed strong{color:#258b70}
 .work-tracker-filter-panel{border:1px solid rgba(0,120,128,.14);border-radius:20px;background:rgba(255,255,255,.94);padding:18px}
 .work-tracker-filter-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
@@ -11096,7 +11106,7 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
 .work-tracker-table-head strong{font-size:17px;color:var(--text-main)}
 .work-tracker-table-head span{font-size:12px;color:var(--text-muted);font-weight:700}
 .work-tracker-scroll{overflow:auto;max-height:62vh}
-.work-tracker-table{width:100%;min-width:1540px;border-collapse:separate;border-spacing:0;font-size:12px}
+.work-tracker-table{width:100%;min-width:2180px;border-collapse:separate;border-spacing:0;font-size:12px}
 .work-tracker-table th{position:sticky;top:0;z-index:2;background:#eaf5f6;color:#365f66;text-align:left;padding:11px 10px;border-bottom:1px solid rgba(0,120,128,.18);white-space:nowrap}
 .work-tracker-table td{padding:11px 10px;border-bottom:1px solid rgba(0,120,128,.09);vertical-align:top;color:var(--text-main)}
 .work-tracker-table tr:hover td{background:#f8fcfc}
@@ -11110,6 +11120,13 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
 .work-tracker-count-cell{min-width:150px}
 .work-tracker-count-cell strong{display:block;font-size:14px;color:#123f45}
 .work-tracker-count-cell span{display:block;margin-top:2px;color:var(--text-muted);font-size:10px;white-space:nowrap}
+.work-tracker-count-cell .work-tracker-round-note{max-width:190px;white-space:normal;overflow-wrap:anywhere;color:#44727a}
+.work-tracker-photo-link{display:inline-flex;margin-top:4px;color:#b74d40;font-size:10px;font-weight:800;text-decoration:none}
+.work-tracker-photo-link:hover{text-decoration:underline}
+.work-tracker-approval-cell{min-width:190px}
+.work-tracker-approval-cell strong{display:block;color:#6644a3;font-size:15px}
+.work-tracker-final-cell{min-width:180px}
+.work-tracker-final-cell .work-tracker-sub{white-space:normal}
 .work-tracker-variance{font-weight:900;font-size:14px}
 .work-tracker-variance.plus{color:#16806e}
 .work-tracker-variance.minus{color:#d65343}
@@ -11117,6 +11134,15 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
 .work-tracker-pagination button{border:0;border-radius:11px;background:#e8f4f5;color:#007780;padding:9px 13px;font-weight:800;cursor:pointer}
 .work-tracker-pagination button:disabled{opacity:.4;cursor:default}
 .work-tracker-empty{padding:48px 20px;text-align:center;color:var(--text-muted);font-weight:700}
+
+/* v203 — dashboard popovers must not be clipped by the generic card shell. */
+#dash-content.card{overflow:visible !important}
+#dash-content .wms-list-shell,
+#dash-content #wms-list,
+#dash-content .wms-row,
+#dash-content .wms-row-side,
+#dash-content .wms-actions,
+#dash-content .wms-note-control{overflow:visible !important}
 @media (max-width:1200px){
   .work-tracker-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
   .work-tracker-filter-grid{grid-template-columns:repeat(3,minmax(135px,1fr))}
@@ -17224,7 +17250,7 @@ body.tablet-ui .count-touch-toolbar .count-screen-lock-button { display:inline-f
 }
 </style>
 </head>
-<body data-build="v202-v199-scanner-keyboard-toggle">
+<body data-build="v203-complete-work-tracking-supervisor-menu-fix">
 <div id="app"></div>
 
 <script>
@@ -17294,7 +17320,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v202-v199-scanner-keyboard-toggle';
+window.__CYCLE_COUNT_BUILD__ = 'v203-complete-work-tracking-supervisor-menu-fix';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -24543,7 +24569,7 @@ function hardwareLaserCaptureHtml(id,context,instruction) {
   // injecting the decoded Location even when the field appears focused.
   const captureInputMode = isNarrowHandheldTerminal() ? 'text' : 'none';
   const shouldAutofocus = context === 'task-location';
-  const buildLabel = shouldAutofocus ? ' · v202' : '';
+  const buildLabel = shouldAutofocus ? ' · v203' : '';
   return `<div class="handheld-laser-bar" data-i18n-skip
     ${shouldAutofocus ? 'onpointerdown="focusTaskLocationCapture({force:true,reconnect:true})"' : ''}>
     <span class="handheld-laser-icon">${barcodeScanIconSvg()}</span>
@@ -27905,6 +27931,9 @@ const WORK_TRACKER_FILTERS = {
   round:{ state:'_trackerRound', field:'roundCount', labelTh:'รอบการตรวจนับล่าสุด', labelEn:'Latest Count Round' },
   user:{ state:'_trackerUser', field:'assignedUser', labelTh:'ผู้รับมอบหมายงาน', labelEn:'Assigned User' },
   counter:{ state:'_trackerCounter', field:'latestCounter', labelTh:'ผู้ตรวจนับจริง', labelEn:'Physical Counter' },
+  supervisor:{ state:'_trackerSupervisor', field:'supervisorName', labelTh:'ผู้ยืนยันยอด', labelEn:'Confirmed By' },
+  final:{ state:'_trackerFinal', field:'finalStatusKey', labelTh:'สถานะสุดท้าย', labelEn:'Final Status' },
+  wms_user:{ state:'_trackerWmsUser', field:'wmsFixedByName', labelTh:'ผู้ตรวจสอบ WMS', labelEn:'WMS Reviewed By' },
   category:{ state:'_trackerCategory', field:'category', labelTh:'ประเภทสินค้า', labelEn:'Item Category' },
   uom:{ state:'_trackerUom', field:'uom', labelTh:'หน่วยนับ (UOM)', labelEn:'Unit of Measure (UOM)' },
   inventory:{ state:'_trackerInventory', field:'inventoryStatus', labelTh:'สถานะสินค้าคงคลัง', labelEn:'Inventory Status' },
@@ -27928,9 +27957,31 @@ function workTrackerStatusLabel(key) {
 
 function workTrackerWmsLabel(key) {
   const labels = currentUiLanguage() === 'en'
-    ? { none:'No Record', pending:'Pending Confirmation', unfixed:'Pending WMS Review', fixed:'WMS Review Completed' }
-    : { none:'ไม่มีรายการ', pending:'รอยืนยันผล', unfixed:'รอตรวจสอบ WMS', fixed:'ตรวจสอบ WMS เสร็จสิ้น' };
+    ? { none:'No Record', pending:'Pending Confirmation', not_required:'No WMS Adjustment Required', unfixed:'Pending WMS Review', fixed:'WMS Review Completed' }
+    : { none:'ไม่มีรายการ', pending:'รอยืนยันผล', not_required:'ไม่ต้องปรับยอด WMS', unfixed:'รอตรวจสอบ WMS', fixed:'ตรวจสอบ WMS เสร็จสิ้น' };
   return labels[key] || key || uiCopy('ไม่มีรายการ','No Record');
+}
+
+function workTrackerFinalLabel(key) {
+  const labels = currentUiLanguage() === 'en' ? {
+    not_counted:'Not Counted', recount:'Next Count Required', count_match:'Count Matches OH',
+    supervisor_pending:'Pending Supervisor Confirmation', supervisor_match:'Supervisor Confirmed Match',
+    wms_pending:'Supervisor Confirmed Variance / Pending WMS', closed_match:'Closed — Quantity Matched',
+    closed_variance:'Closed — WMS Reviewed',
+  } : {
+    not_counted:'ยังไม่ได้ตรวจนับ', recount:'ต้องตรวจนับรอบถัดไป', count_match:'ผลนับตรงกับ OH',
+    supervisor_pending:'พบผลต่าง · รอหัวหน้ายืนยัน', supervisor_match:'หัวหน้ายืนยันยอดตรง',
+    wms_pending:'หัวหน้ายืนยันผลต่าง · รอตรวจสอบ WMS', closed_match:'ปิดงานแล้ว · ยอดตรง',
+    closed_variance:'ปิดงานแล้ว · ตรวจสอบ WMS เสร็จสิ้น',
+  };
+  return labels[key] || key || uiCopy('ยังไม่ทราบสถานะ','Status Not Available');
+}
+
+function workTrackerResolutionLabel(key) {
+  const labels = currentUiLanguage() === 'en'
+    ? { ok:'Matched OH', lost:'Confirmed Variance', pending_diff:'Pending Variance', pending_recount:'Pending Recount' }
+    : { ok:'ยืนยันยอดตรง OH', lost:'ยืนยันผลต่าง', pending_diff:'รอตรวจผลต่าง', pending_recount:'รอนับซ้ำ' };
+  return labels[key] || key || '—';
 }
 
 function workTrackerDate(value) {
@@ -27944,6 +27995,11 @@ function workTrackerUniqueNames(value) {
 }
 
 function buildWorkTrackerRows({ snapshots=[],details=[],assignments=[],counts=[],approvals=[],jobs=[],jobItems=[],rules={} }) {
+  const nullableNumber = value => {
+    if (value === null || value === undefined || value === '') return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  };
   const assignmentByLocation = {};
   assignments.forEach(assignment => { assignmentByLocation[assignment.location_id] = assignment; });
   const jobMap = Object.fromEntries(jobs.map(job => [job.id,job]));
@@ -27990,15 +28046,35 @@ function buildWorkTrackerRows({ snapshots=[],details=[],assignments=[],counts=[]
       rounds[2] ? Number(rounds[2].count_qty) : undefined,
       rules,
     );
+    const supervisorQty = approval ? nullableNumber(approval.final_qty) : null;
+    const storedSupervisorVariance = approval ? nullableNumber(approval.variance) : null;
+    const supervisorVariance = approval
+      ? (storedSupervisorVariance ?? (supervisorQty === null ? null : supervisorQty - oh))
+      : null;
+    const finalQty = supervisorQty ?? latestQty;
+    const finalVariance = approval
+      ? supervisorVariance
+      : (latestQty === null ? null : latestQty - oh);
     let statusKey = 'unassigned';
     if (assignment) statusKey = assignment.status === 'in_progress' ? 'in_progress' : 'pending';
     if (latestRound && itemStatus === 'PENDING') statusKey = 'recount';
     if (latestRound && itemStatus === 'Diff') statusKey = 'variance';
     if (latestRound && itemStatus === 'OK') statusKey = 'completed';
-    if (approval) statusKey = approval.wms_fixed ? 'wms_fixed' : 'approved';
+    if (approval) statusKey = finalVariance === 0 ? 'completed' : (approval.wms_fixed ? 'wms_fixed' : 'approved');
     let wmsStatus = 'none';
     if (latestRound && itemStatus === 'Diff') wmsStatus = 'pending';
-    if (approval) wmsStatus = approval.wms_fixed ? 'fixed' : 'unfixed';
+    if (approval) wmsStatus = finalVariance === 0 ? 'not_required' : (approval.wms_fixed ? 'fixed' : 'unfixed');
+    let finalStatusKey = 'not_counted';
+    if (latestRound && itemStatus === 'PENDING') finalStatusKey = 'recount';
+    if (latestRound && itemStatus === 'OK') finalStatusKey = 'count_match';
+    if (latestRound && itemStatus === 'Diff') finalStatusKey = 'supervisor_pending';
+    if (approval && finalVariance === 0) finalStatusKey = approval.wms_fixed ? 'closed_match' : 'supervisor_match';
+    if (approval && finalVariance !== null && finalVariance !== 0) finalStatusKey = approval.wms_fixed ? 'closed_variance' : 'wms_pending';
+    const supervisorAt = approval?.approved_at || approval?.created_at || '';
+    const wmsFixedAt = approval?.wms_fixed_at || '';
+    const latestActivityTime = [latest?.counted_at,supervisorAt,wmsFixedAt]
+      .filter(Boolean)
+      .sort((a,b) => (Date.parse(b) || 0) - (Date.parse(a) || 0))[0] || '';
     const itemDetails = detailsByLocationItem[key] || [];
     const inventoryStatuses = [...new Set(itemDetails.map(row => row.inventory_status).filter(Boolean))];
     const lpnValues = [...new Set(itemDetails.map(row => row.license_plate).filter(Boolean))];
@@ -28027,8 +28103,24 @@ function buildWorkTrackerRows({ snapshots=[],details=[],assignments=[],counts=[]
       rounds,
       latestCounter,
       latestTime:latest?.counted_at || '',
-      variance:latestQty === null ? null : latestQty - oh,
+      latestActivityTime,
+      latestQty,
+      latestVariance:latestQty === null ? null : latestQty - oh,
+      finalQty,
+      variance:finalVariance,
+      finalVariance,
+      finalStatusKey,
+      finalStatusLabel:workTrackerFinalLabel(finalStatusKey),
+      hasApproval:Boolean(approval),
+      supervisorQty,
+      supervisorVariance,
+      supervisorName:approval?._approvedByName || '',
+      supervisorAt,
+      supervisorNote:approval?.supervisor_note || '',
+      approvalResolution:approval?.resolution || '',
       wmsStatus,
+      wmsFixedByName:approval?._wmsFixedByName || '',
+      wmsFixedAt,
       inventoryStatus:inventoryStatuses.join(', '),
       lpnCount:lpnValues.length,
       lpnList:lpnValues.join(', '),
@@ -28050,13 +28142,15 @@ function getFilteredWorkTrackerRows(excludeKey='') {
     if (search && excludeKey !== 'search') {
       const haystack = [
         row.jobCode,row.location,row.zone,row.row,row.level,row.item,row.description,
-        row.category,row.uom,row.assignedUser,row.latestCounter,row.lpnList,row.lotList,row.inventoryStatus,
+        row.category,row.uom,row.assignedUser,row.latestCounter,row.supervisorName,row.wmsFixedByName,
+        row.supervisorNote,row.finalStatusLabel,row.lpnList,row.lotList,row.inventoryStatus,
+        ...(row.rounds || []).flatMap(record => record ? [record.remark,record.actual_counter_name,record._countedByName] : []),
       ].join(' ').toLocaleLowerCase('th');
       if (!haystack.includes(search)) return false;
     }
     if (dateRange) {
-      if (!row.latestTime) return false;
-      const countedTime = new Date(row.latestTime).getTime();
+      if (!row.latestActivityTime) return false;
+      const countedTime = new Date(row.latestActivityTime).getTime();
       if (!Number.isFinite(countedTime) || countedTime < dateRange.from || countedTime >= dateRange.toExclusive) return false;
     }
     return true;
@@ -28065,7 +28159,7 @@ function getFilteredWorkTrackerRows(excludeKey='') {
   return filtered.sort((a,b) => {
     if (sort === 'job') return String(a.jobCode).localeCompare(String(b.jobCode),undefined,{ numeric:true }) || String(a.location).localeCompare(String(b.location),undefined,{ numeric:true });
     if (sort === 'item') return String(a.item).localeCompare(String(b.item),undefined,{ numeric:true }) || String(a.location).localeCompare(String(b.location),undefined,{ numeric:true });
-    if (sort === 'latest') return String(b.latestTime || '').localeCompare(String(a.latestTime || ''));
+    if (sort === 'latest') return String(b.latestActivityTime || '').localeCompare(String(a.latestActivityTime || ''));
     return String(a.location).localeCompare(String(b.location),undefined,{ numeric:true }) || String(a.item).localeCompare(String(b.item),undefined,{ numeric:true });
   });
 }
@@ -28082,6 +28176,7 @@ function refreshWorkTrackerFilterOptions() {
       let label = value;
       if (key === 'status') label = workTrackerStatusLabel(value);
       if (key === 'wms') label = workTrackerWmsLabel(value);
+      if (key === 'final') label = workTrackerFinalLabel(value);
       if (key === 'round') label = value === '0'
         ? uiCopy('ยังไม่ได้ตรวจนับ','Not Counted')
         : uiCopy(`รอบที่ ${value}`,`Round ${value}`);
@@ -28151,6 +28246,47 @@ function workTrackerCountCell(record,round) {
     <strong>${Number(record.count_qty || 0).toLocaleString(uiLocale())}</strong>
     <span>${uiCopy(`รอบที่ ${round}`,`Round ${round}`)} · ${escapeWmsText(counter)}</span>
     <span>${escapeWmsText(workTrackerDate(record.counted_at))}</span>
+    ${record._countedByName ? `<span data-i18n-skip>${uiCopy('บันทึกโดย','Recorded By')}: ${escapeWmsText(record._countedByName)}</span>` : ''}
+    ${record.remark ? `<span class="work-tracker-round-note" data-i18n-skip>📝 ${escapeWmsText(record.remark)}</span>` : ''}
+    ${record.photo_url ? `<a class="work-tracker-photo-link" href="${escapeWmsText(record.photo_url)}" target="_blank" rel="noopener">📷 ${uiCopy('ดูรูป','View Photo')}</a>` : ''}
+  </div>`;
+}
+
+function workTrackerApprovalCell(row) {
+  if (!row.hasApproval) {
+    return `<div class="work-tracker-approval-cell"><span class="work-tracker-sub">—</span>${row.finalStatusKey === 'supervisor_pending' ? `<span class="work-tracker-sub">${uiCopy('รอหัวหน้ายืนยันยอด','Pending Supervisor Confirmation')}</span>` : ''}</div>`;
+  }
+  const variance = row.supervisorVariance;
+  const varianceText = variance === null ? '—' : `${variance > 0 ? '+' : ''}${Number(variance).toLocaleString(uiLocale())}`;
+  return `<div class="work-tracker-approval-cell">
+    <strong>${row.supervisorQty === null ? '—' : Number(row.supervisorQty).toLocaleString(uiLocale())}</strong>
+    <span class="work-tracker-sub">${escapeWmsText(workTrackerResolutionLabel(row.approvalResolution))} · ${uiCopy('ผลต่าง','Variance')} ${varianceText}</span>
+    <span class="work-tracker-sub" data-i18n-skip>${escapeWmsText(row.supervisorName || translateUiText('ไม่ระบุผู้ยืนยัน'))}</span>
+    <span class="work-tracker-sub">${escapeWmsText(workTrackerDate(row.supervisorAt))}</span>
+    ${row.supervisorNote ? `<span class="work-tracker-sub" data-i18n-skip>📝 ${escapeWmsText(row.supervisorNote)}</span>` : ''}
+  </div>`;
+}
+
+function workTrackerFinalCell(row) {
+  const statusClass = ['closed_match','closed_variance','supervisor_match','count_match'].includes(row.finalStatusKey)
+    ? 'completed'
+    : row.finalStatusKey === 'wms_pending' || row.finalStatusKey === 'supervisor_pending'
+      ? 'variance'
+      : 'pending';
+  return `<div class="work-tracker-final-cell">
+    <span class="work-tracker-status ${statusClass}">${escapeWmsText(workTrackerFinalLabel(row.finalStatusKey))}</span>
+    <span class="work-tracker-sub">${uiCopy('ยอดสุดท้าย','Final Quantity')} ${row.finalQty === null ? '—' : Number(row.finalQty).toLocaleString(uiLocale())} · OH ${Number(row.oh).toLocaleString(uiLocale())}</span>
+  </div>`;
+}
+
+function workTrackerWmsCell(row) {
+  const statusClass = row.wmsStatus === 'fixed' || row.wmsStatus === 'not_required'
+    ? 'wms_fixed'
+    : row.wmsStatus === 'pending' || row.wmsStatus === 'unfixed' ? 'variance' : '';
+  return `<div>
+    <span class="work-tracker-status ${statusClass}">${escapeWmsText(workTrackerWmsLabel(row.wmsStatus))}</span>
+    ${row.wmsFixedByName ? `<div class="work-tracker-sub" data-i18n-skip>${escapeWmsText(row.wmsFixedByName)}</div>` : ''}
+    ${row.wmsFixedAt ? `<div class="work-tracker-sub">${escapeWmsText(workTrackerDate(row.wmsFixedAt))}</div>` : ''}
   </div>`;
 }
 
@@ -28167,10 +28303,12 @@ function renderWorkTrackerList() {
     unassigned:allRows.filter(row => row.statusKey === 'unassigned').length,
     pending:allRows.filter(row => ['pending','in_progress','recount'].includes(row.statusKey)).length,
     counted:allRows.filter(row => row.roundCount > 0).length,
-    variance:allRows.filter(row => ['variance','approved'].includes(row.statusKey)).length,
-    completed:allRows.filter(row => ['completed','wms_fixed'].includes(row.statusKey)).length,
+    variance:allRows.filter(row => row.finalVariance !== null && Number(row.finalVariance) !== 0).length,
+    supervisor:allRows.filter(row => row.hasApproval).length,
+    wms:allRows.filter(row => row.wmsStatus === 'unfixed').length,
+    completed:allRows.filter(row => ['count_match','supervisor_match','closed_match','closed_variance'].includes(row.finalStatusKey)).length,
   };
-  ['total','unassigned','pending','counted','variance','completed'].forEach(key => {
+  ['total','unassigned','pending','counted','variance','supervisor','wms','completed'].forEach(key => {
     if (Q(`tracker-kpi-${key}`)) Q(`tracker-kpi-${key}`).textContent = kpiValues[key].toLocaleString(uiLocale());
   });
   if (Q('tracker-result-count')) {
@@ -28197,10 +28335,12 @@ function renderWorkTrackerList() {
         <td>${workTrackerCountCell(row.rounds[0],1)}</td>
         <td>${workTrackerCountCell(row.rounds[1],2)}</td>
         <td>${workTrackerCountCell(row.rounds[2],3)}</td>
+        <td>${workTrackerApprovalCell(row)}</td>
         <td><span class="work-tracker-variance ${varianceClass}">${varianceText}</span></td>
-        <td><span class="work-tracker-status ${row.wmsStatus === 'fixed' ? 'wms_fixed' : row.wmsStatus === 'pending' ? 'variance' : ''}">${escapeWmsText(workTrackerWmsLabel(row.wmsStatus))}</span></td>
+        <td>${workTrackerFinalCell(row)}</td>
+        <td>${workTrackerWmsCell(row)}</td>
       </tr>`;
-    }).join('') : `<tr><td colspan="14"><div class="work-tracker-empty">${uiCopy('ไม่พบงานที่ตรงกับตัวกรอง','No Work Matches the Selected Filters')}</div></td></tr>`;
+    }).join('') : `<tr><td colspan="16"><div class="work-tracker-empty">${uiCopy('ไม่พบงานที่ตรงกับตัวกรอง','No Work Matches the Selected Filters')}</div></td></tr>`;
   }
   const pagination = Q('tracker-pagination');
   if (pagination) {
@@ -28223,14 +28363,16 @@ function workTrackerViewHtml() {
       <div class="work-tracker-kpi"><span>${t('ยังไม่ได้มอบหมายงาน','Not Assigned')}</span><strong id="tracker-kpi-unassigned">0</strong></div>
       <div class="work-tracker-kpi pending"><span>${t('รอหรืออยู่ระหว่างตรวจนับ','Pending / In Progress')}</span><strong id="tracker-kpi-pending">0</strong></div>
       <div class="work-tracker-kpi counted"><span>${t('ตรวจนับแล้ว','Counted')}</span><strong id="tracker-kpi-counted">0</strong></div>
-      <div class="work-tracker-kpi variance"><span>${t('ผลต่างสินค้าคงคลัง','Inventory Variance')}</span><strong id="tracker-kpi-variance">0</strong></div>
+      <div class="work-tracker-kpi variance"><span>${t('ผลต่างสุดท้าย','Final Variance')}</span><strong id="tracker-kpi-variance">0</strong></div>
+      <div class="work-tracker-kpi supervisor"><span>${t('หัวหน้ายืนยันแล้ว','Supervisor Confirmed')}</span><strong id="tracker-kpi-supervisor">0</strong></div>
+      <div class="work-tracker-kpi wms"><span>${t('รอตรวจสอบ WMS','Pending WMS Review')}</span><strong id="tracker-kpi-wms">0</strong></div>
       <div class="work-tracker-kpi completed"><span>${t('เสร็จสิ้น / ตรวจสอบ WMS แล้ว','Completed / WMS Reviewed')}</span><strong id="tracker-kpi-completed">0</strong></div>
     </div>
     <section class="work-tracker-filter-panel">
       <div class="work-tracker-filter-head"><strong>${t('ตัวกรองทั้งหมด','All Filters')}</strong><button type="button" onclick="clearWorkTrackerFilters()">${t('ล้างตัวกรอง','Clear Filters')}</button></div>
       <div class="work-tracker-filter-grid">
         ${Object.keys(WORK_TRACKER_FILTERS).map(selectField).join('')}
-        <div class="work-tracker-filter-field"><label>${t('การเรียงข้อมูล','Sort Order')}</label><select id="tracker-sort" onchange="updateWorkTrackerSort(this.value)"><option value="location">${t('ตำแหน่งจัดเก็บ A → Z','Storage Location A → Z')}</option><option value="job">${t('งาน','Job')}</option><option value="item">${t('สินค้า','Item')}</option><option value="latest">${t('เวลาตรวจนับล่าสุด','Latest Count Time')}</option></select></div>
+        <div class="work-tracker-filter-field"><label>${t('การเรียงข้อมูล','Sort Order')}</label><select id="tracker-sort" onchange="updateWorkTrackerSort(this.value)"><option value="location">${t('ตำแหน่งจัดเก็บ A → Z','Storage Location A → Z')}</option><option value="job">${t('งาน','Job')}</option><option value="item">${t('สินค้า','Item')}</option><option value="latest">${t('กิจกรรมล่าสุด','Latest Activity')}</option></select></div>
         <div class="work-tracker-filter-field"><label>${t('จำนวนรายการต่อหน้า','Items per Page')}</label><select id="tracker-page-size" onchange="updateWorkTrackerPageSize(this.value)"><option value="50">50</option><option value="100" selected>100</option><option value="200">200</option></select></div>
         <div class="work-tracker-filter-field search"><label>${t('ค้นหา ตำแหน่งจัดเก็บ / สินค้า / LPN / ล็อต / งาน','Search Storage Location / Item / LPN / Lot / Job')}</label><input id="tracker-search" value="${escapeWmsText(S._trackerSearch || '')}" placeholder="${t('กรอกคำค้นหา','Enter Search Term')}" oninput="updateWorkTrackerSearch(this.value)"></div>
       </div>
@@ -28238,7 +28380,7 @@ function workTrackerViewHtml() {
     <section class="work-tracker-table-shell" id="tracker-table-shell">
       <div class="work-tracker-table-head"><strong>${t('รายการงานทั้งหมด','Total Work Items')}</strong><span id="tracker-result-count">${t('0 รายการ','0 items')}</span></div>
       <div class="work-tracker-scroll"><table class="work-tracker-table">
-        <thead><tr><th>${t('งาน','Job')}</th><th>${t('ตำแหน่งจัดเก็บ','Storage Location')}</th><th>${t('สินค้า / รายละเอียด','Item / Details')}</th><th>${t('ยอดคงคลังตามระบบ (OH / AL)','System On-hand (OH / AL)')}</th><th>${t('ป้าย LPN / ล็อต','LPN / Lot')}</th><th>${t('สถานะสินค้าคงคลัง','Inventory Status')}</th><th>${t('สถานะงาน','Work Status')}</th><th>${t('รอบการตรวจนับล่าสุด','Latest Count Round')}</th><th>${t('ผู้รับมอบหมายงาน','Assigned User')}</th><th>${t('ผลนับรอบที่ 1','Count 1')}</th><th>${t('ผลนับรอบที่ 2','Count 2')}</th><th>${t('ผลนับรอบที่ 3','Count 3')}</th><th>${t('ผลต่างสินค้าคงคลัง','Inventory Variance')}</th><th>${t('สถานะ WMS','WMS Status')}</th></tr></thead>
+        <thead><tr><th>${t('งาน','Job')}</th><th>${t('ตำแหน่งจัดเก็บ','Storage Location')}</th><th>${t('สินค้า / รายละเอียด','Item / Details')}</th><th>${t('ยอดคงคลังตามระบบ (OH / AL)','System On-hand (OH / AL)')}</th><th>${t('ป้าย LPN / ล็อต','LPN / Lot')}</th><th>${t('สถานะสินค้าคงคลัง','Inventory Status')}</th><th>${t('สถานะงาน','Work Status')}</th><th>${t('รอบการตรวจนับล่าสุด','Latest Count Round')}</th><th>${t('ผู้รับมอบหมายงาน','Assigned User')}</th><th>${t('ผลนับรอบที่ 1','Count 1')}</th><th>${t('ผลนับรอบที่ 2','Count 2')}</th><th>${t('ผลนับรอบที่ 3','Count 3')}</th><th>${t('ยอดหัวหน้ายืนยัน','Supervisor Confirmed Quantity')}</th><th>${t('ผลต่างสุดท้าย','Final Variance')}</th><th>${t('สรุปสถานะสุดท้าย','Final Status Summary')}</th><th>${t('สถานะ WMS','WMS Status')}</th></tr></thead>
         <tbody id="tracker-table-body"></tbody>
       </table></div>
       <div class="work-tracker-pagination" id="tracker-pagination"></div>
@@ -29764,7 +29906,7 @@ async function loadSvDash() {
   const [countResult, snapshotResult, detailResult, annualJobsResult, annualJobItemsResult, rules] = await Promise.all([
     fetchSupabaseRowsByValues(
       'count_records',
-      'id,assignment_id,item_id,round,count_qty,counted_at,actual_counter_name,remark,photo_url',
+      'id,assignment_id,item_id,round,count_qty,counted_by,counted_at,actual_counter_name,remark,photo_url',
       'assignment_id',
       allAsgnIds,
     ),
@@ -29877,7 +30019,7 @@ async function loadSvDash() {
   try {
     const { data: vaData, error: vaErr } = await fetchSupabaseRowsByValues(
       'variance_approvals',
-      'id,assignment_id,item_id,final_qty,variance,resolution,approved_by,approved_at,wms_fixed,wms_fixed_at,wms_fixed_by',
+      'id,assignment_id,item_id,final_qty,variance,resolution,supervisor_note,approved_by,approved_at,created_at,wms_fixed,wms_fixed_at,wms_fixed_by',
       'assignment_id',
       allAsgnIds,
     );
@@ -29904,6 +30046,25 @@ async function loadSvDash() {
     vaError = e;
   }
   if (isStaleLoad()) return;
+
+  const trackerActorIds = [...new Set([
+    ...rawCounts.map(record => record.counted_by),
+    ...trackerApprovalRows.flatMap(approval => [approval.approved_by,approval.wms_fixed_by]),
+  ].filter(Boolean))];
+  const trackerActorResult = await fetchSupabaseRowsByValues(
+    'profiles',
+    'id,name',
+    'id',
+    trackerActorIds,
+  );
+  if (isStaleLoad()) return;
+  if (trackerActorResult.error) console.warn('โหลดชื่อผู้ทำรายการสำหรับหน้าติดตามไม่สำเร็จ:',trackerActorResult.error.message);
+  const trackerActorMap = Object.fromEntries((trackerActorResult.data || []).map(profile => [profile.id,profile.name]));
+  rawCounts.forEach(record => { record._countedByName = trackerActorMap[record.counted_by] || ''; });
+  trackerApprovalRows.forEach(approval => {
+    approval._approvedByName = trackerActorMap[approval.approved_by] || '';
+    approval._wmsFixedByName = trackerActorMap[approval.wms_fixed_by] || '';
+  });
 
   window._workTrackerRows = buildWorkTrackerRows({
     snapshots:allSnapshots,
@@ -31036,8 +31197,45 @@ const WMS_NOTE_PRESETS = [
 
 function closeWmsNoteMenus(exceptKey='') {
   document.querySelectorAll('.wms-note-menu').forEach(menu => {
-    if (!exceptKey || menu.id !== `wms_note_menu_${exceptKey}`) menu.hidden = true;
+    if (!exceptKey || menu.id !== `wms_note_menu_${exceptKey}`) {
+      menu.hidden = true;
+      menu.classList.remove('is-viewport-menu');
+      ['left','right','top','bottom','width','max-height'].forEach(property => menu.style.removeProperty(property));
+      menu.closest('.wms-note-control')?.querySelector('.wms-note-btn')?.setAttribute('aria-expanded','false');
+    }
   });
+}
+
+function positionWmsNoteMenu(key) {
+  const menu = Q(`wms_note_menu_${key}`);
+  const control = menu?.closest('.wms-note-control');
+  const anchor = control?.querySelector('.wms-note-btn');
+  if (!menu || menu.hidden || !anchor) return;
+  const viewportWidth = Math.max(280,window.innerWidth || document.documentElement.clientWidth || 0);
+  const viewportHeight = Math.max(320,window.innerHeight || document.documentElement.clientHeight || 0);
+  const margin = 12;
+  const gap = 8;
+  const anchorRect = anchor.getBoundingClientRect();
+  const width = Math.min(360,Math.max(260,viewportWidth - (margin * 2)));
+
+  menu.classList.add('is-viewport-menu');
+  menu.style.width = `${width}px`;
+  menu.style.maxHeight = `${Math.max(220,viewportHeight - (margin * 2))}px`;
+  menu.style.left = `${Math.max(margin,Math.min(anchorRect.right - width,viewportWidth - width - margin))}px`;
+  menu.style.right = 'auto';
+  menu.style.top = 'auto';
+  menu.style.bottom = 'auto';
+
+  const naturalHeight = Math.min(menu.scrollHeight,viewportHeight - (margin * 2));
+  const spaceBelow = viewportHeight - anchorRect.bottom - margin;
+  const spaceAbove = anchorRect.top - margin;
+  if (spaceBelow >= Math.min(naturalHeight,280) || spaceBelow >= spaceAbove) {
+    menu.style.top = `${Math.max(margin,anchorRect.bottom + gap)}px`;
+    menu.style.maxHeight = `${Math.max(180,spaceBelow - gap)}px`;
+  } else {
+    menu.style.bottom = `${Math.max(margin,viewportHeight - anchorRect.top + gap)}px`;
+    menu.style.maxHeight = `${Math.max(180,spaceAbove - gap)}px`;
+  }
 }
 
 function toggleWmsNoteMenu(event, key) {
@@ -31048,9 +31246,20 @@ function toggleWmsNoteMenu(event, key) {
   const willOpen = menu.hidden;
   closeWmsNoteMenus(key);
   menu.hidden = !willOpen;
+  menu.closest('.wms-note-control')?.querySelector('.wms-note-btn')?.setAttribute('aria-expanded',String(willOpen));
+  if (!willOpen) {
+    closeWmsNoteMenus();
+    return;
+  }
   if (willOpen) {
     updateWmsNoteSelectionPreview(key);
-    setTimeout(() => Q(`wms_note_custom_${key}`)?.focus(), 30);
+    positionWmsNoteMenu(key);
+    requestAnimationFrame(() => positionWmsNoteMenu(key));
+    setTimeout(() => {
+      positionWmsNoteMenu(key);
+      const focusTarget = Q(`wms_note_custom_${key}`) || menu.querySelector('input[type="checkbox"],button');
+      try { focusTarget?.focus?.({ preventScroll:true }); } catch (_) { focusTarget?.focus?.(); }
+    },30);
   }
 }
 
@@ -31189,6 +31398,27 @@ async function saveWmsNotes(assignmentId, itemId, key) {
 document.addEventListener('click', event => {
   if (!event.target.closest('.wms-note-control')) closeWmsNoteMenus();
 });
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Escape') return;
+  const menu = [...document.querySelectorAll('.wms-note-menu:not([hidden])')][0];
+  if (!menu) return;
+  const button = menu.closest('.wms-note-control')?.querySelector('.wms-note-btn');
+  closeWmsNoteMenus();
+  button?.focus?.();
+});
+
+let _wmsNotePositionFrame = 0;
+function scheduleOpenWmsNoteMenuPosition() {
+  if (_wmsNotePositionFrame) return;
+  _wmsNotePositionFrame = requestAnimationFrame(() => {
+    _wmsNotePositionFrame = 0;
+    const menu = [...document.querySelectorAll('.wms-note-menu:not([hidden])')][0];
+    const key = menu?.id?.replace(/^wms_note_menu_/,'');
+    if (key) positionWmsNoteMenu(key);
+  });
+}
+window.addEventListener('resize',scheduleOpenWmsNoteMenuPosition);
+document.addEventListener('scroll',scheduleOpenWmsNoteMenuPosition,true);
 
 function refreshWmsDependentFilters() {
   const rows = (window._wmsRows || []).filter(v => Number(v.variance) !== 0);
@@ -31355,6 +31585,7 @@ function renderWmsList() {
       <div class="wms-note-control">
         <button class="btn btn-sm btn-ghost wms-action-btn wms-note-btn ${notes.length?'has-notes':''}"
           onclick="toggleWmsNoteMenu(event,'${noteKey}')" aria-haspopup="true"
+          aria-expanded="false"
           aria-controls="wms_note_menu_${noteKey}">
           ${wmsIconSvg('note')}
           <span>${notes.length ? `หมายเหตุ ${notes.length}` : 'เพิ่มหมายเหตุ'}</span>
