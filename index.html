@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v213 - Date-Scoped Dashboard and WMS Fix</title>
+<title>Cycle Count v214 - Persisted DIFF Reconciliation Fix</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -17250,7 +17250,7 @@ body.tablet-ui .count-touch-toolbar .count-screen-lock-button { display:inline-f
 }
 </style>
 </head>
-<body data-build="v213-date-scoped-dashboard-wms-fix">
+<body data-build="v214-persisted-diff-reconciliation-fix">
 <div id="app"></div>
 
 <script>
@@ -17328,7 +17328,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v213-date-scoped-dashboard-wms-fix';
+window.__CYCLE_COUNT_BUILD__ = 'v214-persisted-diff-reconciliation-fix';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -30102,15 +30102,10 @@ async function loadSvDash() {
       vaError = vaErr;
       wmsRows = [];
     } else {
-      // A persisted round3_done status means the work was reopened or never
-      // completed approval. Ignore stale approval rows for that Assignment;
-      // otherwise approvedItemKeys suppresses it from both review queues.
-      trackerApprovalRows = (vaData || [])
-        .map(normalizeVarianceApprovalRow)
-        .filter(row => {
-          const assignment = asgnInfoMap[row.assignment_id];
-          return (assignment?._storedStatus || assignment?.status) === 'approved';
-        });
+      // An approval row is the strongest item-level record of the confirmed
+      // historical DIFF. Keep it even if a legacy write left Assignment.status
+      // at round3_done; discarding it makes the WMS queue silently become zero.
+      trackerApprovalRows = (vaData || []).map(normalizeVarianceApprovalRow);
       wmsRows = trackerApprovalRows
         .filter(v => Number(v.variance) !== 0)
         .map(v => ({ ...v, _fromVA:true }));
@@ -30206,20 +30201,38 @@ async function loadSvDash() {
   const approvedItemKeys = new Set(
     trackerApprovalRows.map(v => `${v.assignment_id || ''}|${v.item_id || ''}`)
   );
+  const approvalAssignmentIds = new Set(
+    trackerApprovalRows
+      .filter(v => Number(v.variance) !== 0)
+      .map(v => v.assignment_id)
+      .filter(Boolean)
+  );
   const pendingWmsRows = [];
   for (const a of diffAssignments) {
     const itemCounts = sessionCountByAsgn[a.id] || {};
     const locId = a.location_id;
+    const pendingStartIndex = pendingWmsRows.length;
+    const persistedFallbackCandidates = [];
     for (const [itemId, rounds] of Object.entries(itemCounts)) {
       if (approvedItemKeys.has(`${a.id}|${itemId}`)) continue;
       const oh = ohMap[locId + '|' + itemId];
-      if (oh === undefined) continue;
-      const st = computeItemStatus(oh, rounds[1], rounds[2], rounds[3], rules);
-      if (!a._storedNeedsSupervisorReview && st !== 'Diff' && st !== 'PENDING') continue;
       const latestRound = rounds[3] !== undefined ? 3 : rounds[2] !== undefined ? 2 : 1;
       const countQty = rounds[latestRound];
+      if (oh === undefined) {
+        if (a._storedNeedsSupervisorReview) {
+          persistedFallbackCandidates.push({ itemId,rounds,countQty,reason:'snapshot_missing' });
+        }
+        continue;
+      }
+      const st = computeItemStatus(oh, rounds[1], rounds[2], rounds[3], rules);
+      if (!a._storedNeedsSupervisorReview && st !== 'Diff' && st !== 'PENDING') continue;
       const variance = countQty - oh;
-      if (Number(variance) === 0) continue;
+      if (Number(variance) === 0) {
+        if (a._storedNeedsSupervisorReview) {
+          persistedFallbackCandidates.push({ itemId,rounds,countQty,oh,reason:'snapshot_changed' });
+        }
+        continue;
+      }
       pendingWmsRows.push({
         _isPending: true,
         assignment_id: a.id,
@@ -30236,6 +30249,53 @@ async function loadSvDash() {
         profiles: { name: '(ยังไม่คอนเฟิร์ม)' },
         wms_notes: wmsNoteMap[`${a.id}|${itemId}`] || [],
       });
+    }
+
+    // round3_done is a persisted workflow fact. If every item was lost only
+    // because today's Snapshot is missing/changed, keep one assignment-level
+    // review row visible instead of silently reporting zero DIFF.
+    if (
+      a._storedNeedsSupervisorReview
+      && pendingWmsRows.length === pendingStartIndex
+      && !approvalAssignmentIds.has(a.id)
+    ) {
+      let fallback = persistedFallbackCandidates[0];
+      if (!fallback) {
+        const firstItemId = Object.keys(itemCounts)[0]
+          || (snapshotsByLocation[a.location_id] || [])[0]?.item_id
+          || '';
+        if (firstItemId) {
+          const rounds = itemCounts[firstItemId] || {};
+          const latestRound = rounds[3] !== undefined ? 3 : rounds[2] !== undefined ? 2 : 1;
+          fallback = {
+            itemId:firstItemId,
+            rounds,
+            countQty:rounds[latestRound] ?? null,
+            oh:ohMap[locId + '|' + firstItemId],
+            reason:'persisted_status',
+          };
+        }
+      }
+      if (fallback?.itemId) {
+        pendingWmsRows.push({
+          _isPending:true,
+          _persistedReviewFallback:true,
+          _persistedReviewReason:fallback.reason,
+          assignment_id:a.id,
+          item_id:fallback.itemId,
+          final_qty:fallback.countQty,
+          variance:null,
+          resolution:'pending_persisted_review',
+          approved_by:null,
+          wms_fixed:false,
+          wms_fixed_at:null,
+          wms_fixed_by:null,
+          created_at:null,
+          items:{ code:'?', description:'' },
+          profiles:{ name:'(รอตรวจสอบข้อมูลเดิม)' },
+          wms_notes:wmsNoteMap[`${a.id}|${fallback.itemId}`] || [],
+        });
+      }
     }
   }
 
@@ -31119,7 +31179,7 @@ function showWmsFeedback(message, type='success') {
 }
 
 function updateWmsOverview() {
-  const rows = (window._wmsRows || []).filter(v => Number(v.variance) !== 0);
+  const rows = (window._wmsRows || []).filter(isWmsQueueRow);
   const pendingCount = rows.filter(v => v._isPending).length;
   const confirmedRows = rows.filter(v => !v._isPending);
   const fixedCount = confirmedRows.filter(v => v.wms_fixed).length;
@@ -31545,7 +31605,7 @@ window.addEventListener('resize',scheduleOpenWmsNoteMenuPosition);
 document.addEventListener('scroll',scheduleOpenWmsNoteMenuPosition,true);
 
 function refreshWmsDependentFilters() {
-  const rows = (window._wmsRows || []).filter(v => Number(v.variance) !== 0);
+  const rows = (window._wmsRows || []).filter(isWmsQueueRow);
   const asgnInfoMap = window._wmsAsgnInfoMap || {};
   const facetRows = (excludeKey='') => rows.filter(item => {
     const location = asgnInfoMap[item.assignment_id]?.locations || {};
@@ -31634,10 +31694,14 @@ function wmsRowMatchesStatus(item,filterStatus='all') {
   return !item?._isPending && !item?.wms_fixed;
 }
 
+function isWmsQueueRow(item) {
+  return Number(item?.variance) !== 0 || Boolean(item?._persistedReviewFallback);
+}
+
 function renderWmsList() {
   const container = Q('wms-list');
   if (!container) return;
-  const wmsRows = (window._wmsRows || []).filter(v => Number(v.variance) !== 0);
+  const wmsRows = (window._wmsRows || []).filter(isWmsQueueRow);
   const asgnInfoMap = window._wmsAsgnInfoMap || {};
   const filterStatus = S._wmsFilter || 'all';
   const filterZone = S._wmsZone || '';
@@ -31685,7 +31749,11 @@ function renderWmsList() {
     );
     const assignmentArg = JSON.stringify(v.assignment_id || '');
     const itemArg = JSON.stringify(v.item_id || '');
-    const statusBadge = isPending ? `<span class="tag tag-amber" style="font-size:10px">⏳ รอคอนเฟิร์ม</span>` : `<span class="tag tag-blue" style="font-size:10px">✅ คอนเฟิร์มแล้ว</span>`;
+    const statusBadge = isPending
+      ? (v._persistedReviewFallback
+        ? `<span class="tag tag-red" style="font-size:10px">⚠️ รอตรวจสอบข้อมูลเดิม</span>`
+        : `<span class="tag tag-amber" style="font-size:10px">⏳ รอคอนเฟิร์ม</span>`)
+      : `<span class="tag tag-blue" style="font-size:10px">✅ คอนเฟิร์มแล้ว</span>`;
     const returnReviewButton = isPending ? '' : `
       <button class="btn btn-sm btn-amber wms-action-btn wms-return-review-btn"
         onclick='returnWmsForReview(${JSON.stringify(v.id || '')},${assignmentArg},${itemArg},this)'
@@ -31780,8 +31848,8 @@ function renderWmsList() {
       </div>
       <div class="wms-row-side">
         <div class="wms-variance-value">
-          <strong style="color:${varAmt>0?'var(--accent-green)':varAmt<0?'var(--accent-red)':'var(--primary-blue)'}">${varAmt>0?'+':''}${Number(varAmt).toLocaleString(uiLocale())}</strong>
-          <span>Variance · ยืนยัน ${Number(v.final_qty ?? 0).toLocaleString(uiLocale())}</span>
+          <strong style="color:${v._persistedReviewFallback?'var(--accent-red)':varAmt>0?'var(--accent-green)':varAmt<0?'var(--accent-red)':'var(--primary-blue)'}">${v._persistedReviewFallback?'—':`${varAmt>0?'+':''}${Number(varAmt).toLocaleString(uiLocale())}`}</strong>
+          <span>${v._persistedReviewFallback?'สถานะเดิมยังรอตรวจ · เปิดเพื่อตรวจข้อมูล':`Variance · ยืนยัน ${Number(v.final_qty ?? 0).toLocaleString(uiLocale())}`}</span>
         </div>
         <div class="wms-actions">${returnReviewButton}${wmsButton}${noteButton}</div>
         ${noteInline}
