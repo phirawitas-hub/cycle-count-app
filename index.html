@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v220 - Synced Theme Colors and Popup Status Colors</title>
+<title>Cycle Count v221 - Persistent Auto Contrast and Theme Set Sync</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -17398,7 +17398,7 @@ body.tablet-ui .count-touch-toolbar .count-screen-lock-button { display:inline-f
 }
 </style>
 </head>
-<body data-build="v220-synced-theme-popup-colors">
+<body data-build="v221-persistent-theme-settings">
 <div id="app"></div>
 
 <script>
@@ -17476,7 +17476,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v220-synced-theme-popup-colors';
+window.__CYCLE_COUNT_BUILD__ = 'v221-persistent-theme-settings';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -17761,9 +17761,10 @@ async function supabaseFetchWithTimeout(input, init = {}) {
   }
 }
 
-const BRANDING_STORAGE_KEY = 'cycle_count_ui_branding_v70';
-const LEGACY_BRANDING_STORAGE_KEYS = ['cycle_count_ui_branding_v69', 'cycle_count_ui_branding_v68', 'cycle_count_ui_branding_v67', 'cycle_count_ui_branding_v66', 'cycle_count_ui_branding_v65', 'cycle_count_ui_branding_v64', 'cycle_count_ui_branding_v63'];
+const BRANDING_STORAGE_KEY = 'cycle_count_ui_branding_v71';
+const LEGACY_BRANDING_STORAGE_KEYS = ['cycle_count_ui_branding_v70', 'cycle_count_ui_branding_v69', 'cycle_count_ui_branding_v68', 'cycle_count_ui_branding_v67', 'cycle_count_ui_branding_v66', 'cycle_count_ui_branding_v65', 'cycle_count_ui_branding_v64', 'cycle_count_ui_branding_v63'];
 const BRANDING_SETTING_KEY = 'ui_branding';
+const BRANDING_SYNC_VERSION = 3;
 const THEME_SETS_STORAGE_KEY = 'cycle_count_theme_sets_v1';
 const THEME_SETS_SETTING_KEY = 'ui_theme_sets_v1';
 const THEME_SET_LIMIT = 24;
@@ -17771,7 +17772,7 @@ const DEFAULT_BRANDING = Object.freeze({
   systemName: 'Cycle Count',
   systemSubtitle: 'Warehouse v1.0',
   language: 'th',
-  autoContrast: true,
+  autoContrast: false,
   workFontScale: 100,
   reportFontScale: 100,
   dashboardBg: '#F7FBFC',
@@ -19801,7 +19802,7 @@ function themeReadableForeground(preferred, backgrounds, minimum = 4.5) {
 }
 
 function enforceBrandingContrast(settings = {}) {
-  if (settings.autoContrast === false) return settings;
+  if (settings.autoContrast !== true) return settings;
   const result = { ...settings };
   const protect = (textKey,backgroundKeys,minimum = 4.5) => {
     const keys = Array.isArray(backgroundKeys) ? backgroundKeys : [backgroundKeys];
@@ -19875,7 +19876,9 @@ function normalizeBrandingSettings(input = {}) {
   output.systemName = String(input?.systemName || DEFAULT_BRANDING.systemName).trim().slice(0, 60) || DEFAULT_BRANDING.systemName;
   output.systemSubtitle = String(input?.systemSubtitle || DEFAULT_BRANDING.systemSubtitle).trim().slice(0, 100) || DEFAULT_BRANDING.systemSubtitle;
   output.language = input?.language === 'en' ? 'en' : 'th';
-  output.autoContrast = input?.autoContrast !== false;
+  /* Missing values must stay OFF. Older builds treated an absent field as ON,
+     which changed Theme Set colors again after refresh or on another device. */
+  output.autoContrast = input?.autoContrast === true;
   output.workFontScale = Math.max(90,Math.min(125,Math.round(Number(input?.workFontScale) || DEFAULT_BRANDING.workFontScale)));
   output.reportFontScale = Math.max(85,Math.min(110,Math.round(Number(input?.reportFontScale) || DEFAULT_BRANDING.reportFontScale)));
   output.printFormStyle = input?.printFormStyle === 'detailed' ? 'detailed' : 'compact';
@@ -20079,7 +20082,6 @@ async function loadThemeSets(force = false) {
   const localConfig = readLocalThemeSetsConfig();
   let selectedConfig = localConfig;
   let remoteFound = false;
-  let localIsNewer = false;
   let remoteReadFailed = false;
   if (sb) {
     try {
@@ -20090,10 +20092,9 @@ async function loadThemeSets(force = false) {
       if (!error && data?.value) {
         const remoteConfig = normalizeThemeSetsConfig(data.value);
         remoteFound = true;
-        const localTime = Date.parse(localConfig.updatedAt || '') || 0;
-        const remoteTime = Date.parse(remoteConfig.updatedAt || '') || 0;
-        localIsNewer = localTime > remoteTime;
-        selectedConfig = localIsNewer ? localConfig : remoteConfig;
+        /* Theme Sets use the same central-authoritative rule as active colors.
+           This prevents clock skew and stale browser caches from winning. */
+        selectedConfig = remoteConfig;
       } else if (error) {
         remoteReadFailed = true;
       }
@@ -20105,7 +20106,6 @@ async function loadThemeSets(force = false) {
   const mergedConfig = mergeBuiltInThemeSets(selectedConfig);
   const needsDefaultSave = !remoteReadFailed && (
     !remoteFound
-      || localIsNewer
       || JSON.stringify(selectedConfig.sets || []) !== JSON.stringify(mergedConfig.sets || [])
   );
   _themeSetsConfig = mergedConfig;
@@ -20152,7 +20152,9 @@ function readLocalBrandingSettings() {
     const legacy = LEGACY_BRANDING_STORAGE_KEYS
       .map(key => localStorage.getItem(key))
       .find(Boolean);
-    return normalizeBrandingSettings(JSON.parse(current || legacy || '{}'));
+    const parsed = JSON.parse(current || legacy || '{}');
+    if ((Number(parsed?.syncVersion) || 1) < BRANDING_SYNC_VERSION) parsed.autoContrast = false;
+    return normalizeBrandingSettings(parsed);
   } catch (_) {
     return { ...DEFAULT_BRANDING };
   }
@@ -20269,7 +20271,7 @@ function applyBrandingSettings(settings, persistLocal = true) {
     const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
     root.setProperty(`--theme-${cssKey}`, uiBranding[key]);
   });
-  document.title = `${uiBranding.systemName} v220`;
+  document.title = `${uiBranding.systemName} v221`;
   if (persistLocal) {
     try { localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(uiBranding)); } catch (_) {}
   }
@@ -20281,7 +20283,7 @@ async function persistCentralBrandingSettings(input = {}) {
     activeThemeSetId:String(input?.activeThemeSetId ?? S._activeThemeSetId ?? ''),
     updatedAt:String(input?.updatedAt || new Date().toISOString()),
     updatedBy:String(input?.updatedBy || prof?.name || ''),
-    syncVersion:2,
+    syncVersion:BRANDING_SYNC_VERSION,
   });
   let centralSaved = false;
   let centralError = null;
@@ -20305,6 +20307,7 @@ async function loadPublicBrandingSettings(options = {}) {
   const localSettings = readLocalBrandingSettings();
   let selectedSettings = localSettings;
   let remoteFound = false;
+  let remoteNeedsMigration = false;
   let remoteReadFailed = false;
   applyBrandingSettings(localSettings, false);
   if (sb) {
@@ -20317,7 +20320,15 @@ async function loadPublicBrandingSettings(options = {}) {
       if (!error && data?.value) {
         /* The central record is authoritative across devices. A clock-skewed or
            stale Admin cache must never overwrite the theme chosen elsewhere. */
-        const remoteSettings = normalizeBrandingSettings(data.value);
+        const remoteInput = { ...data.value };
+        remoteNeedsMigration = (Number(remoteInput.syncVersion) || 1) < BRANDING_SYNC_VERSION;
+        if (remoteNeedsMigration) {
+          remoteInput.autoContrast = false;
+          remoteInput.syncVersion = BRANDING_SYNC_VERSION;
+          remoteInput.updatedAt = new Date().toISOString();
+          remoteInput.updatedBy = prof?.name || remoteInput.updatedBy || '';
+        }
+        const remoteSettings = normalizeBrandingSettings(remoteInput);
         remoteFound = true;
         selectedSettings = remoteSettings;
       } else if (error) {
@@ -20331,7 +20342,7 @@ async function loadPublicBrandingSettings(options = {}) {
   }
   applyBrandingSettings(selectedSettings);
   S._activeThemeSetId = selectedSettings.activeThemeSetId || '';
-  if (syncToCentral && !remoteReadFailed && !remoteFound) {
+  if (syncToCentral && !remoteReadFailed && (!remoteFound || remoteNeedsMigration)) {
     const syncResult = await persistCentralBrandingSettings(selectedSettings);
     if (!syncResult.centralSaved && syncResult.centralError) {
       console.warn('ซิงก์ธีมจากอุปกรณ์นี้ขึ้นส่วนกลางไม่สำเร็จ:',syncResult.centralError);
@@ -40304,10 +40315,11 @@ async function applyThemeSet(themeSetId) {
     const settings = normalizeBrandingSettings({
       ...savedBase,
       ...set.colors,
+      autoContrast:Q('branding-auto-contrast')?.checked === true,
       activeThemeSetId:set.id,
       updatedAt:new Date().toISOString(),
       updatedBy:prof?.name || '',
-      syncVersion:2,
+      syncVersion:BRANDING_SYNC_VERSION,
     });
     const result = await invokeAdminSettings('branding_save',{ settings });
     const syncedSettings = normalizeBrandingSettings({
@@ -40437,7 +40449,7 @@ async function deleteThemeSet(themeSetId) {
         activeThemeSetId:'',
         updatedAt:new Date().toISOString(),
         updatedBy:prof?.name || '',
-        syncVersion:2,
+        syncVersion:BRANDING_SYNC_VERSION,
       });
       await invokeAdminSettings('branding_save',{ settings });
       const centralResult = await persistCentralBrandingSettings(settings);
@@ -40541,7 +40553,7 @@ async function saveUiLanguageSettings() {
       language,
       updatedAt:new Date().toISOString(),
       updatedBy:prof?.name || '',
-      syncVersion:Math.max(2,Number(uiBranding.syncVersion || 1) + 1),
+      syncVersion:Math.max(BRANDING_SYNC_VERSION,Number(uiBranding.syncVersion || 1) + 1),
     });
     const result = await invokeAdminSettings('branding_save',{ settings });
     const syncedSettings = normalizeBrandingSettings({
@@ -40703,7 +40715,7 @@ async function loadAdBranding() {
             <strong>ปรับสีให้อ่านง่ายอัตโนมัติ</strong>
             <small>ถ้าสีข้อความหรือไอคอนกลืนกับพื้น ระบบจะสลับเป็นสีอ่อนหรือสีเข้มที่มี Contrast อย่างน้อย 4.5:1</small>
           </span>
-          <input id="branding-auto-contrast" type="checkbox" ${uiBranding.autoContrast !== false ? 'checked' : ''}
+          <input id="branding-auto-contrast" type="checkbox" ${uiBranding.autoContrast === true ? 'checked' : ''}
             onchange="previewBrandingDraft()">
           <span class="theme-contrast-switch" aria-hidden="true"></span>
         </label>
@@ -40845,7 +40857,7 @@ function collectBrandingDraft() {
     ...uiBranding,
     systemName: Q('branding-system-name')?.value || uiBranding.systemName,
     systemSubtitle: Q('branding-system-subtitle')?.value || uiBranding.systemSubtitle,
-    autoContrast: Q('branding-auto-contrast')?.checked !== false,
+    autoContrast: Q('branding-auto-contrast')?.checked === true,
     workFontScale: Number(Q('branding-work-font-scale')?.value) || uiBranding.workFontScale,
     reportFontScale: Number(Q('branding-report-font-scale')?.value) || uiBranding.reportFontScale,
     logoDataUrl: _brandingDraftLogo,
@@ -40985,18 +40997,19 @@ async function saveBrandingSettings() {
       activeThemeSetId:S._activeThemeSetId || '',
       updatedAt:new Date().toISOString(),
       updatedBy:prof?.name || '',
-      syncVersion:2,
+      syncVersion:BRANDING_SYNC_VERSION,
     });
     if (button) { button.disabled = true; button.textContent = 'กำลังบันทึก...'; }
     if (alertBox) alertBox.innerHTML = `<div class="alert alert-blue">⏳ กำลังบันทึกและซิงก์ชื่อ ธีม โลโก้ และขนาดตัวอักษร...</div>`;
     const result = await invokeAdminSettings('branding_save', { settings });
     const syncedSettings = normalizeBrandingSettings({
-      ...settings,
       ...(result.settings || {}),
+      ...settings,
       activeThemeSetId:settings.activeThemeSetId,
       updatedAt:settings.updatedAt,
       updatedBy:settings.updatedBy,
-      syncVersion:2,
+      autoContrast:settings.autoContrast,
+      syncVersion:BRANDING_SYNC_VERSION,
     });
     const centralResult = await persistCentralBrandingSettings(syncedSettings);
     applyBrandingSettings(centralResult.settings);
