@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v206 - WMS Approval Data Fix</title>
+<title>Cycle Count v213 - Date-Scoped Dashboard and WMS Fix</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -16949,7 +16949,7 @@ body.login-page-active .lcard {
 .summary-page-header:not(.a4-v2-header) .dashboard-session-filter select,
 .dashboard-filter-strip .dashboard-session-filter select {
   position:absolute !important;
-  top:11px !important;
+  top:6px !important;
   right:0 !important;
   bottom:auto !important;
   left:0 !important;
@@ -17250,7 +17250,7 @@ body.tablet-ui .count-touch-toolbar .count-screen-lock-button { display:inline-f
 }
 </style>
 </head>
-<body data-build="v206-wms-approval-data-fix">
+<body data-build="v213-date-scoped-dashboard-wms-fix">
 <div id="app"></div>
 
 <script>
@@ -17296,9 +17296,17 @@ function dashboardDateRange() {
 function filterRowsByDashboardDate(rows, dateField = 'counted_at') {
   const range = dashboardDateRange();
   if (!range) return rows || [];
+  const dateKeyInBangkok = value => {
+    const date = new Date(value || '');
+    if (Number.isNaN(date.getTime())) return '';
+    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', {
+      timeZone:'Asia/Bangkok', year:'numeric', month:'2-digit', day:'2-digit',
+    }).formatToParts(date).map(part => [part.type,part.value]));
+    return `${parts.year}-${parts.month}-${parts.day}`;
+  };
   return (rows || []).filter(row => {
-    const time = Date.parse(row?.[dateField] || '');
-    return Number.isFinite(time) && time >= range.start.getTime() && time <= range.end.getTime();
+    const key = dateKeyInBangkok(row?.[dateField]);
+    return Boolean(key) && key >= range.from && key <= range.to;
   });
 }
 
@@ -17320,7 +17328,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v206-wms-approval-data-fix';
+window.__CYCLE_COUNT_BUILD__ = 'v213-date-scoped-dashboard-wms-fix';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -20304,6 +20312,13 @@ function resolveDashboardSessionId(sessions = [], stateSessionId = '', remembere
     .find(value => value && activeIds.has(value)) || '';
 }
 
+function sessionOptionLabel(session = {}) {
+  const createdLabel = session.created_at ? fmtDMY(session.created_at) : '';
+  return [session.name,createdLabel]
+    .filter(Boolean)
+    .join(' · ');
+}
+
 function dashboardFilterIconSvg(type) {
   if (type === 'calendar') {
     return `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="15" rx="3"/><path d="M8 3.5v4M16 3.5v4M3.5 10h17"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 17.5h.01M12 17.5h.01"/></svg>`;
@@ -20321,7 +20336,6 @@ function dashboardFiltersHtml(sessionOptionsHtml, includeLocationSort = true) {
     <label class="dashboard-filter-control dashboard-session-filter" title="เลือก Session">
       <span class="dashboard-filter-icon">${dashboardFilterIconSvg('session')}</span>
       <span class="dashboard-filter-copy">
-        <span class="dashboard-filter-label">SESSION</span>
         <select aria-label="เลือก Session" onchange="changeDashboardSession(this.value)">${sessionOptionsHtml}</select>
       </span>
     </label>
@@ -21283,7 +21297,7 @@ function paintDashboardView(tab, cache = _dashboardViewCache) {
     if (Q('wms-row')) Q('wms-row').value = S._wmsRow || '';
     if (Q('wms-level')) Q('wms-level').value = S._wmsLevel || '';
     if (Q('wms-user')) Q('wms-user').value = S._wmsUser || '';
-    if (Q('wms-status')) Q('wms-status').value = S._wmsFilter || 'unfixed';
+    if (Q('wms-status')) Q('wms-status').value = S._wmsFilter || 'all';
     if (Q('wms-loc-search')) Q('wms-loc-search').value = S._wmsLocSearch || '';
     refreshWmsDependentFilters();
     renderWmsList();
@@ -29832,7 +29846,7 @@ async function loadSvDash() {
   _dashTab = tab;
 
   const { data: sessions, error:sessionsError } = await sb.from('count_sessions')
-    .select('id,name').eq('status','active').order('created_at',{ascending:false});
+    .select('id,name,status,created_at').eq('status','active').order('created_at',{ascending:false});
   if (isStaleLoad()) return;
   if (sessionsError) throw sessionsError;
 
@@ -29850,8 +29864,8 @@ async function loadSvDash() {
   if (curSid) rememberDashboardSession(curSid);
   else if (rememberedSessionId) rememberDashboardSession('');
   const curName = sessions.find(session => String(session.id) === curSid)?.name || '';
-  const sessOpts = `<option value="" ${curSid ? '' : 'selected'} disabled>— เลือก Session —</option>`
-    + sessions.map(session => `<option value="${session.id}" ${String(session.id)===curSid?'selected':''}>${escapeWmsText(session.name)}</option>`).join('');
+  const sessOpts = `<option value="" ${curSid ? '' : 'selected'} disabled>— เลือกงาน —</option>`
+    + sessions.map(session => `<option value="${session.id}" ${String(session.id)===curSid?'selected':''}>${escapeWmsText(sessionOptionLabel(session))}</option>`).join('');
 
   if (!curSid) {
     cnt().innerHTML = `${dashboardSessionControlHtml(tab,sessOpts)}
@@ -29874,10 +29888,19 @@ async function loadSvDash() {
     { data: wmsRemarkRows, error:wmsRemarksError },
     { data: pendingFoundRows, error:pendingFoundError },
   ] = await Promise.all([
-    sb.from('assignments')
-      .select('id,status,assigned_to,location_id,created_at,counter_r2_id,counter_r3_id,locations(code,zone,row_no,level),profiles!assigned_to(name)')
-      .eq('session_id', curSid)
-      .order('status'),
+    // Count History already reads every Assignment with pagination. The review
+    // pages must do the same: a direct Supabase select is capped (normally at
+    // 1,000 rows), and round3_done sorts near the end, so older DIFF work could
+    // disappear from both the Variance and WMS queues even while History shows it.
+    fetchPagedSupabaseRows(
+      'assignments',
+      'id,status,assigned_to,location_id,created_at,counter_r2_id,counter_r3_id,locations(code,zone,row_no,level),profiles!assigned_to(name)',
+      query => query
+        .eq('session_id', curSid)
+        .order('status')
+        .order('created_at')
+        .order('id'),
+    ),
     sb.from('remark_options').select('id,label').eq('context','wms').order('label'),
     sb.from('found_items')
       .select('id,session_id,status,source_type,location_code,license_plate,lot,inventory_status,item_code,description,uom,qty,actual_counter_name,discovered_at,profiles!found_items_discovered_by_fkey(name)')
@@ -29945,7 +29968,6 @@ async function loadSvDash() {
     'discovered_at',
   );
   const dateCountedAssignmentIds = new Set(allCounts.map(row => row.assignment_id).filter(Boolean));
-  const dashboardDataAsgnIds = activeDateFilter ? [...dateCountedAssignmentIds] : allAsgnIds;
   if (activeDateFilter) {
     const periodAssignments = asgns.filter(assignment => dateCountedAssignmentIds.has(assignment.id));
     total = periodAssignments.length;
@@ -29970,6 +29992,15 @@ async function loadSvDash() {
     if (!countByAsgn[c.assignment_id]) countByAsgn[c.assignment_id] = {};
     if (!countByAsgn[c.assignment_id][c.item_id]) countByAsgn[c.assignment_id][c.item_id] = {};
     countByAsgn[c.assignment_id][c.item_id][c.round] = +c.count_qty;
+  });
+  // The dashboard date range is useful for summary metrics, but the WMS tab is
+  // an operational queue and must always show every outstanding/completed DIFF
+  // in the selected Session. Keep a second, unfiltered count map for WMS.
+  const sessionCountByAsgn = {};
+  (rawCounts||[]).forEach(c => {
+    if (!sessionCountByAsgn[c.assignment_id]) sessionCountByAsgn[c.assignment_id] = {};
+    if (!sessionCountByAsgn[c.assignment_id][c.item_id]) sessionCountByAsgn[c.assignment_id][c.item_id] = {};
+    sessionCountByAsgn[c.assignment_id][c.item_id][c.round] = +c.count_qty;
   });
   const snapshotsByLocation = {};
   (allSnapshots || []).forEach(snapshot => {
@@ -30001,13 +30032,32 @@ async function loadSvDash() {
   const actualCountersByAssignment = buildActualCounterMap(allCounts || []);
 
   const diffAssignments = [];
+  const sessionWorkflowByAssignment = new Map();
   for (const a of asgns) {
-    const workflow = a._workflow || {};
-    if (workflow.hasDiff || workflow.hasPending) {
+    const storedWorkflowStatus = a._storedStatus || a.status;
+    const storedNeedsSupervisorReview = storedWorkflowStatus === 'round3_done';
+    // Do not reuse a._workflow here because it was derived from date-filtered
+    // counts for the summary page. WMS needs the full Session workflow.
+    const workflow = deriveAssignmentWorkflowStatus(
+      snapshotsByLocation[a.location_id] || [],
+      sessionCountByAsgn[a.id] || {},
+      rules,
+      // "approved" is a workflow decision, not proof that Count equals OH.
+      // Recalculate the physical result so approved DIFF remains visible in
+      // the Variance page and can be traced into its WMS stage.
+      a._storedStatus === 'approved' ? 'pending' : (a._storedStatus || a.status),
+    );
+    sessionWorkflowByAssignment.set(a.id,workflow);
+    // The Count History page reads the persisted assignment status. If it says
+    // round3_done, the Location was explicitly submitted to the supervisor and
+    // must stay in both review queues until an approval row exists. Re-running
+    // today's rules against mutable OH must not erase that queued work.
+    if (storedNeedsSupervisorReview || workflow.hasDiff || workflow.hasPending) {
       diffAssignments.push({
         ...a,
         _hasDiff:Boolean(workflow.hasDiff),
         _hasPending:Boolean(workflow.hasPending),
+        _storedNeedsSupervisorReview:storedNeedsSupervisorReview,
       });
     }
   }
@@ -30015,15 +30065,35 @@ async function loadSvDash() {
   let wmsRows = [];
   let trackerApprovalRows = [];
   let vaError = null;
+  const normalizeVarianceApprovalRow = value => {
+    const row = value || {};
+    // Imported/legacy rows can contain text booleans, while some schemas have
+    // an unsafe default true. A completed WMS review must also have fixed-at or
+    // fixed-by evidence written by toggleWmsFixed().
+    const rawFixed = row.wms_fixed;
+    const fixedFlag = rawFixed === true || rawFixed === 1
+      || ['true','t','1','yes','y'].includes(String(rawFixed ?? '').trim().toLowerCase());
+    const explicitFalse = rawFixed === false || rawFixed === 0
+      || ['false','f','0','no','n',''].includes(String(rawFixed ?? '').trim().toLowerCase());
+    const hasFixedEvidence = Boolean(row.wms_fixed_at || row.wms_fixed_by);
+    return {
+      ...row,
+      wms_fixed:hasFixedEvidence && fixedFlag && !explicitFalse,
+      wms_fixed_at:row.wms_fixed_at ?? null,
+      wms_fixed_by:row.wms_fixed_by ?? null,
+      approved_at:row.approved_at ?? row.created_at ?? null,
+      created_at:row.created_at ?? row.approved_at ?? null,
+    };
+  };
 
   try {
     const { data: vaData, error: vaErr } = await fetchSupabaseRowsByValues(
       'variance_approvals',
-      // variance_approvals records their confirmation time in approved_at.
-      // Requesting a non-existent created_at column makes every batch fail
-      // with HTTP 400 and causes confirmed DIFF rows to be misclassified as
-      // pending confirmation, leaving both WMS review counters at zero.
-      'id,assignment_id,item_id,final_qty,variance,resolution,supervisor_note,approved_by,approved_at,wms_fixed,wms_fixed_at,wms_fixed_by',
+      // Deployments of this app exist with either approved_at or the legacy
+      // created_at timestamp. Selecting an explicit missing column makes the
+      // whole request fail, so read the row shape that actually exists and
+      // normalize it below.
+      '*',
       'assignment_id',
       allAsgnIds,
     );
@@ -30032,21 +30102,18 @@ async function loadSvDash() {
       vaError = vaErr;
       wmsRows = [];
     } else {
-      trackerApprovalRows = vaData || [];
-      const dashboardAssignmentIdSet = new Set(dashboardDataAsgnIds);
+      // A persisted round3_done status means the work was reopened or never
+      // completed approval. Ignore stale approval rows for that Assignment;
+      // otherwise approvedItemKeys suppresses it from both review queues.
+      trackerApprovalRows = (vaData || [])
+        .map(normalizeVarianceApprovalRow)
+        .filter(row => {
+          const assignment = asgnInfoMap[row.assignment_id];
+          return (assignment?._storedStatus || assignment?.status) === 'approved';
+        });
       wmsRows = trackerApprovalRows
-        .filter(v => dashboardAssignmentIdSet.has(v.assignment_id))
         .filter(v => Number(v.variance) !== 0)
-        .map(v => ({
-          ...v,
-          wms_fixed: v.wms_fixed ?? false,
-          wms_fixed_at: v.wms_fixed_at ?? null,
-          wms_fixed_by: v.wms_fixed_by ?? null,
-          // Keep the shared downstream sort/display field without requiring
-          // a created_at column from the database schema.
-          created_at: v.approved_at ?? null,
-          _fromVA: true
-        }));
+        .map(v => ({ ...v, _fromVA:true }));
     }
   } catch (e) {
     vaError = e;
@@ -30137,18 +30204,18 @@ async function loadSvDash() {
   // An approved item must never be recreated as "รอคอนเฟิร์ม".
   // Use the assignment + item key because one assignment can contain several items.
   const approvedItemKeys = new Set(
-    wmsRows.map(v => `${v.assignment_id || ''}|${v.item_id || ''}`)
+    trackerApprovalRows.map(v => `${v.assignment_id || ''}|${v.item_id || ''}`)
   );
   const pendingWmsRows = [];
   for (const a of diffAssignments) {
-    const itemCounts = countByAsgn[a.id] || {};
+    const itemCounts = sessionCountByAsgn[a.id] || {};
     const locId = a.location_id;
     for (const [itemId, rounds] of Object.entries(itemCounts)) {
       if (approvedItemKeys.has(`${a.id}|${itemId}`)) continue;
       const oh = ohMap[locId + '|' + itemId];
       if (oh === undefined) continue;
       const st = computeItemStatus(oh, rounds[1], rounds[2], rounds[3], rules);
-      if (st !== 'Diff' && st !== 'PENDING') continue;
+      if (!a._storedNeedsSupervisorReview && st !== 'Diff' && st !== 'PENDING') continue;
       const latestRound = rounds[3] !== undefined ? 3 : rounds[2] !== undefined ? 2 : 1;
       const countQty = rounds[latestRound];
       const variance = countQty - oh;
@@ -30159,7 +30226,7 @@ async function loadSvDash() {
         item_id: itemId,
         final_qty: countQty,
         variance: variance,
-        resolution: st === 'Diff' ? 'pending_diff' : 'pending_recount',
+        resolution: a._storedNeedsSupervisorReview || st === 'Diff' ? 'pending_diff' : 'pending_recount',
         approved_by: null,
         wms_fixed: false,
         wms_fixed_at: null,
@@ -30185,17 +30252,42 @@ async function loadSvDash() {
   }
   if (isStaleLoad()) return;
 
-  const allWmsRows = [...wmsRows, ...pendingWmsRows];
-  allWmsRows.forEach(v => {
+  // The date control is global for this Dashboard. A WMS result belongs to the
+  // date of its latest/final count for that Assignment + Item—not every date on
+  // which the same Assignment happened to receive an earlier counting round.
+  const sessionWmsRows = [...wmsRows, ...pendingWmsRows];
+  const latestWmsCountAt = new Map();
+  rawCounts.forEach(record => {
+    if (!record.assignment_id || !record.item_id || !record.counted_at) return;
+    const time = new Date(record.counted_at).getTime();
+    if (!Number.isFinite(time)) return;
+    const key = `${record.assignment_id}|${record.item_id}`;
+    const previous = latestWmsCountAt.get(key);
+    if (!previous || time > previous.time) {
+      latestWmsCountAt.set(key,{ time, value:record.counted_at });
+    }
+  });
+  sessionWmsRows.forEach(row => {
+    const key = `${row.assignment_id || ''}|${row.item_id || ''}`;
+    row._dashboardCountedAt = latestWmsCountAt.get(key)?.value
+      || row.approved_at
+      || row.created_at
+      || null;
+  });
+  const wmsWorkspaceRows = activeDateFilter
+    ? filterRowsByDashboardDate(sessionWmsRows,'_dashboardCountedAt')
+    : sessionWmsRows;
+  const allWmsRows = wmsWorkspaceRows;
+  wmsWorkspaceRows.forEach(v => {
     const assignment = asgnInfoMap[v.assignment_id];
-    const rounds = countByAsgn[v.assignment_id]?.[v.item_id] || {};
+    const rounds = sessionCountByAsgn[v.assignment_id]?.[v.item_id] || {};
     const ohKey = `${assignment?.location_id || ''}|${v.item_id || ''}`;
     v._oh = ohMap[ohKey];
     v._count1 = rounds[1];
     v._count2 = rounds[2];
     v._count3 = rounds[3];
   });
-  window._wmsRows = allWmsRows;
+  window._wmsRows = wmsWorkspaceRows;
   window._wmsAsgnInfoMap = asgnInfoMap;
   window._actualCountersByAssignment = actualCountersByAssignment;
 
@@ -30553,12 +30645,29 @@ async function loadSvDash() {
   });
 
   _svDashOpenVarianceIdx = null;
-  const needsFollowUp = sortRowsByLocation(asgns.filter(a =>
-    (!activeDateFilter || dateCountedAssignmentIds.has(a.id)) &&
-    ['round1_done','round2_done','round3_done'].includes(a.status)
-  ), assignment => assignment.locations?.code);
+  // Match Count History: the persisted assignment status is the source of
+  // truth for the supervisor queue. The selected date still limits which
+  // counted assignments appear.
+  const reviewQueueCandidates = asgns
+    .map(a => ({
+      ...a,
+      status:a._storedStatus || a.status,
+    }))
+    .filter(a => ['round1_done','round2_done','round3_done'].includes(a.status));
+  const dateScopedReviewQueue = activeDateFilter
+    ? reviewQueueCandidates.filter(a => dateCountedAssignmentIds.has(a.id))
+    : reviewQueueCandidates;
+  const needsFollowUp = sortRowsByLocation(
+    dateScopedReviewQueue,
+    assignment => assignment.locations?.code,
+  );
   const varianceRowsHtml = needsFollowUp.length ? needsFollowUp.map((a, i) => {
-    const si = tagInfo(a.status);
+    const approvedDiffRows = wmsRows.filter(row => row.assignment_id === a.id);
+    const si = approvedDiffRows.length
+      ? (approvedDiffRows.every(row => row.wms_fixed)
+        ? { cls:'tag-green', lbl:'DIFF · ตรวจ WMS เสร็จแล้ว' }
+        : { cls:'tag-blue', lbl:'DIFF · รอตรวจสอบ WMS' })
+      : tagInfo(a.status);
     const l = a.locations;
     return `<div data-location-sort-code="${escapeWmsText(l?.code || '')}" style="border-bottom:1px solid var(--theme-border-color);padding:14px 0">
       <div class="tab-row" style="display:flex;align-items:center;gap:12px; padding: 10px;" onclick="toggleVarianceDetail('${a.id}',${i})">
@@ -30608,9 +30717,11 @@ async function loadSvDash() {
     varianceReportRows = `<div style="padding:30px; text-align:center; color:var(--text-muted); font-size:13px; font-weight:600;">ไม่มีรายการผลต่างสินค้าคงคลังที่ต้องตรวจสอบ</div>`;
   }
 
-  const summaryWmsTotalCount = allWmsRows.length;
-  const summaryWmsPendingCount = allWmsRows.filter(v => v._isPending).length;
-  const summaryWmsConfirmedRows = allWmsRows.filter(v => !v._isPending);
+  // The summary card and the direct WMS workspace share the same date-scoped
+  // collection so every graph changes together when the date changes.
+  const summaryWmsTotalCount = wmsWorkspaceRows.length;
+  const summaryWmsPendingCount = wmsWorkspaceRows.filter(v => v._isPending).length;
+  const summaryWmsConfirmedRows = wmsWorkspaceRows.filter(v => !v._isPending);
   const summaryWmsFixedCount = summaryWmsConfirmedRows.filter(v => v.wms_fixed).length;
   const summaryWmsUnfixedCount = summaryWmsConfirmedRows.length - summaryWmsFixedCount;
   // Progress means completed WMS checks out of every DIFF item.
@@ -30828,7 +30939,14 @@ async function loadSvDash() {
     ${needsFollowUp.length ? '<div class="sec">Variance จากงาน Cycle Count</div>' : ''}
     <div data-location-sort-group>${varianceRowsHtml}</div>`;
 
-  const wmsFilter = S._wmsFilter || 'unfixed';
+  let wmsFilter = S._wmsFilter || 'all';
+  // Never open the WMS list on an empty status while the Session has rows in
+  // another status. This previously hid all 14 completed rows behind the
+  // default "รอตรวจสอบ" filter.
+  if (wmsFilter !== 'all' && !wmsWorkspaceRows.some(item => wmsRowMatchesStatus(item,wmsFilter))) {
+    wmsFilter = 'all';
+  }
+  S._wmsFilter = wmsFilter;
   const wmsZone = S._wmsZone || '';
   const wmsRow = S._wmsRow || '';
   const wmsLevel = S._wmsLevel || '';
@@ -30837,7 +30955,7 @@ async function loadSvDash() {
 
   const wmsZones = new Set(), wmsRowsNo = new Set(), wmsLevels = new Set();
   const wmsUsersMap = {};
-  allWmsRows.forEach(v => {
+  wmsWorkspaceRows.forEach(v => {
     const loc = asgnInfoMap[v.assignment_id]?.locations;
     if (loc?.zone) wmsZones.add(loc.zone);
     if (loc?.row_no) wmsRowsNo.add(loc.row_no);
@@ -30846,9 +30964,9 @@ async function loadSvDash() {
     else if (v._isPending) wmsUsersMap['_pending'] = '(รอคอนเฟิร์ม)';
   });
 
-  const wmsTotalCount = allWmsRows.length;
-  const wmsPendingCount = allWmsRows.filter(v => v._isPending).length;
-  const wmsConfirmedRows = allWmsRows.filter(v => !v._isPending);
+  const wmsTotalCount = wmsWorkspaceRows.length;
+  const wmsPendingCount = wmsWorkspaceRows.filter(v => v._isPending).length;
+  const wmsConfirmedRows = wmsWorkspaceRows.filter(v => !v._isPending);
   const wmsFixedCount = wmsConfirmedRows.filter(v => v.wms_fixed).length;
   const wmsUnfixedCount = wmsConfirmedRows.length - wmsFixedCount;
   const wmsFixedPercent = wmsTotalCount > 0
@@ -30933,10 +31051,10 @@ async function loadSvDash() {
           </div>
           <div class="wms-filter-field"><label>สถานะ</label>
             <select id="wms-status" onchange="updateWmsFilter('Filter',this.value)">
+              <option value="all" ${wmsFilter==='all'?'selected':''}>ทั้งหมด</option>
               <option value="unfixed" ${wmsFilter==='unfixed'?'selected':''}>ยังไม่ได้ตรวจสอบ</option>
               <option value="fixed" ${wmsFilter==='fixed'?'selected':''}>ตรวจสอบแล้ว</option>
               <option value="pending" ${wmsFilter==='pending'?'selected':''}>รอคอนเฟิร์ม</option>
-              <option value="all" ${wmsFilter==='all'?'selected':''}>ทั้งหมด</option>
             </select>
           </div>
           <div class="wms-filter-field search"><label>ค้นหา LOCATION / ITEM</label>
@@ -31489,7 +31607,7 @@ function refreshWmsDependentFilters() {
       option.disabled = false;
     });
     const allowedStatuses = new Set(['unfixed','fixed','pending','all']);
-    const preferredStatus = S._wmsFilter || 'unfixed';
+    const preferredStatus = S._wmsFilter || 'all';
     S._wmsFilter = allowedStatuses.has(preferredStatus) ? preferredStatus : 'all';
     statusSelect.value = S._wmsFilter;
     document.querySelectorAll('[data-wms-kpi]').forEach(card => {
@@ -31509,7 +31627,7 @@ function updateWmsFilter(key, value) {
   renderWmsList();
 }
 
-function wmsRowMatchesStatus(item,filterStatus='unfixed') {
+function wmsRowMatchesStatus(item,filterStatus='all') {
   if (filterStatus === 'all') return true;
   if (filterStatus === 'pending') return Boolean(item?._isPending);
   if (filterStatus === 'fixed') return !item?._isPending && Boolean(item?.wms_fixed);
@@ -31521,7 +31639,7 @@ function renderWmsList() {
   if (!container) return;
   const wmsRows = (window._wmsRows || []).filter(v => Number(v.variance) !== 0);
   const asgnInfoMap = window._wmsAsgnInfoMap || {};
-  const filterStatus = S._wmsFilter || 'unfixed';
+  const filterStatus = S._wmsFilter || 'all';
   const filterZone = S._wmsZone || '';
   const filterRow = S._wmsRow || '';
   const filterLevel = S._wmsLevel || '';
@@ -31884,10 +32002,15 @@ async function loadSvList() {
   }
 
   const assignmentQuery = sess.length
-    ? await sb.from('assignments')
-        .select('id,status,session_id,location_id,locations(code,zone,area)')
-        .in('session_id', sess.map(s => s.id))
-        .order('status')
+    ? await fetchPagedSupabaseRows(
+        'assignments',
+        'id,status,session_id,location_id,created_at,locations(code,zone,area)',
+        query => query
+          .in('session_id', sess.map(s => s.id))
+          .order('status')
+          .order('created_at')
+          .order('id'),
+      )
     : { data:[],error:null };
   const { data:rawAssignments,error:assignmentError } = assignmentQuery;
   if (assignmentError) { cnt().innerHTML = errBox(assignmentError.message); return; }
@@ -36084,7 +36207,7 @@ async function loadAdHistory() {
   }
 
   const sessionOptions = `<option value="">${uiCopy('ทุกรอบการตรวจนับ','All Count Sessions')}</option>` + availableSessions.map(session =>
-    `<option value="${session.id}" ${session.id===sid?'selected':''}>${escapeWmsText(session.name)}</option>`
+    `<option value="${session.id}" ${session.id===sid?'selected':''}>${escapeWmsText(sessionOptionLabel(session))}</option>`
   ).join('');
   const counterOptions = `<option value="">${uiCopy('ผู้ตรวจนับทั้งหมด','All Physical Counters')}</option>` + availableCounters.map(name =>
     `<option value="${escapeWmsText(name)}" ${name===counterName?'selected':''}>${escapeWmsText(name)}</option>`
