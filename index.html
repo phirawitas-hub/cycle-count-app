@@ -6,7 +6,15 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v221 - Persistent Auto Contrast and Theme Set Sync</title>
+<title>Cycle Count v222 - PWA Ready</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#006D77">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Cycle Count">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -17398,7 +17406,7 @@ body.tablet-ui .count-touch-toolbar .count-screen-lock-button { display:inline-f
 }
 </style>
 </head>
-<body data-build="v221-persistent-theme-settings">
+<body data-build="v222-pwa-ready">
 <div id="app"></div>
 
 <script>
@@ -17476,7 +17484,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v221-persistent-theme-settings';
+window.__CYCLE_COUNT_BUILD__ = 'v222-pwa-ready';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -20271,7 +20279,7 @@ function applyBrandingSettings(settings, persistLocal = true) {
     const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
     root.setProperty(`--theme-${cssKey}`, uiBranding[key]);
   });
-  document.title = `${uiBranding.systemName} v221`;
+  document.title = `${uiBranding.systemName} v222`;
   if (persistLocal) {
     try { localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(uiBranding)); } catch (_) {}
   }
@@ -41536,6 +41544,20 @@ window.addEventListener('DOMContentLoaded', () => {
   startStableUiIconGuard();
   boot();
 });
+
+// v222 — PWA: register the repository-root service worker on GitHub Pages.
+if ('serviceWorker' in navigator && ['https:','http:'].includes(location.protocol)) {
+  window.addEventListener('load', async () => {
+    try {
+      const registration = await navigator.serviceWorker.register('./sw.js', { scope:'./' });
+      registration.update().catch(() => {});
+      document.documentElement.dataset.pwaReady = 'true';
+    } catch (error) {
+      console.warn('PWA Service Worker registration failed:', error);
+      document.documentElement.dataset.pwaReady = 'false';
+    }
+  });
+}
 </script>
 </body>
 </html>
