@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v215 - Clean Session Name Display</title>
+<title>Cycle Count v220 - Synced Theme Colors and Popup Status Colors</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Mitr:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase -->
@@ -9772,6 +9772,66 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
   .action-success-facts { grid-template-columns:1fr; }
 }
 
+/* v219 — large, short, auto-closing count-result popup for Handheld. */
+.count-result-backdrop {
+  position:fixed;
+  inset:0;
+  z-index:5400;
+  display:grid;
+  place-items:center;
+  padding:18px;
+  background:rgba(8,31,36,.72);
+  backdrop-filter:blur(9px);
+  animation:assignmentSuccessFade .16s ease-out;
+}
+.count-result-modal {
+  --count-result-color:var(--theme-success-color);
+  width:min(520px,100%);
+  padding:34px 28px 28px;
+  border:2px solid color-mix(in srgb,var(--count-result-color) 46%,transparent);
+  border-radius:30px;
+  color:var(--theme-body-text-color);
+  background:var(--theme-card-bg);
+  box-shadow:0 34px 100px rgba(4,25,30,.48);
+  text-align:center;
+  animation:assignmentSuccessPop .2s ease-out;
+}
+.count-result-modal.is-warning { --count-result-color:var(--theme-warning-color); }
+.count-result-modal.is-danger { --count-result-color:var(--theme-danger-color); }
+.count-result-modal.is-info { --count-result-color:var(--theme-primary-color); }
+.count-result-icon {
+  width:92px;
+  height:92px;
+  margin:0 auto 18px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  color:var(--count-result-color);
+  background:color-mix(in srgb,var(--count-result-color) 16%,white);
+  box-shadow:0 14px 34px color-mix(in srgb,var(--count-result-color) 27%,transparent);
+}
+.count-result-icon svg { width:56px;height:56px;stroke-width:2.4; }
+.count-result-title {
+  margin:0;
+  color:var(--theme-heading-color);
+  font-size:clamp(30px,6vw,42px);
+  font-weight:900;
+  line-height:1.2;
+}
+.count-result-message {
+  margin:12px 0 0;
+  color:var(--count-result-color);
+  font-size:clamp(21px,4.5vw,30px);
+  font-weight:900;
+  line-height:1.35;
+}
+@media (max-width:600px) {
+  .count-result-backdrop { padding:12px; }
+  .count-result-modal { padding:28px 18px 20px;border-radius:24px; }
+  .count-result-icon { width:78px;height:78px;margin-bottom:14px; }
+  .count-result-icon svg { width:46px;height:46px; }
+}
+
 /* v127 — language settings */
 .language-settings-shell {
   max-width:980px;
@@ -17206,6 +17266,35 @@ body.tablet-ui .count-touch-toolbar .count-screen-lock-button { display:inline-f
   border-color:var(--theme-primary-color);
   background:var(--theme-primary-color);
 }
+.count-device-keyboard-toggle-button {
+  min-height:40px;
+  padding:7px 12px;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 22%,transparent);
+  border-radius:13px;
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  color:var(--theme-primary-color);
+  background:#f3f8f6;
+  background:color-mix(in srgb,var(--theme-primary-color) 7%,var(--theme-card-bg));
+  box-shadow:0 7px 16px rgba(13,74,80,.12);
+  font:800 11px 'Mitr',sans-serif;
+  cursor:pointer;
+}
+.count-device-keyboard-toggle-button svg {
+  width:17px;
+  height:17px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.count-device-keyboard-toggle-button.is-enabled {
+  color:#fff;
+  border-color:var(--theme-primary-color);
+  background:var(--theme-primary-color);
+}
 @media (max-width:760px) {
   .task-list-actions-outside { margin-bottom:8px; }
   .task-list-actions-outside .found-work-button { width:100%; flex:1 1 100%; }
@@ -17241,16 +17330,75 @@ body.tablet-ui .count-touch-toolbar .count-screen-lock-button { display:inline-f
   }
   .task-filter-collapsible .multi-filter-actions button { min-height:40px; }
   .count-touch-toolbar { gap:6px; margin-top:8px; }
-  .count-keypad-toggle-button { min-height:38px; padding:6px 9px; font-size:9px; }
+  .count-keypad-toggle-button,
+  .count-device-keyboard-toggle-button { min-height:38px; padding:6px 9px; font-size:9px; }
   .count-numeric-keypad {
     width:min(330px,calc(100vw - 12px));
     bottom:max(6px,env(safe-area-inset-bottom));
     border-radius:18px;
   }
 }
+
+/* ══════════════════════════════════════════════════════════
+   v220 — authoritative synced colors for every Sidebar state
+   Keep text, icons and chevrons on the exact saved theme tokens.
+   ══════════════════════════════════════════════════════════ */
+.sidebar .nav-item:not(.active),
+.sidebar .nav-subitem:not(.active),
+.sidebar .nav-item:not(.active) > :is(.nav-icon,.nav-chevron,span),
+.sidebar .nav-subitem:not(.active) > :is(.nav-icon,.nav-chevron,span) {
+  color:var(--theme-sidebar-text) !important;
+  -webkit-text-fill-color:var(--theme-sidebar-text) !important;
+}
+.sidebar .nav-item:not(.active):hover,
+.sidebar .nav-subitem:not(.active):hover,
+.sidebar .nav-item:not(.active):focus-visible,
+.sidebar .nav-subitem:not(.active):focus-visible {
+  color:var(--theme-sidebar-hover-text) !important;
+  background:var(--theme-sidebar-hover-bg) !important;
+}
+.sidebar .nav-item:not(.active):is(:hover,:focus-visible) > :is(.nav-icon,.nav-chevron,span),
+.sidebar .nav-subitem:not(.active):is(:hover,:focus-visible) > :is(.nav-icon,.nav-chevron,span) {
+  color:var(--theme-sidebar-hover-text) !important;
+  -webkit-text-fill-color:var(--theme-sidebar-hover-text) !important;
+}
+.sidebar :is(.nav-item,.nav-subitem).active,
+.sidebar :is(.nav-item,.nav-subitem).active > :is(.nav-icon,.nav-chevron,span) {
+  color:var(--theme-menu-active-text) !important;
+  -webkit-text-fill-color:var(--theme-menu-active-text) !important;
+}
+.sidebar :is(.nav-item,.nav-subitem).active {
+  background-color:var(--theme-menu-active-bg);
+}
+.sidebar-title {
+  color:var(--theme-sidebar-title-text) !important;
+  -webkit-text-fill-color:var(--theme-sidebar-title-text) !important;
+}
+.sidebar-sub,
+.sidebar-footer {
+  color:var(--theme-sidebar-sub-text) !important;
+  -webkit-text-fill-color:var(--theme-sidebar-sub-text) !important;
+}
+.sidebar :is(.sidebar-header-toggle,.sidebar-logo-toggle) {
+  color:var(--theme-sidebar-text) !important;
+}
+.sidebar :is(.sidebar-header-toggle,.sidebar-logo-toggle):is(:hover,:focus-visible) {
+  color:var(--theme-sidebar-hover-text) !important;
+  background:var(--theme-sidebar-hover-bg) !important;
+}
+.sidebar-logo-icon,
+.sidebar-logo-icon :is(svg,path,circle,rect,line,polyline,polygon) {
+  color:var(--theme-sidebar-logo-text) !important;
+}
+.sidebar-menu {
+  scrollbar-color:var(--theme-sidebar-scrollbar) transparent !important;
+}
+.sidebar-menu::-webkit-scrollbar-thumb {
+  background:var(--theme-sidebar-scrollbar) !important;
+}
 </style>
 </head>
-<body data-build="v215-clean-session-name-display">
+<body data-build="v220-synced-theme-popup-colors">
 <div id="app"></div>
 
 <script>
@@ -17328,7 +17476,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v215-clean-session-name-display';
+window.__CYCLE_COUNT_BUILD__ = 'v220-synced-theme-popup-colors';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -20106,9 +20254,11 @@ function applyBrandingSettings(settings, persistLocal = true) {
     '--theme-surface-color': uiBranding.cardBg,
     '--theme-text-color': uiBranding.bodyTextColor,
     '--theme-button-text-color': uiBranding.primaryText,
-    '--theme-sidebar-top-text': themeReadableForeground(uiBranding.sidebarTitleText,uiBranding.sidebarStart),
-    '--theme-sidebar-bottom-text': themeReadableForeground(uiBranding.sidebarSubText,uiBranding.sidebarEnd),
-    '--theme-sidebar-hero-text': themeReadableForeground(uiBranding.sidebarTitleText,uiBranding.sidebarStart),
+    /* The settings were already normalized once. Reusing the exact stored values
+       here prevents compatibility aliases from silently changing them per surface. */
+    '--theme-sidebar-top-text': uiBranding.sidebarTitleText,
+    '--theme-sidebar-bottom-text': uiBranding.sidebarSubText,
+    '--theme-sidebar-hero-text': uiBranding.sidebarTitleText,
     '--theme-success-contrast': themeReadableForeground('#FFFFFF',uiBranding.successColor),
     '--theme-warning-contrast': themeReadableForeground('#102A2B',uiBranding.warningColor),
     '--theme-danger-contrast': themeReadableForeground('#FFFFFF',uiBranding.dangerColor),
@@ -20119,7 +20269,7 @@ function applyBrandingSettings(settings, persistLocal = true) {
     const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
     root.setProperty(`--theme-${cssKey}`, uiBranding[key]);
   });
-  document.title = `${uiBranding.systemName} v184`;
+  document.title = `${uiBranding.systemName} v220`;
   if (persistLocal) {
     try { localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(uiBranding)); } catch (_) {}
   }
@@ -20131,7 +20281,7 @@ async function persistCentralBrandingSettings(input = {}) {
     activeThemeSetId:String(input?.activeThemeSetId ?? S._activeThemeSetId ?? ''),
     updatedAt:String(input?.updatedAt || new Date().toISOString()),
     updatedBy:String(input?.updatedBy || prof?.name || ''),
-    syncVersion:1,
+    syncVersion:2,
   });
   let centralSaved = false;
   let centralError = null;
@@ -20155,7 +20305,6 @@ async function loadPublicBrandingSettings(options = {}) {
   const localSettings = readLocalBrandingSettings();
   let selectedSettings = localSettings;
   let remoteFound = false;
-  let localIsNewer = false;
   let remoteReadFailed = false;
   applyBrandingSettings(localSettings, false);
   if (sb) {
@@ -20166,14 +20315,11 @@ async function loadPublicBrandingSettings(options = {}) {
         .eq('key',BRANDING_SETTING_KEY)
         .maybeSingle();
       if (!error && data?.value) {
+        /* The central record is authoritative across devices. A clock-skewed or
+           stale Admin cache must never overwrite the theme chosen elsewhere. */
         const remoteSettings = normalizeBrandingSettings(data.value);
-        const localTime = Date.parse(localSettings.updatedAt || '') || 0;
-        const remoteTime = Date.parse(remoteSettings.updatedAt || '') || 0;
         remoteFound = true;
-        localIsNewer = localTime > remoteTime;
-        selectedSettings = localIsNewer
-          ? localSettings
-          : normalizeBrandingSettings({ ...localSettings,...data.value });
+        selectedSettings = remoteSettings;
       } else if (error) {
         remoteReadFailed = true;
         console.warn('โหลดธีมส่วนกลางไม่สำเร็จ ใช้ธีมสำรองในอุปกรณ์นี้แทน:',error);
@@ -20185,7 +20331,7 @@ async function loadPublicBrandingSettings(options = {}) {
   }
   applyBrandingSettings(selectedSettings);
   S._activeThemeSetId = selectedSettings.activeThemeSetId || '';
-  if (syncToCentral && !remoteReadFailed && (!remoteFound || localIsNewer)) {
+  if (syncToCentral && !remoteReadFailed && !remoteFound) {
     const syncResult = await persistCentralBrandingSettings(selectedSettings);
     if (!syncResult.centralSaved && syncResult.centralError) {
       console.warn('ซิงก์ธีมจากอุปกรณ์นี้ขึ้นส่วนกลางไม่สำเร็จ:',syncResult.centralError);
@@ -22877,6 +23023,55 @@ function closeActionSuccessModal() {
   }
 }
 
+let _countResultPopupResolve = null;
+let _countResultPreviousOverflow = '';
+let _countResultPopupTimer = null;
+
+function closeCountResultPopup() {
+  const backdrop = Q('count-result-backdrop');
+  if (!backdrop) return;
+  clearTimeout(_countResultPopupTimer);
+  _countResultPopupTimer = null;
+  backdrop.remove();
+  document.body.style.overflow = _countResultPreviousOverflow;
+  const resolve = _countResultPopupResolve;
+  _countResultPopupResolve = null;
+  resolve?.();
+}
+
+function showCountResultPopup(options={}) {
+  if (Q('count-result-backdrop')) closeCountResultPopup();
+  document.querySelector('.action-success-toast-stack')?.remove();
+  const kind = ['success','info','warning','danger'].includes(options.kind) ? options.kind : 'success';
+  const iconType = kind === 'success' ? 'success' : kind === 'info' ? 'info' : kind === 'danger' ? 'error' : 'warning';
+  const title = String(options.title || (kind === 'success' ? 'บันทึกสำเร็จ' : 'ยอดไม่ตรง')).trim();
+  const message = String(options.message || '').trim();
+  const duration = Number.isFinite(Number(options.duration))
+    ? Math.max(900,Number(options.duration))
+    : kind === 'success' ? 1300 : kind === 'info' ? 1400 : 1600;
+  return new Promise(resolve => {
+    _countResultPopupResolve = resolve;
+    _countResultPreviousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const backdrop = document.createElement('div');
+    backdrop.id = 'count-result-backdrop';
+    backdrop.className = 'count-result-backdrop';
+    backdrop.setAttribute('role','alertdialog');
+    backdrop.setAttribute('aria-modal','true');
+    backdrop.setAttribute('aria-live','assertive');
+    backdrop.setAttribute('aria-labelledby','count-result-title');
+    backdrop.innerHTML = `
+      <section class="count-result-modal is-${kind}" onclick="event.stopPropagation()">
+        <div class="count-result-icon" aria-hidden="true">${stableUiIconSvg(iconType)}</div>
+        <h2 class="count-result-title" id="count-result-title">${escapeWmsText(title)}</h2>
+        ${message ? `<p class="count-result-message">${escapeWmsText(message)}</p>` : ''}
+      </section>`;
+    document.body.appendChild(backdrop);
+    navigator.vibrate?.(['success','info'].includes(kind) ? 55 : [55,35,55]);
+    _countResultPopupTimer = window.setTimeout(closeCountResultPopup,duration);
+  });
+}
+
 function showActionSuccessToast(message, options={}) {
   const cleanMessage = cleanSuccessMessage(message);
   if (!cleanMessage) return;
@@ -22946,6 +23141,10 @@ const _nativeBrowserPrompt = window.prompt.bind(window);
 window.prompt = (message,defaultValue='') =>
   _nativeBrowserPrompt(translateUiText(message),defaultValue);
 document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && Q('count-result-backdrop')) {
+    closeCountResultPopup();
+    return;
+  }
   if (event.key === 'Escape' && Q('action-success-backdrop')) {
     closeActionSuccessModal();
   }
@@ -24146,16 +24345,13 @@ async function continueToNextMyTaskAfterCount() {
   delete S._autoOpenNextCount;
   const target = nextCountNavigationTarget(request);
   if (!target) {
-    showActionSuccessToast(
-      'ไม่มี Location ที่ยังนับได้ภายใต้ตัวกรองและลำดับปัจจุบัน',
-      { title:'ครบรายการที่เลือก',duration:3400 },
-    );
+    await showCountResultPopup({
+      kind:'info',
+      title:'ครบทุกงาน',
+      message:'ไม่มีงานค้าง',
+    });
     return false;
   }
-  showActionSuccessToast(
-    `กำลังเปิด Location ถัดไป: ${target.locationCode || 'ไม่ระบุ Location'}`,
-    { title:'ไปงานถัดไป',duration:1800 },
-  );
   if (target.kind === 'annual') {
     return openAnnualJobCount(target.annualJobId,target.annualJobItemId);
   }
@@ -24206,11 +24402,6 @@ async function openNextCountFromCachedTasks(aid,assignment,newStatus,annualJobId
   const request = buildNextCountNavigationRequest(aid,assignment,annualJobId);
   const target = nextCountNavigationTarget(request);
   if (!target) return false;
-
-  showActionSuccessToast(
-    `กำลังเปิด Location ถัดไป: ${target.locationCode || 'ไม่ระบุ Location'}`,
-    { title:'ไปงานถัดไป',duration:1800 },
-  );
   if (target.kind === 'annual') {
     return openAnnualJobCount(target.annualJobId,target.annualJobItemId);
   }
@@ -24515,6 +24706,28 @@ function handheldKeyboardToggleLabel() {
     : uiCopy('⌨ แป้นพิมพ์: ปิด','⌨ Keyboard: Off');
 }
 
+function countDeviceKeyboardToggleLabel() {
+  return handheldSoftKeyboardEnabled()
+    ? uiCopy('⌨ คีย์บอร์ดเครื่อง: เปิด','⌨ Device Keyboard: On')
+    : uiCopy('⌨ คีย์บอร์ดเครื่อง: ปิด','⌨ Device Keyboard: Off');
+}
+
+function refreshCountDeviceKeyboardToggle() {
+  const enabled = handheldSoftKeyboardEnabled();
+  const button = Q('countDeviceKeyboardToggleButton');
+  const label = Q('countDeviceKeyboardToggleLabel');
+  button?.classList.toggle('is-enabled',enabled);
+  button?.setAttribute('aria-pressed',String(enabled));
+  button?.setAttribute(
+    'aria-label',
+    enabled
+      ? uiCopy('กดเพื่อปิดคีย์บอร์ดของเครื่อง','Turn off the device keyboard')
+      : uiCopy('กดเพื่อเปิดคีย์บอร์ดของเครื่อง','Turn on the device keyboard')
+  );
+  if (label) label.textContent = countDeviceKeyboardToggleLabel();
+  return enabled;
+}
+
 function refreshHandheldKeyboardToggle() {
   document.querySelectorAll('[data-handheld-keyboard-toggle="true"]').forEach(button => {
     const enabled = handheldSoftKeyboardEnabled();
@@ -24528,6 +24741,7 @@ function refreshHandheldKeyboardToggle() {
     );
     button.textContent = handheldKeyboardToggleLabel();
   });
+  refreshCountDeviceKeyboardToggle();
 }
 
 function requestHideHandheldSoftKeyboard() {
@@ -24563,10 +24777,12 @@ function toggleHandheldSoftKeyboard() {
   refreshHandheldKeyboardToggle();
   const target = Q('task_hardware_scan');
   applyHandheldSoftKeyboardPreference(target);
-  if (!target) return;
-  // Reuse the exact V199 reconnect path in both modes. Keyboard-off changes
-  // only the browser's virtual-keyboard visibility, never the scan connection.
-  focusTaskLocationCapture({ force:true,reconnect:true });
+  if (target) {
+    // Reuse the exact V199 reconnect path in both modes. Keyboard-off changes
+    // only the browser's virtual-keyboard visibility, never the scan connection.
+    focusTaskLocationCapture({ force:true,reconnect:true });
+  }
+  if (S?.page === 'c-count') applyCountNumericKeypadMode();
   if (!handheldSoftKeyboardEnabled()) {
     // Do not blur, make readonly, or change inputmode: those actions can sever
     // the Android scanner IME. Only request that the soft keyboard be hidden.
@@ -24863,8 +25079,9 @@ function prepareHandheldCountEntry({ force=false }={}) {
   const inputs = [...document.querySelectorAll('.count-handheld-page .cqty')]
     .filter(input => !input.disabled && !input.hidden && !input.closest('[hidden]'));
   if (narrowHandheld) {
+    const useDeviceKeyboard = handheldSoftKeyboardEnabled() && !countNumericKeypadEnabled();
     inputs.forEach(input => {
-      input.setAttribute('inputmode','none');
+      input.setAttribute('inputmode',useDeviceKeyboard ? 'decimal' : 'none');
       input.setAttribute('enterkeyhint','next');
       input.setAttribute('data-handheld-count-entry','true');
     });
@@ -26560,7 +26777,9 @@ async function loadCCount() {
     if (!round) {
       const completed = workflow.itemStatuses.length > 0
         && workflow.itemStatuses.every(status => status === 'OK' || status === 'Diff');
-      if (completed) alert('รายการใน Location นี้นับครบแล้ว');
+      if (completed) {
+        await showCountResultPopup({ kind:'info',title:'นับครบแล้ว',message:'Location นี้' });
+      }
       go('c-tasks');
       return;
     }
@@ -26594,7 +26813,7 @@ async function loadCCount() {
       return computeItemStatus(snapshot.onhand_qty,counted[1],counted[2],counted[3],rules);
     });
     if (itemStatuses.length && itemStatuses.every(status => status === 'OK' || status === 'Diff')) {
-      alert('รายการใน Location นี้นับครบแล้ว');
+      await showCountResultPopup({ kind:'info',title:'นับครบแล้ว',message:'Location นี้' });
       go('c-tasks');
       return;
     }
@@ -26953,12 +27172,21 @@ function countTouchToolbarHtml() {
       <span id="countScreenLockLabel">ล็อกหน้าจอ: เปิด</span>
     </button>
     <button type="button" class="count-keypad-toggle-button" id="countKeypadToggleButton"
-      onclick="toggleCountNumericKeypad()" aria-pressed="false">
+      onclick="toggleCountNumericKeypad()" aria-pressed="false" aria-label="เปิดหรือปิดแป้นตัวเลข COUNT">
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <rect x="3" y="3" width="18" height="18" rx="3"></rect>
         <path d="M7 8h.01M12 8h.01M17 8h.01M7 12h.01M12 12h.01M17 12h.01M7 16h.01M12 16h5"></path>
       </svg>
-      <span id="countKeypadToggleLabel">แป้นตัวเลข: ปิด</span>
+      <span id="countKeypadToggleLabel">แป้นตัวเลข COUNT: ปิด</span>
+    </button>
+    <button type="button" class="count-device-keyboard-toggle-button" id="countDeviceKeyboardToggleButton"
+      onclick="toggleHandheldSoftKeyboard()" aria-pressed="${String(handheldSoftKeyboardEnabled())}"
+      aria-label="เปิดหรือปิดคีย์บอร์ดของเครื่อง">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="2.5" y="5" width="19" height="14" rx="3"></rect>
+        <path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 13h.01M10 13h.01M14 13h.01M18 13h.01M8 16h8"></path>
+      </svg>
+      <span id="countDeviceKeyboardToggleLabel">${escapeWmsText(countDeviceKeyboardToggleLabel())}</span>
     </button>
   </div>`;
 }
@@ -26999,18 +27227,21 @@ function updateCountNumericKeypadToggleUi() {
   const label = Q('countKeypadToggleLabel');
   button?.classList.toggle('is-enabled',enabled);
   button?.setAttribute('aria-pressed',String(enabled));
-  if (label) label.textContent = enabled ? 'แป้นตัวเลข: เปิด' : 'แป้นตัวเลข: ปิด';
+  if (label) label.textContent = enabled ? 'แป้นตัวเลข COUNT: เปิด' : 'แป้นตัวเลข COUNT: ปิด';
   document.body.classList.toggle('count-keypad-enabled',enabled && S?.page === 'c-count');
   return enabled;
 }
 
 function applyCountNumericKeypadMode() {
   const enabled = updateCountNumericKeypadToggleUi();
-  const keepSoftKeyboardHidden = isNarrowHandheldTerminal();
+  const deviceKeyboardEnabled = refreshCountDeviceKeyboardToggle();
+  const keepSoftKeyboardHidden = !deviceKeyboardEnabled;
   const readOnly = enabled && countNumericKeypadNeedsReadOnly();
   document.querySelectorAll('.count-handheld-page .cqty').forEach(input => {
     input.readOnly = readOnly;
     input.setAttribute('inputmode',readOnly || keepSoftKeyboardHidden ? 'none' : 'decimal');
+    if (keepSoftKeyboardHidden) input.setAttribute('virtualkeyboardpolicy','manual');
+    else input.removeAttribute('virtualkeyboardpolicy');
     input.classList.toggle('custom-keypad-ready',enabled);
     if (enabled) {
       input.setAttribute('aria-haspopup','dialog');
@@ -27025,20 +27256,21 @@ function applyCountNumericKeypadMode() {
       });
     }
   });
+  document.querySelectorAll('.count-handheld-page input:not(.cqty):not([type="file"]),.count-handheld-page textarea').forEach(input => {
+    if (keepSoftKeyboardHidden) input.setAttribute('virtualkeyboardpolicy','manual');
+    else input.removeAttribute('virtualkeyboardpolicy');
+  });
+  if (keepSoftKeyboardHidden) requestHideHandheldSoftKeyboard();
   return enabled;
 }
 
 function toggleCountNumericKeypad() {
   const next = !countNumericKeypadEnabled();
   try { localStorage.setItem(COUNT_NUMERIC_KEYPAD_STORAGE_KEY,next ? 'true' : 'false'); } catch (_) {}
-  if (!next) closeCountNumericKeypad({ blur:false });
+  // การกดสวิตช์เป็นเพียงการเปิด/ปิดสิทธิ์ใช้งานแป้น ไม่ควรเปิดแป้นเอง
+  // แป้นจะแสดงเมื่อผู้ใช้แตะหรือโฟกัสช่อง COUNT เท่านั้น
+  closeCountNumericKeypad({ blur:false });
   applyCountNumericKeypadMode();
-  if (!next) return;
-  const input = document.querySelector('.count-handheld-page .cqty[data-count-initial-focus="true"]')
-    || document.querySelector('.count-handheld-page .cqty');
-  if (!input) return;
-  focusHardwareScanTarget(input);
-  openCountNumericKeypad(input);
 }
 
 function normalizeCountQtyInput(input) {
@@ -27071,7 +27303,7 @@ function countNumericKeypadHtml() {
       ${keyButton('7','7')}${keyButton('8','8')}${keyButton('9','9')}${keyButton('⌫','backspace','keypad-tool')}
       ${keyButton('4','4')}${keyButton('5','5')}${keyButton('6','6')}${keyButton('ล้าง','clear','keypad-tool')}
       ${keyButton('1','1')}${keyButton('2','2')}${keyButton('3','3')}
-      ${keyButton('ยืนยัน','confirm','keypad-confirm')}
+      ${keyButton('ยืนยัน<br>และบันทึก','confirm','keypad-confirm')}
       ${keyButton('.','decimal')}${keyButton('0','0')}${keyButton('00','00')}
     </div>
   </section>`;
@@ -27139,7 +27371,22 @@ function pressCountNumericKey(key) {
       return;
     }
     input.dispatchEvent(new Event('change',{ bubbles:true }));
-    focusNextCountField(input);
+    const countInputs = [...document.querySelectorAll('.count-handheld-page .cqty')]
+      .filter(field => !field.disabled && field.offsetParent !== null);
+    const allCountsComplete = countInputs.length > 0
+      && countInputs.every(field => String(field.value || '').trim() !== '');
+    const submitButton = Q('cb');
+    if (allCountsComplete && submitButton && !submitButton.disabled) {
+      closeCountNumericKeypad();
+      submitButton.click();
+      return;
+    }
+    // งานที่มีหลาย ITEM จะเลื่อนไป COUNT ที่ยังว่างก่อน และบันทึกทันทีเมื่อครบทุกช่อง
+    const nextIncompleteInput = countInputs.find(field => String(field.value || '').trim() === '');
+    if (nextIncompleteInput) {
+      focusHardwareScanTarget(nextIncompleteInput);
+      openCountNumericKeypad(nextIncompleteInput);
+    }
     return;
   }
   if (key === 'clear') return setCountKeypadValue('');
@@ -27175,6 +27422,30 @@ function teardownCountTouchControls() {
   document.body.classList.remove('count-screen-locked');
   document.body.classList.remove('count-keypad-enabled');
 }
+
+function countKeypadEventTarget(event) {
+  return event.target instanceof Element ? event.target : event.target?.parentElement;
+}
+
+// แม้เปิดใช้งานแป้นไว้ แป้นต้องอยู่บนจอเฉพาะขณะทำงานกับช่อง COUNT
+// แตะหรือย้ายโฟกัสไปส่วนอื่นของหน้าให้ซ่อนแป้น โดยไม่เปลี่ยนค่าที่กรอกไว้
+document.addEventListener('pointerdown',event => {
+  if (S?.page !== 'c-count' || !_countKeypadInput) return;
+  const target = countKeypadEventTarget(event);
+  if (target?.closest('.count-numeric-keypad,.cqty')) return;
+  closeCountNumericKeypad({ blur:false });
+});
+
+document.addEventListener('focusin',event => {
+  if (S?.page !== 'c-count') return;
+  const target = countKeypadEventTarget(event);
+  if (!handheldSoftKeyboardEnabled() && target?.matches?.('input,textarea')) {
+    requestHideHandheldSoftKeyboard();
+  }
+  if (!_countKeypadInput) return;
+  if (target?.closest('.count-numeric-keypad,.cqty')) return;
+  closeCountNumericKeypad({ blur:false });
+});
 
 document.addEventListener('gesturestart',event => {
   if (document.body.classList.contains('count-screen-locked')) event.preventDefault();
@@ -27710,21 +27981,28 @@ async function submitCount(aid, round, idsStr, annualJobId='') {
   window._photoMap = {};
 
   if (!needsMore) {
-    showActionSuccessToast(foundPayloads.length
-      ? '✅ บันทึกสำเร็จ · งานที่พบเพิ่มถูกส่งให้ Supervisor ตรวจสอบแล้ว'
-      : '✅ ยอดตรงทุกรายการ! บันทึกสำเร็จ', {
-        title:'บันทึกการนับสำเร็จ',
-        duration:3200,
-      });
+    await showCountResultPopup({
+      kind:foundPayloads.length ? 'info' : 'success',
+      title:'บันทึกสำเร็จ',
+      message:foundPayloads.length ? 'ส่งรายการพบเพิ่มแล้ว' : 'ยอดตรง',
+    });
     if (await openNextCountFromCachedTasks(aid,asgn,newStatus,annualJobId)) return;
     returnToMyTasksAndOpenNextCount(aid,asgn,annualJobId);
   } else if (anyPending) {
-    alert(`⚠️ ยอดไม่ตรงกับระบบ — กรุณานับรอบที่ ${round+1} อีกครั้งอย่างระมัดระวัง`);
+    await showCountResultPopup({
+      kind:'warning',
+      title:'ยอดไม่ตรง',
+      message:`นับรอบ ${round+1}`,
+    });
     go('c-count', annualJobId
       ? { aid,jid:annualJobId,jitemid:S.jitemid }
       : { aid });
   } else {
-    alert('⚠️ ยอดไม่ตรงกับระบบ — ส่ง Supervisor ตรวจสอบแล้ว');
+    await showCountResultPopup({
+      kind:'danger',
+      title:'ยอดยังไม่ตรง',
+      message:'ส่งตรวจสอบแล้ว',
+    });
     if (await openNextCountFromCachedTasks(aid,asgn,newStatus,annualJobId)) return;
     returnToMyTasksAndOpenNextCount(aid,asgn,annualJobId);
   }
@@ -40029,7 +40307,7 @@ async function applyThemeSet(themeSetId) {
       activeThemeSetId:set.id,
       updatedAt:new Date().toISOString(),
       updatedBy:prof?.name || '',
-      syncVersion:1,
+      syncVersion:2,
     });
     const result = await invokeAdminSettings('branding_save',{ settings });
     const syncedSettings = normalizeBrandingSettings({
@@ -40159,7 +40437,7 @@ async function deleteThemeSet(themeSetId) {
         activeThemeSetId:'',
         updatedAt:new Date().toISOString(),
         updatedBy:prof?.name || '',
-        syncVersion:1,
+        syncVersion:2,
       });
       await invokeAdminSettings('branding_save',{ settings });
       const centralResult = await persistCentralBrandingSettings(settings);
@@ -40707,7 +40985,7 @@ async function saveBrandingSettings() {
       activeThemeSetId:S._activeThemeSetId || '',
       updatedAt:new Date().toISOString(),
       updatedBy:prof?.name || '',
-      syncVersion:1,
+      syncVersion:2,
     });
     if (button) { button.disabled = true; button.textContent = 'กำลังบันทึก...'; }
     if (alertBox) alertBox.innerHTML = `<div class="alert alert-blue">⏳ กำลังบันทึกและซิงก์ชื่อ ธีม โลโก้ และขนาดตัวอักษร...</div>`;
@@ -40718,7 +40996,7 @@ async function saveBrandingSettings() {
       activeThemeSetId:settings.activeThemeSetId,
       updatedAt:settings.updatedAt,
       updatedBy:settings.updatedBy,
-      syncVersion:1,
+      syncVersion:2,
     });
     const centralResult = await persistCentralBrandingSettings(syncedSettings);
     applyBrandingSettings(centralResult.settings);
