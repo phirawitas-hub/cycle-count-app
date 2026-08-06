@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cycle-count-pwa-v1';
+const CACHE_NAME = 'cycle-count-pwa-v2';
 
 const APP_SHELL = [
   './',
