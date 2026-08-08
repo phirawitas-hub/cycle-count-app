@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v222 - PWA Ready</title>
+<title>Cycle Count v223 - PWA Ready</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -17404,9 +17404,53 @@ body.tablet-ui .count-touch-toolbar .count-screen-lock-button { display:inline-f
 .sidebar-menu::-webkit-scrollbar-thumb {
   background:var(--theme-sidebar-scrollbar) !important;
 }
+
+.my-task-date-filter {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:18px;
+  padding:12px;
+  border:1px solid var(--theme-border-color);
+  border-radius:16px;
+  background:color-mix(in srgb,var(--theme-card-bg) 82%,var(--theme-primary-color) 6%);
+}
+.my-task-date-label { font-size:12px;font-weight:800;color:var(--text-muted);margin-right:auto; }
+.my-task-date-buttons { display:flex;gap:7px; }
+.my-task-date-filter input[type="date"] { width:auto;min-width:150px;padding:8px 10px;font-weight:700; }
+
+.expired-work-queue {
+  border:1px solid color-mix(in srgb,#d27b16 48%,var(--theme-border-color));
+  border-radius:24px;
+  background:color-mix(in srgb,#fff4df 76%,var(--theme-card-bg));
+  box-shadow:var(--shadow-soft);
+  overflow:hidden;
+}
+.expired-work-queue[hidden] { display:none !important; }
+.expired-work-head { display:flex;align-items:center;gap:12px;padding:18px 20px;border-bottom:1px solid color-mix(in srgb,#d27b16 26%,transparent); }
+.expired-work-head-copy { flex:1;min-width:0; }
+.expired-work-head-copy strong { display:block;font-size:17px;color:#8b4a00; }
+.expired-work-head-copy span { display:block;margin-top:3px;font-size:12px;font-weight:700;color:var(--text-muted); }
+.expired-work-badge { min-width:38px;padding:7px 10px;border-radius:999px;background:#d27b16;color:#fff;text-align:center;font-weight:900; }
+.expired-work-toolbar { display:grid;grid-template-columns:minmax(190px,1fr) auto auto;gap:10px;padding:14px 20px;align-items:center; }
+.expired-work-toolbar select { min-width:0; }
+.expired-work-list { padding:0 20px 18px;display:grid;gap:8px; }
+.expired-work-row { display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:13px 14px;border:1px solid color-mix(in srgb,#d27b16 22%,var(--theme-border-color));border-radius:15px;background:var(--theme-card-bg); }
+.expired-work-code { display:block;font-weight:900;font-family:'Fredoka','Sarabun',sans-serif; }
+.expired-work-meta { display:block;margin-top:3px;font-size:11px;font-weight:700;color:var(--text-muted); }
+.expired-work-status { font-size:11px;font-weight:900;color:#a35400;white-space:nowrap; }
+.annual-job-row.is-expired { background:color-mix(in srgb,#fff4df 75%,var(--theme-card-bg)); }
+@media (max-width:720px) {
+  .my-task-date-filter input[type="date"] { width:100%; }
+  .expired-work-toolbar { grid-template-columns:1fr 1fr; }
+  .expired-work-toolbar select { grid-column:1/-1; }
+  .expired-work-row { grid-template-columns:auto minmax(0,1fr); }
+  .expired-work-status { grid-column:2;white-space:normal; }
+}
 </style>
 </head>
-<body data-build="v222-pwa-ready">
+<body data-build="v223-pwa-ready">
 <div id="app"></div>
 
 <script>
@@ -17484,7 +17528,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v222-pwa-ready';
+window.__CYCLE_COUNT_BUILD__ = 'v223-pwa-ready';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -20279,7 +20323,7 @@ function applyBrandingSettings(settings, persistLocal = true) {
     const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
     root.setProperty(`--theme-${cssKey}`, uiBranding[key]);
   });
-  document.title = `${uiBranding.systemName} v222`;
+  document.title = `${uiBranding.systemName} v223`;
   if (persistLocal) {
     try { localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(uiBranding)); } catch (_) {}
   }
@@ -21830,8 +21874,8 @@ const BACKUP_SHEET_SPECS = [
   { sheet:'Locations', table:'locations', scope:'master', columns:['id','code','zone','area','row_no','level','type','category'], restore:true },
   { sheet:'Data_Info', table:'data_info_items', scope:'reference', columns:['item_code','description','uom','barcode','attributes','source_file','source_sheet','updated_by','updated_at'], restore:true },
   { sheet:'Items', table:'items', scope:'master', columns:['id','code','description','inventory_type','category','uom'], restore:true },
-  { sheet:'Assignments', table:'assignments', scope:'session', columns:['id','session_id','location_id','assigned_to','status','created_at','counter_r2_id','counter_r3_id'], restore:true },
-  { sheet:'Annual_Jobs', table:'annual_count_jobs', scope:'session', columns:['id','session_id','job_no','job_code','assigned_to','status','assigned_at','created_by','created_at'], restore:true },
+  { sheet:'Assignments', table:'assignments', scope:'session', columns:['id','session_id','location_id','assigned_to','status','created_at','assigned_at','expired_at','expired_from','counter_r2_id','counter_r3_id'], restore:true },
+  { sheet:'Annual_Jobs', table:'annual_count_jobs', scope:'session', columns:['id','session_id','job_no','job_code','assigned_to','status','assigned_at','expired_at','expired_from','created_by','created_at'], restore:true },
   { sheet:'Annual_Job_Items', table:'annual_count_job_items', scope:'session', columns:['id','job_id','session_id','stock_snapshot_id','location_id','item_id','sort_order','created_at'], restore:true },
   { sheet:'Stock', table:'stock_snapshot', scope:'session', columns:['id','session_id','location_id','item_id','onhand_qty','created_at','al_qty'], restore:true },
   { sheet:'Stock_Detail', table:'stock_snapshot_detail', scope:'session', columns:['id','session_id','location_id','item_id','license_plate','lot','inventory_status','qty','created_at','uom'], restore:true },
@@ -23872,6 +23916,63 @@ async function doLogout() {
 
 const MY_TASK_FILTER_STORAGE_KEY = 'cycle_count_my_task_filters_v2';
 const MY_TASK_FILTER_FIELDS = ['_mtJob','_mtSession','_mtStatus','_mtZone','_mtRow','_mtPos','_mtLvl'];
+const MY_TASK_DATE_MODES = new Set(['today','date','all']);
+
+function bangkokDateKey(value=new Date()) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const parts = new Intl.DateTimeFormat('en-US',{
+    timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit',
+  }).formatToParts(date);
+  const map = Object.fromEntries(parts.map(part => [part.type,part.value]));
+  return `${map.year}-${map.month}-${map.day}`;
+}
+
+function currentMyTaskDateMode() {
+  return MY_TASK_DATE_MODES.has(S._mtDateMode) ? S._mtDateMode : 'today';
+}
+
+function currentMyTaskDateValue() {
+  const today = bangkokDateKey();
+  const value = /^\d{4}-\d{2}-\d{2}$/.test(String(S._mtDateValue || ''))
+    ? String(S._mtDateValue)
+    : today;
+  return value;
+}
+
+function myTaskWorkDate(row) {
+  return bangkokDateKey(row?.assigned_at || row?.created_at || '');
+}
+
+function myTaskMatchesDate(row) {
+  const mode = currentMyTaskDateMode();
+  if (mode === 'all') return true;
+  const rowDate = myTaskWorkDate(row);
+  if (!rowDate) return false;
+  return rowDate === (mode === 'date' ? currentMyTaskDateValue() : bangkokDateKey());
+}
+
+function setMyTaskDateFilter(mode,dateValue='') {
+  S._mtDateMode = MY_TASK_DATE_MODES.has(mode) ? mode : 'today';
+  if (S._mtDateMode === 'date') S._mtDateValue = dateValue || currentMyTaskDateValue();
+  loadCTasks();
+}
+
+function myTaskDateFilterHtml() {
+  const mode = currentMyTaskDateMode();
+  const dateValue = currentMyTaskDateValue();
+  return `<div class="my-task-date-filter" aria-label="กรองงานตามวันที่จ่ายงาน">
+    <span class="my-task-date-label">วันที่จ่ายงาน</span>
+    <div class="my-task-date-buttons">
+      <button type="button" class="btn btn-sm ${mode === 'today' ? 'btn-blue' : 'btn-ghost'}"
+        onclick="setMyTaskDateFilter('today')">วันนี้</button>
+      <button type="button" class="btn btn-sm ${mode === 'all' ? 'btn-blue' : 'btn-ghost'}"
+        onclick="setMyTaskDateFilter('all')">ทุกวัน</button>
+    </div>
+    <input type="date" value="${dateValue}" aria-label="เลือกวันที่จ่ายงาน"
+      onchange="setMyTaskDateFilter('date',this.value)">
+  </div>`;
+}
 
 function readMyTaskFilters() {
   try {
@@ -23913,12 +24014,12 @@ async function loadCTasks() {
     : await Promise.all([
         fetchPagedSupabaseRows(
           'assignments',
-          'id,status,location_id,session_id,locations(code,zone,area,row_no,level),count_sessions(name,status)',
+          'id,status,location_id,session_id,assigned_at,created_at,locations(code,zone,area,row_no,level),count_sessions(name,status)',
           query => query.eq('assigned_to',me.id).order('created_at'),
         ),
         fetchPagedSupabaseRows(
           'annual_count_jobs',
-          'id,job_no,job_code,status,session_id,count_sessions(name,status)',
+          'id,job_no,job_code,status,session_id,assigned_at,created_at,count_sessions(name,status)',
           query => query.eq('assigned_to',me.id).order('job_no'),
         ),
       ]);
@@ -23929,7 +24030,27 @@ async function loadCTasks() {
   }
 
   let asgns = normalResult.data || [];
-  const annualJobs = annualResult.data || [];
+  let annualJobs = annualResult.data || [];
+  if (workspace) {
+    const [assignmentDatesResult,annualDatesResult] = await Promise.all([
+      fetchPagedSupabaseRows(
+        'assignments','id,assigned_at,created_at',
+        query => query.eq('assigned_to',me.id).order('created_at'),
+      ),
+      fetchPagedSupabaseRows(
+        'annual_count_jobs','id,job_no,assigned_at,created_at',
+        query => query.eq('assigned_to',me.id).order('job_no'),
+      ),
+    ]);
+    if (!assignmentDatesResult.error) {
+      const datesById = new Map((assignmentDatesResult.data || []).map(row => [row.id,row]));
+      asgns = asgns.map(row => ({ ...row,...(datesById.get(row.id) || {}) }));
+    }
+    if (!annualDatesResult.error) {
+      const datesById = new Map((annualDatesResult.data || []).map(row => [row.id,row]));
+      annualJobs = annualJobs.map(row => ({ ...row,...(datesById.get(row.id) || {}) }));
+    }
+  }
   const annualItemsResult = workspace
     ? { data:workspace.annual_items || [],error:null }
     : annualJobs.length
@@ -24038,7 +24159,9 @@ async function loadCTasks() {
     });
   }
 
-  if (!asgns.length && !annualJobs.length) {
+  const allAssignments = asgns;
+  const allAnnualJobs = annualJobs;
+  if (!allAssignments.length && !allAnnualJobs.length) {
     cnt().innerHTML = `<div class="card" style="text-align:center;padding:60px 40px">
       <div style="font-size:60px">📋</div>
       <div style="margin-top:20px;color:var(--text-muted);font-weight:600;font-size:16px">ยังไม่มีงานที่ได้รับมอบหมาย</div>
@@ -24047,6 +24170,10 @@ async function loadCTasks() {
     </div>`; return;
   }
 
+  asgns = allAssignments.filter(myTaskMatchesDate);
+  annualJobs = allAnnualJobs.filter(myTaskMatchesDate);
+  window._myTasksAllDates = allAssignments;
+  window._myAnnualJobsAllDates = allAnnualJobs;
   window._myTasks = asgns;
   window._myAnnualJobs = annualJobs;
   window._myAnnualJobItems = annualItemsResult.data || [];
@@ -24099,7 +24226,10 @@ async function loadCTasks() {
         </div>
       </div>
     </details>
-    <div class="card card-flush" id="mt-list" data-location-sort-group></div>` : '';
+    <div class="card card-flush" id="mt-list" data-location-sort-group></div>` : `
+    <div class="card" style="padding:42px 24px;text-align:center;color:var(--text-muted);font-weight:700">
+      ไม่มีงานที่ได้รับมอบหมายในวันที่เลือก
+    </div>`;
 
   cnt().innerHTML = `
     <div class="card">
@@ -24108,6 +24238,7 @@ async function loadCTasks() {
         <span style="font-size:18px;font-weight:800;color:var(--primary-blue);font-family:'Fredoka'">${done} / ${total}</span>
       </div>
       <div class="prog"><div class="prog-fill" style="width:${pct}%"></div></div>
+      ${myTaskDateFilterHtml()}
       ${(asgns.length || annualJobs.length) ? `<button class="btn btn-blue" style="margin-top:24px;width:100%" onclick="openScanner()">📷 สแกน Location</button>` : ''}
       ${(asgns.length || annualJobs.length) ? hardwareLaserCaptureHtml(
         'task_hardware_scan',
@@ -24164,7 +24295,7 @@ async function ensureAnnualJobAssignments(jobIds,userId) {
   const locationIds = [...new Set([...wanted.values()].map(row => row.location_id))];
   const existingResult = await fetchSupabaseRowsByValues(
     'assignments',
-    'id,session_id,location_id,assigned_to,status',
+    'id,session_id,location_id,assigned_to,status,expired_at',
     'location_id',
     locationIds,
   );
@@ -24175,13 +24306,30 @@ async function ensureAnnualJobAssignments(jobIds,userId) {
   const missingRows = [...wanted.entries()]
     .filter(([key]) => !existingKeys.has(key))
     .map(([,row]) => row);
+  const rowsToReactivate = (existingResult.data || []).filter(row => {
+    const wantedRow = wanted.get(annualAssignmentKey(row.session_id,row.location_id));
+    return Boolean(
+      wantedRow
+      && userId
+      && row.assigned_to !== userId
+      && !assignmentCountingFinished(row.status)
+    );
+  });
 
   const batchSize = 200;
+  for (let start=0; start<rowsToReactivate.length; start+=batchSize) {
+    const ids = rowsToReactivate.slice(start,start+batchSize).map(row => row.id);
+    const { error } = await sb.from('assignments').update({
+      assigned_to:userId,
+      assigned_at:new Date().toISOString(),
+    }).in('id',ids);
+    if (error) throw error;
+  }
   for (let start=0; start<missingRows.length; start+=batchSize) {
     const { error } = await sb.from('assignments').insert(missingRows.slice(start,start+batchSize));
     if (error) throw error;
   }
-  if (!missingRows.length) return existingResult.data || [];
+  if (!missingRows.length && !rowsToReactivate.length) return existingResult.data || [];
 
   const refreshedResult = await fetchSupabaseRowsByValues(
     'assignments',
@@ -33287,7 +33435,7 @@ async function loadAssignmentWorkspaceData(sessionId) {
     ),
     fetchPagedSupabaseRows(
       'assignments',
-      'id,session_id,location_id,assigned_to,status,created_at,profiles!assigned_to(name)',
+      'id,session_id,location_id,assigned_to,status,created_at,assigned_at,expired_at,expired_from,profiles!assigned_to(name),expired_profiles:profiles!expired_from(name)',
       query => query.eq('session_id',sessionId).order('id'),
     ),
   ]).then(async ([snapshotResult,assignmentResult]) => {
@@ -33365,6 +33513,7 @@ function annualAssignmentWorkspaceHtml(userOptionsHtml) {
         <select id="annual-job-filter" onchange="renderAnnualJobList()" aria-label="กรองสถานะ JOB">
           <option value="all">JOB ทั้งหมด</option>
           <option value="unassigned">ยังไม่จ่ายงาน</option>
+          <option value="expired">งานหมดเวลา รอจ่ายใหม่</option>
           <option value="assigned">จ่ายงานแล้ว</option>
           <option value="pending">รอเริ่มงาน</option>
           <option value="in_progress">กำลังนับ</option>
@@ -33440,6 +33589,7 @@ async function renderManageAssign(container) {
   const userOpts = sortedUsers.length
     ? sortedUsers.map(u=>`<option value="${u.id}">${escapeWmsText(u.name)}</option>`).join('')
     : '<option value="">ไม่มี User</option>';
+  window._assignmentProfiles = sortedUsers;
   invalidateAssignmentWorkspaceCache();
 
   container.innerHTML = `
@@ -33618,6 +33768,23 @@ async function renderManageAssign(container) {
             <button class="btn btn-blue" id="assign-session-next" type="button" disabled onclick="focusAssignmentStep('assign-step-round1')">ต่อไป: จ่ายรอบแรก</button>
           </div>
         </div>
+      </section>
+
+      <section class="expired-work-queue" id="expired-work-queue" hidden aria-live="polite">
+        <div class="expired-work-head">
+          <div class="expired-work-head-copy">
+            <strong>งานหมดเวลา รอจ่ายใหม่</strong>
+            <span>งานค้างจากวันก่อนถูกดึงกลับเวลา 00:00 · Count ที่บันทึกไว้ยังอยู่ครบ</span>
+          </div>
+          <span class="expired-work-badge" id="expired-work-count">0</span>
+        </div>
+        <div class="expired-work-toolbar">
+          <select id="expired-work-user" aria-label="เลือกผู้รับงานใหม่">${userOpts}</select>
+          <button class="btn btn-ghost btn-sm" type="button" onclick="selectAllExpiredAssignments()">เลือกทั้งหมด</button>
+          <button class="btn btn-amber btn-sm" id="expired-work-reassign-btn" type="button"
+            onclick="reassignExpiredAssignments()" disabled>จ่ายงานใหม่</button>
+        </div>
+        <div class="expired-work-list" id="expired-work-list"></div>
       </section>
 
       <div id="aa"></div>
@@ -33890,6 +34057,8 @@ async function handleAssignSessionChange() {
   updateAssignSessionHeading();
   updateAssignWorkspaceStats(0,0,0);
   window._bulkAssignments = [];
+  window._expiredAssignments = [];
+  renderExpiredAssignmentQueue();
   syncNormalRoundOnePrintButton();
   const alertBox = Q('aa');
   if (alertBox) alertBox.innerHTML = '';
@@ -33943,7 +34112,7 @@ async function loadAnnualJobWorkspace() {
   const [jobsResult,itemsResult,snapshotResult] = await Promise.all([
     fetchPagedSupabaseRows(
       'annual_count_jobs',
-      'id,session_id,job_no,job_code,assigned_to,status,assigned_at,created_at,profiles!assigned_to(name)',
+      'id,session_id,job_no,job_code,assigned_to,status,assigned_at,expired_at,expired_from,created_at,profiles!assigned_to(name),expired_profiles:profiles!expired_from(name)',
       query => query.eq('session_id',config.sessionId).order('job_no'),
     ),
     fetchPagedSupabaseRows(
@@ -33980,7 +34149,8 @@ function renderAnnualJobList() {
   );
   const filter = Q('annual-job-filter')?.value || 'all';
   const jobs = (_annualWorkspaceJobs || []).filter(job => {
-    if (filter === 'unassigned') return !job.assigned_to;
+    if (filter === 'unassigned') return !job.assigned_to && !job.expired_at;
+    if (filter === 'expired') return !job.assigned_to && Boolean(job.expired_at);
     if (filter === 'assigned') return Boolean(job.assigned_to);
     if (['pending','in_progress','completed'].includes(filter)) {
       return Boolean(job.assigned_to) && job.status === filter;
@@ -33998,16 +34168,23 @@ function renderAnnualJobList() {
     completed:{ cls:'tag-green',label:'เสร็จแล้ว' },
   };
   list.innerHTML = jobs.map(job => {
-    const status = statusInfo[job.status] || statusInfo.pending;
+    const expired = !job.assigned_to && Boolean(job.expired_at);
+    const status = expired
+      ? { cls:'tag-amber',label:'หมดเวลา · รอจ่ายใหม่' }
+      : (statusInfo[job.status] || statusInfo.pending);
     const checked = selectedIds.has(job.id) ? 'checked' : '';
-    return `<div class="annual-job-row">
+    return `<div class="annual-job-row ${expired ? 'is-expired' : ''}">
       <input class="annual-job-checkbox" type="checkbox" value="${job.id}" ${checked}
         onchange="syncAnnualJobSelection()" aria-label="เลือก ${escapeWmsText(job.job_code)}">
       <div>
         <div class="annual-job-code">${escapeWmsText(job.job_code)}</div>
         <div class="annual-job-meta">${Number(_annualWorkspaceItemCounts[job.id] || 0)} รายการ Location + ITEM</div>
       </div>
-      <div class="annual-job-user">${job.profiles?.name ? `👤 ${escapeWmsText(job.profiles.name)}` : '— ยังไม่จ่ายงาน —'}</div>
+      <div class="annual-job-user">${job.profiles?.name
+        ? `👤 ${escapeWmsText(job.profiles.name)}`
+        : expired
+          ? `⏰ ผู้รับเดิม: ${escapeWmsText(job.expired_profiles?.name || 'ไม่ระบุ')}`
+          : '— ยังไม่จ่ายงาน —'}</div>
       <span class="tag ${status.cls}">${status.label}</span>
       <button class="btn btn-ghost btn-sm" type="button" onclick='printAnnualJobForms(["${job.id}"])'>🖨️ พิมพ์</button>
     </div>`;
@@ -34032,7 +34209,7 @@ function syncAnnualJobSelection() {
 function selectAnnualJobs(mode) {
   document.querySelectorAll('.annual-job-checkbox').forEach(input => {
     const job = _annualWorkspaceJobs.find(row => row.id === input.value);
-    input.checked = mode === 'all' || (mode === 'unassigned' && !job?.assigned_to);
+    input.checked = mode === 'all' || (mode === 'unassigned' && !job?.assigned_to && !job?.expired_at);
   });
   syncAnnualJobSelection();
 }
@@ -34838,7 +35015,10 @@ async function doR23Assign() {
   for (let i = 0; i < asgns.length; i += BATCH) {
     const chunk = asgns.slice(i, i+BATCH);
     for (const a of chunk) {
-      await sb.from('assignments').update({ assigned_to: uid }).eq('id', a.id);
+      await sb.from('assignments').update({
+        assigned_to:uid,
+        assigned_at:new Date().toISOString(),
+      }).eq('id', a.id);
       reassignmentAuditRows.push(buildAuditRow(
         a.session_id,
         a.location_id,
@@ -34886,8 +35066,10 @@ function getNormalLocationRows() {
 
 function updateNormalAssignmentStatsFromRows() {
   const rows = getNormalLocationRows();
-  const assigned = rows.filter(row => Boolean(row.assignment)).length;
-  updateAssignWorkspaceStats(rows.length,assigned,Math.max(0,rows.length-assigned));
+  const assigned = rows.filter(row => Boolean(row.assignment?.assigned_to)).length;
+  const expired = rows.filter(row => isExpiredWaitingAssignment(row.assignment)).length;
+  const neverAssigned = rows.filter(row => !row.assignment).length;
+  updateAssignWorkspaceStats(rows.length,assigned,neverAssigned + expired);
 }
 
 function handleR23FilterChange(key) {
@@ -34896,7 +35078,7 @@ function handleR23FilterChange(key) {
 
 function normalFreeSearchMatches(entry, search) {
   if (!search) return true;
-  const status = entry.assignment?.status || 'unassigned';
+  const status = normalAssignmentDisplayStatus(entry.assignment);
   const location = entry.location || {};
   const searchable = [
     location.code,location.zone,location.area,location.row_no,location.level,
@@ -34919,7 +35101,7 @@ function refreshNormalFreeDependentFilters() {
   const search = String(Q('normal-free-search')?.value || '').trim().toLowerCase();
   const facetRows = (excludeKey='') => sourceRows.filter(entry => {
     const location = entry.location || {};
-    const status = entry.assignment?.status || 'unassigned';
+    const status = normalAssignmentDisplayStatus(entry.assignment);
     if (!normalFreeSearchMatches(entry,search)) return false;
     if (excludeKey !== 'zone' && !myTaskFilterMatches(_normalFreeFilters.zone,location.zone)) return false;
     if (excludeKey !== 'row' && !myTaskFilterMatches(_normalFreeFilters.row,String(location.row_no ?? ''))) return false;
@@ -34954,13 +35136,17 @@ function refreshNormalFreeDependentFilters() {
     _normalFreeFilters.level,
     values => handleNormalFreeMultiFilterChange('level',values),
   );
-  const statusOrder = ['unassigned','pending','in_progress','round1_done','round2_done','round3_done','completed','approved'];
-  const availableStatuses = new Set(facetRows('status').map(entry => entry.assignment?.status || 'unassigned'));
+  const statusOrder = ['unassigned','expired','pending','in_progress','round1_done','round2_done','round3_done','completed','approved'];
+  const availableStatuses = new Set(facetRows('status').map(entry => normalAssignmentDisplayStatus(entry.assignment)));
   _normalFreeFilters.status = setMultiFilterOptions(
     'normal-free-status',
     statusOrder.filter(status => availableStatuses.has(status)).map(status => ({
       value:status,
-      label:status === 'unassigned' ? uiCopy('ยังไม่ได้มอบหมายงาน','Not Assigned') : translateUiText(tagInfo(status).lbl),
+      label:status === 'unassigned'
+        ? uiCopy('ยังไม่ได้มอบหมายงาน','Not Assigned')
+        : status === 'expired'
+          ? uiCopy('งานหมดเวลา รอจ่ายใหม่','Expired · Waiting for reassignment')
+          : translateUiText(tagInfo(status).lbl),
     })),
     _normalFreeFilters.status,
     values => handleNormalFreeMultiFilterChange('status',values),
@@ -34969,7 +35155,13 @@ function refreshNormalFreeDependentFilters() {
 }
 
 function isNormalFreeReassignableAssignment(assignment) {
-  return Boolean(assignment && ['pending','in_progress'].includes(assignment.status));
+  return Boolean(assignment && !assignment.expired_at && ['pending','in_progress'].includes(assignment.status));
+}
+
+function normalAssignmentDisplayStatus(assignment) {
+  if (!assignment) return 'unassigned';
+  if (isExpiredWaitingAssignment(assignment)) return 'expired';
+  return assignment.status || 'pending';
 }
 
 function setNormalFreeReassignMode(forceValue) {
@@ -34991,7 +35183,7 @@ function renderNormalFreeLocationList() {
     rows.filter(row => !row.assignment).map(row => row.location.id)
   );
   const assignedIds = new Set(
-    rows.filter(row => row.assignment).map(row => row.location.id)
+    rows.filter(row => row.assignment && !isExpiredWaitingAssignment(row.assignment)).map(row => row.location.id)
   );
   const reassignableIds = new Set(
     rows.filter(row => isNormalFreeReassignableAssignment(row.assignment)).map(row => row.location.id)
@@ -35012,7 +35204,7 @@ function renderNormalFreeLocationList() {
   const search = String(Q('normal-free-search')?.value || '').trim().toLowerCase();
   const filtered = rows.filter(entry => {
     const location = entry.location;
-    const status = entry.assignment?.status || 'unassigned';
+    const status = normalAssignmentDisplayStatus(entry.assignment);
     if (!myTaskFilterMatches(zone,location.zone)) return false;
     if (!myTaskFilterMatches(row,String(location.row_no ?? ''))) return false;
     if (!myTaskFilterMatches(level,String(location.level ?? ''))) return false;
@@ -35031,25 +35223,32 @@ function renderNormalFreeLocationList() {
   list.innerHTML = displayed.map(entry => {
     const location = entry.location;
     const assignment = entry.assignment;
+    const expired = isExpiredWaitingAssignment(assignment);
     const available = !assignment;
     const reassignable = isNormalFreeReassignableAssignment(assignment);
-    const selectionMode = _normalFreeReassignMode
+    const selectionMode = expired
+      ? 'blocked'
+      : _normalFreeReassignMode
       ? 'reassign'
       : (available ? 'assign' : 'print');
     const selectedSet = selectionMode === 'reassign'
       ? _normalFreeSelectedReassignLocationIds
       : available ? _normalFreeSelectedLocationIds : _normalFreeSelectedPrintLocationIds;
-    const checked = selectedSet.has(location.id) ? 'checked' : '';
+    const checked = !expired && selectedSet.has(location.id) ? 'checked' : '';
     const detail = [
       location.zone,location.area,
       location.row_no ? `Row ${location.row_no}` : '',
       location.level ? `Lv.${location.level}` : '',
     ].filter(Boolean).join(' · ');
-    const status = available
+    const status = expired
+      ? { cls:'tag-amber',lbl:'งานหมดเวลา รอจ่ายใหม่' }
+      : available
       ? { cls:'tag-gray',lbl:'ยังไม่จ่ายงาน' }
       : tagInfo(assignment.status);
-    const checkboxDisabled = _normalFreeReassignMode && !reassignable ? 'disabled' : '';
-    const assignmentMeta = _normalFreeReassignMode
+    const checkboxDisabled = expired || (_normalFreeReassignMode && !reassignable) ? 'disabled' : '';
+    const assignmentMeta = expired
+      ? `ผู้รับเดิม: ${assignment.expired_profiles?.name || 'ไม่ระบุ'} · จ่ายใหม่ในกล่องงานหมดเวลา`
+      : _normalFreeReassignMode
       ? (reassignable
           ? `User เดิม: ${assignment.profiles?.name || 'ไม่ระบุ'} · เลือกเพื่อจ่ายงานซ้ำ`
           : available
@@ -35058,7 +35257,7 @@ function renderNormalFreeLocationList() {
       : available
         ? 'เลือกอิสระ · ไม่จำกัดจำนวน'
         : `User: ${assignment.profiles?.name || 'ไม่ระบุ'} · เลือกเพื่อพิมพ์`;
-    const ariaAction = selectionMode === 'reassign' ? 'เลือกเพื่อจ่ายงานซ้ำ' : available ? 'เลือกเพื่อจ่ายงาน' : 'เลือกเพื่อพิมพ์';
+    const ariaAction = expired ? 'งานหมดเวลา รอจ่ายใหม่' : selectionMode === 'reassign' ? 'เลือกเพื่อจ่ายงานซ้ำ' : available ? 'เลือกเพื่อจ่ายงาน' : 'เลือกเพื่อพิมพ์';
     return `<label class="normal-free-row ${available?'':'is-assigned'}">
       <input class="normal-free-checkbox" type="checkbox" value="${location.id}" ${checked} ${checkboxDisabled}
         aria-label="${ariaAction} ${escapeWmsText(location.code || '')}"
@@ -35094,7 +35293,11 @@ function selectNormalFreeLocations(mode) {
       });
     } else {
       const assignedIds = new Set(getAssignedNormalRoundOneLocationIds());
+      const expiredIds = new Set(getNormalLocationRows()
+        .filter(entry => isExpiredWaitingAssignment(entry.assignment))
+        .map(entry => entry.location.id));
       _normalFreeVisibleLocationIds.forEach(id => {
+        if (expiredIds.has(id)) return;
         if (assignedIds.has(id)) _normalFreeSelectedPrintLocationIds.add(id);
         else _normalFreeSelectedLocationIds.add(id);
       });
@@ -35138,6 +35341,7 @@ function syncNormalFreeSelection() {
 function getAssignedNormalRoundOneLocationIds() {
   return [...new Set(
     (window._bulkAssignments || [])
+      .filter(assignment => !isExpiredWaitingAssignment(assignment))
       .map(assignment => assignment?.location_id)
       .filter(Boolean)
   )];
@@ -35320,6 +35524,7 @@ async function commitSelectedNormalLocations(payload) {
     session_id:sid,
     location_id:locationId,
     assigned_to:userId,
+    assigned_at:new Date().toISOString(),
   }));
   const updatedAssignments = [];
   const batchSize = 200;
@@ -35499,6 +35704,108 @@ async function doBulkAssign() {
   });
 }
 
+function assignmentCountingFinished(status='') {
+  return ['round3_done','completed','approved'].includes(String(status || ''));
+}
+
+function isExpiredWaitingAssignment(assignment) {
+  return Boolean(
+    assignment
+    && !assignment.assigned_to
+    && assignment.expired_at
+    && !assignmentCountingFinished(assignment.status)
+  );
+}
+
+function selectedExpiredAssignmentIds() {
+  return [...document.querySelectorAll('.expired-work-check:checked')]
+    .map(input => input.value)
+    .filter(Boolean);
+}
+
+function syncExpiredAssignmentSelection() {
+  const count = selectedExpiredAssignmentIds().length;
+  const button = Q('expired-work-reassign-btn');
+  if (!button) return;
+  button.disabled = count === 0;
+  button.textContent = count ? `จ่ายงานใหม่ (${count.toLocaleString(uiLocale())})` : 'จ่ายงานใหม่';
+}
+
+function selectAllExpiredAssignments() {
+  const boxes = [...document.querySelectorAll('.expired-work-check')];
+  const shouldSelect = boxes.some(input => !input.checked);
+  boxes.forEach(input => { input.checked = shouldSelect; });
+  syncExpiredAssignmentSelection();
+}
+
+function renderExpiredAssignmentQueue() {
+  const section = Q('expired-work-queue');
+  const list = Q('expired-work-list');
+  const count = Q('expired-work-count');
+  if (!section || !list) return;
+  const assignments = window._expiredAssignments || [];
+  section.hidden = assignments.length === 0;
+  if (count) count.textContent = assignments.length.toLocaleString(uiLocale());
+  if (!assignments.length) {
+    list.innerHTML = '';
+    syncExpiredAssignmentSelection();
+    return;
+  }
+  list.innerHTML = assignments.map(assignment => {
+    const location = assignmentReviewLocation(assignment);
+    const previousUser = assignment.expired_profiles?.name || 'ไม่ระบุผู้รับเดิม';
+    const expiredAt = assignment.expired_at
+      ? new Date(assignment.expired_at).toLocaleString('th-TH',{ timeZone:'Asia/Bangkok',dateStyle:'short',timeStyle:'short' })
+      : '';
+    const detail = [location.zone,location.row_no ? `Row ${location.row_no}` : '',location.level ? `Lv.${location.level}` : '']
+      .filter(Boolean).join(' · ');
+    return `<label class="expired-work-row">
+      <input class="expired-work-check" type="checkbox" value="${assignment.id}"
+        onchange="syncExpiredAssignmentSelection()" aria-label="เลือกจ่ายงาน ${escapeWmsText(location.code || '')} ใหม่">
+      <span>
+        <span class="expired-work-code">${escapeWmsText(location.code || '?')}</span>
+        <span class="expired-work-meta">${escapeWmsText(detail || 'ไม่ระบุรายละเอียด')} · ผู้รับเดิม: ${escapeWmsText(previousUser)}${expiredAt ? ` · คืนงาน ${escapeWmsText(expiredAt)}` : ''}</span>
+      </span>
+      <span class="expired-work-status">หมดเวลา · รอจ่ายใหม่</span>
+    </label>`;
+  }).join('');
+  syncExpiredAssignmentSelection();
+}
+
+async function reassignExpiredAssignments() {
+  const sessionId = Q('as-sess')?.value;
+  const userSelect = Q('expired-work-user');
+  const userId = userSelect?.value;
+  const assignmentIds = selectedExpiredAssignmentIds();
+  if (!sessionId || !userId || !assignmentIds.length) return;
+  const button = Q('expired-work-reassign-btn');
+  if (button) { button.disabled = true;button.textContent = 'กำลังจ่ายงาน...'; }
+  const previousRows = (window._expiredAssignments || []).filter(row => assignmentIds.includes(row.id));
+  const { data,error } = await sb.from('assignments')
+    .update({ assigned_to:userId,assigned_at:new Date().toISOString() })
+    .in('id',assignmentIds)
+    .is('assigned_to',null)
+    .select('id,session_id,location_id,assigned_to,status');
+  if (error || (data || []).length !== assignmentIds.length) {
+    const message = error?.message || 'มีบางงานถูกจ่ายไปแล้ว กรุณาโหลดรายการใหม่';
+    const alertBox = Q('aa');
+    if (alertBox) alertBox.innerHTML = `<div class="alert alert-red">❌ ${escapeWmsText(message)}</div>`;
+    if (button) button.disabled = false;
+    return;
+  }
+  const userName = userSelect?.options?.[userSelect.selectedIndex]?.textContent || 'User';
+  await writeAuditRows(previousRows.map(row => buildAuditRow(
+    row.session_id,row.location_id,null,'expired_reassign',
+    row.expired_profiles?.name || 'งานหมดเวลา',userName,row.id,
+  )));
+  invalidateAssignmentWorkspaceCache(sessionId);
+  await Promise.all([refreshLocs(),refreshBulkFilters()]);
+  showActionSuccess(`จ่ายงานหมดเวลาใหม่ ${assignmentIds.length.toLocaleString(uiLocale())} Location แล้ว`,{
+    title:'จ่ายงานใหม่สำเร็จ',
+    facts:[{ label:'ผู้รับงาน',value:userName }],
+  });
+}
+
 async function refreshLocs() {
   const sid = Q('as-sess')?.value; if (!sid) return;
   let snaps = [], asgns = [];
@@ -35531,6 +35838,8 @@ async function refreshLocs() {
       ...assignment,
       _location:{ ...(locationById.get(assignment.location_id) || {}),...(assignment.locations || {}) },
     }));
+  const expiredAssignments = sortedAssignments.filter(isExpiredWaitingAssignment);
+  const activeAssignments = sortedAssignments.filter(assignment => !isExpiredWaitingAssignment(assignment));
   const sel = Q('as-loc');
   if (sel) {
     sel.setAttribute('data-location-sort-select','');
@@ -35540,8 +35849,11 @@ async function refreshLocs() {
   }
 
   const al = Q('al'); if (!al) return;
-  window._printableAssignments = sortedAssignments;
-  updateAssignWorkspaceStats(locs.length,Math.max(0,locs.length-free.length),free.length);
+  window._expiredAssignments = expiredAssignments;
+  window._printableAssignments = activeAssignments;
+  const activeAssignedCount = activeAssignments.filter(assignment => Boolean(assignment.assigned_to)).length;
+  updateAssignWorkspaceStats(locs.length,activeAssignedCount,free.length + expiredAssignments.length);
+  renderExpiredAssignmentQueue();
   const missingCount = window._assignmentMissingLocationIds?.length || 0;
   if (missingCount) {
     al.innerHTML = `<div class="alert alert-amber">พบ ${missingCount} Location ใน Snapshot ที่ไม่มีข้อมูลใน Location Master กรุณาตรวจสอบข้อมูลนำเข้า</div>`;
@@ -41545,7 +41857,7 @@ window.addEventListener('DOMContentLoaded', () => {
   boot();
 });
 
-// v222 — PWA: register the repository-root service worker on GitHub Pages.
+// v223 — PWA: register the repository-root service worker on GitHub Pages.
 if ('serviceWorker' in navigator && ['https:','http:'].includes(location.protocol)) {
   window.addEventListener('load', async () => {
     try {
