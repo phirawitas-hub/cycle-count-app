@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v240 - PWA Ready</title>
+<title>Cycle Count v241 - PWA Ready</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -17743,7 +17743,7 @@ body.tablet-ui .count-touch-toolbar .count-screen-lock-button { display:inline-f
 
 html,
 body,
-body[data-build="v240-pwa-ready"] *,
+body[data-build="v241-pwa-ready"] *,
 body *,
 #app,
 #app * {
@@ -18491,9 +18491,60 @@ body.expired-session-modal-open { overflow:hidden; }
   #app .variance-result-cell { grid-column:1 / -1; }
   #app .variance-review-description { white-space:normal; }
 }
+/* v241 · clean, high-contrast warehouse layout editor */
+body[data-build="v241-pwa-ready"] :is(.warehouse-editor-canvas-shell,.warehouse-editor-canvas-scroll,.warehouse-editor-canvas){
+  background:#fff !important;
+  background-color:#fff !important;
+  background-image:none !important;
+}
+body[data-build="v241-pwa-ready"] .warehouse-editor-canvas-scroll{
+  border:1px solid #d7e2e3 !important;
+}
+body[data-build="v241-pwa-ready"] .warehouse-editor-canvas{
+  border-color:#cbdadb !important;
+  box-shadow:inset 0 0 0 1px #fff;
+}
+body[data-build="v241-pwa-ready"] .warehouse-editor-element.rack>strong{
+  min-height:20px;
+  padding:4px 8px !important;
+  gap:7px;
+  background:#006d77 !important;
+  color:#fff !important;
+  font:900 12px/1 'Sarabun',sans-serif !important;
+  box-shadow:0 2px 5px rgba(0,55,60,.24);
+}
+body[data-build="v241-pwa-ready"] .warehouse-editor-element.rack>strong small{
+  padding:2px 5px;
+  border-radius:5px;
+  background:#004f57;
+  color:#fff !important;
+  opacity:1 !important;
+  font:900 9px/1 'Sarabun',sans-serif !important;
+}
+body[data-build="v241-pwa-ready"] :is(.warehouse-editor-rack-corner,.warehouse-editor-rack-level){
+  background:#123f5c !important;
+  color:#fff !important;
+  font-size:10px !important;
+}
+body[data-build="v241-pwa-ready"] .warehouse-editor-rack-bay{
+  background:#f8eded !important;
+  color:#172f32 !important;
+  font-size:9px !important;
+}
+body[data-build="v241-pwa-ready"] .warehouse-editor-rack-cell{
+  color:#173c40 !important;
+}
+body[data-build="v241-pwa-ready"] .warehouse-no-level-note{
+  padding:10px 12px;
+  border:1px solid #bed7d8;
+  border-radius:10px;
+  background:#eef8f8;
+  color:#174b50 !important;
+  font-weight:800;
+}
 </style>
 </head>
-<body data-build="v240-pwa-ready">
+<body data-build="v241-pwa-ready">
 <div id="app"></div>
 
 <script>
@@ -18571,7 +18622,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v240-pwa-ready';
+window.__CYCLE_COUNT_BUILD__ = 'v241-pwa-ready';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -21366,7 +21417,7 @@ function applyBrandingSettings(settings, persistLocal = true) {
     const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
     root.setProperty(`--theme-${cssKey}`, uiBranding[key]);
   });
-  document.title = `${uiBranding.systemName} v240`;
+  document.title = `${uiBranding.systemName} v241`;
   if (persistLocal) {
     try { localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(uiBranding)); } catch (_) {}
   }
@@ -21488,6 +21539,7 @@ const DASHBOARD_SESSION_STORAGE_PREFIX = 'cycle_count_dashboard_session_v1';
 const WAREHOUSE_LAYOUT_STORAGE_KEY = 'cycle_count_warehouse_layout_v1';
 const WAREHOUSE_LAYOUT_DRAFT_STORAGE_KEY = 'cycle_count_warehouse_layout_draft_v1';
 const WAREHOUSE_LAYOUT_SETTING_KEY = 'warehouse_layout_v1';
+const WAREHOUSE_NO_LEVEL = '__NO_LEVEL__';
 const PLAN_LOCATION_STORAGE_KEY = 'cycle_count_plan_location_v1';
 const PLAN_LOCATION_SETTING_KEY = 'plan_location_v1';
 let _warehouseLayoutConfig = null;
@@ -30315,8 +30367,43 @@ function warehouseLocationKey(value) {
 function warehouseLocationCodeParts(value) {
   const code = warehouseLocationKey(value);
   const parts = code.split('-').map(part => part.trim()).filter(Boolean);
-  if (parts.length < 4) {
-    return {code,prefix:'',row:parts.at(-3) || '',bayText:parts.at(-2) || '',level:parts.at(-1) || ''};
+  if (parts.length === 2) {
+    return {
+      code,
+      prefix:'',
+      row:parts[0],
+      bayText:parts[1],
+      level:'',
+      hasLevel:false,
+      codePattern:'{row}-{bay}',
+    };
+  }
+  if (parts.length === 3) {
+    const middleIsBay = /^\d+$/.test(parts[1]);
+    const lastLooksLevel = !/^\d+$/.test(parts[2]);
+    if (middleIsBay && lastLooksLevel) {
+      return {
+        code,
+        prefix:'',
+        row:parts[0],
+        bayText:parts[1],
+        level:parts[2],
+        hasLevel:true,
+        codePattern:'{row}-{bay}-{level}',
+      };
+    }
+    return {
+      code,
+      prefix:parts[0],
+      row:parts[1],
+      bayText:parts[2],
+      level:'',
+      hasLevel:false,
+      codePattern:'{prefix}-{row}-{bay}',
+    };
+  }
+  if (parts.length < 2) {
+    return {code,prefix:'',row:parts[0] || '',bayText:'',level:'',hasLevel:false,codePattern:'{row}'};
   }
   return {
     code,
@@ -30324,7 +30411,13 @@ function warehouseLocationCodeParts(value) {
     row:parts.at(-3),
     bayText:parts.at(-2),
     level:parts.at(-1),
+    hasLevel:true,
+    codePattern:'{prefix}-{row}-{bay}-{level}',
   };
+}
+
+function warehouseLayoutLevelLabel(level) {
+  return level === WAREHOUSE_NO_LEVEL ? '—' : String(level || '—');
 }
 
 function normalizeWarehouseLayoutLevels(value) {
@@ -30658,7 +30751,7 @@ async function persistPlanLocationCentral(config) {
   const message = String(error.message || error.details || error.hint || '');
   const rpcMissing = code === 'PGRST202' || code === '42883' || /save_plan_location_setting/i.test(message) && /not find|not exist|schema cache/i.test(message);
   if (rpcMissing) {
-    throw new Error('ยังไม่ได้ติดตั้ง SQL สำหรับ Plan Location กรุณารันไฟล์ Cycle_Count_v240_PLAN_LOCATION_SQL.sql ใน Supabase SQL Editor 1 ครั้ง แล้วลองบันทึกใหม่');
+    throw new Error('ยังไม่ได้ติดตั้ง SQL สำหรับ Plan Location กรุณารันไฟล์ Cycle_Count_v241_LAYOUT_SQL.sql ใน Supabase SQL Editor 1 ครั้ง แล้วลองบันทึกใหม่');
   }
   if (code === '42501' || /permission denied|admin only|เฉพาะ admin/i.test(message)) {
     throw new Error('ไม่มีสิทธิ์บันทึก Plan Location กรุณาเข้าสู่ระบบด้วยบัญชี Admin แล้วลองใหม่');
@@ -30719,9 +30812,12 @@ async function loadAdPlanLocation() {
 
 function parseWarehouseLocationMeta(location={}) {
   const parsed = warehouseLocationCodeParts(location.code || location.location_code || '');
-  const zone = warehouseLayoutString(location.zone || parsed.prefix || 'ZONE-1','ZONE-1',60).toUpperCase();
-  const row = warehouseLayoutString(location.row_no ?? parsed.row ?? '01','01',40).toUpperCase();
-  const level = warehouseLayoutString(location.level ?? parsed.level ?? 'A','A',12).toUpperCase();
+  const zone = warehouseLayoutString(location.zone || parsed.prefix || (!parsed.hasLevel ? parsed.row : '') || 'ZONE-1','ZONE-1',60).toUpperCase();
+  const row = warehouseLayoutString(parsed.hasLevel === false ? parsed.row : (location.row_no ?? parsed.row ?? '01'),'01',40).toUpperCase();
+  const sourceLevel = parsed.hasLevel === false ? '' : (location.level ?? parsed.level ?? '');
+  const level = parsed.hasLevel === false
+    ? WAREHOUSE_NO_LEVEL
+    : warehouseLayoutString(sourceLevel,'A',12).toUpperCase();
   const bay = Number.parseInt(String(parsed.bayText).replace(/\D/g,''),10);
   return {
     code:parsed.code,
@@ -30729,6 +30825,8 @@ function parseWarehouseLocationMeta(location={}) {
     zone,
     row,
     level,
+    hasLevel:parsed.hasLevel !== false,
+    codePattern:parsed.codePattern,
     bay:Number.isInteger(bay) ? bay : null,
   };
 }
@@ -30756,10 +30854,11 @@ function createWarehouseLayoutFromSessionData(sessionData=window._warehouseLayou
       const elements = [];
       let cursorY = 60;
       rows.forEach(([row,locations],index) => {
+        const hasLevel = locations.some(item => item.hasLevel !== false);
         const numericBays = locations.map(item => item.bay).filter(Number.isInteger);
         const bayStart = numericBays.length ? Math.min(...numericBays) : 1;
         const bayEnd = numericBays.length ? Math.max(...numericBays) : Math.max(1,locations.length);
-        const levels = [...new Set(locations.map(item => item.level).filter(Boolean))]
+        const levels = [...new Set(locations.map(item => item.level || WAREHOUSE_NO_LEVEL).filter(Boolean))]
           .sort((a,b) => String(b).localeCompare(String(a),undefined,{numeric:true}));
         const existingBays = new Set(numericBays);
         const skipBays = [];
@@ -30788,7 +30887,8 @@ function createWarehouseLayoutFromSessionData(sessionData=window._warehouseLayou
           levels:levels.length ? levels : ['A'],
           skipBays,
           excludedCells:[],
-          codePattern:'{prefix}-{row}-{bay}-{level}',
+          codePattern:locations.find(item => item.codePattern)?.codePattern
+            || (hasLevel ? (locationPrefix ? '{prefix}-{row}-{bay}-{level}' : '{row}-{bay}-{level}') : (locationPrefix ? '{prefix}-{row}-{bay}' : '{row}-{bay}')),
           direction:'ltr',
         },elements.length));
         cursorY = y+rackHeight+76;
@@ -30850,12 +30950,12 @@ function warehouseExcelRackIdentity(rawRack,sheetName,title) {
   const rackCode = warehouseLayoutString(rawRack,'',50).toUpperCase().replace(/\s+/g,'');
   const hyphenated = rackCode.match(/^([A-Z0-9]+)-([A-Z0-9]+)$/);
   if (hyphenated) return {prefix:hyphenated[1],row:hyphenated[2],rackCode};
-  const prefix = warehouseExcelZonePrefix(sheetName,title,rackCode);
   const compact = rackCode.replace(/[^A-Z0-9]/g,'');
-  const row = compact.startsWith(prefix) && compact.length > prefix.length
-    ? compact.slice(prefix.length)
-    : compact;
-  return {prefix,row:row || '01',rackCode:rackCode || `${prefix}-01`};
+  // Compact rack names such as CA, CB, FA are complete Row codes.  Older
+  // versions split CA into prefix C + row A, producing C-A-001-G while the WMS
+  // code is B-CA-001-G.  Keep the compact value intact and let live imported
+  // Location data resolve its warehouse prefix safely.
+  return {prefix:'',row:compact || '01',rackCode:rackCode || compact || '01'};
 }
 
 function parseWarehouseLayoutExcelSheet(workbook,worksheet,sheetName) {
@@ -30944,7 +31044,7 @@ function parseWarehouseLayoutExcelSheet(workbook,worksheet,sheetName) {
     const rackWidth = Math.max(700,150+(bayCount*27));
     elements.push(normalizeWarehouseLayoutElement({
       id:warehouseLayoutUid('rack'),type:'rack',label:rack.identity.rackCode,rackCode:rack.identity.rackCode,
-      row:rack.identity.row,locationPrefix:rack.identity.prefix || prefix,x:60,y:cursorY,width:rackWidth,height:rackHeight,
+      row:rack.identity.row,locationPrefix:rack.identity.prefix || '',x:60,y:cursorY,width:rackWidth,height:rackHeight,
       bayStart,bayCount,bayPad:Math.max(3,String(bayEnd).length),levels:rack.levels,skipBays:[],
       excludedCells:rack.excludedCells,codePattern:'{prefix}-{row}-{bay}-{level}',direction:'ltr',
     },index));
@@ -31075,25 +31175,27 @@ function addWarehouseMissingCodesToConfig(baseConfig,codes=[]) {
   codes.forEach(code => {
     const parts = warehouseLocationCodeParts(code);
     const bay = Number.parseInt(String(parts.bayText).replace(/\D/g,''),10);
-    const prefix = warehouseLayoutString(parts.prefix,'ZONE',60).toUpperCase();
+    const prefix = warehouseLayoutString(parts.prefix,'',60).toUpperCase();
     const row = warehouseLayoutString(parts.row,'01',40).toUpperCase();
-    const level = warehouseLayoutString(parts.level,'A',12).toUpperCase();
+    const level = parts.hasLevel === false ? WAREHOUSE_NO_LEVEL : warehouseLayoutString(parts.level,'A',12).toUpperCase();
     if (!Number.isInteger(bay) || !row || !level) return;
-    let zone = config.zones.find(item => warehouseLocationKey(item.name) === warehouseLocationKey(prefix));
+    const zoneName = prefix || row;
+    let zone = config.zones.find(item => warehouseLocationKey(item.name) === warehouseLocationKey(zoneName));
     if (!zone) {
-      zone = {id:warehouseLayoutUid('zone'),name:prefix,canvasWidth:1200,canvasHeight:720,elements:[]};
+      zone = {id:warehouseLayoutUid('zone'),name:zoneName,canvasWidth:1200,canvasHeight:720,elements:[]};
       config.zones.push(zone);
     }
     let rack = zone.elements.find(item => item.type === 'rack'
       && warehouseLocationKey(item.row) === warehouseLocationKey(row)
-      && (!item.locationPrefix || warehouseLocationKey(item.locationPrefix) === warehouseLocationKey(prefix)));
+      && (!item.locationPrefix || warehouseLocationKey(item.locationPrefix) === warehouseLocationKey(prefix))
+      && ((item.levels || []).includes(WAREHOUSE_NO_LEVEL)) === (parts.hasLevel === false));
     if (!rack) {
       const rackY = Math.max(50,...zone.elements.map(item => Number(item.y || 0)+Number(item.height || 0)+45));
       rack = normalizeWarehouseLayoutElement({
-        id:warehouseLayoutUid('rack'),type:'rack',label:`${prefix}-${row}`,rackCode:`${prefix}-${row}`,
+        id:warehouseLayoutUid('rack'),type:'rack',label:[prefix,row].filter(Boolean).join('-'),rackCode:[prefix,row].filter(Boolean).join('-'),
         row,locationPrefix:prefix,x:60,y:rackY,width:420,height:116,bayStart:bay,bayCount:1,
         bayPad:Math.max(3,String(bay).length),levels:[level],skipBays:[],excludedCells:[],
-        codePattern:'{prefix}-{row}-{bay}-{level}',direction:'ltr',
+        codePattern:parts.codePattern || (parts.hasLevel === false ? '{prefix}-{row}-{bay}' : '{prefix}-{row}-{bay}-{level}'),direction:'ltr',
       },zone.elements.length);
       zone.elements.push(rack);
     } else {
@@ -31125,6 +31227,7 @@ async function checkWarehouseLayoutAfterWmsImport(rows=[]) {
   const missingCodes = importedCodes.filter(code => !layoutCodes.has(code));
   if (!missingCodes.length) return;
   window._warehouseLayoutPendingMissingCodes = missingCodes;
+  window._warehouseLayoutPendingMissingUseDraft = false;
   openWarehouseLayoutDialog('พบ Location ที่ยังไม่มีในผังแม่',`
     <div class="alert alert-orange">Import WMS สำเร็จ แต่พบ <strong>${missingCodes.length.toLocaleString(uiLocale())}</strong> Location ที่ยังไม่มีในผังแม่</div>
     <div class="warehouse-match-list" style="margin-top:12px;max-height:210px">${missingCodes.slice(0,30).map(code => `<div>${escapeWmsText(code)}</div>`).join('')}${missingCodes.length > 30 ? `<div>… และอีก ${(missingCodes.length-30).toLocaleString(uiLocale())} Location</div>` : ''}</div>
@@ -31138,10 +31241,14 @@ async function checkWarehouseLayoutAfterWmsImport(rows=[]) {
 function createWarehouseLayoutDraftFromMissingImport() {
   const codes = window._warehouseLayoutPendingMissingCodes || [];
   if (!codes.length) return;
-  _warehouseLayoutDraft = addWarehouseMissingCodesToConfig(_warehouseLayoutConfig,codes);
+  const baseConfig = window._warehouseLayoutPendingMissingUseDraft && _warehouseLayoutDraft
+    ? _warehouseLayoutDraft
+    : _warehouseLayoutConfig;
+  _warehouseLayoutDraft = addWarehouseMissingCodesToConfig(baseConfig,codes);
   _warehouseLayoutDraftDirty = true;
   persistLocalWarehouseLayout(_warehouseLayoutDraft,WAREHOUSE_LAYOUT_DRAFT_STORAGE_KEY);
   window._warehouseLayoutPendingMissingCodes = [];
+  window._warehouseLayoutPendingMissingUseDraft = false;
   closeWarehouseLayoutDialog();
   S._layoutOpenEditor = true;
   openDashboardMenu('layout');
@@ -31190,15 +31297,53 @@ function warehouseLocationPrefixIndex(sessionData={}) {
   return {byRow,byZoneRow};
 }
 
-function warehouseRackLocationPrefix(rack,zone,prefixIndex) {
-  if (rack.locationPrefix) return warehouseLocationKey(rack.locationPrefix);
-  const rowKey = warehouseLocationKey(rack.row);
+function warehouseRackLocationIdentity(rack,zone,prefixIndex) {
+  const storedRow = warehouseLocationKey(rack.row);
+  const storedPrefix = warehouseLocationKey(rack.locationPrefix);
+  const rackCode = warehouseLocationKey(rack.rackCode);
+  let rowKey = storedRow;
+
+  // Repair legacy Excel layouts in memory.  Example: rack CA was previously
+  // stored as prefix C + row A, although imported WMS Locations use row CA.
+  const compactRack = rackCode.replace(/-/g,'');
+  const compactStored = `${storedPrefix}${storedRow}`.replace(/-/g,'');
+  const rackRowPrefixes = prefixIndex.byRow.get(rackCode);
+  if (rackCode && compactRack === compactStored && rackRowPrefixes?.size) {
+    rowKey = rackCode;
+    if (rackRowPrefixes.size === 1) return {row:rowKey,prefix:[...rackRowPrefixes][0],repaired:true};
+  }
+
+  // Outside the proven legacy case, an explicitly configured prefix remains
+  // authoritative and must not be replaced by another row that happens to use
+  // the same number elsewhere in the warehouse.
+  if (rowKey === storedRow && storedPrefix) return {row:storedRow,prefix:storedPrefix,repaired:false};
+
   const zoneKey = warehouseLocationKey(zone.name);
   const zoned = prefixIndex.byZoneRow.get(`${zoneKey}|${rowKey}`);
-  if (zoned?.size === 1) return [...zoned][0];
+  if (zoned?.size === 1) return {row:rowKey,prefix:[...zoned][0],repaired:rowKey !== storedRow};
   const byRow = prefixIndex.byRow.get(rowKey);
-  if (byRow?.size === 1) return [...byRow][0];
-  return warehouseLocationKey(zone.name);
+  if (byRow?.size === 1) return {row:rowKey,prefix:[...byRow][0],repaired:rowKey !== storedRow};
+  return {row:rowKey,prefix:storedPrefix || warehouseLocationKey(zone.name),repaired:rowKey !== storedRow};
+}
+
+function warehouseRackLocationPrefix(rack,zone,prefixIndex) {
+  return warehouseRackLocationIdentity(rack,zone,prefixIndex).prefix;
+}
+
+function repairWarehouseLegacyRackIdentities(config,sessionData=window._warehouseLayoutSessionData || {}) {
+  const repairedConfig = normalizeWarehouseLayoutConfig(warehouseLayoutClone(config) || {zones:[]});
+  const prefixIndex = warehouseLocationPrefixIndex(sessionData);
+  let changed = 0;
+  repairedConfig.zones.forEach(zone => {
+    zone.elements.filter(element => element.type === 'rack').forEach(rack => {
+      const identity = warehouseRackLocationIdentity(rack,zone,prefixIndex);
+      if (!identity.repaired) return;
+      rack.row = identity.row;
+      rack.locationPrefix = identity.prefix;
+      changed++;
+    });
+  });
+  return {config:repairedConfig,changed};
 }
 
 function generateWarehouseLayoutLocations(config=_warehouseLayoutConfig,sessionData=window._warehouseLayoutSessionData || {}) {
@@ -31210,7 +31355,9 @@ function generateWarehouseLayoutLocations(config=_warehouseLayoutConfig,sessionD
     zone.elements.filter(element => element.type === 'rack').forEach(rack => {
       const skipped = new Set(rack.skipBays || []);
       const excluded = new Set((rack.excludedCells || []).map(cell => warehouseExcludedCellKey(cell.level,cell.bay)));
-      const locationPrefix = warehouseRackLocationPrefix(rack,zone,prefixIndex);
+      const identity = warehouseRackLocationIdentity(rack,zone,prefixIndex);
+      const locationPrefix = identity.prefix;
+      const locationRow = identity.row || warehouseLocationKey(rack.row);
       const bayNumbers = Array.from({length:rack.bayCount},(_,index) => rack.bayStart+index)
         .filter(bay => !skipped.has(bay));
       const visualBays = rack.direction === 'rtl' ? [...bayNumbers].reverse() : bayNumbers;
@@ -31219,7 +31366,7 @@ function generateWarehouseLayoutLocations(config=_warehouseLayoutConfig,sessionD
           if (excluded.has(warehouseExcludedCellKey(level,bay))) return;
           const bayText = String(bay).padStart(rack.bayPad,'0');
           const code = formatWarehouseLocationCode(rack.codePattern,{
-            prefix:locationPrefix,zone:zone.name,layoutZone:zone.name,row:rack.row,rack:rack.rackCode,bay:bayText,level,
+            prefix:locationPrefix,zone:zone.name,layoutZone:zone.name,row:locationRow,rack:rack.rackCode,bay:bayText,level,
           });
           const location = {
             code,
@@ -31228,7 +31375,8 @@ function generateWarehouseLayoutLocations(config=_warehouseLayoutConfig,sessionD
             rackId:rack.id,
             rackCode:rack.rackCode,
             locationPrefix,
-            row:rack.row,
+            row:locationRow,
+            identityRepaired:identity.repaired,
             bay,
             bayText,
             level,
@@ -31428,7 +31576,7 @@ function warehouseLayoutRackHtml(rack,zone,runtime,statusFilter,search) {
       ${bays.map(bay => `<span class="${skipped.has(bay)?'skip':''}">${escapeWmsText(String(bay).padStart(rack.bayPad,'0'))}</span>`).join('')}
     </div>
     <div class="warehouse-layout-levels" style="grid-template-rows:repeat(${rack.levels.length},minmax(0,1fr))">
-      ${rack.levels.map(level => `<span>${escapeWmsText(level)}</span>`).join('')}
+      ${rack.levels.map(level => `<span>${escapeWmsText(warehouseLayoutLevelLabel(level))}</span>`).join('')}
     </div>
     <div class="warehouse-layout-grid" style="grid-template-columns:repeat(${rack.bayCount},minmax(0,1fr));grid-template-rows:repeat(${rack.levels.length},minmax(0,1fr))">
       ${cells}
@@ -31458,13 +31606,14 @@ function warehouseLayoutRackSummary(rack,runtime) {
 
 function warehouseLayoutMatrixRackHtml(rack,zone,runtime,statusFilter,search) {
   const rackLocations = runtime.generatedLocations.filter(location => location.zoneId === zone.id && location.rackId === rack.id);
+  const displayRow = rackLocations[0]?.row || rack.row;
   const byKey = new Map(rackLocations.map(location => [`${location.level}|${location.bay}`,location]));
   const skipped = new Set(rack.skipBays || []);
   const excluded = new Map((rack.excludedCells || []).map(cell => [warehouseExcludedCellKey(cell.level,cell.bay),cell]));
   const bays = Array.from({length:rack.bayCount},(_,index) => rack.bayStart+index);
   if (rack.direction === 'rtl') bays.reverse();
   const rows = rack.levels.map(level => `<tr>
-    <th class="warehouse-matrix-level">${escapeWmsText(level)}</th>
+    <th class="warehouse-matrix-level">${escapeWmsText(warehouseLayoutLevelLabel(level))}</th>
     ${bays.map(bay => {
       if (skipped.has(bay)) return '<td><span class="warehouse-matrix-skip" title="ช่องเว้นว่าง"></span></td>';
       const blocked = excluded.get(warehouseExcludedCellKey(level,bay));
@@ -31487,14 +31636,14 @@ function warehouseLayoutMatrixRackHtml(rack,zone,runtime,statusFilter,search) {
   </tr>`).join('');
   const summary = warehouseLayoutRackSummary(rack,runtime);
   return `<section class="warehouse-matrix-rack">
-    <div class="warehouse-matrix-rack-name"><strong>${escapeWmsText(rack.rackCode)}</strong><small>ROW ${escapeWmsText(rack.row)}</small><div class="warehouse-matrix-rack-stats"><span>ทั้งหมด ${summary.total.toLocaleString(uiLocale())}</span><span>ใช้งาน ${summary.usable.toLocaleString(uiLocale())}</span><span>ปิดใช้ ${summary.disabled.toLocaleString(uiLocale())}</span><span>เสา ${summary.pillar.toLocaleString(uiLocale())}</span><span class="diff">DIFF ${summary.diff.toLocaleString(uiLocale())}</span></div></div>
+    <div class="warehouse-matrix-rack-name"><strong>${escapeWmsText(rack.rackCode)}</strong><small>ROW ${escapeWmsText(displayRow)}</small><div class="warehouse-matrix-rack-stats"><span>ทั้งหมด ${summary.total.toLocaleString(uiLocale())}</span><span>ใช้งาน ${summary.usable.toLocaleString(uiLocale())}</span><span>ปิดใช้ ${summary.disabled.toLocaleString(uiLocale())}</span><span>เสา ${summary.pillar.toLocaleString(uiLocale())}</span><span class="diff">DIFF ${summary.diff.toLocaleString(uiLocale())}</span></div></div>
     <table class="warehouse-matrix-table"><thead><tr><th class="warehouse-matrix-level">LV</th>${bays.map(bay => `<th>${escapeWmsText(String(bay).padStart(rack.bayPad,'0'))}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>
   </section>`;
 }
 
 function warehouseLayoutMatrixZoneHtml(zone,runtime,statusFilter,search,zoom=1) {
   const racks = zone.elements.filter(element => element.type === 'rack');
-  const matrixZoom = [0.75,1,1.25,1.5].includes(Number(zoom)) ? Number(zoom) : 1;
+  const matrixZoom = [0.5,0.75,1,1.25,1.5].includes(Number(zoom)) ? Number(zoom) : 1;
   return `<div class="warehouse-matrix-wrap"><div class="warehouse-matrix-zone" style="zoom:${matrixZoom}">
     ${racks.map(rack => warehouseLayoutMatrixRackHtml(rack,zone,runtime,statusFilter,search)).join('') || '<div class="warehouse-layout-empty"><h3>Zone นี้ยังไม่มี Rack</h3></div>'}
   </div></div>`;
@@ -31552,7 +31701,7 @@ function warehouseLayoutViewHtml(runtime) {
     ? S._layoutStatus
     : 'all';
   const search = warehouseLocationKey(S._layoutSearch || '');
-  const zoomOptions = [0.75,1,1.25,1.5];
+  const zoomOptions = [0.5,0.75,1,1.25,1.5];
   const zoom = zoomOptions.includes(Number(S._layoutZoom)) ? Number(S._layoutZoom) : 1;
   S._layoutZoom = zoom;
   const viewMode = 'matrix';
@@ -31673,7 +31822,7 @@ function setWarehouseLayoutStatusFilter(status) {
 
 function setWarehouseLayoutZoom(value) {
   const zoom = Number(value);
-  S._layoutZoom = [0.75,1,1.25,1.5].includes(zoom) ? zoom : 1;
+  S._layoutZoom = [0.5,0.75,1,1.25,1.5].includes(zoom) ? zoom : 1;
   renderWarehouseLayoutTab();
 }
 
@@ -31728,7 +31877,7 @@ function showWarehouseLocationDetail(code) {
     <div class="warehouse-layout-detail-grid">
       <div class="warehouse-layout-detail-card"><span>การจับคู่ WMS</span><strong>${escapeWmsText(importedText)}</strong></div>
       <div class="warehouse-layout-detail-card"><span>Zone / Rack</span><strong>${escapeWmsText(detail.zone)} · ${escapeWmsText(detail.rackCode)}</strong></div>
-      <div class="warehouse-layout-detail-card"><span>ช่อง / ระดับ</span><strong>${escapeWmsText(detail.bayText)} · ${escapeWmsText(detail.level)}</strong></div>
+      <div class="warehouse-layout-detail-card"><span>ช่อง / ระดับ</span><strong>${escapeWmsText(detail.bayText)} · ${escapeWmsText(warehouseLayoutLevelLabel(detail.level))}</strong></div>
       <div class="warehouse-layout-detail-card"><span>JOB</span><strong>${escapeWmsText(jobs)}</strong></div>
       <div class="warehouse-layout-detail-card"><span>รอบล่าสุด</span><strong>${escapeWmsText(latestRound)}</strong></div>
       <div class="warehouse-layout-detail-card"><span>ผู้รับผิดชอบ / ผู้ตรวจนับ</span><strong>${escapeWmsText(assignmentUser)}</strong></div>
@@ -31747,6 +31896,8 @@ function showWarehouseLayoutMatchReport(useDraft=false) {
   const runtime = useDraft && _warehouseLayoutDraft
     ? buildWarehouseLayoutRuntime(_warehouseLayoutDraft,window._warehouseLayoutSessionData || {})
     : (window._warehouseLayoutRuntime || refreshWarehouseLayoutRuntime());
+  window._warehouseLayoutPendingMissingCodes = runtime.unmatchedImported.map(item => item.code).filter(Boolean);
+  window._warehouseLayoutPendingMissingUseDraft = Boolean(useDraft && _warehouseLayoutDraft);
   openWarehouseLayoutDialog('ผลตรวจสอบและจับคู่ Location',`
     <div class="alert alert-blue" style="margin-bottom:14px">
       ตรงกัน ${runtime.matched.toLocaleString(uiLocale())} จาก Layout ${runtime.totalLayout.toLocaleString(uiLocale())} Location · ความครบถ้วน ${runtime.completeness.toLocaleString(uiLocale(),{minimumFractionDigits:1,maximumFractionDigits:1})}%
@@ -31762,6 +31913,7 @@ function showWarehouseLayoutMatchReport(useDraft=false) {
         <div class="warehouse-match-list">${warehouseLayoutMatchListHtml(runtime.unmatchedImported,'ไม่พบ Location นอก Layout')}</div>
       </section>
     </div>
+    ${prof?.role === 'admin' && runtime.unmatchedImported.length ? `<div class="warehouse-layout-dialog-actions"><button class="btn btn-blue" type="button" onclick="createWarehouseLayoutDraftFromMissingImport()">เพิ่ม Location ที่ขาดเป็นฉบับร่าง</button></div>` : ''}
   `);
 }
 
@@ -31772,14 +31924,14 @@ function openWarehouseExcludedCellEditor() {
   const bays = Array.from({length:rack.bayCount},(_,index) => rack.bayStart+index);
   if (rack.direction === 'rtl') bays.reverse();
   const cells = rack.levels.map(level => `
-    <div class="warehouse-cell-editor-level">${escapeWmsText(level)}</div>
+    <div class="warehouse-cell-editor-level">${escapeWmsText(warehouseLayoutLevelLabel(level))}</div>
     ${bays.map(bay => {
       const excluded = excludedByKey.get(warehouseExcludedCellKey(level,bay));
       const bayText = String(bay).padStart(rack.bayPad,'0');
       return `<label class="warehouse-cell-editor-item${excluded?' is-excluded':''}">
         <input type="checkbox" data-bay="${bay}" data-level="${escapeWmsText(level)}" ${excluded?'checked':''}
           onchange="toggleWarehouseExcludedCell(this)">
-        <span>${escapeWmsText(bayText)}-${escapeWmsText(level)}</span>
+        <span>${escapeWmsText(bayText)}${level === WAREHOUSE_NO_LEVEL ? '' : `-${escapeWmsText(level)}`}</span>
         <input class="warehouse-cell-note" data-bay="${bay}" data-level="${escapeWmsText(level)}"
           value="${escapeWmsText(excluded?.note || '')}" placeholder="ทางเดิน / เสา / หมายเหตุ"
           ${excluded?'':'disabled'} onclick="event.stopPropagation()" oninput="updateWarehouseExcludedCellNote(this)">
@@ -31864,13 +32016,15 @@ function warehouseEditorRackGridHtml(rack) {
     const className = isSkip ? 'cell-skip' : `cell-${type}`;
     const red = /สีแดง/i.test(entry?.note || '') ? ' is-red' : '';
     const bayText = String(bay).padStart(rack.bayPad,'0');
+    const levelText = warehouseLayoutLevelLabel(level);
+    const coordinateText = level === WAREHOUSE_NO_LEVEL ? bayText : `${bayText}-${levelText}`;
     return `<button class="warehouse-editor-rack-cell ${className}${red}" type="button"
       data-rack-id="${escapeWmsText(rack.id)}" data-level="${escapeWmsText(level)}" data-bay="${bay}"
-      data-coordinate="${escapeWmsText(bayText)}-${escapeWmsText(level)}"
+      data-coordinate="${escapeWmsText(coordinateText)}"
       data-current-type="${escapeWmsText(type)}" onpointerdown="event.stopPropagation()"
       onclick="openWarehouseLayoutCellTypeMenu(event,this)"
-      title="${escapeWmsText(rack.rackCode)} · ${escapeWmsText(bayText)}-${escapeWmsText(level)} · ${escapeWmsText(info.label)}"
-      aria-label="${escapeWmsText(bayText)}-${escapeWmsText(level)} ${escapeWmsText(info.label)}"><span>${escapeWmsText(info.short)}</span></button>`;
+      title="${escapeWmsText(rack.rackCode)} · ${escapeWmsText(coordinateText)} · ${escapeWmsText(info.label)}"
+      aria-label="${escapeWmsText(coordinateText)} ${escapeWmsText(info.label)}"><span>${escapeWmsText(info.short)}</span></button>`;
   }));
   return `<div class="warehouse-editor-rack-frame">
     <div class="warehouse-editor-rack-corner">LV</div>
@@ -31878,7 +32032,7 @@ function warehouseEditorRackGridHtml(rack) {
       ${bays.map(bay => `<span class="warehouse-editor-rack-bay">${escapeWmsText(String(bay).padStart(rack.bayPad,'0'))}</span>`).join('')}
     </div>
     <div class="warehouse-editor-rack-levels" style="grid-template-rows:repeat(${rack.levels.length},minmax(0,1fr))">
-      ${rack.levels.map(level => `<span class="warehouse-editor-rack-level">${escapeWmsText(level)}</span>`).join('')}
+      ${rack.levels.map(level => `<span class="warehouse-editor-rack-level">${escapeWmsText(warehouseLayoutLevelLabel(level))}</span>`).join('')}
     </div>
     <div class="warehouse-editor-rack-grid" style="grid-template-columns:repeat(${rack.bayCount},minmax(0,1fr));grid-template-rows:repeat(${rack.levels.length},minmax(0,1fr))">${cells.join('')}</div>
   </div>`;
@@ -31899,6 +32053,7 @@ function openWarehouseLayoutCellTypeMenu(event,button) {
   if (!rack || !level || !Number.isInteger(bay)) return;
   _warehouseLayoutSelectedElementId = rack.id;
   const bayText = String(bay).padStart(rack.bayPad,'0');
+  const noLevel = level === WAREHOUSE_NO_LEVEL;
   const currentType = warehouseLayoutString(button?.dataset?.currentType,'location',20);
   const backdrop = document.createElement('div');
   backdrop.id = 'warehouse-cell-type-backdrop';
@@ -31912,7 +32067,7 @@ function openWarehouseLayoutCellTypeMenu(event,button) {
       onclick="setWarehouseLayoutCellTypeFromButton(this)"><i>${escapeWmsText(symbol)}</i><span>${escapeWmsText(info.label)}</span></button>`;
   }).join('');
   backdrop.innerHTML = `<div class="warehouse-cell-type-popover" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
-    <div class="warehouse-cell-type-popover-head"><div><strong>${escapeWmsText(rack.rackCode)}</strong><span class="coordinate">Row ${escapeWmsText(rack.row)} · Bay ${escapeWmsText(bayText)} · Level ${escapeWmsText(level)}</span><span>เลือกประเภทของช่องนี้</span></div><button class="warehouse-cell-type-close" type="button" onclick="closeWarehouseLayoutCellTypeMenu()" aria-label="ปิด">×</button></div>
+    <div class="warehouse-cell-type-popover-head"><div><strong>${escapeWmsText(rack.rackCode)}</strong><span class="coordinate">Row ${escapeWmsText(rack.row)} · Bay ${escapeWmsText(bayText)}${noLevel ? ' · ไม่มี Level' : ` · Level ${escapeWmsText(level)}`}</span><span>เลือกประเภทของช่องนี้</span></div><button class="warehouse-cell-type-close" type="button" onclick="closeWarehouseLayoutCellTypeMenu()" aria-label="ปิด">×</button></div>
     <div class="warehouse-cell-type-options">${options}</div>
   </div>`;
   document.body.appendChild(backdrop);
@@ -31999,6 +32154,7 @@ function warehouseLayoutElementPropertiesHtml(element) {
     counts[type] = (counts[type] || 0)+1;
     return counts;
   },{pillar:0,aisle:0,disabled:0});
+  const noLevel = element.levels.length === 1 && element.levels[0] === WAREHOUSE_NO_LEVEL;
   return `<div class="warehouse-property-form">
     ${warehousePropertyFieldHtml('ชื่อ Rack','rackCode',element.rackCode)}
     ${warehousePropertyFieldHtml('รหัส ROW','row',element.row)}
@@ -32012,10 +32168,18 @@ function warehouseLayoutElementPropertiesHtml(element) {
     ${warehousePropertyFieldHtml('จำนวนช่อง','bayCount',element.bayCount,'number','min="1" max="500"')}
     ${warehousePropertyFieldHtml('จำนวนหลักของเลขช่อง','bayPad',element.bayPad,'number','min="1" max="6"')}
     <div class="warehouse-property-field">
+      <label>รูปแบบ Level</label>
+      <select onchange="updateWarehouseLayoutLevelMode(this.value)">
+        <option value="with-level" ${noLevel?'':'selected'}>มี Level</option>
+        <option value="no-level" ${noLevel?'selected':''}>ไม่มี Level</option>
+      </select>
+      <div class="warehouse-property-help">เลือก “ไม่มี Level” สำหรับ B-CR-001 หรือ B-HELMET-01</div>
+    </div>
+    ${noLevel ? `<div class="warehouse-property-field"><label>Level</label><div class="warehouse-property-help warehouse-no-level-note">ไม่มี Level · ระบบจะไม่เติมรหัสท้าย Location</div></div>` : `<div class="warehouse-property-field">
       <label>ระดับ เรียงจากบนลงล่าง</label>
       <input value="${escapeWmsText(element.levels.join(', '))}" onchange="updateWarehouseLayoutElementField('levels',this.value)">
       <div class="warehouse-property-help">ตัวอย่าง: G, F, E, D, C, B, A</div>
-    </div>
+    </div>`}
     <div class="warehouse-cell-type-help">
       <b>แก้ประเภทได้จากช่องโดยตรง</b><br>กดช่องในชั้นวาง แล้วเลือก Location, เสา, ทางเดิน หรือปิดใช้งาน
       <div class="warehouse-cell-type-legend">
@@ -32028,7 +32192,7 @@ function warehouseLayoutElementPropertiesHtml(element) {
     <div class="warehouse-property-field">
       <label>รูปแบบรหัส Location</label>
       <input value="${escapeWmsText(element.codePattern)}" onchange="updateWarehouseLayoutElementField('codePattern',this.value)">
-      <div class="warehouse-property-help">ค่าแนะนำ: {prefix}-{row}-{bay}-{level} · ใช้ได้: {prefix} {layoutZone} {row} {rack} {bay} {level}</div>
+      <div class="warehouse-property-help">${noLevel ? 'ไม่มี Level: {prefix}-{row}-{bay}' : 'มี Level: {prefix}-{row}-{bay}-{level}'} · ใช้ได้: {prefix} {layoutZone} {row} {rack} {bay} {level}</div>
     </div>
     <div class="warehouse-property-field">
       <label>ทิศทางเลขช่อง</label>
@@ -32174,11 +32338,13 @@ function openWarehouseLayoutEditor(blank=false) {
       updatedBy:prof?.name || '',
     });
   }
-  _warehouseLayoutDraft = warehouseLayoutClone(source);
-  _warehouseLayoutDraftDirty = false;
+  const repaired = repairWarehouseLegacyRackIdentities(source,window._warehouseLayoutSessionData || {});
+  _warehouseLayoutDraft = repaired.config;
+  _warehouseLayoutDraftDirty = repaired.changed > 0;
   S._layoutEditorZone = _warehouseLayoutDraft.zones[0]?.id || '';
   _warehouseLayoutSelectedElementId = _warehouseLayoutDraft.zones[0]?.elements.find(element => element.type === 'rack')?.id || '';
   renderWarehouseLayoutEditor();
+  if (repaired.changed) showWarehouseLayoutToast(`ซ่อมรหัส Row/Prefix จากข้อมูล Import แล้ว ${repaired.changed.toLocaleString(uiLocale())} Rack · กดใช้เป็นผังแม่เพื่อบันทึก`,'warn');
 }
 
 function cancelWarehouseLayoutEditor() {
@@ -32256,10 +32422,7 @@ async function saveWarehouseLayoutConfig(masterConfirmed=false) {
   let centralError = null;
   if (sb) {
     try {
-      const { error } = await sb.from('app_settings').upsert({
-        key:WAREHOUSE_LAYOUT_SETTING_KEY,
-        value:config,
-      },{onConflict:'key'});
+      const { error } = await sb.rpc('save_warehouse_layout_setting', { p_value:config });
       if (error) centralError = error;
       else centralSaved = true;
     } catch (error) {
@@ -32287,7 +32450,10 @@ async function saveWarehouseLayoutConfig(masterConfirmed=false) {
     });
   } else if (localSaved) {
     console.warn('บันทึก Warehouse Layout ส่วนกลางไม่สำเร็จ:',centralError);
-    showWarehouseLayoutToast('ใช้ผังแม่ได้เฉพาะอุปกรณ์นี้ กรุณาตรวจสิทธิ์ app_settings','warn');
+    const centralMessage = /save_warehouse_layout_setting|schema cache|PGRST202|42883/i.test(`${centralError?.code || ''} ${centralError?.message || ''}`)
+      ? 'บันทึกได้เฉพาะเครื่องนี้ · กรุณารัน SQL v241 เพื่อเปิดการบันทึกผังส่วนกลาง'
+      : 'บันทึกได้เฉพาะเครื่องนี้ · ไม่มีสิทธิ์บันทึกผังส่วนกลาง';
+    showWarehouseLayoutToast(centralMessage,'warn');
   } else {
     showWarehouseLayoutToast('ไม่สามารถบันทึก Layout ได้','error');
   }
@@ -32388,6 +32554,22 @@ function selectWarehouseLayoutElement(elementId) {
 
 function currentWarehouseLayoutSelectedElement() {
   return currentWarehouseLayoutDraftZone()?.elements?.find(element => element.id === _warehouseLayoutSelectedElementId) || null;
+}
+
+function updateWarehouseLayoutLevelMode(mode) {
+  const element = currentWarehouseLayoutSelectedElement();
+  if (!element || element.type !== 'rack') return;
+  if (mode === 'no-level') {
+    element.levels = [WAREHOUSE_NO_LEVEL];
+    element.excludedCells = [];
+    element.codePattern = '{prefix}-{row}-{bay}';
+  } else {
+    element.levels = ['G','F','E','D','C','B','A'];
+    element.excludedCells = [];
+    element.codePattern = '{prefix}-{row}-{bay}-{level}';
+  }
+  _warehouseLayoutDraftDirty = true;
+  renderWarehouseLayoutEditor();
 }
 
 function updateWarehouseLayoutElementField(field,value) {
