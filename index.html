@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count v239 - PWA Ready</title>
+<title>Cycle Count v240 - PWA Ready</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -17743,7 +17743,7 @@ body.tablet-ui .count-touch-toolbar .count-screen-lock-button { display:inline-f
 
 html,
 body,
-body[data-build="v239-pwa-ready"] *,
+body[data-build="v240-pwa-ready"] *,
 body *,
 #app,
 #app * {
@@ -18493,7 +18493,7 @@ body.expired-session-modal-open { overflow:hidden; }
 }
 </style>
 </head>
-<body data-build="v239-pwa-ready">
+<body data-build="v240-pwa-ready">
 <div id="app"></div>
 
 <script>
@@ -18571,7 +18571,7 @@ function dashboardDateRangeLabel() {
     ? fromLabel
     : `${fromLabel} – ${toLabel}`;
 }
-window.__CYCLE_COUNT_BUILD__ = 'v239-pwa-ready';
+window.__CYCLE_COUNT_BUILD__ = 'v240-pwa-ready';
 window.__CYCLE_COUNT_LAYOUT_SCHEMA__ = 1;
 
 let _viewportSyncFrame = 0;
@@ -21366,7 +21366,7 @@ function applyBrandingSettings(settings, persistLocal = true) {
     const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
     root.setProperty(`--theme-${cssKey}`, uiBranding[key]);
   });
-  document.title = `${uiBranding.systemName} v239`;
+  document.title = `${uiBranding.systemName} v240`;
   if (persistLocal) {
     try { localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(uiBranding)); } catch (_) {}
   }
@@ -30646,6 +30646,26 @@ function updatePlanLocationRow(input) {
   if (total) total.textContent = planLocationGrandTotal(planLocationDraft()).toLocaleString(uiLocale());
 }
 
+async function persistPlanLocationCentral(config) {
+  if (!sb) throw new Error('ยังไม่เชื่อมต่อฐานข้อมูล');
+
+  const { data, error } = await sb.rpc('save_plan_location_setting', {
+    p_value: config,
+  });
+  if (!error) return data || config;
+
+  const code = String(error.code || '');
+  const message = String(error.message || error.details || error.hint || '');
+  const rpcMissing = code === 'PGRST202' || code === '42883' || /save_plan_location_setting/i.test(message) && /not find|not exist|schema cache/i.test(message);
+  if (rpcMissing) {
+    throw new Error('ยังไม่ได้ติดตั้ง SQL สำหรับ Plan Location กรุณารันไฟล์ Cycle_Count_v240_PLAN_LOCATION_SQL.sql ใน Supabase SQL Editor 1 ครั้ง แล้วลองบันทึกใหม่');
+  }
+  if (code === '42501' || /permission denied|admin only|เฉพาะ admin/i.test(message)) {
+    throw new Error('ไม่มีสิทธิ์บันทึก Plan Location กรุณาเข้าสู่ระบบด้วยบัญชี Admin แล้วลองใหม่');
+  }
+  throw error;
+}
+
 async function savePlanLocationSettings() {
   if (prof?.role !== 'admin') { adminOnlyMessage(); return; }
   const button = Q('plan-location-save');
@@ -30665,8 +30685,7 @@ async function savePlanLocationSettings() {
   config.updatedBy = prof?.name || '';
   try {
     if (button) { button.disabled = true; button.textContent = 'กำลังบันทึก...'; }
-    const { error } = await sb.from('app_settings').upsert({key:PLAN_LOCATION_SETTING_KEY,value:config},{onConflict:'key'});
-    if (error) throw error;
+    await persistPlanLocationCentral(config);
     _planLocationConfig = config;
     _planLocationLoaded = true;
     S._planLocationDraft = normalizePlanLocationConfig(config);
