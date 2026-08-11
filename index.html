@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.38</title>
+<title>Cycle Count V1.39</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -21,6 +21,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.min.js"></script>
 <!-- SheetJS สำหรับอ่านไฟล์ XLSX -->
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<!-- JSZip สำหรับ Backup รูปพร้อมข้อมูลเป็นไฟล์ ZIP เดียว -->
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <!-- html5-qrcode สำหรับสแกน Location -->
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
@@ -5825,6 +5827,34 @@ body {
 .backup-history-row:last-child {
   border-bottom: 0;
 }
+
+/* V1.39 · complete ZIP backup and Admin photo-storage monitor */
+.storage-monitor {
+  margin-bottom:18px;
+  padding:20px;
+  border:1px solid rgba(0,109,119,.18);
+  border-radius:24px;
+  background:linear-gradient(145deg,rgba(255,255,255,.84),rgba(237,246,249,.72));
+  box-shadow:0 12px 28px rgba(38,70,83,.08);
+}
+.storage-monitor-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.storage-monitor-head h3{font-size:18px;color:var(--text-main);margin:0 0 4px}
+.storage-monitor-head p{font-size:11px;color:var(--text-muted);line-height:1.55;margin:0}
+.storage-metric-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:16px}
+.storage-metric{padding:14px;border-radius:17px;background:rgba(255,255,255,.82);border:1px solid rgba(38,70,83,.1);min-width:0}
+.storage-metric span{display:block;font-size:10px;font-weight:800;color:var(--text-muted);margin-bottom:5px}
+.storage-metric strong{display:block;font-size:20px;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.storage-usage-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;margin-top:15px}
+.storage-usage-track{height:16px;border-radius:999px;background:#dbe7e8;overflow:hidden;box-shadow:inset 0 2px 5px rgba(38,70,83,.12)}
+.storage-usage-fill{height:100%;width:0;border-radius:inherit;background:#167c74;transition:width .3s ease}
+.storage-usage-fill.level-70{background:#b7791f}.storage-usage-fill.level-85{background:#c05621}.storage-usage-fill.level-95{background:#b8323c}
+.storage-alert{margin-top:12px;padding:11px 13px;border-radius:14px;font-size:12px;font-weight:800;line-height:1.5}
+.storage-alert.safe{background:#e6f4f1;color:#17645e}.storage-alert.warn{background:#fff3cd;color:#8a5a00}.storage-alert.critical{background:#fde2e2;color:#9b2c2c}
+.backup-action-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,.85fr);gap:10px;margin-top:16px}
+.backup-zip-note{margin-top:10px;padding:11px 13px;border-radius:14px;background:rgba(131,197,190,.16);font-size:11px;line-height:1.6;color:var(--text-main)}
+.backup-photo-summary{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:11px;color:var(--text-muted)}
+@media(max-width:1050px){.storage-metric-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:700px){.storage-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.backup-action-grid{grid-template-columns:1fr}.storage-monitor-head{flex-direction:column}.storage-usage-row{grid-template-columns:1fr}}
 
 /* v60 — full-width hourly chart, clean plot background, highlighted SKU card */
 #dash-content .summary-hour-chart-line {
@@ -17766,7 +17796,7 @@ body.tablet-ui .count-touch-toolbar .count-screen-lock-button { display:inline-f
 
 html,
 body,
-body[data-build="v1-38"] *,
+body[data-build="v1-39"] *,
 body *,
 #app,
 #app * {
@@ -18515,19 +18545,19 @@ body.expired-session-modal-open { overflow:hidden; }
   #app .variance-review-description { white-space:normal; }
 }
 /* v241 · clean, high-contrast warehouse layout editor */
-body[data-build="v1-38"] :is(.warehouse-editor-canvas-shell,.warehouse-editor-canvas-scroll,.warehouse-editor-canvas){
+body[data-build="v1-39"] :is(.warehouse-editor-canvas-shell,.warehouse-editor-canvas-scroll,.warehouse-editor-canvas){
   background:#fff !important;
   background-color:#fff !important;
   background-image:none !important;
 }
-body[data-build="v1-38"] .warehouse-editor-canvas-scroll{
+body[data-build="v1-39"] .warehouse-editor-canvas-scroll{
   border:1px solid #d7e2e3 !important;
 }
-body[data-build="v1-38"] .warehouse-editor-canvas{
+body[data-build="v1-39"] .warehouse-editor-canvas{
   border-color:#cbdadb !important;
   box-shadow:inset 0 0 0 1px #fff;
 }
-body[data-build="v1-38"] .warehouse-editor-element.rack>strong{
+body[data-build="v1-39"] .warehouse-editor-element.rack>strong{
   min-height:20px;
   padding:4px 8px !important;
   gap:7px;
@@ -18536,7 +18566,7 @@ body[data-build="v1-38"] .warehouse-editor-element.rack>strong{
   font:900 12px/1 'Sarabun',sans-serif !important;
   box-shadow:0 2px 5px rgba(0,55,60,.24);
 }
-body[data-build="v1-38"] .warehouse-editor-element.rack>strong small{
+body[data-build="v1-39"] .warehouse-editor-element.rack>strong small{
   padding:2px 5px;
   border-radius:5px;
   background:#004f57;
@@ -18544,20 +18574,20 @@ body[data-build="v1-38"] .warehouse-editor-element.rack>strong small{
   opacity:1 !important;
   font:900 9px/1 'Sarabun',sans-serif !important;
 }
-body[data-build="v1-38"] :is(.warehouse-editor-rack-corner,.warehouse-editor-rack-level){
+body[data-build="v1-39"] :is(.warehouse-editor-rack-corner,.warehouse-editor-rack-level){
   background:#123f5c !important;
   color:#fff !important;
   font-size:10px !important;
 }
-body[data-build="v1-38"] .warehouse-editor-rack-bay{
+body[data-build="v1-39"] .warehouse-editor-rack-bay{
   background:#f8eded !important;
   color:#172f32 !important;
   font-size:9px !important;
 }
-body[data-build="v1-38"] .warehouse-editor-rack-cell{
+body[data-build="v1-39"] .warehouse-editor-rack-cell{
   color:#173c40 !important;
 }
-body[data-build="v1-38"] .warehouse-no-level-note{
+body[data-build="v1-39"] .warehouse-no-level-note{
   padding:10px 12px;
   border:1px solid #bed7d8;
   border-radius:10px;
@@ -18566,8 +18596,8 @@ body[data-build="v1-38"] .warehouse-no-level-note{
   font-weight:800;
 }
 
-/* V1.38 · one high-contrast status palette for every warehouse-layout view */
-body[data-build="v1-38"]{
+/* V1.39 · one high-contrast status palette for every warehouse-layout view */
+body[data-build="v1-39"]{
   --warehouse-status-not-imported:#4b5563;
   --warehouse-status-imported:#005f73;
   --warehouse-status-counting:#9a5800;
@@ -18578,30 +18608,30 @@ body[data-build="v1-38"]{
   --warehouse-cell-pillar:#174e7a;
   --warehouse-cell-disabled:#7f1d1d;
 }
-body[data-build="v1-38"] :is(.warehouse-location-cell,.warehouse-matrix-cell).status-not_imported,
-body[data-build="v1-38"] .warehouse-layout-legend-dot.not_imported{background:var(--warehouse-status-not-imported) !important;border-color:var(--warehouse-status-not-imported) !important}
-body[data-build="v1-38"] :is(.warehouse-location-cell,.warehouse-matrix-cell).status-imported,
-body[data-build="v1-38"] .warehouse-layout-legend-dot.imported{background:var(--warehouse-status-imported) !important;border-color:var(--warehouse-status-imported) !important}
-body[data-build="v1-38"] :is(.warehouse-location-cell,.warehouse-matrix-cell).status-counting,
-body[data-build="v1-38"] .warehouse-layout-legend-dot.counting{background:var(--warehouse-status-counting) !important;border-color:var(--warehouse-status-counting) !important}
-body[data-build="v1-38"] :is(.warehouse-location-cell,.warehouse-matrix-cell).status-variance,
-body[data-build="v1-38"] .warehouse-layout-legend-dot.variance{background:var(--warehouse-status-variance) !important;border-color:var(--warehouse-status-variance) !important}
-body[data-build="v1-38"] :is(.warehouse-location-cell,.warehouse-matrix-cell).status-completed,
-body[data-build="v1-38"] .warehouse-layout-legend-dot.completed{background:var(--warehouse-status-completed) !important;border-color:var(--warehouse-status-completed) !important}
-body[data-build="v1-38"] .warehouse-layout-kpi.missing strong{color:var(--warehouse-status-not-imported) !important}
-body[data-build="v1-38"] .warehouse-layout-kpi.imported strong{color:var(--warehouse-status-imported) !important}
-body[data-build="v1-38"] .warehouse-layout-kpi.counting strong{color:var(--warehouse-status-counting) !important}
-body[data-build="v1-38"] .warehouse-layout-kpi.variance strong{color:var(--warehouse-status-variance) !important}
-body[data-build="v1-38"] .warehouse-layout-kpi.completed strong{color:var(--warehouse-status-completed) !important}
-body[data-build="v1-38"] .warehouse-layout-legend-dot.unmatched{background:var(--warehouse-status-unmatched) !important;border-color:var(--warehouse-status-unmatched) !important}
-body[data-build="v1-38"] :is(.warehouse-location-cell.is-excluded.is-aisle,.warehouse-matrix-blocked.is-aisle,.warehouse-editor-rack-cell.cell-aisle),
-body[data-build="v1-38"] .warehouse-layout-legend-dot.aisle{background:var(--warehouse-cell-aisle) !important;border-color:var(--warehouse-cell-aisle) !important}
-body[data-build="v1-38"] :is(.warehouse-location-cell.is-excluded.is-pillar,.warehouse-matrix-blocked.is-pillar,.warehouse-editor-rack-cell.cell-pillar),
-body[data-build="v1-38"] .warehouse-layout-legend-dot.pillar{background:var(--warehouse-cell-pillar) !important;border-color:var(--warehouse-cell-pillar) !important}
-body[data-build="v1-38"] :is(.warehouse-location-cell.is-excluded.is-disabled,.warehouse-matrix-blocked.is-disabled,.warehouse-editor-rack-cell.cell-disabled),
-body[data-build="v1-38"] .warehouse-layout-legend-dot.disabled{background:var(--warehouse-cell-disabled) !important;border-color:var(--warehouse-cell-disabled) !important}
-body[data-build="v1-38"] :is(.warehouse-location-cell,.warehouse-matrix-cell){box-shadow:inset 0 0 0 1px rgba(255,255,255,.24)}
-body[data-build="v1-38"] .warehouse-layout-legend-dot{box-shadow:inset 0 0 0 1px rgba(255,255,255,.28),0 0 0 1px rgba(20,31,35,.16)}
+body[data-build="v1-39"] :is(.warehouse-location-cell,.warehouse-matrix-cell).status-not_imported,
+body[data-build="v1-39"] .warehouse-layout-legend-dot.not_imported{background:var(--warehouse-status-not-imported) !important;border-color:var(--warehouse-status-not-imported) !important}
+body[data-build="v1-39"] :is(.warehouse-location-cell,.warehouse-matrix-cell).status-imported,
+body[data-build="v1-39"] .warehouse-layout-legend-dot.imported{background:var(--warehouse-status-imported) !important;border-color:var(--warehouse-status-imported) !important}
+body[data-build="v1-39"] :is(.warehouse-location-cell,.warehouse-matrix-cell).status-counting,
+body[data-build="v1-39"] .warehouse-layout-legend-dot.counting{background:var(--warehouse-status-counting) !important;border-color:var(--warehouse-status-counting) !important}
+body[data-build="v1-39"] :is(.warehouse-location-cell,.warehouse-matrix-cell).status-variance,
+body[data-build="v1-39"] .warehouse-layout-legend-dot.variance{background:var(--warehouse-status-variance) !important;border-color:var(--warehouse-status-variance) !important}
+body[data-build="v1-39"] :is(.warehouse-location-cell,.warehouse-matrix-cell).status-completed,
+body[data-build="v1-39"] .warehouse-layout-legend-dot.completed{background:var(--warehouse-status-completed) !important;border-color:var(--warehouse-status-completed) !important}
+body[data-build="v1-39"] .warehouse-layout-kpi.missing strong{color:var(--warehouse-status-not-imported) !important}
+body[data-build="v1-39"] .warehouse-layout-kpi.imported strong{color:var(--warehouse-status-imported) !important}
+body[data-build="v1-39"] .warehouse-layout-kpi.counting strong{color:var(--warehouse-status-counting) !important}
+body[data-build="v1-39"] .warehouse-layout-kpi.variance strong{color:var(--warehouse-status-variance) !important}
+body[data-build="v1-39"] .warehouse-layout-kpi.completed strong{color:var(--warehouse-status-completed) !important}
+body[data-build="v1-39"] .warehouse-layout-legend-dot.unmatched{background:var(--warehouse-status-unmatched) !important;border-color:var(--warehouse-status-unmatched) !important}
+body[data-build="v1-39"] :is(.warehouse-location-cell.is-excluded.is-aisle,.warehouse-matrix-blocked.is-aisle,.warehouse-editor-rack-cell.cell-aisle),
+body[data-build="v1-39"] .warehouse-layout-legend-dot.aisle{background:var(--warehouse-cell-aisle) !important;border-color:var(--warehouse-cell-aisle) !important}
+body[data-build="v1-39"] :is(.warehouse-location-cell.is-excluded.is-pillar,.warehouse-matrix-blocked.is-pillar,.warehouse-editor-rack-cell.cell-pillar),
+body[data-build="v1-39"] .warehouse-layout-legend-dot.pillar{background:var(--warehouse-cell-pillar) !important;border-color:var(--warehouse-cell-pillar) !important}
+body[data-build="v1-39"] :is(.warehouse-location-cell.is-excluded.is-disabled,.warehouse-matrix-blocked.is-disabled,.warehouse-editor-rack-cell.cell-disabled),
+body[data-build="v1-39"] .warehouse-layout-legend-dot.disabled{background:var(--warehouse-cell-disabled) !important;border-color:var(--warehouse-cell-disabled) !important}
+body[data-build="v1-39"] :is(.warehouse-location-cell,.warehouse-matrix-cell){box-shadow:inset 0 0 0 1px rgba(255,255,255,.24)}
+body[data-build="v1-39"] .warehouse-layout-legend-dot{box-shadow:inset 0 0 0 1px rgba(255,255,255,.28),0 0 0 1px rgba(20,31,35,.16)}
 
 /* V1.18 · Session selector uses one clean outer frame. */
 #app .dashboard-session-filter .dashboard-filter-copy{
@@ -19221,7 +19251,7 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
 @media(max-width:640px){.main-wrapper.executive-view .topbar{height:auto;min-height:64px;padding:10px 12px}.exec-v16-global-filters{flex-direction:column;align-items:stretch}.exec-v16-global-filters .dashboard-filter-control{width:100%;min-width:0}.exec-v16-header{flex-direction:column}.exec-v16-header-right,.exec-v16-context-filters{align-items:stretch;flex-direction:column}.exec-v16-context-filters .dashboard-filter-control{width:100%}.exec-v16-header-actions{justify-content:flex-start}.exec-v16-filterbar{grid-template-columns:1fr}.exec-v16-filterbar>strong,.exec-v16-metric{grid-column:auto}.exec-v16-primary-value{align-items:flex-start;flex-direction:column}.exec-v16-snapshot-grid{grid-template-columns:1fr}.exec-v16-risk-row{grid-template-columns:28px minmax(0,1fr) 68px 16px}.exec-v16-risk-stat:nth-of-type(4),.exec-v16-risk-accuracy{display:none}.exec-v16-action-item{grid-template-columns:34px minmax(0,1fr)}.exec-v16-action-item>button{grid-column:2;justify-self:start}.exec-v16-method>div{flex-direction:column;gap:5px}}
 @media print{.main-wrapper.executive-view .topbar,.exec-v16-global-filters,.exec-v16-header-actions,.exec-v16-filterbar,.exec-v16-method{display:none!important}.main-wrapper.executive-view .page-content{padding:0!important}.exec-v16-dashboard{gap:8px}.exec-v16-header{min-height:45px}.exec-v16-hero{box-shadow:none}.exec-v16-panel,.exec-v16-snapshot{box-shadow:none;break-inside:avoid}}
 
-/* V1.38 · cleaner summary copy and structured Zone cards */
+/* V1.39 · cleaner summary copy and structured Zone cards */
 #dash-content .summary-hour-top-stats-boxes .summary-hour-stat {
   min-height: 76px !important;
   justify-content: center !important;
@@ -19355,7 +19385,7 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
   }
 }
 
-/* V1.38 · adaptive Zone overview, tabs and searchable picker */
+/* V1.39 · adaptive Zone overview, tabs and searchable picker */
 #dash-content .summary-zone-heading-actions-v128 {
   min-width: 0;
   display: flex;
@@ -19585,7 +19615,7 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
   }
 }
 
-/* V1.38 · adapt Zone density to the number of Zones in the Session */
+/* V1.39 · adapt Zone density to the number of Zones in the Session */
 #dash-content .summary-zones-card.is-single-zone-v129 .summary-zone-browser-v128,
 #dash-content .summary-zones-card.is-single-zone-v129 .summary-zone-browser-v128 > .summary-zone-grid,
 #dash-content .summary-zones-card.is-single-zone-v129 .summary-zone-detail-v128 {
@@ -19655,7 +19685,7 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
   }
 }
 
-/* V1.38 · size Zone content from the card itself, not the viewport. */
+/* V1.39 · size Zone content from the card itself, not the viewport. */
 #dash-content .summary-zones-card {
   container-type: inline-size;
 }
@@ -19732,7 +19762,7 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
   }
 }
 
-/* V1.38 · two-page WMS import result: clear summary + scrollable details. */
+/* V1.39 · two-page WMS import result: clear summary + scrollable details. */
 .wms-import-result-backdrop {
   position: fixed;
   inset: 0;
@@ -20046,7 +20076,7 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
   .wms-import-inline-summary { grid-template-columns: 1fr; }
 }
 
-/* V1.38 · inherited issue evidence and supervisor variance workflow. */
+/* V1.39 · inherited issue evidence and supervisor variance workflow. */
 .count-issue-backdrop {
   position: fixed;
   inset: 0;
@@ -20184,13 +20214,13 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
 }
 </style>
 </head>
-<body data-build="v1-38">
+<body data-build="v1-39">
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.38';
+const APP_VERSION = '1.39';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
-const APP_BUILD_ID = 'v1-38';
+const APP_BUILD_ID = 'v1-39';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
 // v31 defensive date helpers: prevent legacy cached/remaining references from crashing the dashboard.
 var selectedDateFrom = '';
@@ -21588,7 +21618,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.38':'e.g. Warehouse V1.38',
+  'เช่น Warehouse V1.39':'e.g. Warehouse V1.39',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -23182,6 +23212,7 @@ let _backupParsed = null;
 let _lastBackupExport = null;
 let _backupScopeRequestSerial = 0;
 let _backupExportRunning = false;
+let _backupStorageUsage = null;
 let _svDashOpenVarianceIdx = null;   
 let _dashTab = 'summary';
 let _navStack = [];
@@ -24792,6 +24823,9 @@ const BACKUP_BATCH_SIZE = 500;
 const BACKUP_EXCEL_CELL_LIMIT = 32767;
 const BACKUP_EXCEL_CHUNK_SIZE = 30000;
 const BACKUP_CHUNK_MARKER = '__cc_part_';
+const BACKUP_ZIP_FORMAT = 'CYCLE_COUNT_FULL_BACKUP';
+const BACKUP_ZIP_VERSION = 1;
+const BACKUP_PHOTO_BUCKET = 'count-photos';
 const BACKUP_SHEET_SPECS = [
   { sheet:'Sessions', table:'count_sessions', scope:'session', columns:['id','name','status','created_by','created_at','closed_at','show_oh','max_rounds','repeat_match_action','count_mode','annual_items_per_job','annual_job_prefix','annual_form_title','annual_form_logo_data_url'], restore:true },
   { sheet:'Locations', table:'locations', scope:'master', columns:['id','code','zone','area','row_no','level','type','category'], restore:true },
@@ -26739,7 +26773,7 @@ function computeItemStatus(oh, r1, r2, r3, rules) {
   return 'Diff';
 }
 
-// V1.38: protect summary/WMS reporting from a legacy approval inconsistency.
+// V1.39: protect summary/WMS reporting from a legacy approval inconsistency.
 // Some approved rows were saved as variance=0/final_qty=OH even though the
 // physical rounds still resolve to Diff.  Preserve the database history, but
 // use the confirmed physical rounds for display and dashboard calculations so
@@ -47296,7 +47330,65 @@ function handleBackupSessionChange() {
   const alertBox = Q('backup-export-alert');
   if (deleteArea) deleteArea.hidden = true;
   if (alertBox) alertBox.innerHTML = '';
+  const excelButton = Q('backup-excel-btn');
+  if (excelButton) excelButton.disabled = true;
   refreshBackupScopeSummary();
+}
+
+function formatFileBytes(value) {
+  const bytes = Math.max(0,Number(value)||0);
+  if (bytes < 1000) return `${bytes.toLocaleString(uiLocale())} B`;
+  const units = ['KB','MB','GB','TB'];
+  let size = bytes;
+  let index = -1;
+  do { size /= 1000; index++; } while (size >= 1000 && index < units.length-1);
+  return `${size.toLocaleString(uiLocale(),{maximumFractionDigits:size>=100?0:size>=10?1:2})} ${units[index]}`;
+}
+
+function storageMonitorHtml(storage) {
+  if (!storage) return `<div class="load" style="padding:18px">กำลังตรวจพื้นที่จัดเก็บรูป...</div>`;
+  const percent = Math.max(0,Number(storage.used_percent)||0);
+  const level = Number(storage.alert_level)||0;
+  const levelClass = level >= 95 ? 'level-95' : level >= 85 ? 'level-85' : level >= 70 ? 'level-70' : '';
+  const alertClass = level >= 85 ? 'critical' : level >= 70 ? 'warn' : 'safe';
+  const alertText = level >= 95
+    ? 'วิกฤต 95% — กรุณา Backup ZIP และเคลียร์รูปทันที'
+    : level >= 85
+      ? 'เตือน 85% — ควรวางแผน Backup ZIP และลบรูปที่สำรองแล้ว'
+      : level >= 70
+        ? 'เตือน 70% — พื้นที่รูปเริ่มสูง ควรตรวจแผนการสำรองข้อมูล'
+        : 'พื้นที่รูปอยู่ในระดับปกติ';
+  return `
+    <div class="storage-monitor-head">
+      <div><h3>พื้นที่จัดเก็บรูป · Admin</h3><p>Bucket ${escapeWmsText(storage.bucket || BACKUP_PHOTO_BUCKET)} · โควตา Free 1 GB ระดับองค์กร · ตรวจล่าสุด ${storage.measured_at ? new Date(storage.measured_at).toLocaleString(uiLocale()) : '-'}</p></div>
+      <button class="btn btn-ghost btn-sm" type="button" onclick="refreshAdminPhotoStorage(true)">↻ รีเฟรชพื้นที่</button>
+    </div>
+    <div class="storage-metric-grid">
+      <div class="storage-metric"><span>ใช้ไปแล้ว</span><strong>${formatFileBytes(storage.used_bytes)}</strong></div>
+      <div class="storage-metric"><span>พื้นที่เหลือโดยประมาณ</span><strong>${formatFileBytes(storage.remaining_bytes)}</strong></div>
+      <div class="storage-metric"><span>พื้นที่ทั้งหมด</span><strong>${formatFileBytes(storage.quota_bytes)}</strong></div>
+      <div class="storage-metric"><span>จำนวนรูปทั้งหมด</span><strong>${Number(storage.object_count||0).toLocaleString(uiLocale())}</strong></div>
+      <div class="storage-metric"><span>รูปใหญ่สุด / เฉลี่ย</span><strong style="font-size:16px">${formatFileBytes(storage.largest_object?.size||0)} / ${formatFileBytes(storage.average_bytes)}</strong></div>
+    </div>
+    <div class="storage-usage-row">
+      <div class="storage-usage-track"><div class="storage-usage-fill ${levelClass}" style="width:${Math.min(100,percent)}%"></div></div>
+      <strong>${percent.toLocaleString(uiLocale(),{minimumFractionDigits:2,maximumFractionDigits:2})}%</strong>
+    </div>
+    <div class="storage-alert ${alertClass}">${alertText} · ระบบแจ้งเตือนที่ 70%, 85% และ 95%</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);line-height:1.55">พื้นที่เหลือเป็นค่าประมาณจากโควตาองค์กรหักการใช้ของ Cycle Count bucket นี้ หากองค์กรมีไฟล์ใน Project อื่น ตัวเลขหน้า Supabase Usage อาจน้อยกว่านี้</div>`;
+}
+
+async function refreshAdminPhotoStorage(showLoading=false) {
+  const container = Q('backup-storage-monitor');
+  if (!container) return;
+  if (showLoading) container.innerHTML = `<div class="load" style="padding:18px">กำลังตรวจพื้นที่จัดเก็บรูป...</div>`;
+  try {
+    const result = await invokeAdminBackup('storage_usage');
+    _backupStorageUsage = result.storage || null;
+    container.innerHTML = storageMonitorHtml(_backupStorageUsage);
+  } catch (error) {
+    container.innerHTML = errBox(`ตรวจพื้นที่รูปไม่สำเร็จ: ${error.message || error}`);
+  }
 }
 
 async function renderManageBackup(container) {
@@ -47321,7 +47413,7 @@ async function renderManageBackup(container) {
     `<option value="${session.id}">${escapeWmsText(session.name)} · ${escapeWmsText(session.status || '')}</option>`
   ).join('');
   const actionLabels = {
-    export:'Backup Excel',
+    export:'Backup Excel / ZIP',
     delete_after_export:'ลบหลัง Backup',
     restore:'Restore Excel',
   };
@@ -47339,6 +47431,7 @@ async function renderManageBackup(container) {
     </div>`).join('');
 
   container.innerHTML = `
+    <section class="storage-monitor" id="backup-storage-monitor">${storageMonitorHtml(_backupStorageUsage)}</section>
     <div class="alert alert-blue" style="line-height:1.7">
       <strong>Backup ที่อ่านง่าย ใช้งานต่อได้ และกู้คืนได้</strong><br>
       Excel จะเปิดที่ชีต Data_Count ซึ่งรวมข้อมูล Stock / LPN และ Found_Work ที่ไม่ถูกปฏิเสธของ Session โดยไม่กรองเฉพาะ Gain / Lost
@@ -47374,10 +47467,15 @@ async function renderManageBackup(container) {
           ${(sessions || []).length ? `<div class="load" style="padding:15px">กรุณาเลือก Session ที่ต้องการ Backup</div>`
             : `<div class="alert alert-amber">ยังไม่มี Session สำหรับ Backup</div>`}
         </div>
-        <button class="btn btn-blue" id="backup-export-btn" style="width:100%;margin-top:16px"
-          onclick="exportBackupExcel()" disabled>
-          ${navIconSvg('backup',18)} ดาวน์โหลด Backup Excel
-        </button>
+        <div class="backup-action-grid">
+          <button class="btn btn-blue" id="backup-export-btn" onclick="exportBackupZip()" disabled>
+            ${navIconSvg('backup',18)} Backup ครบชุด ZIP · Excel + รูป
+          </button>
+          <button class="btn btn-ghost" id="backup-excel-btn" onclick="exportBackupExcel()" disabled>
+            ดาวน์โหลดเฉพาะ Excel
+          </button>
+        </div>
+        <div class="backup-zip-note"><strong>แนะนำ:</strong> ZIP เป็นไฟล์เดียว ภายในมี Excel, รูปทั้งหมด และ Manifest พร้อม checksum จึงใช้ลบทั้งข้อมูลและรูปหลังตรวจ Backup สำเร็จได้ ส่วน Excel อย่างเดียวจะไม่ลบไฟล์รูป</div>
         <div style="margin-top:14px">
           <div id="backup-export-progress-text" style="font-size:11px;color:var(--text-muted);font-weight:700">พร้อมสร้าง Backup</div>
           <div class="backup-progress"><span id="backup-export-progress-bar"></span></div>
@@ -47386,7 +47484,7 @@ async function renderManageBackup(container) {
         <div id="backup-delete-area" hidden style="margin-top:14px">
           <div class="alert alert-red" style="line-height:1.65">
             ตรวจว่าไฟล์เปิดได้และเก็บไฟล์ไว้เรียบร้อยก่อนกดลบ<br>
-            ระบบจะลบเฉพาะข้อมูล Session ในฐานข้อมูล ส่วนไฟล์รูปจะเก็บไว้เพื่อ Restore
+            ZIP: ลบข้อมูล Session และรูปที่ไม่ถูกใช้งานร่วมกับ Session อื่น · Excel: ลบเฉพาะข้อมูลและเก็บรูปไว้
           </div>
           <button class="btn btn-red admin-delete-icon" style="width:100%" onclick="deleteLastBackedUpSessions()">
             ${adminTrashIconSvg()} <span>ลบข้อมูลที่ Backup แล้ว</span>
@@ -47408,8 +47506,8 @@ async function renderManageBackup(container) {
           และตรวจ Manifest, จำนวนแถว และ checksum ก่อน Import
         </div>
         <div class="fg">
-          <label>เลือกไฟล์ Backup (.xlsx)</label>
-          <input class="backup-file-input" type="file" id="backup-import-file" accept=".xlsx"
+          <label>เลือกไฟล์ Backup (.zip หรือ .xlsx)</label>
+          <input class="backup-file-input" type="file" id="backup-import-file" accept=".zip,.xlsx"
             onchange="readBackupExcelFile(event)">
         </div>
         <div id="backup-import-preview">
@@ -47439,6 +47537,7 @@ async function renderManageBackup(container) {
       </div>
     </details>`;
 
+  await refreshAdminPhotoStorage();
   if ((sessions || []).length) await refreshBackupScopeSummary();
 }
 
@@ -47448,13 +47547,16 @@ async function refreshBackupScopeSummary() {
   const requestSerial = ++_backupScopeRequestSerial;
   const container = Q('backup-scope-summary');
   const button = Q('backup-export-btn');
+  const excelButton = Q('backup-excel-btn');
   if (!container || !button) return;
   if (!sessionIds.length) {
     button.disabled = true;
+    if (excelButton) excelButton.disabled = true;
     container.innerHTML = `<div class="load" style="padding:15px">กรุณาเลือก Session ที่ต้องการ Backup</div>`;
     return;
   }
   button.disabled = true;
+  if (excelButton) excelButton.disabled = true;
   container.innerHTML = `<div class="load" style="padding:15px">กำลังตรวจจำนวนข้อมูล...</div>`;
   let ready = false;
   try {
@@ -47471,6 +47573,7 @@ async function refreshBackupScopeSummary() {
   } finally {
     if (requestSerial === _backupScopeRequestSerial && scopeKey === backupSessionScopeKey()) {
       button.disabled = !ready;
+      if (excelButton) excelButton.disabled = !ready;
     }
   }
 }
@@ -48793,7 +48896,7 @@ function appendTeamBackupSheet(workbook, sheetName, rows, columns) {
   XLSX.utils.book_append_sheet(workbook, sheet, sheetName);
 }
 
-function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BACKUP_FORMAT_VERSION) {
+function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BACKUP_FORMAT_VERSION, photoBackupMode='storage_url_preserved') {
   if (typeof XLSX === 'undefined') throw new Error('ไม่พบระบบอ่าน/เขียน Excel');
   if (!BACKUP_SUPPORTED_VERSIONS.has(String(formatVersion))) throw new Error('Backup Format ไม่ถูกต้อง');
   validateBackupDataScope(dataBySheet,sessionIds);
@@ -48811,11 +48914,11 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.38' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.39' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
-    { key:'photo_backup_mode', value:'storage_url_preserved' },
+    { key:'photo_backup_mode', value:photoBackupMode },
     ...BACKUP_SHEET_SPECS.flatMap(spec => [
       { key:`rows:${spec.sheet}`, value:String(rowCounts[spec.sheet]) },
       { key:`hash:${spec.sheet}`, value:sheetHashes[spec.sheet] },
@@ -48852,7 +48955,9 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     ['การใช้งานต่อ','ทีมสามารถกรอง คัดลอก หรือแก้ไขชีตข้อมูลที่มองเห็นได้ เพราะ Restore จะอ่านเฉพาะชีตระบบที่ซ่อนไว้'],
     ['ข้อความยาว','Backup Format v6 จะแบ่งข้อความที่ยาวเกินข้อจำกัด Excel เป็นคอลัมน์ __cc_part_2, 3... และประกอบกลับอัตโนมัติเมื่อ Restore'],
     ['คำเตือน Restore','ชีตข้อมูลระบบที่จำเป็นต่อ Restore ถูกซ่อนไว้ ห้ามเปิด แก้ชื่อ หรือลบชีตเหล่านั้น'],
-    ['รูปถ่าย','เก็บเป็น URL และระบบจะรักษาไฟล์รูปใน Storage เมื่อลบผ่านเมนู Backup'],
+    ['รูปถ่าย',photoBackupMode === 'embedded_zip'
+      ? 'รูปจริงถูกเก็บใน ZIP พร้อม checksum และ Restore กลับ path เดิมได้'
+      : 'เก็บเป็น URL และระบบจะรักษาไฟล์รูปใน Storage เมื่อลบผ่านเมนู Backup'],
     ['ข้อมูลระบบ','ข้อมูล Restore ยังอยู่ครบ รวมข้อมูลใบและ Transaction History แต่ชีตระบบถูกซ่อนไว้เพื่อป้องกันการแก้โดยไม่ตั้งใจ'],
     ['รหัสระบบ','Session ID, Assignment ID, Location ID และ Item ID ถูกนำออกจากชีตที่ทีมใช้งาน แต่ยังอยู่ครบในชีตระบบที่ซ่อนสำหรับ Restore'],
     ['User Login','ไฟล์นี้ไม่เก็บรหัสผ่านและไม่สร้างบัญชี Auth ใหม่; Profiles ใช้เป็นข้อมูลอ้างอิง'],
@@ -48899,6 +49004,167 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
   return { workbook, manifestHash, rowCounts, sheetHashes, businessCounts, createdAt };
 }
 
+function downloadBackupBlob(blob, fileName) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.style.display = 'none';
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(url),30000);
+}
+
+async function backupSha256Hex(value) {
+  if (!crypto?.subtle) throw new Error('Browser นี้ไม่รองรับการตรวจ checksum SHA-256');
+  const buffer = value instanceof ArrayBuffer ? value : await value.arrayBuffer();
+  const digest = await crypto.subtle.digest('SHA-256',buffer);
+  return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2,'0')).join('');
+}
+
+function backupArchiveSafePath(value) {
+  const path = String(value || '').trim().replace(/^\/+/, '');
+  if (!path || path.includes('\\') || path.split('/').some(part => !part || part === '.' || part === '..')) {
+    throw new Error('พบ path รูปใน ZIP ที่ไม่ปลอดภัย');
+  }
+  return path;
+}
+
+async function backupMapConcurrent(items, limit, worker) {
+  const results = new Array(items.length);
+  let cursor = 0;
+  const runners = Array.from({length:Math.min(Math.max(1,limit),Math.max(1,items.length))},async () => {
+    while (cursor < items.length) {
+      const index = cursor++;
+      results[index] = await worker(items[index],index);
+    }
+  });
+  await Promise.all(runners);
+  return results;
+}
+
+async function exportBackupZip() {
+  if (prof?.role !== 'admin') { adminOnlyMessage(); return; }
+  if (_backupExportRunning) { alert('ระบบกำลังสร้าง Backup อยู่ กรุณารอให้เสร็จก่อน'); return; }
+  if (typeof JSZip === 'undefined') { alert('ไม่พบระบบสร้าง ZIP กรุณาเชื่อมต่ออินเทอร์เน็ตและโหลดหน้าใหม่'); return; }
+  const sessionIds = backupSelectedSessionIds();
+  if (!sessionIds.length) { alert('กรุณาเลือก Session'); return; }
+  const scopeKey = backupSessionScopeKey(sessionIds);
+  const button = Q('backup-export-btn');
+  const excelButton = Q('backup-excel-btn');
+  const sessionSelect = Q('backup-session');
+  const afterMode = Q('backup-after-mode');
+  const alertBox = Q('backup-export-alert');
+  const deleteArea = Q('backup-delete-area');
+  _backupExportRunning = true;
+  [button,excelButton,sessionSelect,afterMode].forEach(control => { if (control) control.disabled = true; });
+  if (deleteArea) deleteArea.hidden = true;
+  _lastBackupExport = null;
+  try {
+    if (alertBox) alertBox.innerHTML = `<div class="alert alert-blue">กำลังสร้าง Backup ครบชุด กรุณาอย่าปิดหน้านี้...</div>`;
+    setBackupProgress(1,'กำลังรวบรวมข้อมูลระบบ...','export');
+    const dataBySheet = await collectBackupData(sessionIds);
+    if (scopeKey !== backupSessionScopeKey()) throw new Error('ขอบเขต Session เปลี่ยนระหว่างสร้าง Backup กรุณาลองใหม่');
+    validateBackupDataScope(dataBySheet,sessionIds);
+    const sessions = dataBySheet.Sessions || [];
+    const scopeName = sessions.length === 1 ? sessions[0].name : `${sessions.length}_Sessions`;
+    const stem = `CycleCount_Backup_${backupTimestampForFile()}_${backupSafeFilePart(scopeName)}`;
+    const excelFileName = `${stem}.xlsx`;
+    const zipFileName = `${stem}.zip`;
+    setBackupProgress(72,'กำลังสร้าง Excel และ checksum...','export');
+    const built = buildBackupWorkbook(dataBySheet,sessionIds,excelFileName,BACKUP_FORMAT_VERSION,'embedded_zip');
+    const excelArray = XLSX.write(built.workbook,{bookType:'xlsx',type:'array',compression:true});
+    const excelBuffer = excelArray instanceof ArrayBuffer
+      ? excelArray
+      : excelArray.buffer.slice(excelArray.byteOffset,excelArray.byteOffset + excelArray.byteLength);
+    const excelSha256 = await backupSha256Hex(excelBuffer);
+
+    setBackupProgress(76,'กำลังตรวจรายการรูปใน Session...','export');
+    const prepared = await invokeAdminBackup('prepare_photo_backup',{session_ids:sessionIds});
+    const sourceEntries = Array.isArray(prepared.entries) ? prepared.entries : [];
+    const zip = new JSZip();
+    zip.file(excelFileName,excelBuffer,{binary:true,compression:'DEFLATE'});
+    let downloadedBytes = 0;
+    const photoManifest = await backupMapConcurrent(sourceEntries,4,async (entry,index) => {
+      const path = backupArchiveSafePath(entry.path);
+      if (!entry.signed_url) throw new Error(`ไม่พบลิงก์ดาวน์โหลดรูป ${path}`);
+      const response = await fetch(entry.signed_url,{cache:'no-store'});
+      if (!response.ok) throw new Error(`ดาวน์โหลดรูป ${path} ไม่สำเร็จ (${response.status})`);
+      const blob = await response.blob();
+      if (!blob.size) throw new Error(`รูป ${path} เป็นไฟล์ว่าง`);
+      const sha256 = await backupSha256Hex(blob);
+      const archivePath = `photos/${path}`;
+      zip.file(archivePath,blob,{binary:true,compression:'STORE'});
+      downloadedBytes += blob.size;
+      setBackupProgress(76 + Math.round((index+1)/Math.max(1,sourceEntries.length)*10),
+        `เก็บรูป ${index+1}/${sourceEntries.length} · ${formatFileBytes(downloadedBytes)}`,'export');
+      return {
+        bucket:BACKUP_PHOTO_BUCKET,
+        path,
+        archive_path:archivePath,
+        original_url:String(entry.original_url || ''),
+        reference_count:Number(entry.reference_count || 1),
+        size:blob.size,
+        mime_type:blob.type || 'application/octet-stream',
+        sha256,
+      };
+    });
+    const manifestBase = {
+      format:BACKUP_ZIP_FORMAT,
+      version:BACKUP_ZIP_VERSION,
+      created_at:new Date().toISOString(),
+      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.39',
+      excel_file:excelFileName,
+      excel_sha256:excelSha256,
+      excel_manifest_hash:built.manifestHash,
+      session_ids:sessionIds,
+      photo_bucket:BACKUP_PHOTO_BUCKET,
+      photo_count:photoManifest.length,
+      photo_bytes:downloadedBytes,
+      photos:photoManifest,
+    };
+    const manifestSha256 = await backupSha256Hex(new Blob([JSON.stringify(manifestBase)]));
+    const zipManifest = {...manifestBase,manifest_sha256:manifestSha256};
+    zip.file('manifest.json',JSON.stringify(zipManifest,null,2));
+    zip.file('README.txt',`Cycle Count Full Backup\nExcel: ${excelFileName}\nPhotos: ${photoManifest.length}\nCreated: ${zipManifest.created_at}\nRestore from Admin > Backup / Restore.\n`);
+    setBackupProgress(88,'กำลังรวมเป็น ZIP ไฟล์เดียว...','export');
+    const zipBlob = await zip.generateAsync({type:'blob',compression:'STORE',streamFiles:true},metadata => {
+      setBackupProgress(88 + Math.round(metadata.percent*.1),`กำลังสร้าง ZIP ${Math.round(metadata.percent)}%`,'export');
+    });
+    downloadBackupBlob(zipBlob,zipFileName);
+    const logResult = await invokeAdminBackup('log_export',{
+      file_name:zipFileName,
+      session_ids:sessionIds,
+      manifest_hash:built.manifestHash,
+      row_counts:built.rowCounts,
+    });
+    _lastBackupExport = {
+      mode:'zip',fileName:zipFileName,sessionIds,manifestHash:built.manifestHash,
+      rowCounts:built.rowCounts,backupEventId:logResult.backup_event_id,photoManifest,
+    };
+    setBackupProgress(100,'Backup ZIP สำเร็จ','export');
+    if (alertBox) alertBox.innerHTML = `<div class="alert alert-green" style="line-height:1.65">
+      ✅ ดาวน์โหลด <strong>${escapeWmsText(zipFileName)}</strong> แล้ว · 1 ไฟล์<br>
+      Excel ${formatFileBytes(excelBuffer.byteLength)} · รูป ${photoManifest.length.toLocaleString(uiLocale())} ไฟล์ (${formatFileBytes(downloadedBytes)}) · ZIP ${formatFileBytes(zipBlob.size)}<br>
+      <span style="font-size:11px">ตรวจ Excel, รูป และ checksum ครบก่อนเปิดปุ่มลบข้อมูล</span>
+    </div>`;
+    showActionSuccess('สร้าง Backup ZIP ครบทั้งข้อมูลและรูปแล้ว',{title:'Backup ครบชุดสำเร็จ',detail:zipFileName,facts:[{label:'รูป',value:photoManifest.length.toLocaleString(uiLocale())},{label:'ขนาด ZIP',value:formatFileBytes(zipBlob.size)}]});
+    if (Q('backup-after-mode')?.value === 'delete' && deleteArea) deleteArea.hidden = false;
+  } catch (error) {
+    console.error(error);
+    setBackupProgress(0,'Backup ZIP ไม่สำเร็จ','export');
+    if (alertBox) alertBox.innerHTML = errBox(error.message || error);
+  } finally {
+    _backupExportRunning = false;
+    if (sessionSelect) sessionSelect.disabled = false;
+    if (afterMode) afterMode.disabled = false;
+    const hasScope = backupSelectedSessionIds().length > 0;
+    if (button) button.disabled = !hasScope;
+    if (excelButton) excelButton.disabled = !hasScope;
+  }
+}
+
 async function exportBackupExcel() {
   if (prof?.role !== 'admin') { adminOnlyMessage(); return; }
   if (_backupExportRunning) {
@@ -48909,12 +49175,14 @@ async function exportBackupExcel() {
   if (!sessionIds.length) { alert('กรุณาเลือก Session'); return; }
   const scopeKey = backupSessionScopeKey(sessionIds);
   const button = Q('backup-export-btn');
+  const excelButton = Q('backup-excel-btn');
   const sessionSelect = Q('backup-session');
   const afterMode = Q('backup-after-mode');
   const alertBox = Q('backup-export-alert');
   const deleteArea = Q('backup-delete-area');
   _backupExportRunning = true;
   if (button) button.disabled = true;
+  if (excelButton) excelButton.disabled = true;
   if (sessionSelect) sessionSelect.disabled = true;
   if (afterMode) afterMode.disabled = true;
   if (deleteArea) deleteArea.hidden = true;
@@ -48942,11 +49210,13 @@ async function exportBackupExcel() {
       row_counts:built.rowCounts,
     });
     _lastBackupExport = {
+      mode:'excel',
       fileName,
       sessionIds,
       manifestHash:built.manifestHash,
       rowCounts:built.rowCounts,
       backupEventId:logResult.backup_event_id,
+      photoManifest:[],
     };
     setBackupProgress(100,'Backup สำเร็จ','export');
     if (alertBox) alertBox.innerHTML = `<div class="alert alert-green" style="line-height:1.65">
@@ -48973,6 +49243,7 @@ async function exportBackupExcel() {
     if (sessionSelect) sessionSelect.disabled = false;
     if (afterMode) afterMode.disabled = false;
     if (button) button.disabled = !backupSelectedSessionIds().length;
+    if (excelButton) excelButton.disabled = !backupSelectedSessionIds().length;
   }
 }
 
@@ -48986,11 +49257,19 @@ async function deleteLastBackedUpSessions() {
   const alertBox = Q('backup-export-alert');
   try {
     if (alertBox) alertBox.innerHTML = `<div class="alert alert-blue">กำลังลบข้อมูลที่ Backup แล้ว...</div>`;
-    const result = await invokeAdminBackup('delete_sessions', {
+    const action = _lastBackupExport.mode === 'zip' ? 'delete_sessions_with_photos' : 'delete_sessions';
+    const result = await invokeAdminBackup(action, {
       session_ids:_lastBackupExport.sessionIds,
       backup_event_id:_lastBackupExport.backupEventId,
+      photo_manifest:_lastBackupExport.photoManifest || [],
     });
-    alert(`✅ ลบข้อมูล Session แล้ว\nไฟล์รูปยังถูกเก็บไว้สำหรับ Restore`);
+    if (_lastBackupExport.mode === 'zip') {
+      alert(`✅ ลบข้อมูล Session แล้ว\nลบรูป ${Number(result.photos_deleted||0).toLocaleString()} ไฟล์` +
+        (Number(result.photos_shared_preserved||0) ? `\nเก็บรูปที่ใช้งานร่วมกับ Session อื่น ${result.photos_shared_preserved} ไฟล์` : '') +
+        (Number(result.photos_failed||0) ? `\n⚠️ มีรูปที่ลบไม่สำเร็จ ${result.photos_failed} ชุด แต่ข้อมูลใน ZIP ยังอยู่ครบ` : ''));
+    } else {
+      alert(`✅ ลบข้อมูล Session แล้ว\nไฟล์รูปยังถูกเก็บไว้สำหรับ Restore`);
+    }
     _lastBackupExport = null;
     await loadAdManage();
   } catch (error) {
@@ -49037,14 +49316,71 @@ async function readBackupExcelFile(event) {
     return;
   }
   try {
-    if (!/\.xlsx$/i.test(file.name || '')) throw new Error('รองรับเฉพาะไฟล์ .xlsx จากเมนู Backup');
-    if (Number(file.size || 0) > 250 * 1024 * 1024) {
-      throw new Error('ไฟล์ใหญ่เกิน 250 MB กรุณา Backup/Restore แยก Session');
-    }
+    const isZip = /\.zip$/i.test(file.name || '');
+    const isExcel = /\.xlsx$/i.test(file.name || '');
+    if (!isZip && !isExcel) throw new Error('รองรับเฉพาะไฟล์ .zip หรือ .xlsx จากเมนู Backup');
+    const maxSize = isZip ? 1200 * 1024 * 1024 : 250 * 1024 * 1024;
+    if (Number(file.size || 0) > maxSize) throw new Error('ไฟล์ใหญ่เกินขีดจำกัด กรุณา Backup/Restore แยก Session');
     if (preview) preview.innerHTML = `<div class="load" style="padding:18px">กำลังตรวจไฟล์และ checksum...</div>`;
-    setBackupProgress(5,'กำลังอ่านไฟล์ Excel...');
-    const workbook = XLSX.read(await file.arrayBuffer(), { type:'array', cellDates:false });
+    setBackupProgress(3,isZip ? 'กำลังเปิด ZIP และตรวจ Manifest...' : 'กำลังอ่านไฟล์ Excel...');
+    let excelBuffer;
+    let photoArchive = null;
+    if (isZip) {
+      if (typeof JSZip === 'undefined') throw new Error('ไม่พบระบบอ่าน ZIP กรุณาเชื่อมต่ออินเทอร์เน็ตและโหลดหน้าใหม่');
+      const zip = await JSZip.loadAsync(file);
+      const manifestEntry = zip.file('manifest.json');
+      if (!manifestEntry) throw new Error('ZIP ไม่มี manifest.json');
+      const zipManifest = JSON.parse(await manifestEntry.async('text'));
+      if (zipManifest.format !== BACKUP_ZIP_FORMAT || Number(zipManifest.version) !== BACKUP_ZIP_VERSION) {
+        throw new Error('รูปแบบ Full Backup ZIP ไม่ถูกต้องหรือยังไม่รองรับ');
+      }
+      const manifestCopy = {...zipManifest};
+      const expectedManifestSha = String(manifestCopy.manifest_sha256 || '');
+      delete manifestCopy.manifest_sha256;
+      if (!expectedManifestSha || await backupSha256Hex(new Blob([JSON.stringify(manifestCopy)])) !== expectedManifestSha) {
+        throw new Error('ZIP Manifest checksum ไม่ตรง ไฟล์อาจถูกแก้ไข');
+      }
+      const excelPath = backupArchiveSafePath(zipManifest.excel_file);
+      const excelEntry = zip.file(excelPath);
+      if (!excelEntry) throw new Error('ZIP ไม่มีไฟล์ Excel ที่ระบุใน Manifest');
+      excelBuffer = await excelEntry.async('arraybuffer');
+      if (await backupSha256Hex(excelBuffer) !== String(zipManifest.excel_sha256 || '')) {
+        throw new Error('Excel checksum ใน ZIP ไม่ตรง');
+      }
+      const photos = Array.isArray(zipManifest.photos) ? zipManifest.photos : [];
+      if (Number(zipManifest.photo_count || 0) !== photos.length) throw new Error('จำนวนรูปใน ZIP ไม่ตรงกับ Manifest');
+      const seenPaths = new Set();
+      let checkedPhotoBytes = 0;
+      for (let index = 0; index < photos.length; index++) {
+        const photo = photos[index];
+        const path = backupArchiveSafePath(photo.path);
+        const archivePath = backupArchiveSafePath(photo.archive_path);
+        if (!archivePath.startsWith('photos/')) throw new Error(`ตำแหน่งรูป ${archivePath} ไม่ถูกต้อง`);
+        if (seenPaths.has(path)) throw new Error(`พบ path รูปซ้ำใน ZIP: ${path}`);
+        seenPaths.add(path);
+        const entry = zip.file(archivePath);
+        if (!entry) throw new Error(`ZIP ขาดรูป ${archivePath}`);
+        const blob = await entry.async('blob');
+        if (Number(photo.size || 0) !== blob.size) throw new Error(`ขนาดรูป ${path} ไม่ตรงกับ Manifest`);
+        if (await backupSha256Hex(blob) !== String(photo.sha256 || '')) throw new Error(`checksum รูป ${path} ไม่ตรง`);
+        checkedPhotoBytes += blob.size;
+        setBackupProgress(3 + Math.round((index+1)/Math.max(1,photos.length)*17),`ตรวจรูป ${index+1}/${photos.length}`);
+      }
+      if (Number(zipManifest.photo_bytes || 0) !== checkedPhotoBytes) throw new Error('ขนาดรูปรวมใน ZIP ไม่ตรงกับ Manifest');
+      photoArchive = {zip,manifest:zipManifest};
+    } else {
+      excelBuffer = await file.arrayBuffer();
+    }
+    setBackupProgress(isZip ? 21 : 5,'กำลังตรวจ Excel และ checksum...');
+    const workbook = XLSX.read(excelBuffer, { type:'array', cellDates:false });
     const manifest = backupManifestFromSheet(workbook);
+    if (photoArchive) {
+      const zipManifest = photoArchive.manifest;
+      if (zipManifest.excel_manifest_hash !== manifest.manifestHash) throw new Error('Manifest ของ ZIP และ Excel ไม่ตรงกัน');
+      if (JSON.stringify([...(zipManifest.session_ids||[])].sort()) !== JSON.stringify([...manifest.sessionIds].sort())) {
+        throw new Error('Session ใน ZIP และ Excel ไม่ตรงกัน');
+      }
+    }
     const dataBySheet = {};
     const rowCounts = {};
     let manifestTotalRows = 0;
@@ -49093,7 +49429,9 @@ async function readBackupExcelFile(event) {
       }
       dataBySheet[spec.sheet] = rows;
       rowCounts[spec.sheet] = rows.length;
-      setBackupProgress(5 + Math.round((index + 1) / BACKUP_SHEET_SPECS.length * 45),
+      const verifyBase = photoArchive ? 22 : 5;
+      const verifySpan = photoArchive ? 28 : 45;
+      setBackupProgress(verifyBase + Math.round((index + 1) / BACKUP_SHEET_SPECS.length * verifySpan),
         `ตรวจ ${spec.sheet} แล้ว (${rows.length.toLocaleString()} แถว)`);
     }
 
@@ -49103,11 +49441,13 @@ async function readBackupExcelFile(event) {
       manifestHash:manifest.manifestHash,
       rowCounts,
       dataBySheet,
+      photoArchive,
     };
     const totalRows = Object.values(rowCounts).reduce((sum,value)=>sum+Number(value||0),0);
     if (preview) preview.innerHTML = `
       <div class="alert alert-green" style="line-height:1.6">
         ✅ ไฟล์ถูกต้อง · ${manifest.sessionIds.length} Session · ${totalRows.toLocaleString()} แถว<br>
+        ${photoArchive ? `รูปใน ZIP ${Number(photoArchive.manifest.photo_count||0).toLocaleString(uiLocale())} ไฟล์ · ${formatFileBytes(photoArchive.manifest.photo_bytes||0)}<br>` : 'ไฟล์ Excel ไม่มีรูปจริง · Restore เฉพาะข้อมูล<br>'}
         สร้างเมื่อ ${manifest.map.created_at ? new Date(manifest.map.created_at).toLocaleString(uiLocale()) : '-'}
       </div>
       ${backupCountCards(rowCounts)}`;
@@ -49120,6 +49460,43 @@ async function readBackupExcelFile(event) {
   }
 }
 
+async function restoreBackupPhotoArchive(photoArchive) {
+  if (!photoArchive) return {restored:0,bytes:0};
+  const photos = Array.isArray(photoArchive.manifest?.photos) ? photoArchive.manifest.photos : [];
+  if (!photos.length) return {restored:0,bytes:0};
+  const tokenByPath = new Map();
+  for (let start = 0; start < photos.length; start += 100) {
+    const batch = photos.slice(start,start+100).map(photo => ({path:backupArchiveSafePath(photo.path)}));
+    const prepared = await invokeAdminBackup('prepare_photo_restore',{photos:batch});
+    (prepared.tokens || []).forEach(item => tokenByPath.set(item.path,item.token));
+  }
+  let restoredBytes = 0;
+  await backupMapConcurrent(photos,3,async (photo,index) => {
+    const path = backupArchiveSafePath(photo.path);
+    const archivePath = backupArchiveSafePath(photo.archive_path);
+    const token = tokenByPath.get(path);
+    if (!token) throw new Error(`ไม่พบ Upload Token สำหรับ ${path}`);
+    const entry = photoArchive.zip.file(archivePath);
+    if (!entry) throw new Error(`ZIP ขาดรูป ${archivePath}`);
+    const blob = await entry.async('blob');
+    if (blob.size !== Number(photo.size || 0) || await backupSha256Hex(blob) !== String(photo.sha256 || '')) {
+      throw new Error(`รูป ${path} ไม่ผ่าน checksum ก่อน Restore`);
+    }
+    const {error} = await sb.storage.from(BACKUP_PHOTO_BUCKET).uploadToSignedUrl(path,token,blob,{
+      contentType:photo.mime_type || blob.type || 'application/octet-stream',
+    });
+    if (error) throw new Error(`Restore รูป ${path} ไม่สำเร็จ: ${error.message}`);
+    restoredBytes += blob.size;
+    setBackupProgress(50 + Math.round((index+1)/photos.length*18),`Restore รูป ${index+1}/${photos.length}`);
+  });
+  for (let start = 0; start < photos.length; start += 2000) {
+    const paths = photos.slice(start,start+2000).map(photo => backupArchiveSafePath(photo.path));
+    const result = await invokeAdminBackup('verify_photo_restore',{paths});
+    if (!result.ok || (result.missing || []).length) throw new Error(`ตรวจรูปหลัง Restore ไม่ครบ ${(result.missing || []).length} ไฟล์`);
+  }
+  return {restored:photos.length,bytes:restoredBytes};
+}
+
 async function restoreBackupExcel() {
   if (prof?.role !== 'admin') { adminOnlyMessage(); return; }
   if (!_backupParsed) { alert('กรุณาเลือกและตรวจไฟล์ Backup ก่อน'); return; }
@@ -49128,6 +49505,8 @@ async function restoreBackupExcel() {
   const alertBox = Q('backup-restore-alert');
   if (button) button.disabled = true;
   try {
+    const photoResult = await restoreBackupPhotoArchive(_backupParsed.photoArchive);
+    if (_backupParsed.photoArchive) setBackupProgress(69,'รูปกลับเข้าพื้นที่จัดเก็บครบแล้ว · กำลัง Restore ข้อมูล...');
     const totalRows = BACKUP_RESTORE_ORDER.reduce((sum,sheet) =>
       sum + (_backupParsed.dataBySheet[sheet]?.length || 0), 0);
     let completed = 0;
@@ -49143,7 +49522,7 @@ async function restoreBackupExcel() {
           await invokeAdminBackup('restore_batch', { table:spec.table, rows:batch });
         }
         completed += batch.length;
-        setBackupProgress(50 + Math.round(completed / Math.max(1,totalRows) * 47),
+        setBackupProgress((_backupParsed.photoArchive ? 69 : 50) + Math.round(completed / Math.max(1,totalRows) * (_backupParsed.photoArchive ? 28 : 47)),
           `Restore ${sheetName}: ${Math.min(start + batch.length, rows.length).toLocaleString()} / ${rows.length.toLocaleString()}`);
         await new Promise(resolve => requestAnimationFrame(resolve));
       }
@@ -49165,10 +49544,12 @@ async function restoreBackupExcel() {
       facts:[
         {label:'จำนวน Session',value:_backupParsed.sessionIds.length.toLocaleString(uiLocale())},
         {label:'จำนวนข้อมูล',value:totalRows.toLocaleString(uiLocale())},
+        {label:'รูปที่ Restore',value:Number(photoResult.restored||0).toLocaleString(uiLocale())},
       ],
     });
     if (Q('backup-import-file')) Q('backup-import-file').value = '';
     _backupParsed = null;
+    refreshAdminPhotoStorage();
   } catch (error) {
     console.error(error);
     if (alertBox) alertBox.innerHTML = `<div class="alert alert-red" style="line-height:1.65">
@@ -49890,7 +50271,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.38" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.39" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
