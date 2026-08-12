@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.47</title>
+<title>Cycle Count V1.48</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -20464,13 +20464,13 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
 }
 </style>
 </head>
-<body data-build="v1-47">
+<body data-build="v1-48">
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.47';
+const APP_VERSION = '1.48';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
-const APP_BUILD_ID = 'v1-47';
+const APP_BUILD_ID = 'v1-48';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
 // v31 defensive date helpers: prevent legacy cached/remaining references from crashing the dashboard.
 var selectedDateFrom = '';
@@ -48696,6 +48696,108 @@ function backupPhysicalRowsFromSheet(sheet, spec, expectedRows) {
   return rows;
 }
 
+function backupRestoreValuePresent(value) {
+  return value !== null && value !== undefined
+    && (typeof value !== 'string' || value.trim() !== '');
+}
+
+function validateBackupRestoreData(dataBySheet) {
+  const requiredColumns = {
+    Sessions:['id','name','status'], Locations:['id','code'], Items:['id'],
+    Assignments:['id','session_id','location_id'],
+    Annual_Jobs:['id','session_id','job_code'],
+    Annual_Job_Items:['id','job_id','session_id','location_id','item_id'],
+    Stock:['id','session_id','location_id','item_id','onhand_qty'],
+    Stock_Detail:['id','session_id','location_id','item_id','qty'],
+    Counts:['id','assignment_id','item_id','round','count_qty'],
+    Approvals:['id','assignment_id','item_id'],
+    Found_Items:['id','session_id','location_id'],
+    Paper_Count_Raw:['id','session_id','row_key','location_code'],
+    Paper_History_Raw:['id','session_id','paper_row_id'],
+    Audit:['id','session_id','action'], Profiles:['id','name','role'],
+    Counters:['id','name'], Remarks:['id','context','label'],
+    Type_Issues:['id','value','label'], Data_Info:['item_code'],
+  };
+  Object.entries(requiredColumns).forEach(([sheetName,columns]) => {
+    (dataBySheet[sheetName] || []).forEach((row,index) => {
+      const missing = columns.filter(column => !backupRestoreValuePresent(row?.[column]));
+      if (missing.length) {
+        throw new Error(`${sheetName} แถว ${index + 2} ขาดข้อมูลบังคับ: ${missing.join(', ')}`);
+      }
+    });
+  });
+
+  const ids = sheetName => new Set((dataBySheet[sheetName] || [])
+    .map(row => String(row?.id || '').trim()).filter(Boolean));
+  const idSets = Object.fromEntries([
+    'Sessions','Locations','Items','Assignments','Annual_Jobs','Stock',
+    'Paper_Count_Raw',
+  ].map(sheetName => [sheetName,ids(sheetName)]));
+  const checkReference = (sheetName,column,targetSheet,{optional=false}={}) => {
+    (dataBySheet[sheetName] || []).forEach((row,index) => {
+      const value = String(row?.[column] || '').trim();
+      if (!value && optional) return;
+      if (!value || !idSets[targetSheet]?.has(value)) {
+        throw new Error(`${sheetName} แถว ${index + 2} อ้างอิง ${column} ที่ไม่มีใน ${targetSheet}`);
+      }
+    });
+  };
+  checkReference('Assignments','session_id','Sessions');
+  checkReference('Assignments','location_id','Locations');
+  ['Stock','Stock_Detail'].forEach(sheetName => {
+    checkReference(sheetName,'session_id','Sessions');
+    checkReference(sheetName,'location_id','Locations');
+    checkReference(sheetName,'item_id','Items');
+  });
+  ['Counts','Approvals'].forEach(sheetName => {
+    checkReference(sheetName,'assignment_id','Assignments');
+    checkReference(sheetName,'item_id','Items');
+  });
+  checkReference('Annual_Jobs','session_id','Sessions');
+  checkReference('Annual_Job_Items','session_id','Sessions');
+  checkReference('Annual_Job_Items','job_id','Annual_Jobs');
+  checkReference('Annual_Job_Items','location_id','Locations');
+  checkReference('Annual_Job_Items','item_id','Items');
+  checkReference('Found_Items','session_id','Sessions');
+  checkReference('Found_Items','location_id','Locations');
+  checkReference('Found_Items','item_id','Items',{optional:true});
+  checkReference('Found_Items','promoted_item_id','Items',{optional:true});
+  checkReference('Found_Items','assignment_id','Assignments',{optional:true});
+  checkReference('Found_Items','promoted_assignment_id','Assignments',{optional:true});
+  checkReference('Audit','session_id','Sessions');
+  checkReference('Audit','location_id','Locations',{optional:true});
+  checkReference('Audit','assignment_id','Assignments',{optional:true});
+  checkReference('Audit','item_id','Items',{optional:true});
+  checkReference('Paper_Count_Raw','session_id','Sessions');
+  checkReference('Paper_Count_Raw','source_assignment_id','Assignments',{optional:true});
+  checkReference('Paper_Count_Raw','source_location_id','Locations',{optional:true});
+  checkReference('Paper_Count_Raw','source_item_id','Items',{optional:true});
+  checkReference('Paper_History_Raw','session_id','Sessions');
+  checkReference('Paper_History_Raw','paper_row_id','Paper_Count_Raw');
+
+  const stockKeys = new Set((dataBySheet.Stock || []).map(row =>
+    `${row.session_id}|${row.location_id}|${row.item_id}`));
+  (dataBySheet.Stock_Detail || []).forEach((row,index) => {
+    if (!stockKeys.has(`${row.session_id}|${row.location_id}|${row.item_id}`)) {
+      throw new Error(`Stock_Detail แถว ${index + 2} ไม่มี Stock หลักที่ตรงกัน`);
+    }
+  });
+
+  const emptyItems = (dataBySheet.Items || []).filter(row => !normalizeImportText(row?.code));
+  if (emptyItems.length > 1) throw new Error(`Items มีรายการ Location ว่างมากกว่า 1 รายการ (${emptyItems.length})`);
+  emptyItems.forEach(item => {
+    const itemId = String(item.id);
+    const stocks = (dataBySheet.Stock || []).filter(row => String(row.item_id) === itemId);
+    const details = (dataBySheet.Stock_Detail || []).filter(row => String(row.item_id) === itemId);
+    const counts = (dataBySheet.Counts || []).filter(row => String(row.item_id) === itemId);
+    if (!stocks.length || stocks.some(row => Number(row.onhand_qty || 0) !== 0)
+      || details.length || counts.some(row => Number(row.count_qty || 0) !== 0)) {
+      throw new Error(`Item ${itemId} ไม่มี code แต่ไม่ใช่รายการ Location ว่างที่ถูกต้อง`);
+    }
+  });
+  return {emptyLocationItems:emptyItems.length};
+}
+
 function backupManifestRowsForExcel(entries, formatVersion) {
   if (Number(formatVersion) < 3) return entries;
   return (entries || []).flatMap(entry => {
@@ -50511,6 +50613,8 @@ async function readBackupExcelFile(event) {
         `ตรวจ ${spec.sheet} แล้ว (${rows.length.toLocaleString()} แถว)`);
     }
 
+    validateBackupRestoreData(dataBySheet);
+
     _backupParsed = {
       fileName:file.name,
       sessionIds:manifest.sessionIds,
@@ -50520,13 +50624,17 @@ async function readBackupExcelFile(event) {
       photoArchive,
     };
     const totalRows = Object.values(rowCounts).reduce((sum,value)=>sum+Number(value||0),0);
+    const previewCounts = {
+      ...rowCounts,
+      Photos:photoArchive ? Number(photoArchive.manifest.photo_count || 0) : 0,
+    };
     if (preview) preview.innerHTML = `
       <div class="alert alert-green" style="line-height:1.6">
         ✅ ไฟล์ถูกต้อง · ${manifest.sessionIds.length} Session · ${totalRows.toLocaleString()} แถว<br>
         ${photoArchive ? `รูปใน ZIP ${Number(photoArchive.manifest.photo_count||0).toLocaleString(uiLocale())} ไฟล์ · ${formatFileBytes(photoArchive.manifest.photo_bytes||0)}<br>` : 'ไฟล์ Excel ไม่มีรูปจริง · Restore เฉพาะข้อมูล<br>'}
         สร้างเมื่อ ${manifest.map.created_at ? new Date(manifest.map.created_at).toLocaleString(uiLocale()) : '-'}
       </div>
-      ${backupCountCards(rowCounts)}`;
+      ${backupCountCards(previewCounts)}`;
     setBackupProgress(50,'ตรวจไฟล์ผ่าน พร้อม Restore');
     if (button) button.disabled = false;
   } catch (error) {
@@ -50567,6 +50675,7 @@ async function restoreBackupPhotoArchive(photoArchive) {
     const blob = new Blob([photoBuffer],{type:mimeType});
     const {error} = await sb.storage.from(BACKUP_PHOTO_BUCKET).uploadToSignedUrl(path,token,blob,{
       contentType:mimeType,
+      upsert:true,
     });
     if (error) throw new Error(`Restore รูป ${path} ไม่สำเร็จ: ${error.message}`);
     restoredBytes += blob.size;
@@ -50578,6 +50687,28 @@ async function restoreBackupPhotoArchive(photoArchive) {
     if (!result.ok || (result.missing || []).length) throw new Error(`ตรวจรูปหลัง Restore ไม่ครบ ${(result.missing || []).length} ไฟล์`);
   }
   return {restored:photos.length,bytes:restoredBytes};
+}
+
+async function restoreBackupBatch(spec,batch) {
+  if (!spec || !batch.length) return;
+  if (['paper_form_counts','paper_form_count_history'].includes(spec.table)) {
+    const {error} = await sb.from(spec.table).upsert(batch,{onConflict:'id'});
+    if (error) throw new Error(`Restore ${spec.sheet} ไม่สำเร็จ: ${error.message}`);
+    return;
+  }
+  if (spec.table === 'items') {
+    const normalItems = batch.filter(row => normalizeImportText(row?.code));
+    const emptyLocationItems = batch.filter(row => !normalizeImportText(row?.code));
+    if (normalItems.length) {
+      await invokeAdminBackup('restore_batch',{table:spec.table,rows:normalItems});
+    }
+    if (emptyLocationItems.length) {
+      const {error} = await sb.from('items').upsert(emptyLocationItems,{onConflict:'id'});
+      if (error) throw new Error(`Restore Item สำหรับ Location ว่างไม่สำเร็จ: ${error.message}`);
+    }
+    return;
+  }
+  await invokeAdminBackup('restore_batch',{table:spec.table,rows:batch});
 }
 
 async function restoreBackupExcel() {
@@ -50598,12 +50729,7 @@ async function restoreBackupExcel() {
       const rows = _backupParsed.dataBySheet[sheetName] || [];
       for (let start = 0; start < rows.length; start += BACKUP_BATCH_SIZE) {
         const batch = rows.slice(start, start + BACKUP_BATCH_SIZE);
-        if (['paper_form_counts','paper_form_count_history'].includes(spec.table)) {
-          const { error } = await sb.from(spec.table).upsert(batch,{ onConflict:'id' });
-          if (error) throw new Error(`Restore ${sheetName} ไม่สำเร็จ: ${error.message}`);
-        } else {
-          await invokeAdminBackup('restore_batch', { table:spec.table, rows:batch });
-        }
+        await restoreBackupBatch(spec,batch);
         completed += batch.length;
         setBackupProgress((_backupParsed.photoArchive ? 69 : 50) + Math.round(completed / Math.max(1,totalRows) * (_backupParsed.photoArchive ? 28 : 47)),
           `Restore ${sheetName}: ${Math.min(start + batch.length, rows.length).toLocaleString()} / ${rows.length.toLocaleString()}`);
