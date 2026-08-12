@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.46</title>
+<title>Cycle Count V1.47</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -20464,13 +20464,13 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
 }
 </style>
 </head>
-<body data-build="v1-46">
+<body data-build="v1-47">
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.46';
+const APP_VERSION = '1.47';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
-const APP_BUILD_ID = 'v1-46';
+const APP_BUILD_ID = 'v1-47';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
 // v31 defensive date helpers: prevent legacy cached/remaining references from crashing the dashboard.
 var selectedDateFrom = '';
@@ -50042,6 +50042,43 @@ function backupArchiveSafePath(value) {
   return path;
 }
 
+function backupPhotoMimeType(path, declaredMime='') {
+  const extension = String(path || '').split('.').pop().toLowerCase();
+  const mimeByExtension = {
+    jpg:'image/jpeg', jpeg:'image/jpeg', png:'image/png', webp:'image/webp',
+  };
+  const allowedMimeTypes = new Set(Object.values(mimeByExtension));
+  let declared = String(declaredMime || '').toLowerCase().split(';')[0].trim();
+  if (declared === 'image/jpg') declared = 'image/jpeg';
+  const inferred = mimeByExtension[extension] || '';
+  if (declared && declared !== 'application/octet-stream' && !allowedMimeTypes.has(declared)) {
+    throw new Error(`ชนิดไฟล์รูป ${declared} ไม่รองรับ`);
+  }
+  if (declared && declared !== 'application/octet-stream' && inferred && declared !== inferred) {
+    throw new Error(`ชนิดไฟล์รูป ${path} ไม่ตรงกับนามสกุลไฟล์`);
+  }
+  const mimeType = inferred || (allowedMimeTypes.has(declared) ? declared : '');
+  if (!mimeType) throw new Error(`ไม่สามารถระบุชนิดไฟล์รูป ${path}`);
+  return mimeType;
+}
+
+function backupPhotoSignatureMatches(buffer, mimeType) {
+  const bytes = new Uint8Array(buffer);
+  if (mimeType === 'image/jpeg') {
+    return bytes.length >= 3 && bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF;
+  }
+  if (mimeType === 'image/png') {
+    const signature = [0x89,0x50,0x4E,0x47,0x0D,0x0A,0x1A,0x0A];
+    return bytes.length >= signature.length && signature.every((value,index) => bytes[index] === value);
+  }
+  if (mimeType === 'image/webp') {
+    return bytes.length >= 12
+      && String.fromCharCode(...bytes.slice(0,4)) === 'RIFF'
+      && String.fromCharCode(...bytes.slice(8,12)) === 'WEBP';
+  }
+  return false;
+}
+
 async function backupMapConcurrent(items, limit, worker) {
   const results = new Array(items.length);
   let cursor = 0;
@@ -50395,10 +50432,12 @@ async function readBackupExcelFile(event) {
         seenArchivePaths.add(archivePath);
         const entry = zip.file(archivePath);
         if (!entry) throw new Error(`ZIP ขาดรูป ${archivePath}`);
-        const blob = await entry.async('blob');
-        if (!blob.size || Number(photo.size || 0) !== blob.size) throw new Error(`ขนาดรูป ${path} ไม่ตรงกับ Manifest`);
-        if (await backupSha256Hex(blob) !== String(photo.sha256 || '')) throw new Error(`checksum รูป ${path} ไม่ตรง`);
-        checkedPhotoBytes += blob.size;
+        const photoBuffer = await entry.async('arraybuffer');
+        const mimeType = backupPhotoMimeType(path,photo.mime_type);
+        if (!photoBuffer.byteLength || Number(photo.size || 0) !== photoBuffer.byteLength) throw new Error(`ขนาดรูป ${path} ไม่ตรงกับ Manifest`);
+        if (!backupPhotoSignatureMatches(photoBuffer,mimeType)) throw new Error(`เนื้อหาไฟล์รูป ${path} ไม่ตรงกับชนิด ${mimeType}`);
+        if (await backupSha256Hex(photoBuffer) !== String(photo.sha256 || '')) throw new Error(`checksum รูป ${path} ไม่ตรง`);
+        checkedPhotoBytes += photoBuffer.byteLength;
         setBackupProgress(3 + Math.round((index+1)/Math.max(1,photos.length)*17),`ตรวจรูป ${index+1}/${photos.length}`);
       }
       if (Number(zipManifest.photo_bytes || 0) !== checkedPhotoBytes) throw new Error('ขนาดรูปรวมใน ZIP ไม่ตรงกับ Manifest');
@@ -50515,12 +50554,19 @@ async function restoreBackupPhotoArchive(photoArchive) {
     if (!token) throw new Error(`ไม่พบ Upload Token สำหรับ ${path}`);
     const entry = photoArchive.zip.file(archivePath);
     if (!entry) throw new Error(`ZIP ขาดรูป ${archivePath}`);
-    const blob = await entry.async('blob');
-    if (blob.size !== Number(photo.size || 0) || await backupSha256Hex(blob) !== String(photo.sha256 || '')) {
+    const photoBuffer = await entry.async('arraybuffer');
+    const mimeType = backupPhotoMimeType(path,photo.mime_type);
+    if (photoBuffer.byteLength !== Number(photo.size || 0)
+      || !backupPhotoSignatureMatches(photoBuffer,mimeType)
+      || await backupSha256Hex(photoBuffer) !== String(photo.sha256 || '')) {
       throw new Error(`รูป ${path} ไม่ผ่าน checksum ก่อน Restore`);
     }
+    // Supabase sends Blob uploads as multipart/form-data and derives the file
+    // type from Blob.type. JSZip returns an untyped Blob, so recreate it with
+    // the verified MIME type to avoid application/octet-stream rejection.
+    const blob = new Blob([photoBuffer],{type:mimeType});
     const {error} = await sb.storage.from(BACKUP_PHOTO_BUCKET).uploadToSignedUrl(path,token,blob,{
-      contentType:photo.mime_type || blob.type || 'application/octet-stream',
+      contentType:mimeType,
     });
     if (error) throw new Error(`Restore รูป ${path} ไม่สำเร็จ: ${error.message}`);
     restoredBytes += blob.size;
