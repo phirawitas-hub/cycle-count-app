@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.43</title>
+<title>Cycle Count V1.45</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -5828,7 +5828,7 @@ body {
   border-bottom: 0;
 }
 
-/* V1.43 · complete ZIP backup and Admin database/photo storage monitor */
+/* V1.44 · complete ZIP backup and Admin database/photo storage monitor */
 .storage-monitor {
   margin-bottom:18px;
   padding:20px;
@@ -18562,6 +18562,184 @@ body.expired-session-modal-open { overflow:hidden; }
   #app .variance-result-cell { grid-column:1 / -1; }
   #app .variance-review-description { white-space:normal; }
 }
+
+/* V1.44 · resumable item-by-item inventory variance review. */
+#app .variance-location-progress {
+  display:grid;
+  grid-template-columns:minmax(180px,.72fr) minmax(260px,1.4fr);
+  gap:16px;
+  align-items:center;
+  margin:0 0 16px;
+  padding:16px 18px;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 24%,transparent);
+  border-radius:20px;
+  background:color-mix(in srgb,var(--theme-primary-color) 5%,var(--theme-card-bg));
+}
+#app .variance-location-progress-copy strong {
+  display:block;
+  color:var(--theme-heading-color);
+  font-size:18px;
+  font-weight:800;
+}
+#app .variance-location-progress-copy span {
+  display:block;
+  margin-top:4px;
+  color:var(--theme-muted-text-color);
+  font-size:11px;
+  font-weight:700;
+}
+#app .variance-location-progress-stats {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+}
+#app .variance-location-progress-stat {
+  min-width:0;
+  padding:10px 12px;
+  border-radius:14px;
+  background:var(--theme-card-bg);
+  text-align:center;
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--theme-primary-color) 11%,transparent);
+}
+#app .variance-location-progress-stat strong {
+  display:block;
+  color:var(--theme-heading-color);
+  font-size:20px;
+  line-height:1;
+}
+#app .variance-location-progress-stat span {
+  display:block;
+  margin-top:5px;
+  overflow:hidden;
+  color:var(--theme-muted-text-color);
+  font-size:9px;
+  font-weight:800;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+#app .variance-location-progress-track {
+  grid-column:1 / -1;
+  height:9px;
+  overflow:hidden;
+  border-radius:99px;
+  background:color-mix(in srgb,var(--theme-primary-color) 12%,var(--theme-card-bg));
+}
+#app .variance-location-progress-track > span {
+  display:block;
+  width:var(--variance-review-progress,0%);
+  height:100%;
+  border-radius:inherit;
+  background:var(--theme-primary-color);
+  transition:width .24s ease;
+}
+#app .variance-review-item.is-review-draft {
+  border-left:5px solid var(--theme-warning-color) !important;
+}
+#app .variance-review-item.is-review-confirmed {
+  border-left:5px solid var(--theme-success-color) !important;
+  background:color-mix(in srgb,var(--theme-success-color) 5%,var(--theme-card-bg)) !important;
+}
+#app .variance-review-heading-left {
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  min-width:0;
+}
+#app .variance-review-select {
+  width:20px;
+  height:20px;
+  margin:2px 0 0;
+  flex:0 0 auto;
+  accent-color:var(--theme-primary-color);
+}
+#app .variance-review-status {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:27px;
+  padding:4px 10px;
+  border-radius:999px;
+  font-size:9px;
+  font-weight:800;
+  white-space:nowrap;
+}
+#app .variance-review-status.is-unreviewed {
+  background:color-mix(in srgb,var(--theme-muted-text-color) 13%,var(--theme-card-bg));
+  color:var(--theme-muted-text-color);
+}
+#app .variance-review-status.is-draft {
+  background:color-mix(in srgb,var(--theme-warning-color) 20%,var(--theme-card-bg));
+  color:color-mix(in srgb,var(--theme-warning-color) 75%,#4a2b00);
+}
+#app .variance-review-status.is-confirmed {
+  background:color-mix(in srgb,var(--theme-success-color) 18%,var(--theme-card-bg));
+  color:color-mix(in srgb,var(--theme-success-color) 72%,#063c36);
+}
+#app .variance-review-item-actions {
+  display:flex;
+  justify-content:flex-end;
+  gap:9px;
+  flex-wrap:wrap;
+  padding-top:3px;
+}
+#app .variance-review-toolbar {
+  position:sticky;
+  bottom:10px;
+  z-index:9;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-top:14px;
+  padding:12px 14px;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 20%,transparent);
+  border-radius:18px;
+  background:color-mix(in srgb,var(--theme-card-bg) 94%,transparent);
+  box-shadow:0 12px 28px rgba(31,72,68,.16);
+  backdrop-filter:blur(14px);
+}
+#app .variance-review-toolbar-copy {
+  min-width:0;
+  color:var(--theme-muted-text-color);
+  font-size:11px;
+  font-weight:700;
+}
+#app .variance-review-toolbar-actions {
+  display:flex;
+  gap:9px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+#app .variance-location-close {
+  display:grid;
+  gap:9px;
+  margin-top:14px;
+  padding:14px;
+  border-radius:18px;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 18%,transparent);
+  background:color-mix(in srgb,var(--theme-primary-color) 4%,var(--theme-card-bg));
+}
+#app .variance-location-close small {
+  color:var(--theme-muted-text-color);
+  font-size:10px;
+  font-weight:700;
+  text-align:center;
+}
+#app .variance-qty-input:disabled {
+  opacity:1 !important;
+  border-color:transparent !important;
+  background:transparent !important;
+  color:var(--theme-heading-color) !important;
+}
+@media (max-width:760px) {
+  #app .variance-location-progress { grid-template-columns:1fr; }
+  #app .variance-location-progress-stats { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  #app .variance-review-toolbar { position:static;align-items:stretch;flex-direction:column; }
+  #app .variance-review-toolbar-actions { display:grid;grid-template-columns:1fr; }
+  #app .variance-review-toolbar-actions .btn { width:100%; }
+  #app .variance-review-item-actions { display:grid;grid-template-columns:1fr; }
+  #app .variance-review-item-actions .btn { width:100%; }
+}
 /* v241 · clean, high-contrast warehouse layout editor */
 body[data-build="v1-42"] :is(.warehouse-editor-canvas-shell,.warehouse-editor-canvas-scroll,.warehouse-editor-canvas){
   background:#fff !important;
@@ -18614,7 +18792,7 @@ body[data-build="v1-42"] .warehouse-no-level-note{
   font-weight:800;
 }
 
-/* V1.43 · one high-contrast status palette for every warehouse-layout view */
+/* V1.44 · one high-contrast status palette for every warehouse-layout view */
 body[data-build="v1-42"]{
   --warehouse-status-not-imported:#4b5563;
   --warehouse-status-imported:#005f73;
@@ -19269,7 +19447,7 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
 @media(max-width:640px){.main-wrapper.executive-view .topbar{height:auto;min-height:64px;padding:10px 12px}.exec-v16-global-filters{flex-direction:column;align-items:stretch}.exec-v16-global-filters .dashboard-filter-control{width:100%;min-width:0}.exec-v16-header{flex-direction:column}.exec-v16-header-right,.exec-v16-context-filters{align-items:stretch;flex-direction:column}.exec-v16-context-filters .dashboard-filter-control{width:100%}.exec-v16-header-actions{justify-content:flex-start}.exec-v16-filterbar{grid-template-columns:1fr}.exec-v16-filterbar>strong,.exec-v16-metric{grid-column:auto}.exec-v16-primary-value{align-items:flex-start;flex-direction:column}.exec-v16-snapshot-grid{grid-template-columns:1fr}.exec-v16-risk-row{grid-template-columns:28px minmax(0,1fr) 68px 16px}.exec-v16-risk-stat:nth-of-type(4),.exec-v16-risk-accuracy{display:none}.exec-v16-action-item{grid-template-columns:34px minmax(0,1fr)}.exec-v16-action-item>button{grid-column:2;justify-self:start}.exec-v16-method>div{flex-direction:column;gap:5px}}
 @media print{.main-wrapper.executive-view .topbar,.exec-v16-global-filters,.exec-v16-header-actions,.exec-v16-filterbar,.exec-v16-method{display:none!important}.main-wrapper.executive-view .page-content{padding:0!important}.exec-v16-dashboard{gap:8px}.exec-v16-header{min-height:45px}.exec-v16-hero{box-shadow:none}.exec-v16-panel,.exec-v16-snapshot{box-shadow:none;break-inside:avoid}}
 
-/* V1.43 · cleaner summary copy and structured Zone cards */
+/* V1.44 · cleaner summary copy and structured Zone cards */
 #dash-content .summary-hour-top-stats-boxes .summary-hour-stat {
   min-height: 76px !important;
   justify-content: center !important;
@@ -19403,7 +19581,7 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
   }
 }
 
-/* V1.43 · adaptive Zone overview, tabs and searchable picker */
+/* V1.44 · adaptive Zone overview, tabs and searchable picker */
 #dash-content .summary-zone-heading-actions-v128 {
   min-width: 0;
   display: flex;
@@ -19633,7 +19811,7 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
   }
 }
 
-/* V1.43 · adapt Zone density to the number of Zones in the Session */
+/* V1.44 · adapt Zone density to the number of Zones in the Session */
 #dash-content .summary-zones-card.is-single-zone-v129 .summary-zone-browser-v128,
 #dash-content .summary-zones-card.is-single-zone-v129 .summary-zone-browser-v128 > .summary-zone-grid,
 #dash-content .summary-zones-card.is-single-zone-v129 .summary-zone-detail-v128 {
@@ -19703,7 +19881,7 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
   }
 }
 
-/* V1.43 · size Zone content from the card itself, not the viewport. */
+/* V1.44 · size Zone content from the card itself, not the viewport. */
 #dash-content .summary-zones-card {
   container-type: inline-size;
 }
@@ -19780,7 +19958,7 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
   }
 }
 
-/* V1.43 · two-page WMS import result: clear summary + scrollable details. */
+/* V1.44 · two-page WMS import result: clear summary + scrollable details. */
 .wms-import-result-backdrop {
   position: fixed;
   inset: 0;
@@ -20094,7 +20272,7 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
   .wms-import-inline-summary { grid-template-columns: 1fr; }
 }
 
-/* V1.43 · inherited issue evidence and supervisor variance workflow. */
+/* V1.44 · inherited issue evidence and supervisor variance workflow. */
 .count-issue-backdrop {
   position: fixed;
   inset: 0;
@@ -20230,15 +20408,69 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
   .type-issue-manager-row { grid-template-columns:1fr 1fr; }
   .type-issue-manager-row input { grid-column:1/-1; }
 }
+
+/* V1.45 · WMS review is resumable per Item and closes explicitly per Location. */
+.wms-location-groups { display:grid;gap:16px; }
+.wms-location-group {
+  min-width:0;
+  overflow:hidden;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 24%,var(--theme-border-color));
+  border-radius:22px;
+  background:var(--theme-card-bg);
+  box-shadow:0 12px 30px color-mix(in srgb,var(--theme-primary-color) 9%,transparent);
+}
+.wms-location-group.is-closed {
+  border-color:color-mix(in srgb,var(--theme-success-color) 46%,var(--theme-border-color));
+}
+.wms-location-group.is-pending {
+  border-color:color-mix(in srgb,var(--theme-warning-color) 45%,var(--theme-border-color));
+}
+.wms-location-head {
+  padding:16px 18px;
+  display:grid;
+  grid-template-columns:minmax(180px,1fr) minmax(210px,.9fr) auto;
+  align-items:center;
+  gap:16px;
+  border-bottom:1px solid var(--theme-border-color);
+  background:linear-gradient(135deg,color-mix(in srgb,var(--theme-primary-color) 7%,var(--theme-card-bg)),var(--theme-card-bg));
+}
+.wms-location-group.is-closed .wms-location-head {
+  background:linear-gradient(135deg,color-mix(in srgb,var(--theme-success-color) 10%,var(--theme-card-bg)),var(--theme-card-bg));
+}
+.wms-location-title { min-width:0;display:grid;gap:4px; }
+.wms-location-title strong { color:var(--theme-heading-color);font-size:18px;font-weight:900;overflow-wrap:anywhere; }
+.wms-location-title span { color:var(--theme-muted-text-color);font-size:10px;font-weight:750;line-height:1.45; }
+.wms-location-progress { min-width:0;display:grid;gap:7px; }
+.wms-location-progress-label { display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--theme-muted-text-color);font-size:10px;font-weight:800; }
+.wms-location-progress-label strong { color:var(--theme-heading-color);font-size:13px;font-weight:900; }
+.wms-location-progress-track { height:9px;overflow:hidden;border-radius:999px;background:color-mix(in srgb,var(--theme-primary-color) 10%,var(--theme-card-bg)); }
+.wms-location-progress-track span { display:block;height:100%;border-radius:inherit;background:var(--theme-primary-color);transition:width .25s ease; }
+.wms-location-group.is-closed .wms-location-progress-track span { background:var(--theme-success-color); }
+.wms-location-actions { display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap; }
+.wms-location-status { padding:7px 10px;border-radius:999px;color:var(--theme-primary-color);background:color-mix(in srgb,var(--theme-primary-color) 10%,var(--theme-card-bg));font-size:10px;font-weight:900;white-space:nowrap; }
+.wms-location-status.is-closed { color:var(--theme-success-color);background:color-mix(in srgb,var(--theme-success-color) 12%,var(--theme-card-bg)); }
+.wms-location-status.is-pending { color:var(--theme-warning-color);background:color-mix(in srgb,var(--theme-warning-color) 13%,var(--theme-card-bg)); }
+.wms-location-items { display:grid; }
+.wms-location-items .wms-row { border-radius:0;border-left:0;border-right:0;border-top:0;box-shadow:none;margin:0; }
+.wms-location-items .wms-row:last-child { border-bottom:0; }
+.wms-location-group.is-closed .wms-row { opacity:.9; }
+@media (max-width:980px) {
+  .wms-location-head { grid-template-columns:minmax(0,1fr) minmax(190px,1fr); }
+  .wms-location-actions { grid-column:1/-1;justify-content:flex-start; }
+}
+@media (max-width:650px) {
+  .wms-location-head { grid-template-columns:1fr;padding:14px;gap:12px; }
+  .wms-location-actions { grid-column:auto; }
+}
 </style>
 </head>
-<body data-build="v1-42">
+<body data-build="v1-45">
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.43';
+const APP_VERSION = '1.45';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
-const APP_BUILD_ID = 'v1-42';
+const APP_BUILD_ID = 'v1-45';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
 // v31 defensive date helpers: prevent legacy cached/remaining references from crashing the dashboard.
 var selectedDateFrom = '';
@@ -21636,7 +21868,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.43':'e.g. Warehouse V1.43',
+  'เช่น Warehouse V1.45':'e.g. Warehouse V1.45',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -24835,8 +25067,8 @@ function adminOnlyMessage() {
 }
 
 const BACKUP_FORMAT = 'CYCLE_COUNT_BACKUP';
-const BACKUP_FORMAT_VERSION = '9';
-const BACKUP_SUPPORTED_VERSIONS = new Set(['1','2','3','4','5','6','7','8','9']);
+const BACKUP_FORMAT_VERSION = '10';
+const BACKUP_SUPPORTED_VERSIONS = new Set(['1','2','3','4','5','6','7','8','9','10']);
 const BACKUP_BATCH_SIZE = 500;
 const BACKUP_EXCEL_CELL_LIMIT = 32767;
 const BACKUP_EXCEL_CHUNK_SIZE = 30000;
@@ -24851,13 +25083,13 @@ const BACKUP_SHEET_SPECS = [
   { sheet:'Locations', table:'locations', scope:'master', columns:['id','code','zone','area','row_no','level','type','category'], restore:true },
   { sheet:'Data_Info', table:'data_info_items', scope:'reference', columns:['item_code','description','uom','barcode','attributes','source_file','source_sheet','updated_by','updated_at'], restore:true },
   { sheet:'Items', table:'items', scope:'master', columns:['id','code','description','inventory_type','category','uom'], restore:true },
-  { sheet:'Assignments', table:'assignments', scope:'session', columns:['id','session_id','location_id','assigned_to','status','created_at','assigned_at','expired_at','expired_from','counter_r2_id','counter_r3_id'], restore:true },
+  { sheet:'Assignments', table:'assignments', scope:'session', columns:['id','session_id','location_id','assigned_to','status','created_at','assigned_at','expired_at','expired_from','counter_r2_id','counter_r3_id','wms_closed_at','wms_closed_by'], restore:true },
   { sheet:'Annual_Jobs', table:'annual_count_jobs', scope:'session', columns:['id','session_id','job_no','job_code','assigned_to','status','assigned_at','expired_at','expired_from','created_by','created_at'], restore:true },
   { sheet:'Annual_Job_Items', table:'annual_count_job_items', scope:'session', columns:['id','job_id','session_id','stock_snapshot_id','location_id','item_id','sort_order','created_at'], restore:true },
   { sheet:'Stock', table:'stock_snapshot', scope:'session', columns:['id','session_id','location_id','item_id','onhand_qty','created_at','al_qty'], restore:true },
   { sheet:'Stock_Detail', table:'stock_snapshot_detail', scope:'session', columns:['id','session_id','location_id','item_id','license_plate','lot','inventory_status','qty','created_at','uom'], restore:true },
   { sheet:'Counts', table:'count_records', scope:'assignment', columns:['id','assignment_id','item_id','round','count_qty','counted_by','counted_at','actual_counter_id','type_issue','remark','photo_url','actual_counter_name'], restore:true },
-  { sheet:'Approvals', table:'variance_approvals', scope:'assignment', columns:['id','assignment_id','item_id','final_qty','variance','resolution','supervisor_note','approved_by','approved_at','wms_fixed','wms_fixed_at','wms_fixed_by'], restore:true },
+  { sheet:'Approvals', table:'variance_approvals', scope:'assignment', columns:['id','assignment_id','item_id','final_qty','variance','resolution','supervisor_note','approved_by','approved_at','review_status','released_to_wms','draft_saved_by','draft_saved_at','updated_at','wms_fixed','wms_fixed_at','wms_fixed_by'], restore:true },
   { sheet:'Found_Items', table:'found_items', scope:'session', columns:['id','session_id','assignment_id','location_id','location_code','license_plate','lot','inventory_status','item_id','item_code','description','uom','qty','type_issue','remark','photo_url','actual_counter_name','source_type','status','discovered_by','discovered_at','reviewed_by','reviewed_at','supervisor_note','promoted_assignment_id','promoted_item_id'], restore:true },
   { sheet:'Paper_Count_Raw', table:'paper_form_counts', scope:'session', columns:['id','session_id','source_type','row_key','source_assignment_id','source_location_id','source_item_id','original_location_code','location_code','zone','row_no','level','item_code','description','inventory_status','uom','lpn','lot','original_oh','paper_oh','count1','count2','count3','physical_count','status','item_issue','variance','solution','remarks','counter_names_count1','counter_names_count2','counter_names_count3','created_by','updated_by','created_at','updated_at'], restore:true },
   { sheet:'Paper_History_Raw', table:'paper_form_count_history', scope:'session', columns:['id','session_id','paper_row_id','action','source_label','old_value','new_value','performed_by','created_at'], restore:true },
@@ -26793,7 +27025,7 @@ function computeItemStatus(oh, r1, r2, r3, rules) {
   return 'Diff';
 }
 
-// V1.43: protect summary/WMS reporting from a legacy approval inconsistency.
+// V1.44: protect summary/WMS reporting from a legacy approval inconsistency.
 // Some approved rows were saved as variance=0/final_qty=OH even though the
 // physical rounds still resolve to Diff.  Preserve the database history, but
 // use the confirmed physical rounds for display and dashboard calculations so
@@ -30209,6 +30441,14 @@ function varianceIssueEditorHtml(roundMap, key, item, context={}) {
   const safeKey = String(key || item?.id || 'variance').replace(/[^a-zA-Z0-9_-]/g,'_');
   const evidence = latestVarianceEvidence(roundMap);
   if (!evidence.record?.id) return '';
+  if (context.locked === true) {
+    return `<div class="variance-issue-summary is-locked">
+      <div class="variance-issue-summary-head">
+        ${varianceIssueSummaryInner(evidence)}
+        <span class="variance-review-status is-confirmed">ล็อกหลังยืนยัน</span>
+      </div>
+    </div>`;
+  }
   window._varianceIssueContext = window._varianceIssueContext || {};
   window._varianceIssueContext[safeKey] = {
     recordId:evidence.record.id,
@@ -38430,7 +38670,7 @@ async function loadSvDash() {
     // disappear from both the Variance and WMS queues even while History shows it.
     fetchPagedSupabaseRows(
       'assignments',
-      'id,status,assigned_to,location_id,assigned_at,created_at,counter_r2_id,counter_r3_id,locations(code,zone,row_no,level),profiles!assigned_to(name)',
+      'id,status,assigned_to,location_id,assigned_at,created_at,counter_r2_id,counter_r3_id,wms_closed_at,wms_closed_by,locations(code,zone,row_no,level),profiles!assigned_to(name)',
       query => query
         .eq('session_id', curSid)
         .order('status')
@@ -38625,8 +38865,15 @@ async function loadSvDash() {
     const explicitFalse = rawFixed === false || rawFixed === 0
       || ['false','f','0','no','n',''].includes(String(rawFixed ?? '').trim().toLowerCase());
     const hasFixedEvidence = Boolean(row.wms_fixed_at || row.wms_fixed_by);
+    const rawReleased = row.released_to_wms;
+    const releasedFlag = rawReleased === undefined || rawReleased === null
+      ? true
+      : rawReleased === true || rawReleased === 1
+        || ['true','t','1','yes','y'].includes(String(rawReleased).trim().toLowerCase());
     return {
       ...row,
+      review_status:row.review_status || (row.approved_at ? 'confirmed' : 'draft'),
+      released_to_wms:releasedFlag,
       wms_fixed:hasFixedEvidence && fixedFlag && !explicitFalse,
       wms_fixed_at:row.wms_fixed_at ?? null,
       wms_fixed_by:row.wms_fixed_by ?? null,
@@ -38656,6 +38903,7 @@ async function loadSvDash() {
       // at round3_done; discarding it makes the WMS queue silently become zero.
       trackerApprovalRows = (vaData || [])
         .map(normalizeVarianceApprovalRow)
+        .filter(row => row.review_status === 'confirmed')
         .map(row => {
           const assignment = asgnInfoMap[row.assignment_id];
           const rounds = sessionCountByAsgn[row.assignment_id]?.[row.item_id] || {};
@@ -38664,7 +38912,7 @@ async function loadSvDash() {
           return reconcileApprovalWithPhysicalCount(row,rounds,oh,rules);
         });
       wmsRows = trackerApprovalRows
-        .filter(v => Number(v.variance) !== 0)
+        .filter(v => v.released_to_wms !== false && Number(v.variance) !== 0)
         .map(v => ({ ...v, _fromVA:true }));
     }
   } catch (e) {
@@ -39948,11 +40196,17 @@ function setWmsStatusFilter(status) {
 
 async function toggleWmsFixed(vaId, checked, button) {
   const target = (window._wmsRows || []).find(row => row.id === vaId);
+  const assignment = window._wmsAsgnInfoMap?.[target?.assignment_id];
   const previous = target ? {
     wms_fixed: !!target.wms_fixed,
     wms_fixed_at: target.wms_fixed_at,
     wms_fixed_by: target.wms_fixed_by,
   } : null;
+  const previousLocationClose = assignment ? {
+    wms_closed_at:assignment.wms_closed_at || null,
+    wms_closed_by:assignment.wms_closed_by || null,
+  } : null;
+  let locationClosureCleared = false;
   try {
     if (!vaId || vaId === 'undefined') {
       showWmsFeedback('ไม่พบ ID รายการ กรุณารีเฟรชแล้วลองใหม่', 'error');
@@ -39964,6 +40218,17 @@ async function toggleWmsFixed(vaId, checked, button) {
       button.querySelector('span')?.replaceChildren(document.createTextNode('กำลังบันทึก...'));
     }
     showWmsFeedback('กำลังบันทึกสถานะการตรวจสอบ...');
+    if (!checked && assignment?.wms_closed_at) {
+      const { data: reopenedRows, error: reopenError } = await sb.from('assignments')
+        .update({ wms_closed_at:null,wms_closed_by:null })
+        .eq('id',target.assignment_id)
+        .select('id,wms_closed_at,wms_closed_by');
+      if (reopenError) throw reopenError;
+      if (!reopenedRows?.length) throw new Error('เปิด Location เพื่อแก้ไขอีกครั้งไม่สำเร็จ');
+      assignment.wms_closed_at = null;
+      assignment.wms_closed_by = null;
+      locationClosureCleared = true;
+    }
     const updates = { wms_fixed: checked };
     if (checked) { updates.wms_fixed_at = new Date().toISOString(); updates.wms_fixed_by = me.id; } 
     else { updates.wms_fixed_at = null; updates.wms_fixed_by = null; }
@@ -39971,7 +40236,6 @@ async function toggleWmsFixed(vaId, checked, button) {
     if (error) throw error;
     if (!data || data.length === 0) throw new Error('ไม่พบรายการที่ต้องการอัปเดต');
     if (target) Object.assign(target, updates);
-    const assignment = window._wmsAsgnInfoMap?.[target?.assignment_id];
     await logAudit(
       assignment?.session_id || S._dashSid,
       assignment?.location_id,
@@ -39981,6 +40245,17 @@ async function toggleWmsFixed(vaId, checked, button) {
       checked ? 'ตรวจสอบแล้ว' : 'ยังไม่ได้ตรวจสอบ',
       target?.assignment_id,
     );
+    if (locationClosureCleared) {
+      await logAudit(
+        assignment?.session_id || S._dashSid,
+        assignment?.location_id,
+        target?.item_id,
+        'wms_location_reopened',
+        'ปิดงาน WMS Location แล้ว',
+        'เปิดแก้ไข Item อีกครั้ง',
+        target?.assignment_id,
+      );
+    }
     updateWmsOverview();
     renderWmsList();
     showWmsFeedback(checked
@@ -39989,6 +40264,17 @@ async function toggleWmsFixed(vaId, checked, button) {
     invalidateDashboardCache();
     refreshDashboardData();
   } catch (e) {
+    if (locationClosureCleared && assignment && previousLocationClose?.wms_closed_at) {
+      const restoreClose = {
+        wms_closed_at:previousLocationClose.wms_closed_at,
+        wms_closed_by:previousLocationClose.wms_closed_by,
+      };
+      const { error:restoreCloseError } = await sb.from('assignments')
+        .update(restoreClose)
+        .eq('id',assignment.id);
+      if (!restoreCloseError) Object.assign(assignment,restoreClose);
+      else console.error('คืนสถานะปิด WMS Location ไม่สำเร็จ:',restoreCloseError);
+    }
     if (target && previous) Object.assign(target, previous);
     updateWmsOverview();
     renderWmsList();
@@ -40048,6 +40334,8 @@ async function returnWmsForReview(vaId, assignmentId, itemId, button) {
   const assignment = window._wmsAsgnInfoMap?.[assignmentId];
   const locationCode = assignment?.locations?.code || 'รายการนี้';
   const previousStatus = assignment?.status || 'approved';
+  const previousWmsClosedAt = assignment?.wms_closed_at || null;
+  const previousWmsClosedBy = assignment?.wms_closed_by || null;
 
   if (!vaId || !assignmentId) {
     showWmsFeedback('ไม่พบข้อมูลรายการสำหรับส่งตรวจใหม่ กรุณารีเฟรชแล้วลองอีกครั้ง', 'error');
@@ -40070,9 +40358,9 @@ async function returnWmsForReview(vaId, assignmentId, itemId, button) {
     showWmsFeedback('กำลังส่งรายการกลับให้หัวหน้าตรวจสอบใหม่...');
 
     const { data: assignmentRows, error: assignmentError } = await sb.from('assignments')
-      .update({ status:'round3_done' })
+      .update({ status:'round3_done',wms_closed_at:null,wms_closed_by:null })
       .eq('id', assignmentId)
-      .select('id,status');
+      .select('id,status,wms_closed_at,wms_closed_by');
     if (assignmentError) throw assignmentError;
     if (!assignmentRows?.length) throw new Error('อัปเดตสถานะงานไม่สำเร็จ');
 
@@ -40081,11 +40369,19 @@ async function returnWmsForReview(vaId, assignmentId, itemId, button) {
       .eq('id', vaId)
       .select('id');
     if (deleteError || !deletedRows?.length) {
-      await sb.from('assignments').update({ status:previousStatus }).eq('id', assignmentId);
+      await sb.from('assignments').update({
+        status:previousStatus,
+        wms_closed_at:previousWmsClosedAt,
+        wms_closed_by:previousWmsClosedBy,
+      }).eq('id', assignmentId);
       throw deleteError || new Error('นำรายการออกจากขั้นตอน WMS ไม่สำเร็จ');
     }
 
-    if (assignment) assignment.status = 'round3_done';
+    if (assignment) {
+      assignment.status = 'round3_done';
+      assignment.wms_closed_at = null;
+      assignment.wms_closed_by = null;
+    }
     window._wmsRows = (window._wmsRows || []).filter(row => row.id !== vaId);
     await logAudit(
       S._dashSid || assignment?.session_id,
@@ -40096,6 +40392,17 @@ async function returnWmsForReview(vaId, assignmentId, itemId, button) {
       'Variance Review',
       assignmentId,
     );
+    if (previousWmsClosedAt) {
+      await logAudit(
+        S._dashSid || assignment?.session_id,
+        assignment?.location_id,
+        itemId,
+        'wms_location_reopened',
+        'ปิดงาน WMS Location แล้ว',
+        'ส่ง Item กลับตรวจใหม่',
+        assignmentId,
+      );
+    }
     updateWmsOverview();
     renderWmsList();
     showWmsFeedback(`ส่ง ${locationCode} กลับให้หัวหน้าตรวจสอบใหม่แล้ว`);
@@ -40354,6 +40661,72 @@ function varianceCounterNamesFromNode(node) {
   }
 }
 
+async function closeWmsLocation(assignmentId,button) {
+  const assignment = window._wmsAsgnInfoMap?.[assignmentId];
+  const locationCode = assignment?.locations?.code || 'Location นี้';
+  try {
+    if (!['admin','supervisor'].includes(prof?.role || '')) {
+      throw new Error('ปิดงาน WMS Location ได้เฉพาะ Supervisor / Admin');
+    }
+    if (!assignmentId || !assignment) throw new Error('ไม่พบข้อมูล Location กรุณารีเฟรชแล้วลองใหม่');
+    if (button) {
+      button.disabled = true;
+      button.classList.add('is-saving');
+      button.querySelector('span')?.replaceChildren(document.createTextNode('กำลังปิดงาน...'));
+    }
+    const localRows = (window._wmsRows || []).filter(row =>
+      row.assignment_id === assignmentId && isWmsQueueRow(row));
+    if (!localRows.length) throw new Error('Location นี้ไม่มี Item ที่ต้องตรวจสอบ WMS');
+    if (localRows.some(row => row._isPending)) {
+      throw new Error('ยังมี Item รอหัวหน้าคอนเฟิร์ม จึงยังปิด Location ไม่ได้');
+    }
+    if (localRows.some(row => !row.wms_fixed)) {
+      throw new Error('กรุณายืนยันตรวจสอบให้ครบทุก Item ก่อนปิด Location');
+    }
+
+    showWmsFeedback(`กำลังตรวจสอบความครบถ้วนของ ${locationCode}...`);
+    const { data:serverRows,error:serverError } = await sb.from('variance_approvals')
+      .select('id,variance,review_status,released_to_wms,wms_fixed,wms_fixed_at,wms_fixed_by')
+      .eq('assignment_id',assignmentId)
+      .eq('review_status','confirmed')
+      .eq('released_to_wms',true)
+      .neq('variance',0);
+    if (serverError) throw serverError;
+    if (!serverRows?.length) throw new Error('ไม่พบ Item ที่ถูกส่งเข้าขั้นตอน WMS');
+    const unfinished = serverRows.filter(row => !row.wms_fixed || !(row.wms_fixed_at || row.wms_fixed_by));
+    if (unfinished.length) {
+      throw new Error(`ยังตรวจไม่ครบ ${unfinished.length.toLocaleString(uiLocale())} Item กรุณารีเฟรชข้อมูล`);
+    }
+
+    const closedAt = new Date().toISOString();
+    const { data:closedRows,error:closeError } = await sb.from('assignments')
+      .update({ wms_closed_at:closedAt,wms_closed_by:me.id })
+      .eq('id',assignmentId)
+      .select('id,wms_closed_at,wms_closed_by');
+    if (closeError) throw closeError;
+    if (!closedRows?.length) throw new Error('ปิดงาน WMS Location ไม่สำเร็จ');
+    assignment.wms_closed_at = closedAt;
+    assignment.wms_closed_by = me.id;
+    await logAudit(
+      assignment.session_id || S._dashSid,
+      assignment.location_id,
+      null,
+      'wms_location_closed',
+      `ตรวจแล้ว ${serverRows.length} Item`,
+      'ปิดงาน WMS Location แล้ว',
+      assignmentId,
+    );
+    renderWmsList();
+    showWmsFeedback(`ปิดงาน ${locationCode} แล้ว · ตรวจครบ ${serverRows.length.toLocaleString(uiLocale())}/${serverRows.length.toLocaleString(uiLocale())} Item`);
+    invalidateDashboardCache();
+    refreshDashboardData();
+  } catch (error) {
+    console.error(error);
+    renderWmsList();
+    showWmsFeedback('ปิดงาน Location ไม่สำเร็จ: ' + (error.message || error),'error');
+  }
+}
+
 function varianceRowMatchesFilters(node, excludeKey='') {
   if (!node) return false;
   const counterNames = varianceCounterNamesFromNode(node);
@@ -40563,8 +40936,9 @@ function renderWmsList() {
     return true;
   }), row => asgnInfoMap[row.assignment_id]?.locations?.code);
 
+  const visibleAssignmentIds = [...new Set(filtered.map(row => row.assignment_id).filter(Boolean))];
   const visibleCount = Q('wms-visible-count');
-  if (visibleCount) visibleCount.textContent = `${filtered.length.toLocaleString(uiLocale())} รายการ`;
+  if (visibleCount) visibleCount.textContent = `${visibleAssignmentIds.length.toLocaleString(uiLocale())} Location · ${filtered.length.toLocaleString(uiLocale())} Item`;
   if (!filtered.length) {
     const msg = filterStatus==='unfixed' ? '🎉 ไม่มีรายการที่ยังไม่ได้ตรวจสอบ' 
       : filterStatus==='fixed' ? 'ยังไม่มีรายการที่ตรวจสอบแล้ว' 
@@ -40574,7 +40948,37 @@ function renderWmsList() {
     return;
   }
 
-  container.innerHTML = filtered.map(v => {
+  const grouped = visibleAssignmentIds.map(assignmentId => ({
+    assignmentId,
+    visibleRows:filtered.filter(row => row.assignment_id === assignmentId),
+    allRows:wmsRows.filter(row => row.assignment_id === assignmentId),
+  }));
+
+  container.classList.add('wms-location-groups');
+  container.innerHTML = grouped.map(group => {
+    const assignment = asgnInfoMap[group.assignmentId] || {};
+    const location = assignment.locations || {};
+    const totalItems = group.allRows.length;
+    const fixedItems = group.allRows.filter(row => !row._isPending && row.wms_fixed).length;
+    const pendingItems = group.allRows.filter(row => row._isPending).length;
+    const progressPercent = totalItems ? Math.round(fixedItems / totalItems * 100) : 0;
+    const isClosed = Boolean(assignment.wms_closed_at)
+      && totalItems > 0
+      && fixedItems === totalItems
+      && pendingItems === 0;
+    const canClose = !isClosed && totalItems > 0 && fixedItems === totalItems && pendingItems === 0;
+    const locationStatus = isClosed
+      ? '<span class="wms-location-status is-closed">✓ ปิด Location แล้ว</span>'
+      : pendingItems
+        ? `<span class="wms-location-status is-pending">รอคอนเฟิร์ม ${pendingItems.toLocaleString(uiLocale())} Item</span>`
+        : '<span class="wms-location-status">กำลังตรวจสอบ</span>';
+    const closeButton = canClose
+      ? `<button type="button" class="btn btn-green btn-sm" onclick='closeWmsLocation(${JSON.stringify(group.assignmentId)},this)'>${wmsIconSvg('reviewed',17)} <span>ปิดงาน WMS Location</span></button>`
+      : '';
+    const closedByText = isClosed
+      ? ` · ปิดเมื่อ ${escapeWmsText(workTrackerDate(assignment.wms_closed_at))}`
+      : '';
+    const itemsHtml = group.visibleRows.map(v => {
     const loc = asgnInfoMap[v.assignment_id]?.locations;
     const isFixed = !!v.wms_fixed;
     const isPending = !!v._isPending;
@@ -40692,6 +41096,22 @@ function renderWmsList() {
         ${noteInline}
       </div>
     </div>`;
+    }).join('');
+
+    return `<section class="wms-location-group ${isClosed?'is-closed':''} ${pendingItems?'is-pending':''}" data-assignment-id="${escapeWmsText(group.assignmentId)}">
+      <div class="wms-location-head">
+        <div class="wms-location-title">
+          <strong class="mono">${escapeWmsText(location.code || '?')}</strong>
+          <span>Zone ${escapeWmsText(location.zone || '—')} · ROW ${escapeWmsText(location.row_no ?? '—')} · Level ${escapeWmsText(location.level ?? '—')}${closedByText}</span>
+        </div>
+        <div class="wms-location-progress">
+          <div class="wms-location-progress-label"><span>ตรวจแล้ว</span><strong>${fixedItems.toLocaleString(uiLocale())}/${totalItems.toLocaleString(uiLocale())} Item · ${progressPercent}%</strong></div>
+          <div class="wms-location-progress-track"><span style="width:${progressPercent}%"></span></div>
+        </div>
+        <div class="wms-location-actions">${locationStatus}${closeButton}</div>
+      </div>
+      <div class="wms-location-items">${itemsHtml}</div>
+    </section>`;
   }).join('');
 }
 
@@ -40715,6 +41135,7 @@ function varianceQuantitySummaryHtml({
   r3=null,
   finalQty=null,
   editableOH=false,
+  locked=false,
   sessionId='',
   locationId='',
 }) {
@@ -40742,7 +41163,7 @@ function varianceQuantitySummaryHtml({
     <label class="variance-qty-cell is-confirm" for="confirm_${key}">
       <span>ยอดยืนยัน</span>
       <input class="variance-qty-input" type="number" id="confirm_${key}" value="${Number.isFinite(finalNumber) ? finalNumber : 0}"
-        oninput='refreshVarianceQuantityPreview(${itemArg})'>
+        ${locked ? 'disabled' : ''} oninput='refreshVarianceQuantityPreview(${itemArg})'>
     </label>
     <div class="variance-result-cell">
       <strong class="${varianceClass}" id="variance_live_${key}">${varianceText}</strong>
@@ -40769,6 +41190,107 @@ function refreshVarianceQuantityPreview(itemId) {
   finalNode.textContent = Number.isFinite(finalQty) ? finalQty.toLocaleString(uiLocale()) : '—';
 }
 
+function varianceReviewState(approval) {
+  if (!approval) return 'unreviewed';
+  if (approval.review_status === 'confirmed') return 'confirmed';
+  if (approval.review_status === 'draft') return 'draft';
+  return approval.approved_at ? 'confirmed' : 'draft';
+}
+
+function varianceReviewStateLabel(state) {
+  return ({ unreviewed:'ยังไม่ได้ตรวจ',draft:'บันทึกร่าง',confirmed:'ยืนยันแล้ว' })[state] || 'ยังไม่ได้ตรวจ';
+}
+
+function varianceReviewStateBadgeHtml(state) {
+  const icon = state === 'confirmed' ? '✓' : state === 'draft' ? '●' : '○';
+  return `<span class="variance-review-status is-${state}">${icon} ${varianceReviewStateLabel(state)}</span>`;
+}
+
+function varianceReviewProgressHtml(summary={}) {
+  const total = Number(summary.total) || 0;
+  const confirmed = Number(summary.confirmed) || 0;
+  const draft = Number(summary.draft) || 0;
+  const unreviewed = Math.max(0,total-confirmed-draft);
+  const percent = total ? Math.round((confirmed/total)*100) : 0;
+  return `<section class="variance-location-progress" style="--variance-review-progress:${percent}%">
+    <div class="variance-location-progress-copy">
+      <strong>ตรวจแล้ว ${confirmed.toLocaleString(uiLocale())} / ${total.toLocaleString(uiLocale())} Item</strong>
+      <span>${percent}% · บันทึกแยกทีละ Item และกลับมาทำต่อจากเครื่องอื่นได้</span>
+    </div>
+    <div class="variance-location-progress-stats">
+      <div class="variance-location-progress-stat"><strong>${unreviewed.toLocaleString(uiLocale())}</strong><span>ยังไม่ได้ตรวจ</span></div>
+      <div class="variance-location-progress-stat"><strong>${draft.toLocaleString(uiLocale())}</strong><span>บันทึกร่าง</span></div>
+      <div class="variance-location-progress-stat"><strong>${confirmed.toLocaleString(uiLocale())}</strong><span>ยืนยันแล้ว</span></div>
+    </div>
+    <div class="variance-location-progress-track"><span></span></div>
+  </section>`;
+}
+
+function varianceReviewActionHtml({ aid,itemId,state,mode='detail',inlineIndex='' }) {
+  const args = [aid,itemId,mode,String(inlineIndex ?? '')].map(value => JSON.stringify(String(value || ''))).join(',');
+  if (state === 'confirmed') {
+    return `<div class="variance-review-item-actions">
+      <button class="btn btn-ghost btn-sm" type="button" onclick='reopenVarianceReviewItem(${args},this)'>✎ แก้ไขอีกครั้ง</button>
+    </div>`;
+  }
+  return `<div class="variance-review-item-actions">
+    <button class="btn btn-ghost btn-sm" type="button" onclick='saveVarianceReviewItem(${args},"draft",this)'>💾 บันทึกร่าง</button>
+    <button class="btn btn-green btn-sm" type="button" onclick='saveVarianceReviewItem(${args},"confirmed",this)'>✓ ยืนยัน Item</button>
+  </div>`;
+}
+
+function varianceReviewCheckboxSelector(aid) {
+  return `[data-variance-review-assignment="${CSS.escape(String(aid || ''))}"] .variance-review-select:not(:disabled)`;
+}
+
+function selectedVarianceReviewItemIds(aid) {
+  return [...document.querySelectorAll(varianceReviewCheckboxSelector(aid))]
+    .filter(input => input.checked)
+    .map(input => input.value)
+    .filter(Boolean);
+}
+
+function refreshVarianceReviewSelection(aid) {
+  const selected = selectedVarianceReviewItemIds(aid);
+  const count = document.querySelector(`[data-variance-selected-count="${CSS.escape(String(aid || ''))}"]`);
+  const button = document.querySelector(`[data-variance-confirm-selected="${CSS.escape(String(aid || ''))}"]`);
+  if (count) count.textContent = `เลือก ${selected.length.toLocaleString(uiLocale())} Item`;
+  if (button) button.disabled = selected.length === 0;
+}
+
+function toggleVarianceReviewSelection(aid,checked) {
+  document.querySelectorAll(varianceReviewCheckboxSelector(aid)).forEach(input => { input.checked = Boolean(checked); });
+  refreshVarianceReviewSelection(aid);
+}
+
+function varianceReviewToolbarHtml({ aid,total,confirmed,mode='detail',inlineIndex='' }) {
+  if (!total || confirmed >= total) return '';
+  const args = [aid,mode,String(inlineIndex ?? '')].map(value => JSON.stringify(String(value || ''))).join(',');
+  return `<div class="variance-review-toolbar" data-variance-review-assignment="${escapeWmsText(aid)}">
+    <div class="variance-review-toolbar-copy" data-variance-selected-count="${escapeWmsText(aid)}">เลือก 0 Item</div>
+    <div class="variance-review-toolbar-actions">
+      <button class="btn btn-ghost btn-sm" type="button" onclick='toggleVarianceReviewSelection(${JSON.stringify(String(aid || ''))},true)'>เลือกทั้งหมดที่ยังไม่ยืนยัน</button>
+      <button class="btn btn-green btn-sm" type="button" data-variance-confirm-selected="${escapeWmsText(aid)}"
+        onclick='confirmSelectedVarianceReviewItems(${args},this)' disabled>✓ ยืนยันรายการที่เลือก</button>
+    </div>
+  </div>`;
+}
+
+function varianceLocationCloseHtml({ aid,total,confirmed,mode='detail',inlineIndex='' }) {
+  const ready = confirmed === total;
+  const args = [aid,mode,String(inlineIndex ?? '')].map(value => JSON.stringify(String(value || ''))).join(',');
+  return `<div class="variance-location-close">
+    <button class="btn btn-green" type="button" onclick='finalizeVarianceLocation(${args},this)' ${ready?'':'disabled'}>
+      ${ready
+        ? (total ? '✓ ปิดงาน Location และส่งต่อ WMS' : '✓ ปิดงาน Location · ไม่พบ DIFF')
+        : `ยืนยันให้ครบอีก ${(total-confirmed).toLocaleString(uiLocale())} Item`}
+    </button>
+    <small>${ready
+      ? (total ? 'ตรวจครบแล้ว กดเพื่อปิด Location และส่ง Item ที่เป็น DIFF ไปขั้นตอนปรับยอด WMS' : 'ยอดตรงหลังตรวจสอบหรือแก้ OH จึงไม่มีรายการส่งไป WMS')
+      : 'ระบบยังไม่ส่งงานไป WMS จนกว่าจะยืนยันครบทุก Item'}</small>
+  </div>`;
+}
+
 async function toggleVarianceDetail(aid, idx) {
   const prevIdx = _svDashOpenVarianceIdx;
   if (prevIdx !== null && prevIdx !== idx) {
@@ -40793,14 +41315,22 @@ async function renderVarianceItemDetail(aid, container, idx) {
 
   if (!asgn) { container.innerHTML = `<div class="alert alert-red" style="margin:10px">ไม่พบข้อมูล</div>`; return; }
 
-  const [{ data: snaps }, { data: counts }, { data: users }, { data: countRemarkRows }, rules] = await Promise.all([
+  const [{ data: snaps }, { data: counts }, { data: users }, { data: countRemarkRows }, rules, , approvalResult] = await Promise.all([
     sb.from('stock_snapshot').select('item_id,onhand_qty,al_qty,items(id,code,description)').eq('session_id', asgn.session_id).eq('location_id', asgn.location_id),
     sb.from('count_records').select('id,item_id,round,count_qty,remark,photo_url,type_issue,actual_counter_name').eq('assignment_id', aid),
     sb.from('profiles').select('id,name').order('name'),
     sb.from('remark_options').select('id,label').eq('context','count').eq('active',true).order('label'),
     getSessionRules(asgn.session_id),
     loadCountTypeIssueOptions(),
+    sb.from('variance_approvals')
+      .select('id,item_id,final_qty,variance,resolution,approved_by,approved_at,review_status,draft_saved_by,draft_saved_at,updated_at')
+      .eq('assignment_id',aid),
   ]);
+
+  if (approvalResult.error) {
+    container.innerHTML = `<div class="alert alert-red" style="margin:10px">${escapeWmsText(approvalResult.error.message)}</div>`;
+    return;
+  }
 
   window._countRemarkOptions = countRemarkRows || [];
   window._photoMap = window._photoMap || {};
@@ -40819,7 +41349,9 @@ async function renderVarianceItemDetail(aid, container, idx) {
     return `${x.count_qty} · ${escapeWmsText(x.actual_counter_name || 'ไม่ระบุผู้ตรวจนับ')}`;
   };
 
+  const approvalByItem = new Map((approvalResult.data || []).map(row => [row.item_id,row]));
   let varRows = '';
+  const reviewSummary = { total:0,draft:0,confirmed:0 };
   for (const s of snaps || []) {
     const it = s.items;
     const emptyLocation = isEmptyLocationItem(it?.code);
@@ -40840,23 +41372,39 @@ async function renderVarianceItemDetail(aid, container, idx) {
     const st = VS[stKey] || { cls:'tag-gray', lbl:stKey, row:'' };
     const suggested = r3 ?? r2 ?? r1 ?? +s.onhand_qty;
     const alQty = s.al_qty ?? null;
+    const approval = approvalByItem.get(it.id) || null;
+    const reviewState = varianceReviewState(approval);
+    const confirmed = reviewState === 'confirmed';
+    const reviewFinalQty = approval?.final_qty ?? suggested;
+    reviewSummary.total += 1;
+    if (reviewState === 'confirmed') reviewSummary.confirmed += 1;
+    else if (reviewState === 'draft') reviewSummary.draft += 1;
 
-    varRows += `<div class="vrow ${st.row} variance-review-item">
+    varRows += `<div class="vrow ${st.row} variance-review-item is-review-${reviewState}"
+        data-variance-review-assignment="${escapeWmsText(aid)}" data-variance-review-item="${escapeWmsText(it.id)}"
+        data-variance-review-state="${reviewState}">
       <div class="variance-review-heading">
-        <div class="variance-review-heading-copy">
-          <div class="mono">${
-            emptyLocation ? '<span class="tag tag-blue">Location ว่าง</span>' : escapeWmsText(it?.code || '')
-          }</div>
-          <div class="variance-review-description">${
-            emptyLocation ? 'Item ว่างจาก WMS' : escapeWmsText(it?.description || '')
-          }</div>
+        <div class="variance-review-heading-left">
+          ${confirmed ? '' : `<input class="variance-review-select" type="checkbox" value="${escapeWmsText(it.id)}"
+            aria-label="เลือก ${escapeWmsText(it?.code || 'Item')}" onchange="refreshVarianceReviewSelection('${aid}')">`}
+          <div class="variance-review-heading-copy">
+            <div class="mono">${
+              emptyLocation ? '<span class="tag tag-blue">Location ว่าง</span>' : escapeWmsText(it?.code || '')
+            }</div>
+            <div class="variance-review-description">${
+              emptyLocation ? 'Item ว่างจาก WMS' : escapeWmsText(it?.description || '')
+            }</div>
+          </div>
         </div>
-        <span class="tag ${st.cls}">${st.lbl}</span>
+        <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+          ${varianceReviewStateBadgeHtml(reviewState)}
+          <span class="tag ${st.cls}">${st.lbl}</span>
+        </div>
       </div>
       <div class="variance-counter-line">R1: ${fmt(v[1])} · R2: ${fmt(v[2])} · R3: ${fmt(v[3])}</div>
       ${varianceIssueEditorHtml(v,`variance_inline_${idx}_${it.id}`,it,{
         assignmentId:aid,sessionId:asgn.session_id,locationId:asgn.location_id,
-        mode:'inline',inlineIndex:idx,
+        mode:'inline',inlineIndex:idx,locked:confirmed,
       })}
       ${varianceQuantitySummaryHtml({
         itemId:it.id,
@@ -40865,11 +41413,13 @@ async function renderVarianceItemDetail(aid, container, idx) {
         r1,
         r2,
         r3,
-        finalQty:suggested,
-        editableOH:true,
+        finalQty:reviewFinalQty,
+        editableOH:!confirmed,
+        locked:confirmed,
         sessionId:asgn.session_id,
         locationId:asgn.location_id,
       })}
+      ${varianceReviewActionHtml({ aid,itemId:it.id,state:reviewState,mode:'inline',inlineIndex:idx })}
     </div>`;
   }
   if (!varRows) {
@@ -40883,11 +41433,13 @@ async function renderVarianceItemDetail(aid, container, idx) {
   const userOpts = otherUsers.map(u=>`<option value="${u.id}">${escapeWmsText(u.name)}</option>`).join('');
 
   container.innerHTML = `
+    ${varianceReviewProgressHtml(reviewSummary)}
     <div>${varRows}</div>
+    ${varianceReviewToolbarHtml({ aid,...reviewSummary,mode:'inline',inlineIndex:idx })}
     <div style="padding:16px 20px;border-top:1px solid var(--theme-border-color)">
-      <div class="alert alert-blue" style="font-size:12px;margin-bottom:14px">✏️ แก้ "ยอดยืนยัน" หรือ OH ก่อนกดคอนเฟิร์ม</div>
+      <div class="alert alert-blue" style="font-size:12px;margin-bottom:14px">บันทึกร่างเพื่อพักงาน หรือยืนยันแยกทีละ Item ได้ ข้อมูลจะเปิดต่อจากเครื่องอื่นได้</div>
       <div id="vda_${idx}"></div>
-      <button class="btn btn-green" onclick="doApproveInline('${aid}','${idx}')" style="margin-bottom:12px;width:100%">✅ คอนเฟิร์มยอดนับ</button>
+      ${varianceLocationCloseHtml({ aid,...reviewSummary,mode:'inline',inlineIndex:idx })}
       ${nextPhysicalRound <= 3 ? `
       <div style="background:var(--theme-card-bg);border:1px solid var(--theme-border-color);border-radius:20px;padding:16px;margin-top:10px">
         <div style="font-size:13px;font-weight:800;color:var(--primary-blue);margin-bottom:10px">🔄 จ่ายงานรอบที่ ${nextPhysicalRound} ให้ User</div>
@@ -40899,89 +41451,260 @@ async function renderVarianceItemDetail(aid, container, idx) {
     </div>`;
 }
 
-async function persistVarianceApprovalDecision(aid,approvals) {
-  if (!approvals?.length) throw new Error('ไม่พบรายการสำหรับคอนเฟิร์ม');
-  const { data:approvalRows,error:approvalError } = await sb.from('variance_approvals')
-    .upsert(approvals,{ onConflict:'assignment_id,item_id' })
-    .select('id,assignment_id,item_id');
-  if (approvalError) throw approvalError;
-  if ((approvalRows || []).length !== approvals.length) {
-    throw new Error(`บันทึกผลตรวจสอบไม่ครบ: ต้องได้ ${approvals.length} แต่ได้ ${(approvalRows || []).length}`);
-  }
-  const { data:assignmentRows,error:assignmentError } = await sb.from('assignments')
-    .update({ status:'approved' })
-    .eq('id',aid)
-    .select('id,status');
-  if (assignmentError) throw assignmentError;
-  if (!assignmentRows?.length) throw new Error('อัปเดต Assignment เป็น approved ไม่สำเร็จ');
-  return approvalRows;
+function varianceReviewAlertElement(mode='detail',inlineIndex='') {
+  return mode === 'inline' ? Q(`vda_${inlineIndex}`) : Q('sva');
 }
 
-async function recordApprovalAudit(aid,asgn,approvals) {
-  return writeAuditRows((approvals || []).map(approval => buildAuditRow(
-    asgn?.session_id,
-    asgn?.location_id,
-    approval.item_id,
-    'count_confirmed',
-    null,
-    `ยอดยืนยัน ${approval.final_qty} · Variance ${Number(approval.variance || 0) >= 0 ? '+' : ''}${Number(approval.variance || 0)} · ผล ${approval.resolution}`,
+function varianceReviewRowElement(aid,itemId) {
+  return [...document.querySelectorAll('[data-variance-review-item]')].find(node =>
+    node.dataset.varianceReviewAssignment === String(aid)
+      && node.dataset.varianceReviewItem === String(itemId));
+}
+
+function varianceReviewPayloadFromDom(aid,itemId,status) {
+  const key = String(itemId || '').replace(/[^a-zA-Z0-9_-]/g,'_');
+  const row = varianceReviewRowElement(aid,itemId);
+  const grid = Q(`variance_qty_${key}`);
+  const finalInput = Q(`confirm_${key}`);
+  const ohInput = Q(`oh_${key}`);
+  if (!row || !grid || !finalInput) throw new Error('ไม่พบ Item บนหน้าจอ กรุณารีเฟรชแล้วลองใหม่');
+  const finalQty = Number(finalInput.value);
+  const oh = Number(ohInput ? ohInput.value : grid.dataset.oh);
+  if (!Number.isFinite(finalQty) || finalQty < 0) throw new Error('ยอดยืนยันต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป');
+  if (!Number.isFinite(oh)) throw new Error('ไม่พบยอด OH ของ Item นี้');
+  const variance = finalQty-oh;
+  const now = new Date().toISOString();
+  const confirmed = status === 'confirmed';
+  return {
+    assignment_id:aid,
+    item_id:itemId,
+    final_qty:finalQty,
+    variance,
+    resolution:variance === 0 ? 'ok' : variance > 0 ? 'found' : 'lost',
+    review_status:confirmed ? 'confirmed' : 'draft',
+    released_to_wms:false,
+    draft_saved_by:me.id,
+    draft_saved_at:now,
+    updated_at:now,
+    approved_by:confirmed ? me.id : null,
+    approved_at:confirmed ? now : null,
+    wms_fixed:false,
+    wms_fixed_at:null,
+    wms_fixed_by:null,
+  };
+}
+
+async function validateVarianceReviewIssueRequirements(aid,itemIds) {
+  if (!itemIds?.length) return;
+  const { data,error } = await sb.from('count_records')
+    .select('item_id,round,type_issue,remark,photo_url')
+    .eq('assignment_id',aid)
+    .in('item_id',itemIds);
+  if (error) throw error;
+  const byItem = {};
+  (data || []).forEach(record => {
+    byItem[record.item_id] = byItem[record.item_id] || {};
+    byItem[record.item_id][record.round] = record;
+  });
+  const invalid = itemIds.filter(itemId => {
+    const evidence = latestVarianceEvidence(byItem[itemId] || {});
+    return (evidence.remark || evidence.photo_url) && !evidence.type_issue;
+  });
+  if (invalid.length) {
+    const firstRow = varianceReviewRowElement(aid,invalid[0]);
+    const itemLabel = firstRow?.querySelector('.variance-review-heading-copy .mono')?.textContent?.trim() || 'รายการที่เลือก';
+    throw new Error(`${itemLabel} มี Remark หรือรูปถ่าย กรุณาเลือก Type Issue ก่อนยืนยัน`);
+  }
+}
+
+async function persistVarianceReviewRows(aid,itemIds,status) {
+  if (!itemIds?.length) throw new Error('กรุณาเลือก Item อย่างน้อย 1 รายการ');
+  const uniqueItemIds = [...new Set(itemIds.map(String).filter(Boolean))];
+  if (status === 'confirmed') await validateVarianceReviewIssueRequirements(aid,uniqueItemIds);
+  const payloads = uniqueItemIds.map(itemId => varianceReviewPayloadFromDom(aid,itemId,status));
+  const [{ data:assignment,error:assignmentError },beforeResult] = await Promise.all([
+    sb.from('assignments').select('id,session_id,location_id,status').eq('id',aid).maybeSingle(),
+    sb.from('variance_approvals')
+      .select('item_id,final_qty,variance,resolution,review_status,released_to_wms,approved_at')
+      .eq('assignment_id',aid)
+      .in('item_id',uniqueItemIds),
+  ]);
+  if (assignmentError || !assignment) throw (assignmentError || new Error('ไม่พบ Assignment'));
+  if (beforeResult.error) throw beforeResult.error;
+  const beforeByItem = new Map((beforeResult.data || []).map(row => [row.item_id,row]));
+  if (status === 'draft') {
+    const alreadyConfirmed = uniqueItemIds.find(itemId => varianceReviewState(beforeByItem.get(itemId)) === 'confirmed');
+    if (alreadyConfirmed) throw new Error('มี Item ที่ถูกยืนยันจากเครื่องอื่นแล้ว กรุณารีเฟรชก่อนแก้ไข');
+  }
+  const { data,error } = await sb.from('variance_approvals')
+    .upsert(payloads,{ onConflict:'assignment_id,item_id' })
+    .select('id,item_id,final_qty,variance,resolution,review_status,approved_at');
+  if (error) throw error;
+  if ((data || []).length !== payloads.length) {
+    throw new Error(`บันทึกไม่ครบ: ต้องได้ ${payloads.length} แต่ได้ ${(data || []).length}`);
+  }
+  await writeAuditRows(payloads.map(payload => buildAuditRow(
+    assignment.session_id,
+    assignment.location_id,
+    payload.item_id,
+    status === 'confirmed' ? 'variance_item_confirmed' : 'variance_item_draft_saved',
+    beforeByItem.get(payload.item_id) ? JSON.stringify(beforeByItem.get(payload.item_id)) : null,
+    JSON.stringify({ final_qty:payload.final_qty,variance:payload.variance,resolution:payload.resolution,review_status:payload.review_status }),
     aid,
   )));
+  return { assignment,rows:data || [] };
 }
 
-async function doApproveInline(aid, idx) {
-  const al = Q('vda_'+idx);
-  if (al) al.innerHTML = `<div class="alert alert-blue" style="font-size:12px">⏳ กำลังบันทึก...</div>`;
-  try {
-    const { data:asgn,error:assignmentError } = await sb.from('assignments')
-      .select('location_id,session_id').eq('id',aid).single();
-    if (assignmentError || !asgn) throw (assignmentError || new Error('ไม่พบ Assignment'));
-    const [snapshotResult,physicalCountResult] = await Promise.all([
-      sb.from('stock_snapshot')
-        .select('item_id,onhand_qty')
-        .eq('session_id',asgn.session_id)
-        .eq('location_id',asgn.location_id),
-      sb.from('count_records')
-        .select('item_id,round,count_qty')
-        .eq('assignment_id',aid),
-    ]);
-    if (snapshotResult.error) throw snapshotResult.error;
-    if (physicalCountResult.error) throw physicalCountResult.error;
-    const snaps = snapshotResult.data || [];
-    const latestPhysicalQty = new Map();
-    (physicalCountResult.data || []).forEach(record => {
-      const previous = latestPhysicalQty.get(record.item_id);
-      if (!previous || Number(record.round) >= previous.round) {
-        latestPhysicalQty.set(record.item_id,{ round:Number(record.round) || 0,qty:Number(record.count_qty) });
-      }
-    });
+async function refreshVarianceReviewView(aid,mode='detail',inlineIndex='') {
+  invalidateDashboardCache();
+  if (mode === 'inline') {
+    const container = Q(`vdetail_${inlineIndex}`);
+    if (container) await renderVarianceItemDetail(aid,container,inlineIndex);
+  } else {
+    await loadSvDetail();
+  }
+}
 
-    const approvals = [];
-    for (const snapshot of snaps || []) {
-      const input = Q('confirm_'+snapshot.item_id);
-      const typedValue = input && String(input.value ?? '').trim() !== '' ? Number(input.value) : NaN;
-      const countedValue = latestPhysicalQty.get(snapshot.item_id)?.qty;
-      const finalQty = Number.isFinite(typedValue)
-        ? typedValue
-        : (Number.isFinite(countedValue) ? countedValue : Number(snapshot.onhand_qty));
-      const variance = finalQty - Number(snapshot.onhand_qty);
-      approvals.push({
-        assignment_id:aid,
-        item_id:snapshot.item_id,
-        final_qty:finalQty,
-        variance,
-        resolution:variance === 0 ? 'ok' : (variance > 0 ? 'found' : 'lost'),
-        approved_by:me.id,
-      });
-    }
-    await persistVarianceApprovalDecision(aid,approvals);
-    await recordApprovalAudit(aid,asgn,approvals);
-    if (al) al.innerHTML = `<div class="alert alert-green" style="font-size:12px">✅ คอนเฟิร์มยอดเรียบร้อย</div>`;
-    showActionSuccessToast('คอนเฟิร์มยอดเรียบร้อย', { title:'ตรวจสอบสำเร็จ' });
-    invalidateDashboardCache();
-    setTimeout(() => refreshDashboardData(),1000);
+async function saveVarianceReviewItem(aid,itemId,mode,inlineIndex,status,button) {
+  const alertBox = varianceReviewAlertElement(mode,inlineIndex);
+  if (button) button.disabled = true;
+  if (alertBox) alertBox.innerHTML = '<div class="alert alert-blue">⏳ กำลังบันทึก Item...</div>';
+  try {
+    await persistVarianceReviewRows(aid,[itemId],status);
+    showActionSuccessToast(
+      status === 'confirmed' ? 'ยืนยัน Item แล้ว' : 'บันทึกร่าง Item แล้ว',
+      { title:status === 'confirmed' ? 'ยืนยันสำเร็จ' : 'บันทึกร่างสำเร็จ' },
+    );
+    await refreshVarianceReviewView(aid,mode,inlineIndex);
   } catch (error) {
-    if (al) al.innerHTML = `<div class="alert alert-red" style="font-size:12px">❌ ${escapeWmsText(error.message || error)}</div>`;
+    if (alertBox) alertBox.innerHTML = `<div class="alert alert-red">❌ ${escapeWmsText(error.message || error)}</div>`;
+    if (button) button.disabled = false;
+  }
+}
+
+async function confirmSelectedVarianceReviewItems(aid,mode,inlineIndex,button) {
+  const itemIds = selectedVarianceReviewItemIds(aid);
+  const alertBox = varianceReviewAlertElement(mode,inlineIndex);
+  if (!itemIds.length) return;
+  if (button) button.disabled = true;
+  if (alertBox) alertBox.innerHTML = `<div class="alert alert-blue">⏳ กำลังยืนยัน ${itemIds.length.toLocaleString(uiLocale())} Item...</div>`;
+  try {
+    await persistVarianceReviewRows(aid,itemIds,'confirmed');
+    showActionSuccessToast(`ยืนยัน ${itemIds.length.toLocaleString(uiLocale())} Item แล้ว`,{ title:'ยืนยันรายการสำเร็จ' });
+    await refreshVarianceReviewView(aid,mode,inlineIndex);
+  } catch (error) {
+    if (alertBox) alertBox.innerHTML = `<div class="alert alert-red">❌ ${escapeWmsText(error.message || error)}</div>`;
+    if (button) button.disabled = false;
+  }
+}
+
+async function reopenVarianceReviewItem(aid,itemId,mode,inlineIndex,button) {
+  if (button) button.disabled = true;
+  const alertBox = varianceReviewAlertElement(mode,inlineIndex);
+  try {
+    const beforeResult = await sb.from('variance_approvals')
+      .select('id,assignment_id,item_id,final_qty,variance,resolution,review_status,released_to_wms,approved_at,wms_fixed')
+      .eq('assignment_id',aid).eq('item_id',itemId).maybeSingle();
+    if (beforeResult.error) throw beforeResult.error;
+    if (!beforeResult.data) throw new Error('ไม่พบผลยืนยัน Item นี้');
+    if (beforeResult.data.wms_fixed) throw new Error('รายการนี้ตรวจสอบ WMS แล้ว กรุณาส่งกลับจากหน้า WMS ก่อนแก้ไข');
+    const now = new Date().toISOString();
+    const { data,error } = await sb.from('variance_approvals').update({
+      review_status:'draft',released_to_wms:false,approved_by:null,approved_at:null,
+      draft_saved_by:me.id,draft_saved_at:now,updated_at:now,
+      wms_fixed:false,wms_fixed_at:null,wms_fixed_by:null,
+    }).eq('id',beforeResult.data.id).select('id,item_id,review_status');
+    if (error) throw error;
+    if (!data?.length) throw new Error('เปิดแก้ไข Item ไม่สำเร็จ');
+    const { data:assignment } = await sb.from('assignments')
+      .select('session_id,location_id,status').eq('id',aid).maybeSingle();
+    if (assignment?.status === 'approved') {
+      await sb.from('assignments').update({ status:'round3_done' }).eq('id',aid);
+    }
+    await logAudit(
+      assignment?.session_id,assignment?.location_id,itemId,
+      'variance_item_reopened',JSON.stringify(beforeResult.data),'draft',aid,
+    );
+    showActionSuccessToast('เปิด Item ให้แก้ไขอีกครั้งแล้ว',{ title:'เปิดแก้ไขสำเร็จ' });
+    await refreshVarianceReviewView(aid,mode,inlineIndex);
+  } catch (error) {
+    if (alertBox) alertBox.innerHTML = `<div class="alert alert-red">❌ ${escapeWmsText(error.message || error)}</div>`;
+    if (button) button.disabled = false;
+  }
+}
+
+async function loadVarianceLocationReviewState(aid) {
+  const { data:assignment,error:assignmentError } = await sb.from('assignments')
+    .select('id,session_id,location_id,status').eq('id',aid).maybeSingle();
+  if (assignmentError || !assignment) throw (assignmentError || new Error('ไม่พบ Assignment'));
+  const [snapshotResult,countResult,approvalResult] = await Promise.all([
+    sb.from('stock_snapshot').select('item_id,onhand_qty')
+      .eq('session_id',assignment.session_id).eq('location_id',assignment.location_id),
+    sb.from('count_records').select('item_id,round,count_qty').eq('assignment_id',aid),
+    sb.from('variance_approvals').select('item_id,review_status,approved_at').eq('assignment_id',aid),
+  ]);
+  if (snapshotResult.error || countResult.error || approvalResult.error) {
+    throw (snapshotResult.error || countResult.error || approvalResult.error);
+  }
+  const latest = new Map();
+  (countResult.data || []).forEach(record => {
+    const previous = latest.get(record.item_id);
+    if (!previous || Number(record.round) >= previous.round) {
+      latest.set(record.item_id,{ round:Number(record.round) || 0,qty:Number(record.count_qty) });
+    }
+  });
+  const requiredItemIds = (snapshotResult.data || []).filter(snapshot => {
+    const physical = latest.get(snapshot.item_id)?.qty;
+    return Number.isFinite(physical) && physical !== Number(snapshot.onhand_qty);
+  }).map(snapshot => snapshot.item_id);
+  const approvalByItem = new Map((approvalResult.data || []).map(row => [row.item_id,row]));
+  const missingItemIds = requiredItemIds.filter(itemId => varianceReviewState(approvalByItem.get(itemId)) !== 'confirmed');
+  return { assignment,requiredItemIds,missingItemIds };
+}
+
+async function finalizeVarianceLocation(aid,mode,inlineIndex,button) {
+  const alertBox = varianceReviewAlertElement(mode,inlineIndex);
+  if (button) button.disabled = true;
+  if (alertBox) alertBox.innerHTML = '<div class="alert alert-blue">⏳ กำลังตรวจสอบและปิดงาน Location...</div>';
+  try {
+    const state = await loadVarianceLocationReviewState(aid);
+    if (state.missingItemIds.length) {
+      throw new Error(`ยังยืนยันไม่ครบอีก ${state.missingItemIds.length.toLocaleString(uiLocale())} Item กรุณารีเฟรชแล้วตรวจสอบอีกครั้ง`);
+    }
+    const nextAssignmentStatus = state.requiredItemIds.length ? 'approved' : 'completed';
+    const { data,error } = await sb.from('assignments').update({ status:nextAssignmentStatus })
+      .eq('id',aid).select('id,status');
+    if (error) throw error;
+    if (!data?.length) throw new Error('ปิดงาน Location ไม่สำเร็จ');
+    if (state.requiredItemIds.length) {
+      const releaseResult = await sb.from('variance_approvals').update({
+        released_to_wms:true,
+        updated_at:new Date().toISOString(),
+      }).eq('assignment_id',aid).eq('review_status','confirmed')
+        .in('item_id',state.requiredItemIds)
+        .select('id,item_id,released_to_wms');
+      if (releaseResult.error || (releaseResult.data || []).length !== state.requiredItemIds.length) {
+        await sb.from('assignments').update({ status:state.assignment.status }).eq('id',aid);
+        throw (releaseResult.error || new Error('ส่งรายการไปขั้นตอน WMS ได้ไม่ครบ กรุณาลองใหม่'));
+      }
+    }
+    await logAudit(
+      state.assignment.session_id,state.assignment.location_id,null,
+      'variance_location_closed',state.assignment.status,
+      `${nextAssignmentStatus} · ${state.requiredItemIds.length} Item`,aid,
+    );
+    invalidateDashboardCache();
+    showActionSuccess(state.requiredItemIds.length
+      ? 'ยืนยันครบและส่งงานไปขั้นตอนปรับยอด WMS แล้ว'
+      : 'ปิดงาน Location แล้ว ไม่มียอดผลต่างที่ต้องส่งไป WMS', {
+      title:'ปิดงาน Location สำเร็จ',
+      facts:[{ label:'Item ที่ตรวจครบ',value:state.requiredItemIds.length.toLocaleString(uiLocale()) }],
+    });
+    if (mode === 'inline') await refreshDashboardData();
+    else setTimeout(() => go('sv-list'),500);
+  } catch (error) {
+    if (alertBox) alertBox.innerHTML = `<div class="alert alert-red">❌ ${escapeWmsText(error.message || error)}</div>`;
+    if (button) button.disabled = false;
   }
 }
 
@@ -41041,7 +41764,7 @@ async function loadSvList() {
 
   const assignmentIds = (rawAssignments || []).map(assignment => assignment.id);
   const sessionIds = sess.map(session => session.id);
-  const [countResult,snapshotResult,sessionRules] = await Promise.all([
+  const [countResult,snapshotResult,approvalResult,sessionRules] = await Promise.all([
     fetchSupabaseRowsByValues(
       'count_records',
       'assignment_id,item_id,round,count_qty,actual_counter_name',
@@ -41052,10 +41775,16 @@ async function loadSvList() {
       rawAssignments || [],
       'session_id,location_id,item_id,onhand_qty',
     ),
+    fetchSupabaseRowsByValues(
+      'variance_approvals',
+      'assignment_id,item_id,review_status,approved_at',
+      'assignment_id',
+      assignmentIds,
+    ),
     Promise.all(sessionIds.map(async sessionId => [sessionId,await getSessionRules(sessionId)])),
   ]);
-  if (countResult.error || snapshotResult.error) {
-    cnt().innerHTML = errBox((countResult.error || snapshotResult.error).message);
+  if (countResult.error || snapshotResult.error || approvalResult.error) {
+    cnt().innerHTML = errBox((countResult.error || snapshotResult.error || approvalResult.error).message);
     return;
   }
   const rulesBySession = Object.fromEntries(sessionRules);
@@ -41072,14 +41801,31 @@ async function loadSvList() {
     snapshotsByScope[key] = snapshotsByScope[key] || [];
     snapshotsByScope[key].push(snapshot);
   });
+  const approvalsByAssignment = {};
+  (approvalResult.data || []).forEach(approval => {
+    approvalsByAssignment[approval.assignment_id] = approvalsByAssignment[approval.assignment_id] || new Map();
+    approvalsByAssignment[approval.assignment_id].set(approval.item_id,approval);
+  });
   const asgns = (rawAssignments || []).map(assignment => {
+    const scopeSnapshots = snapshotsByScope[`${assignment.session_id}|${assignment.location_id}`] || [];
+    const assignmentCounts = countsByAssignment[assignment.id] || {};
     const workflow = deriveAssignmentWorkflowStatus(
-      snapshotsByScope[`${assignment.session_id}|${assignment.location_id}`] || [],
-      countsByAssignment[assignment.id] || {},
+      scopeSnapshots,
+      assignmentCounts,
       rulesBySession[assignment.session_id],
       assignment.status,
     );
-    return { ...assignment, status:workflow.effectiveStatus, _workflow:workflow };
+    const requiredItemIds = scopeSnapshots.filter(snapshot => {
+      const rounds = assignmentCounts[snapshot.item_id] || {};
+      const latestQty = rounds[3] ?? rounds[2] ?? rounds[1];
+      return Number.isFinite(Number(latestQty)) && Number(latestQty) !== Number(snapshot.onhand_qty);
+    }).map(snapshot => snapshot.item_id);
+    const confirmed = requiredItemIds.filter(itemId =>
+      varianceReviewState(approvalsByAssignment[assignment.id]?.get(itemId)) === 'confirmed').length;
+    return {
+      ...assignment,status:workflow.effectiveStatus,_workflow:workflow,
+      _varianceReview:{ total:requiredItemIds.length,confirmed },
+    };
   }).filter(assignmentPendingVarianceReview);
 
   if (!asgns.length && !pendingFound.length) {
@@ -41121,6 +41867,7 @@ async function loadSvList() {
         <div class="row-title mono">${l.code}</div>
         <div class="row-sub"><span data-i18n-skip>${[l.zone,l.area].filter(Boolean).join(' · ')}</span> · <span style="font-weight:700; color:var(--primary-blue)">ผู้ตรวจนับ: <span data-i18n-skip>${escapeWmsText((counterMap[a.id] || []).join(', ') || translateUiText('ไม่ระบุผู้ตรวจนับ'))}</span></span></div>
       </div>
+      ${a._varianceReview?.total ? `<span class="tag tag-blue">ยืนยัน ${a._varianceReview.confirmed.toLocaleString(uiLocale())}/${a._varianceReview.total.toLocaleString(uiLocale())} Item</span>` : ''}
       <span class="tag ${si.cls}">${si.lbl}</span>
       <span class="caret">›</span>
     </div>`;
@@ -41396,14 +42143,23 @@ async function loadSvDetail() {
   const l = asgn.locations;
   const isAdminOrSup = ['admin','supervisor'].includes(prof?.role);
 
-  const [{ data: snaps }, { data: counts }, { data: users }, { data: countRemarkRows }, rules] = await Promise.all([
+  const [{ data: snaps }, { data: counts }, { data: users }, { data: countRemarkRows }, rules, , approvalResult] = await Promise.all([
     sb.from('stock_snapshot').select('item_id,onhand_qty,al_qty,items(id,code,description)').eq('session_id', asgn.session_id).eq('location_id', asgn.location_id),
     sb.from('count_records').select('id,item_id,round,count_qty,remark,photo_url,type_issue,actual_counter_name').eq('assignment_id', aid),
     sb.from('profiles').select('id,name').order('name'),
     sb.from('remark_options').select('id,label').eq('context','count').eq('active',true).order('label'),
     getSessionRules(asgn.session_id),
     loadCountTypeIssueOptions(),
+    sb.from('variance_approvals')
+      .select('id,item_id,final_qty,variance,resolution,approved_by,approved_at,review_status,draft_saved_by,draft_saved_at,updated_at')
+      .eq('assignment_id',aid),
   ]);
+
+
+  if (approvalResult.error) {
+    cnt().innerHTML = errBox(approvalResult.error.message);
+    return;
+  }
 
   window._countRemarkOptions = countRemarkRows || [];
   window._photoMap = window._photoMap || {};
@@ -41418,7 +42174,9 @@ async function loadSvDetail() {
   const otherUsers = (users||[]).filter(u => u.id !== asgn.assigned_to);
 
   const VS = { OK: { cls:'tag-green', lbl:'OK', row:'exact' }, Diff: { cls:'tag-red', lbl:'Diff', row:'diff' }, PENDING: { cls:'tag-amber', lbl:'PENDING', row:'' }, '': { cls:'tag-gray', lbl:'-', row:'' } };
+  const approvalByItem = new Map((approvalResult.data || []).map(row => [row.item_id,row]));
   let hasVar = false; let varRows = '';
+  const reviewSummary = { total:0,draft:0,confirmed:0 };
   const fmt = x => {
     if (x===undefined || x===null) return '—';
     return `${x.count_qty} · ${escapeWmsText(x.actual_counter_name || 'ไม่ระบุผู้ตรวจนับ')}`;
@@ -41443,26 +42201,41 @@ async function loadSvDetail() {
     const stKey = computeItemStatus(+s.onhand_qty, r1, r2, r3, rules);
     const st = VS[stKey] || { cls:'tag-gray', lbl:stKey, row:'' };
 
-    const issueEvidence = varianceIssueEditorHtml(v,`variance_detail_${it.id}`,it,{
-      assignmentId:aid,sessionId:asgn.session_id,locationId:asgn.location_id,mode:'detail',
-    });
-
     const suggested = r3 ?? r2 ?? r1 ?? +s.onhand_qty;
     const alQty = s.al_qty ?? null;
+    const approval = approvalByItem.get(it.id) || null;
+    const reviewState = varianceReviewState(approval);
+    const confirmed = reviewState === 'confirmed';
+    const reviewFinalQty = approval?.final_qty ?? suggested;
+    reviewSummary.total += 1;
+    if (reviewState === 'confirmed') reviewSummary.confirmed += 1;
+    else if (reviewState === 'draft') reviewSummary.draft += 1;
 
-    varRows += `<div class="vrow ${st.row} variance-review-item">
+    varRows += `<div class="vrow ${st.row} variance-review-item is-review-${reviewState}"
+        data-variance-review-assignment="${escapeWmsText(aid)}" data-variance-review-item="${escapeWmsText(it.id)}"
+        data-variance-review-state="${reviewState}">
       <div class="variance-review-heading">
-        <div class="variance-review-heading-copy">
-          <div class="mono">${
-            emptyLocation ? '<span class="tag tag-blue">Location ว่าง</span>' : escapeWmsText(it?.code || '')
-          }</div>
-          <div class="variance-review-description">${
-            emptyLocation ? 'Item ว่างจาก WMS' : escapeWmsText(it?.description || '')
-          }</div>
+        <div class="variance-review-heading-left">
+          ${confirmed ? '' : `<input class="variance-review-select" type="checkbox" value="${escapeWmsText(it.id)}"
+            aria-label="เลือก ${escapeWmsText(it?.code || 'Item')}" onchange="refreshVarianceReviewSelection('${aid}')">`}
+          <div class="variance-review-heading-copy">
+            <div class="mono">${
+              emptyLocation ? '<span class="tag tag-blue">Location ว่าง</span>' : escapeWmsText(it?.code || '')
+            }</div>
+            <div class="variance-review-description">${
+              emptyLocation ? 'Item ว่างจาก WMS' : escapeWmsText(it?.description || '')
+            }</div>
+          </div>
         </div>
-        <span class="tag ${st.cls}">${st.lbl}</span>
+        <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+          ${varianceReviewStateBadgeHtml(reviewState)}
+          <span class="tag ${st.cls}">${st.lbl}</span>
+        </div>
       </div>
       <div class="variance-counter-line">R1: ${fmt(v[1])} · R2: ${fmt(v[2])} · R3: ${fmt(v[3])}</div>
+      ${varianceIssueEditorHtml(v,`variance_detail_${it.id}`,it,{
+        assignmentId:aid,sessionId:asgn.session_id,locationId:asgn.location_id,mode:'detail',locked:confirmed,
+      })}
       ${varianceQuantitySummaryHtml({
         itemId:it.id,
         oh:s.onhand_qty,
@@ -41470,12 +42243,13 @@ async function loadSvDetail() {
         r1,
         r2,
         r3,
-        finalQty:suggested,
-        editableOH:isAdminOrSup,
+        finalQty:reviewFinalQty,
+        editableOH:isAdminOrSup && !confirmed,
+        locked:confirmed,
         sessionId:asgn.session_id,
         locationId:asgn.location_id,
       })}
-      ${issueEvidence}
+      ${varianceReviewActionHtml({ aid,itemId:it.id,state:reviewState,mode:'detail' })}
     </div>`;
   }
 
@@ -41494,12 +42268,14 @@ async function loadSvDetail() {
         ${hasVar ? `<span class="tag tag-red">⚠️ มี Variance</span>` : `<span class="tag tag-green">✅ ยอดตรง</span>`}
       </div>
     </div>
-    <div class="sec">รายละเอียด — แก้ยอด/OH แล้วกดคอนเฟิร์มด้านล่าง</div>
+    ${varianceReviewProgressHtml(reviewSummary)}
+    <div class="sec">รายละเอียด — บันทึกร่างหรือยืนยันแยกทีละ Item</div>
     <div class="card card-flush">${varRows}</div>
+    ${varianceReviewToolbarHtml({ aid,...reviewSummary,mode:'detail' })}
     <div style="padding:16px 20px">
-      <div class="alert alert-blue" style="font-size:13px;margin-bottom:16px">✏️ แก้ "ยอดยืนยัน" หรือ OH ก่อนกดคอนเฟิร์ม</div>
+      <div class="alert alert-blue" style="font-size:13px;margin-bottom:16px">บันทึกร่างเพื่อพักงาน หรือยืนยันแยกทีละ Item ได้ ข้อมูลจะเปิดต่อจากเครื่องอื่นได้</div>
       <div id="sva"></div>
-      <button class="btn btn-green" onclick="doApprove('${aid}')" style="margin-bottom:16px;width:100%">✅ คอนเฟิร์มยอดนับ</button>
+      ${varianceLocationCloseHtml({ aid,...reviewSummary,mode:'detail' })}
       ${nextPhysicalRound <= 3 ? `
       <div style="background:var(--neu-surface);border-radius:24px;padding:20px;box-shadow: 10px 10px 20px var(--neu-shadow-dark), -10px -10px 20px var(--neu-shadow-light)">
         <div style="font-size:14px;font-weight:800;color:var(--primary-blue);margin-bottom:12px">🔄 จ่ายงานรอบที่ ${nextPhysicalRound} ให้ User</div>
@@ -41519,61 +42295,13 @@ async function updateOH(sessionId, locationId, itemId, newVal) {
 }
 
 async function doApprove(aid) {
-  const al = Q('sva'); al.innerHTML = `<div class="alert alert-blue">⏳ กำลังบันทึก...</div>`;
-  try {
-    const { data:asgn,error:assignmentError } = await sb.from('assignments')
-      .select('location_id,session_id').eq('id',aid).single();
-    if (assignmentError || !asgn) throw (assignmentError || new Error('ไม่พบ Assignment'));
-    const [snapshotResult,physicalCountResult] = await Promise.all([
-      sb.from('stock_snapshot')
-        .select('item_id,onhand_qty')
-        .eq('session_id',asgn.session_id)
-        .eq('location_id',asgn.location_id),
-      sb.from('count_records')
-        .select('item_id,round,count_qty')
-        .eq('assignment_id',aid),
-    ]);
-    if (snapshotResult.error) throw snapshotResult.error;
-    if (physicalCountResult.error) throw physicalCountResult.error;
-    const snaps = snapshotResult.data || [];
-    const latestPhysicalQty = new Map();
-    (physicalCountResult.data || []).forEach(record => {
-      const previous = latestPhysicalQty.get(record.item_id);
-      if (!previous || Number(record.round) >= previous.round) {
-        latestPhysicalQty.set(record.item_id,{ round:Number(record.round) || 0,qty:Number(record.count_qty) });
-      }
-    });
+  toggleVarianceReviewSelection(aid,true);
+  return confirmSelectedVarianceReviewItems(aid,'detail','',null);
+}
 
-    const approvals = [];
-    for (const snapshot of snaps || []) {
-      const input = Q('confirm_'+snapshot.item_id);
-      const typedValue = input && String(input.value ?? '').trim() !== '' ? Number(input.value) : NaN;
-      const countedValue = latestPhysicalQty.get(snapshot.item_id)?.qty;
-      const finalQty = Number.isFinite(typedValue)
-        ? typedValue
-        : (Number.isFinite(countedValue) ? countedValue : Number(snapshot.onhand_qty));
-      const variance = finalQty - Number(snapshot.onhand_qty);
-      approvals.push({
-        assignment_id:aid,
-        item_id:snapshot.item_id,
-        final_qty:finalQty,
-        variance,
-        resolution:variance === 0 ? 'ok' : (variance > 0 ? 'found' : 'lost'),
-        approved_by:me.id,
-      });
-    }
-    await persistVarianceApprovalDecision(aid,approvals);
-    await recordApprovalAudit(aid,asgn,approvals);
-    al.innerHTML = `<div class="alert alert-green">✅ คอนเฟิร์มยอดเรียบร้อย</div>`;
-    showActionSuccess('คอนเฟิร์มยอดและบันทึกผลตรวจสอบเรียบร้อยแล้ว', {
-      title:'ตรวจสอบ Variance สำเร็จ',
-      facts:[{label:'จำนวนรายการ',value:approvals.length}],
-    });
-    invalidateDashboardCache();
-    setTimeout(() => go('sv-list'),1500);
-  } catch (error) {
-    al.innerHTML = `<div class="alert alert-red">❌ ${escapeWmsText(error.message || error)}</div>`;
-  }
+async function doApproveInline(aid,idx) {
+  toggleVarianceReviewSelection(aid,true);
+  return confirmSelectedVarianceReviewItems(aid,'inline',idx,null);
 }
 
 async function reqRecount(aid, targetRound) {
@@ -45865,7 +46593,7 @@ async function loadAdTxLog() {
   const [{ data: asgn }, { data: recs }, { data: approvals, error: apprErr }] = await Promise.all([
     sb.from('assignments').select('id,status,location_id,session_id,locations(code,zone),count_sessions(name)').eq('id', aid).single(),
     sb.from('count_records').select('item_id,round,count_qty,counted_at,type_issue,remark,photo_url,actual_counter_name,items(code,description)').eq('assignment_id', aid).order('counted_at'),
-    sb.from('variance_approvals').select('item_id,final_qty,variance,resolution,approved_by,created_at,items(code,description),profiles!approved_by(name)').eq('assignment_id', aid).order('created_at'),
+    sb.from('variance_approvals').select('item_id,final_qty,variance,resolution,approved_by,approved_at,created_at,review_status,items(code,description),profiles!approved_by(name)').eq('assignment_id', aid).order('created_at'),
   ]);
   if (!asgn) { go('ad-history'); return; }
 
@@ -45888,7 +46616,9 @@ async function loadAdTxLog() {
 
   const events = [];
   (recs||[]).forEach(r => events.push({ type:'count', at: r.counted_at, data: r }));
-  if (!apprErr) (approvals||[]).forEach(a => events.push({ type:'approval', at: a.created_at, data: a }));
+  if (!apprErr) (approvals||[])
+    .filter(a => varianceReviewState(a) === 'confirmed')
+    .forEach(a => events.push({ type:'approval', at:a.approved_at || a.created_at, data:a }));
   if (!auditErr) (auditRows||[]).forEach(a => events.push({ type:'audit', at: a.created_at, data: a }));
   events.sort((a,b) => new Date(a.at||0) - new Date(b.at||0));
 
@@ -45904,6 +46634,8 @@ async function loadAdTxLog() {
     reassign:{ icon:'🔄',label:'เปลี่ยน User ผู้รับงาน' },
     variance_reopened:{ icon:'↩️',label:'ส่งกลับตรวจ Variance' },
     wms_status_change:{ icon:'🛠️',label:'เปลี่ยนสถานะปรับยอด WMS' },
+    wms_location_closed:{ icon:'🔒',label:'ปิดงาน WMS ครบทั้ง Location' },
+    wms_location_reopened:{ icon:'🔓',label:'เปิดงาน WMS Location เพื่อแก้ไขอีกครั้ง' },
     wms_return_review:{ icon:'↩️',label:'ส่งจาก WMS กลับตรวจใหม่' },
     found_item_recorded:{ icon:'➕',label:'บันทึกงานพบเพิ่ม' },
     found_item_approved:{ icon:'✅',label:'อนุมัติงานพบเพิ่ม' },
@@ -45911,6 +46643,10 @@ async function loadAdTxLog() {
     count_type_issue_updated:{ icon:'🏷️',label:'แก้ไข Type Issue งานนับ' },
     count_issue_evidence_updated:{ icon:'📷',label:'แก้ไข Type Issue / Remark / รูปถ่ายจากหน้าผลต่าง' },
     found_type_issue_updated:{ icon:'🏷️',label:'แก้ไข Type Issue งานพบเพิ่ม' },
+    variance_item_draft_saved:{ icon:'💾',label:'บันทึกร่างผลตรวจ Item' },
+    variance_item_confirmed:{ icon:'✅',label:'ยืนยันผลตรวจ Item' },
+    variance_item_reopened:{ icon:'✎',label:'เปิด Item ให้แก้ไขอีกครั้ง' },
+    variance_location_closed:{ icon:'🔐',label:'ปิดงาน Location และส่งต่อ WMS' },
   };
   let rows = '';
   for (const ev of events) {
@@ -45921,7 +46657,8 @@ async function loadAdTxLog() {
     } else if (ev.type === 'approval') {
       const a = ev.data; const isOk = a.resolution === 'ok';
       const itemLabel = isEmptyLocationItem(a.items?.code) ? 'Location ว่าง' : escapeWmsText(a.items?.code || '');
-      rows += `<div class="row" style="cursor:default;flex-wrap:wrap;background:${isOk?'color-mix(in srgb,var(--theme-success-color) 9%,var(--theme-card-bg))':'color-mix(in srgb,var(--theme-danger-color) 9%,var(--theme-card-bg))'}"><div class="row-body"><div class="row-title mono" style="font-size:14px">${itemLabel}</div><div class="row-sub" data-i18n-skip>${escapeWmsText(a.items?.description||'')}</div><div class="row-sub">${isOk?'✅':'❌'} คอนเฟิร์มยอดโดย User: <span data-i18n-skip style="font-weight:700;">${escapeWmsText(a.profiles?.name||'?')}</span></div><div class="row-sub">${a.created_at ? new Date(a.created_at).toLocaleString(uiLocale()) : ''}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:32px;font-weight:800;font-family:'Fredoka';color:var(--theme-body-text-color)">${a.final_qty}</div><span class="tag ${isOk?'tag-green':'tag-red'}" style="font-size:10px">${a.variance>0?'+':''}${a.variance}</span></div></div>`;
+      const approvalTime = a.approved_at || a.created_at;
+      rows += `<div class="row" style="cursor:default;flex-wrap:wrap;background:${isOk?'color-mix(in srgb,var(--theme-success-color) 9%,var(--theme-card-bg))':'color-mix(in srgb,var(--theme-danger-color) 9%,var(--theme-card-bg))'}"><div class="row-body"><div class="row-title mono" style="font-size:14px">${itemLabel}</div><div class="row-sub" data-i18n-skip>${escapeWmsText(a.items?.description||'')}</div><div class="row-sub">${isOk?'✅':'❌'} คอนเฟิร์มยอดโดย User: <span data-i18n-skip style="font-weight:700;">${escapeWmsText(a.profiles?.name||'?')}</span></div><div class="row-sub">${approvalTime ? new Date(approvalTime).toLocaleString(uiLocale()) : ''}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:32px;font-weight:800;font-family:'Fredoka';color:var(--theme-body-text-color)">${a.final_qty}</div><span class="tag ${isOk?'tag-green':'tag-red'}" style="font-size:10px">${a.variance>0?'+':''}${a.variance}</span></div></div>`;
     } else {
       const a = ev.data; const meta = ACTION_META[a.action] || { icon:'📝', label: a.action };
       rows += `<div class="row" style="cursor:default;flex-wrap:wrap;background:color-mix(in srgb,var(--theme-primary-color) 9%,var(--theme-card-bg))"><div class="row-body"><div class="row-title mono" style="font-size:14px">${a.items?.code ? escapeWmsText(a.items.code) : escapeWmsText(meta.label)}</div>${a.items?.code ? `<div class="row-sub" style="font-weight:700;color:var(--theme-primary-color)">${meta.icon} ${escapeWmsText(meta.label)}</div>` : ''}<div class="row-sub">ดำเนินการโดย User: <span data-i18n-skip>${escapeWmsText(a.profiles?.name||'?')}</span></div><div class="row-sub">${a.created_at ? new Date(a.created_at).toLocaleString(uiLocale()) : ''}</div></div><div style="text-align:right;flex:1 1 260px;min-width:220px;max-width:520px"><div data-i18n-skip style="font-size:12px;font-weight:800;line-height:1.55;color:var(--theme-body-text-color);white-space:normal;overflow-wrap:anywhere">${escapeWmsText(a.old_value ?? '—')} → ${escapeWmsText(a.new_value ?? '—')}</div><span class="tag tag-blue" style="font-size:10px; margin-top:6px;">${meta.icon} ${escapeWmsText(meta.label)}</span></div></div>`;
@@ -48003,10 +48740,10 @@ function sanitizeBackupDataForSessions(dataBySheet, sessionIds) {
 
   const profileIds = backupScopeSet([
     ...output.Sessions.map(row => row.created_by),
-    ...output.Assignments.flatMap(row => [row.assigned_to]),
+    ...output.Assignments.flatMap(row => [row.assigned_to,row.wms_closed_by]),
     ...output.Annual_Jobs.flatMap(row => [row.assigned_to,row.created_by]),
     ...output.Counts.map(row => row.counted_by),
-    ...output.Approvals.flatMap(row => [row.approved_by,row.wms_fixed_by]),
+    ...output.Approvals.flatMap(row => [row.approved_by,row.draft_saved_by,row.wms_fixed_by]),
     ...output.Found_Items.flatMap(row => [row.discovered_by,row.reviewed_by]),
     ...output.Paper_Count_Raw.flatMap(row => [row.created_by,row.updated_by]),
     ...output.Paper_History_Raw.map(row => row.performed_by),
@@ -48187,9 +48924,12 @@ function backupTeamSheetColumns(photoBackupMode='storage_url_preserved') {
       col('result','Result',14), col('assignmentStatus','Assignment Status',18),
       col('assignedUser','Assigned User',20), col('round2Counter','Round 2 Assigned Counter',24),
       col('round3Counter','Round 3 Assigned Counter',24), col('approvalResolution','Resolution',24),
+      col('reviewStatus','Review Status',24), col('releasedToWms','Released to WMS',22),
       col('supervisorNote','Supervisor Note',34), col('approvedBy','Approved By',20),
       col('approvedAt','Approved At (Bangkok)',22), col('wmsStatus','WMS Status',18),
       col('wmsFixedBy','WMS Fixed By',20), col('wmsFixedAt','WMS Fixed At (Bangkok)',22),
+      col('wmsLocationStatus','WMS Location Status',22), col('wmsLocationClosedBy','WMS Location Closed By',24),
+      col('wmsLocationClosedAt','WMS Location Closed At (Bangkok)',26),
       col('typeIssue','Type Issue',22), col('photoUrl','Photo URL',44,'url'), col('sessionId','Session ID',38),
       col('assignmentId','Assignment ID',38), col('locationId','Location ID',38),
       col('itemId','Item ID',38),
@@ -48233,9 +48973,12 @@ function backupTeamSheetColumns(photoBackupMode='storage_url_preserved') {
       col('physicalCount','Physical Count',16,'number'), col('variance','Variance',14,'number'),
       col('typeIssue','Type Issue',22), col('remark','Remark',34), ...photoColumns,
       col('result','Gain / Lost',14), col('approvalResolution','Resolution',24),
+      col('reviewStatus','สถานะตรวจ Item',24), col('releasedToWms','ส่งต่อ WMS',22),
       col('supervisorNote','Supervisor Note',34), col('approvedBy','Approved By',20),
       col('approvedAt','Approved At (Bangkok)',22), col('wmsStatus','WMS Status',18),
       col('wmsFixedBy','WMS Fixed By',20), col('wmsFixedAt','WMS Fixed At (Bangkok)',22),
+      col('wmsLocationStatus','WMS Location Status',22), col('wmsLocationClosedBy','WMS Location Closed By',24),
+      col('wmsLocationClosedAt','WMS Location Closed At (Bangkok)',26),
       col('assignedUser','Assigned User',20),
     ],
     Paper_Form_Count:paperFormColumns,
@@ -48418,6 +49161,9 @@ function buildTeamBackupData(dataBySheet) {
     const workKey = assignmentItemKey(assignment?.id,itemId);
     const workCounts = countGroups.get(workKey) || [];
     const approval = approvalByWork.get(workKey) || null;
+    const approvalReviewState = varianceReviewState(approval);
+    const approvalConfirmed = approvalReviewState === 'confirmed';
+    const approvalReleased = approvalConfirmed && approval?.released_to_wms !== false;
     const detailRows = detailsByStock.get(stockKey(sessionId,locationId,itemId)) || [];
     const c1 = countRound(workCounts,1);
     const c2 = countRound(workCounts,2);
@@ -48463,15 +49209,23 @@ function buildTeamBackupData(dataBySheet) {
       physicalCount, variance, result, assignmentStatus:assignment?.status || '',
       assignedUser:profileName(assignment?.assigned_to), round2Counter:counterName(assignment?.counter_r2_id),
       round3Counter:counterName(assignment?.counter_r3_id), approvalResolution:approval?.resolution || '',
+      reviewStatus:!approval ? 'ยังไม่ได้ตรวจ'
+        : approvalConfirmed
+          ? (approvalReleased ? 'ยืนยันแล้ว · ปิด Location แล้ว' : 'ยืนยัน Item แล้ว · รอปิด Location')
+          : 'บันทึกร่าง',
+      releasedToWms:approvalReleased ? 'ส่งต่อ WMS แล้ว' : (approval ? 'ยังไม่ส่ง WMS' : ''),
       supervisorNote:approval?.supervisor_note || '', approvedBy:profileName(approval?.approved_by),
       approvedAt:backupDateForTeam(approval?.approved_at),
-      wmsStatus:approval ? (approval.wms_fixed ? 'แก้ไขแล้ว' : 'ยังไม่แก้ WMS') : '',
+      wmsStatus:approvalReleased ? (approval.wms_fixed ? 'แก้ไขแล้ว' : 'ยังไม่แก้ WMS') : '',
       wmsFixedBy:profileName(approval?.wms_fixed_by), wmsFixedAt:backupDateForTeam(approval?.wms_fixed_at),
+      wmsLocationStatus:assignment?.wms_closed_at ? 'ปิดงาน WMS Location แล้ว' : (approvalReleased ? 'กำลังตรวจสอบ' : ''),
+      wmsLocationClosedBy:profileName(assignment?.wms_closed_by),
+      wmsLocationClosedAt:backupDateForTeam(assignment?.wms_closed_at),
       typeIssue:typeIssueName(finalCountRecord?.type_issue || latestTypeIssueRecord?.type_issue || ''),
       remark:finalCountRecord?.remark || latestRemarkRecord?.remark || '',
       photoUrl:finalCountRecord?.photo_url || latestPhotoRecord?.photo_url || '',
       sessionId, assignmentId:assignment?.id || '',
-      locationId, itemId, hasApproval:Boolean(approval),
+      locationId, itemId, hasApproval:approvalConfirmed,
     };
   }).sort((a,b) =>
     String(a.session).localeCompare(String(b.session),'th')
@@ -48540,7 +49294,8 @@ function buildTeamBackupData(dataBySheet) {
     count2:null, count2Counter:'', count2Time:'',
     count3:null, count3Counter:'', count3Time:'',
     physicalCount:null, variance:null, result:'ยังไม่ได้นับ',
-    typeIssue:'', remark:'', photoUrl:'', approvalResolution:'', supervisorNote:'',
+    typeIssue:'', remark:'', photoUrl:'', approvalResolution:'', reviewStatus:'ยังไม่ได้ตรวจ',
+    releasedToWms:'', supervisorNote:'',
     approvedBy:'', approvedAt:'', wmsStatus:'', wmsFixedBy:'', wmsFixedAt:'',
     assignedUser:profileName(assignment?.assigned_to),
     sessionId, assignmentId:assignment?.id || '', locationId, itemId,
@@ -48688,7 +49443,7 @@ function buildTeamBackupData(dataBySheet) {
     });
   };
   const itemLevelTextFields = [
-    'typeIssue','remark','approvalResolution','supervisorNote','approvedBy','approvedAt',
+    'typeIssue','remark','approvalResolution','reviewStatus','releasedToWms','supervisorNote','approvedBy','approvedAt',
     'wmsStatus','wmsFixedBy','wmsFixedAt',
   ];
   const dataCountGroupKey = row => stockKey(
@@ -49133,7 +49888,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.43' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.45' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -49349,7 +50104,7 @@ async function exportBackupZip() {
       format:BACKUP_ZIP_FORMAT,
       version:BACKUP_ZIP_VERSION,
       created_at:new Date().toISOString(),
-      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.43',
+      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.45',
       excel_file:excelFileName,
       excel_sha256:excelSha256,
       excel_manifest_hash:built.manifestHash,
@@ -50510,7 +51265,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.43" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.45" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
