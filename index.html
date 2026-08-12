@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.48</title>
+<title>Cycle Count V1.49</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -11017,7 +11017,7 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
 }
 .found-review-detail small { display:block; color:var(--theme-muted-text-color); font-size:10px; font-weight:800; }
 .found-review-detail strong { display:block; margin-top:5px; color:var(--theme-body-text-color); overflow-wrap:anywhere; }
-.data-info-summary-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:14px 0; }
+.data-info-summary-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; margin:14px 0; }
 .data-info-stat { padding:14px; text-align:center; border-radius:18px; background:var(--theme-input-bg); }
 .data-info-stat strong { display:block; font:800 24px/1 'Fredoka','Mitr',sans-serif; color:var(--theme-heading-color); }
 .data-info-stat span { display:block; margin-top:7px; font-size:10px; font-weight:800; color:var(--theme-muted-text-color); }
@@ -20464,13 +20464,13 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
 }
 </style>
 </head>
-<body data-build="v1-48">
+<body data-build="v1-49">
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.48';
+const APP_VERSION = '1.49';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
-const APP_BUILD_ID = 'v1-48';
+const APP_BUILD_ID = 'v1-49';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
 // v31 defensive date helpers: prevent legacy cached/remaining references from crashing the dashboard.
 var selectedDateFrom = '';
@@ -30624,6 +30624,16 @@ function dataInfoCategory(info) {
   return String(Array.isArray(value) ? value[0] : value || '').trim();
 }
 
+function dataInfoBrand(info) {
+  if (info?.brand) return String(info.brand).trim();
+  const attributes = dataInfoAttributesObject(info);
+  const brandKey = Object.keys(attributes).find(key =>
+    ['BRAND','ITEMBRAND','BRANDNAME','MANUFACTURERBRAND'].includes(normalizeImportHeader(key))
+  );
+  const value = brandKey ? attributes[brandKey] : '';
+  return String(Array.isArray(value) ? value[0] : value || '').trim();
+}
+
 async function findDataInfo(rawCode) {
   const code = importCodeKey(rawCode);
   if (!code) return null;
@@ -30658,6 +30668,7 @@ async function findDataInfo(rawCode) {
   }
   if (row) {
     row.category = dataInfoCategory(row);
+    row.brand = dataInfoBrand(row);
     const cacheKeys = [
       code,
       row.item_code ? importCodeKey(row.item_code) : '',
@@ -30700,7 +30711,7 @@ async function matchDataInfoForFields(itemInputId,descriptionInputId,uomInputId,
     if (card) {
       card.classList.remove('is-missing');
       card.innerHTML = `<strong data-i18n-skip>${escapeWmsText(info.description || 'ไม่ระบุ Description')}</strong>
-        <span>UOM: <b data-i18n-skip>${escapeWmsText(info.uom || '—')}</b>${info.category ? ` · CATEGORY: <span data-i18n-skip>${escapeWmsText(info.category)}</span>` : ''}</span>`;
+        <span>UOM: <b data-i18n-skip>${escapeWmsText(info.uom || '—')}</b>${info.category ? ` · CATEGORY: <span data-i18n-skip>${escapeWmsText(info.category)}</span>` : ''}${info.brand ? ` · BRAND: <span data-i18n-skip>${escapeWmsText(info.brand)}</span>` : ''}</span>`;
     }
     return info;
   }
@@ -41946,7 +41957,7 @@ async function loadSvFound() {
       </div>
       <div class="info-match-card ${info?'':'is-missing'}" id="found_review_info" style="margin-top:14px">
         <strong>${info ? `<span data-i18n-skip>${escapeWmsText(info.description || '')}</span>` : 'ไม่พบ Item ใน Item Master'}</strong>
-        <span>${info ? `UOM: <b data-i18n-skip>${escapeWmsText(info.uom || '—')}</b>${dataInfoCategory(info)?` · CATEGORY: <span data-i18n-skip>${escapeWmsText(dataInfoCategory(info))}</span>`:''}` : 'Supervisor ยังอนุมัติได้ แต่ควรตรวจสอบ Item ให้ชัดเจน'}</span>
+        <span>${info ? `UOM: <b data-i18n-skip>${escapeWmsText(info.uom || '—')}</b>${dataInfoCategory(info)?` · CATEGORY: <span data-i18n-skip>${escapeWmsText(dataInfoCategory(info))}</span>`:''}${dataInfoBrand(info)?` · BRAND: <span data-i18n-skip>${escapeWmsText(dataInfoBrand(info))}</span>`:''}` : 'Supervisor ยังอนุมัติได้ แต่ควรตรวจสอบ Item ให้ชัดเจน'}</span>
       </div>
       ${attributeEntries.length ? `<details class="admin-master-group" style="margin-top:14px">
         <summary><span>📚</span><span class="admin-master-group-title">ข้อมูลอื่นจาก Item Master</span><span class="admin-master-group-chevron">⌄</span></summary>
@@ -43934,6 +43945,11 @@ const XLSX_INFO_COLUMN_RULES = Object.freeze({
     exact:['CATEGORY','ITEMCATEGORY','PRODUCTCATEGORY','PRODUCTGROUP','ITEMCLASS'],
     contains:['CATEGORY','PRODUCTGROUP','ITEMCLASS'],
   },
+  brand:{
+    label:'Brand',
+    exact:['BRAND','ITEMBRAND','BRANDNAME','MANUFACTURERBRAND'],
+    contains:['ITEMBRAND','BRANDNAME','MANUFACTURERBRAND'],
+  },
 });
 
 let _infoSourceFileName = '';
@@ -43974,6 +43990,7 @@ function analyzeDataInfoRows(rows) {
         description:'',
         uom:'',
         category:'',
+        brand:'',
         attributes:{},
         sourceRows:[],
       });
@@ -43984,6 +44001,7 @@ function analyzeDataInfoRows(rows) {
     if (!info.description && value('description')) info.description = value('description');
     if (!info.uom && value('uom')) info.uom = value('uom');
     if (!info.category && value('category')) info.category = value('category');
+    if (!info.brand && value('brand')) info.brand = value('brand');
     headers.forEach(header => {
       if (!isDataInfoBarcodeAttribute(header)) {
         mergeDataInfoAttribute(info.attributes,header,row?.[header]);
@@ -44007,6 +44025,7 @@ function analyzeDataInfoRows(rows) {
       descriptions:parsed.filter(row => row.description).length,
       uoms:parsed.filter(row => row.uom).length,
       categories:parsed.filter(row => row.category).length,
+      brands:parsed.filter(row => row.brand).length,
     },
   };
 }
@@ -44020,6 +44039,7 @@ function renderDataInfoPreview(analysis) {
       <td>${escapeWmsText(row.description || '—')}</td>
       <td>${escapeWmsText(row.uom || '—')}</td>
       <td>${escapeWmsText(row.category || '—')}</td>
+      <td>${escapeWmsText(row.brand || '—')}</td>
       <td>${row.sourceRows.length.toLocaleString(uiLocale())}</td>
     </tr>`).join('');
   return `
@@ -44032,6 +44052,7 @@ function renderDataInfoPreview(analysis) {
       <div class="data-info-stat"><strong>${metric(analysis.metrics.descriptions)}</strong><span>มี DESCRIPTION</span></div>
       <div class="data-info-stat"><strong>${metric(analysis.metrics.uoms)}</strong><span>มี UOM</span></div>
       <div class="data-info-stat"><strong>${metric(analysis.metrics.categories)}</strong><span>มี CATEGORY</span></div>
+      <div class="data-info-stat"><strong>${metric(analysis.metrics.brands)}</strong><span>มี BRAND</span></div>
     </div>
     <div style="font-size:11px;color:var(--theme-muted-text-color);line-height:1.6;margin-bottom:10px">
       รวม ${metric(analysis.metrics.rows)} แถว · Item ซ้ำถูกรวม ${metric(analysis.metrics.duplicates)} แถว ·
@@ -44040,7 +44061,7 @@ function renderDataInfoPreview(analysis) {
     ${analysis.errors.length ? `<div class="alert alert-red">${analysis.errors.map(escapeWmsText).join('<br>')}</div>` : ''}
     ${analysis.rejected.length ? `<div class="alert alert-red">พบแถว Item ว่าง ${metric(analysis.rejected.length)} แถว เช่น ${analysis.rejected.slice(0,8).map(row=>row.rowNumber).join(', ')}</div>` : ''}
     ${sampleRows ? `<div class="data-info-sample"><table>
-      <thead><tr><th>ITEM</th><th>DESCRIPTION</th><th>UOM</th><th>CATEGORY</th><th>SOURCE ROWS</th></tr></thead>
+      <thead><tr><th>ITEM</th><th>DESCRIPTION</th><th>UOM</th><th>CATEGORY</th><th>BRAND</th><th>SOURCE ROWS</th></tr></thead>
       <tbody>${sampleRows}</tbody>
     </table></div>` : ''}`;
 }
@@ -44109,14 +44130,15 @@ async function loadDataInfoSummary() {
   }
   host.innerHTML = `
     <div class="alert alert-blue"><strong>Item Master ปัจจุบัน ${Number(count || 0).toLocaleString(uiLocale())} Item</strong>
-      <br>ใช้ Match Description / UOM / CATEGORY ในงานนับและ Import WMS</div>
+      <br>ใช้ Match Description / UOM / CATEGORY / BRAND ในงานนับและ Import WMS</div>
     ${(sampleResult.data || []).length ? `<div class="data-info-sample" style="margin-top:12px"><table>
-      <thead><tr><th>ITEM</th><th>DESCRIPTION</th><th>UOM</th><th>CATEGORY</th></tr></thead>
+      <thead><tr><th>ITEM</th><th>DESCRIPTION</th><th>UOM</th><th>CATEGORY</th><th>BRAND</th></tr></thead>
       <tbody>${sampleResult.data.map(row => `<tr>
         <td class="mono">${escapeWmsText(row.item_code)}</td>
         <td>${escapeWmsText(row.description || '—')}</td>
         <td>${escapeWmsText(row.uom || '—')}</td>
         <td>${escapeWmsText(dataInfoCategory(row) || '—')}</td>
+        <td>${escapeWmsText(dataInfoBrand(row) || '—')}</td>
       </tr>`).join('')}</tbody>
     </table></div>` : ''}`;
 }
@@ -44210,7 +44232,7 @@ async function renderManageDataInfo(container) {
       </summary>
       <div class="admin-master-group-body">
         <div class="alert alert-blue" style="font-size:13px;line-height:1.7;margin:16px 0">
-          📚 เก็บ <strong>Item / Description / UOM / CATEGORY</strong> และคอลัมน์อื่นทั้งหมดไว้ใช้ Match ในอนาคต<br>
+          📚 เก็บ <strong>Item / Description / UOM / CATEGORY / BRAND</strong> และคอลัมน์อื่นทั้งหมดไว้ใช้ Match ในอนาคต<br>
           ระบบจับชื่อคอลัมน์อัตโนมัติ และรวมแถว Item ซ้ำโดยไม่ทิ้งข้อมูลคอลัมน์อื่น
         </div>
         <div id="data-info-current"><div class="load">⏳ กำลังโหลด...</div></div>
@@ -49127,7 +49149,7 @@ function backupTeamSheetColumns(photoBackupMode='storage_url_preserved') {
       col('supervisorNote','Supervisor Note',34), ...photoColumns,
     ],
     Info_Master: [
-      col('item','Item',24), col('category','CATEGORY',24),
+      col('item','Item',24), col('category','CATEGORY',24), col('brand','BRAND',20),
       col('description','Description',48), col('uom','UOM',12),
       col('sourceFile','Source File',32), col('sourceSheet','Source Sheet',24),
       col('attributes','ข้อมูลเพิ่มเติม (JSON)',70),
@@ -49738,6 +49760,7 @@ function buildTeamBackupData(dataBySheet) {
   const dataInfoRows = dataInfoItems.map(info => ({
     item:info.item_code || '',
     category:dataInfoCategory(info),
+    brand:dataInfoBrand(info),
     description:info.description || '',
     uom:info.uom || '',
     sourceFile:info.source_file || '',
