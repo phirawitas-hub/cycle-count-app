@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.72</title>
+<title>Cycle Count V1.73</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -20629,7 +20629,7 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.72';
+const APP_VERSION = '1.73';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = 'v1-71';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -23645,7 +23645,6 @@ const PAGE_VIEW_CACHE_TTL_MS = Object.freeze({
   'ad-history':60000,
   'ad-manage:sessions':30000,
   'ad-manage:assign':30000,
-  'ad-manage:backup':60000,
 });
 const _pageViewCache = new Map();
 const _pageViewReadyKeys = new Set();
@@ -40007,7 +40006,12 @@ async function loadSvDash() {
 
   const allItemIds = [...new Set(wmsRows.map(v => v.item_id).filter(Boolean))];
   const allApproverIds = [...new Set(wmsRows.map(v => v.approved_by).filter(Boolean))];
-  const wmsHistoryAssignmentIds = [...new Set(wmsRows.map(v => v.assignment_id).filter(Boolean))];
+  const wmsHistoryAssignmentIds = [...new Set([
+    ...wmsRows.map(v => v.assignment_id),
+    // Include assignments still waiting for confirmation. WMS notes can be
+    // recorded before an approval row exists and must survive that transition.
+    ...diffAssignments.map(v => v.id),
+  ].filter(Boolean))];
   const wmsHistoryPromise = tab === 'wms' && wmsHistoryAssignmentIds.length
     ? fetchSupabaseRowsByValues(
         'audit_log',
@@ -40017,30 +40021,17 @@ async function loadSvDash() {
         query => query.in('action',['wms_note','wms_status_change']),
       )
     : Promise.resolve({ data:[],error:null });
-  const wmsHistoryRead = tab === 'wms' && wmsHistoryAssignmentIds.length
-    ? Promise.race([
-        wmsHistoryPromise,
-        // Do not make the whole Dashboard wait for a large audit history.
-        // The same Promise continues below and hydrates every old Remark as
-        // soon as the server finishes returning it.
-        new Promise(resolve => setTimeout(() => resolve({
-          data:[],
-          error:null,
-          _deferred:true,
-        }),900)),
-      ])
-    : wmsHistoryPromise;
   const [
     { data: itemsData },
     { data: approversData },
-    { data: wmsNoteRows, error: wmsNoteError, _deferred:wmsHistoryDeferred },
+    { data: wmsNoteRows, error: wmsNoteError },
   ] = await Promise.all([
     fetchSupabaseRowsByValues('items', 'id,code,description', 'id', allItemIds),
     fetchSupabaseRowsByValues('profiles', 'id,name', 'id', allApproverIds),
-    // Only the WMS tab needs its historical notes/status. Limit the query to
-    // assignments that are actually in the WMS queue. A slow result is merged
-    // into the already-rendered workspace instead of being discarded.
-    wmsHistoryRead,
+    // WMS Remark is part of the saved business record, not optional decoration.
+    // Wait for the complete history before rendering/caching the page so a
+    // quick tab switch can never preserve a note-less version of the queue.
+    wmsHistoryPromise,
   ]);
   if (isStaleLoad()) return;
   const itemMap = Object.fromEntries((itemsData||[]).map(i => [i.id, i]));
@@ -40049,6 +40040,9 @@ async function loadSvDash() {
   const assignmentWmsNoteMap = {};
   const countRemarkMap = {};
   const wmsStatusAuditMap = {};
+  if (tab === 'wms' && wmsNoteError) {
+    throw new Error(`โหลดหมายเหตุ WMS ไม่สำเร็จ: ${wmsNoteError.message}`);
+  }
   if (wmsNoteError) console.warn('โหลดหมายเหตุ WMS ไม่สำเร็จ:', wmsNoteError.message);
   const wmsAuditFixedState = value => {
     const text = String(value ?? '').trim().toLocaleLowerCase('th');
@@ -40282,27 +40276,7 @@ async function loadSvDash() {
   window._wmsAsgnInfoMap = asgnInfoMap;
   window._actualCountersByAssignment = actualCountersByAssignment;
   window._actualCountersByWork = actualCountersByWork;
-  window._wmsHistoryLoading = Boolean(tab === 'wms' && wmsHistoryDeferred);
-  if (tab === 'wms' && wmsHistoryDeferred) {
-    const historySessionId = curSid;
-    wmsHistoryPromise.then(result => {
-      if (isStaleLoad() || String(S._dashSid || '') !== String(historySessionId || '')) return;
-      window._wmsHistoryLoading = false;
-      if (result?.error) {
-        console.warn('โหลด Remark เดิมของ WMS ไม่สำเร็จ:',result.error.message);
-        renderWmsList();
-        showWmsFeedback('โหลด Remark เดิมไม่สำเร็จ กรุณากดรีเฟรชข้อมูลอีกครั้ง','error');
-        return;
-      }
-      mergeLoadedWmsAuditHistory(result?.data || [],historySessionId);
-    }).catch(error => {
-      if (isStaleLoad() || String(S._dashSid || '') !== String(historySessionId || '')) return;
-      window._wmsHistoryLoading = false;
-      console.warn('โหลด Remark เดิมของ WMS ไม่สำเร็จ:',error);
-      renderWmsList();
-      showWmsFeedback('โหลด Remark เดิมไม่สำเร็จ กรุณากดรีเฟรชข้อมูลอีกครั้ง','error');
-    });
-  }
+  window._wmsHistoryLoading = false;
 
   // One accuracy record represents one physical Location + Item pair.
   // Counting rounds and reassignment must not create additional accuracy items.
@@ -49563,33 +49537,13 @@ async function refreshAdminPhotoStorage(showLoading=false) {
   return refreshAdminSystemStorage(showLoading);
 }
 
-async function renderManageBackup(container) {
-  if (prof?.role !== 'admin') {
-    container.innerHTML = `<div class="alert alert-red">ระบบ Backup/Restore ใช้ได้เฉพาะ Admin เท่านั้น</div>`;
-    return;
-  }
-  const [{ data: sessions, error: sessionError }, { data: events, error: eventError }] = await Promise.all([
-    sb.from('count_sessions').select('id,name,status,created_at').order('created_at',{ascending:false}),
-    sb.from('backup_events')
-      .select('id,action,file_name,session_ids,row_counts,status,created_at,profiles!performed_by(name)')
-      .order('created_at',{ascending:false})
-      .limit(12),
-  ]);
-  if (sessionError) { container.innerHTML = errBox(sessionError.message); return; }
-  if (eventError) console.warn('โหลดประวัติ Backup ไม่สำเร็จ:', eventError.message);
-
-  window._backupSessions = sessions || [];
-  _backupParsed = null;
-  _lastBackupExport = null;
-  const sessionOptions = `<option value="" selected disabled>— เลือก Session —</option>` + (sessions || []).map(session =>
-    `<option value="${session.id}">${escapeWmsText(session.name)} · ${escapeWmsText(session.status || '')}</option>`
-  ).join('');
+function backupHistoryRowsHtml(events=[]) {
   const actionLabels = {
     export:'Backup Excel / ZIP',
     delete_after_export:'ลบหลัง Backup',
     restore:'Restore Excel',
   };
-  const eventRows = (events || []).map(event => `
+  const rows = (events || []).map(event => `
     <div class="backup-history-row">
       <div>
         <div style="font-weight:800;color:var(--text-main)">${actionLabels[event.action] || event.action}</div>
@@ -49601,7 +49555,33 @@ async function renderManageBackup(container) {
       </div>
       <span class="tag ${event.status==='completed'?'tag-green':'tag-red'}">${event.status==='completed'?'สำเร็จ':'ไม่ครบ'}</span>
     </div>`).join('');
+  return rows || `<div class="load" style="padding:24px">ยังไม่มีประวัติ</div>`;
+}
 
+async function renderManageBackup(container) {
+  if (prof?.role !== 'admin') {
+    container.innerHTML = `<div class="alert alert-red">ระบบ Backup/Restore ใช้ได้เฉพาะ Admin เท่านั้น</div>`;
+    return;
+  }
+  const { data:sessions, error:sessionError } = await sb.from('count_sessions')
+    .select('id,name,status,created_at')
+    .order('created_at',{ascending:false});
+  if (sessionError) { container.innerHTML = errBox(sessionError.message); return; }
+  // History is informational only. Load it independently after the required
+  // Session list succeeds, without holding the Backup controls behind it.
+  const eventPromise = Promise.resolve(
+    sb.from('backup_events')
+      .select('id,action,file_name,session_ids,row_counts,status,created_at,profiles!performed_by(name)')
+      .order('created_at',{ascending:false})
+      .limit(12)
+  );
+
+  window._backupSessions = sessions || [];
+  _backupParsed = null;
+  _lastBackupExport = null;
+  const sessionOptions = `<option value="" selected disabled>— เลือก Session —</option>` + (sessions || []).map(session =>
+    `<option value="${session.id}">${escapeWmsText(session.name)} · ${escapeWmsText(session.status || '')}</option>`
+  ).join('');
   container.innerHTML = `
     <section class="storage-monitor" id="backup-storage-monitor">${storageMonitorHtml(_backupStorageUsage)}</section>
     <div class="alert alert-blue" style="line-height:1.7">
@@ -49705,12 +49685,34 @@ async function renderManageBackup(container) {
         <span class="admin-master-group-chevron">⌄</span>
       </summary>
       <div class="admin-master-group-body">
-        ${eventRows || `<div class="load" style="padding:24px">ยังไม่มีประวัติ</div>`}
+        <div id="backup-history-list"><div class="load" style="padding:24px">กำลังโหลดประวัติ...</div></div>
       </div>
     </details>`;
 
-  await refreshAdminPhotoStorage();
-  if ((sessions || []).length) await refreshBackupScopeSummary();
+  // Storage statistics call a separate Admin service and can take many
+  // seconds (or fail independently). The Backup/Restore controls must remain
+  // usable immediately, so finish the page first and hydrate this monitor in
+  // the background. Scope counts start only after the Admin chooses a Session.
+  setTimeout(() => {
+    if (S?.page !== 'ad-manage' || (S?._manageTab || _manageTab) !== 'backup') return;
+    refreshAdminPhotoStorage(false);
+  },0);
+  eventPromise.then(({ data:events, error:eventError }) => {
+    if (S?.page !== 'ad-manage' || (S?._manageTab || _manageTab) !== 'backup') return;
+    const target = Q('backup-history-list');
+    if (!target) return;
+    if (eventError) {
+      console.warn('โหลดประวัติ Backup ไม่สำเร็จ:',eventError.message);
+      target.innerHTML = `<div class="alert alert-amber">โหลดประวัติไม่สำเร็จ แต่ยัง Backup / Restore ได้ตามปกติ</div>`;
+      return;
+    }
+    target.innerHTML = backupHistoryRowsHtml(events || []);
+  }).catch(error => {
+    if (S?.page !== 'ad-manage' || (S?._manageTab || _manageTab) !== 'backup') return;
+    const target = Q('backup-history-list');
+    if (target) target.innerHTML = `<div class="alert alert-amber">โหลดประวัติไม่สำเร็จ แต่ยัง Backup / Restore ได้ตามปกติ</div>`;
+    console.warn('โหลดประวัติ Backup ไม่สำเร็จ:',error);
+  });
 }
 
 async function refreshBackupScopeSummary() {
