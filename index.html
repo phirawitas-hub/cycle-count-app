@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.78</title>
+<title>Cycle Count V1.80</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -21,7 +21,7 @@
 <noscript><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <!-- Supabase -->
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.min.js"></script>
-<!-- V1.78: เครื่องมือ XLSX / ZIP / Export ภาพ / Scanner โหลดเมื่อผู้ใช้กดใช้งานเท่านั้น -->
+<!-- V1.80: ปุ่ม OK ของ Handheld และปุ่มยืนยันบันทึก Count บางส่วนได้ โดยคง WMS Fast RPC/Fallback เดิม -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
 <style>
@@ -14382,6 +14382,14 @@ margin-top:8px;
   text-transform:uppercase;
 }
 .count-submit-dock { padding:16px 20px; }
+.count-partial-save-help {
+  margin-top:8px;
+  color:var(--theme-muted-text-color);
+  font-size:11px;
+  font-weight:750;
+  line-height:1.45;
+  text-align:center;
+}
 
 @media (max-width:480px), (max-width:600px) and (max-height:760px) {
   html { -webkit-text-size-adjust:100%; }
@@ -14685,6 +14693,7 @@ margin-top:8px;
     font-size:14px;
     font-weight:900;
   }
+  .count-partial-save-help { margin-top:6px; font-size:9px; line-height:1.3; }
 
   /* Scanner fallback remains usable on devices whose camera API is restricted. */
   .scan-header { min-height:56px; padding:9px 12px !important; font-size:15px; }
@@ -16998,7 +17007,7 @@ body :is(.alert-green,.alert-amber,.alert-red,.alert-blue) {
 }
 
 /* ══════════════════════════════════════════════════════════
-   v179 — Complete assignment summary + legible native selects.
+   v180 — Complete assignment summary + legible native selects.
    ══════════════════════════════════════════════════════════ */
 body select:not([multiple]):not([size]) {
   min-height:44px;
@@ -20652,16 +20661,16 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
 @container zoneboard (min-width:761px){.exec-v156-zone-strip{grid-template-columns:minmax(125px,1.2fr) repeat(4,minmax(82px,.82fr)) minmax(190px,1.55fr)!important;align-items:stretch!important;gap:11px!important}.exec-v156-zone-name,.exec-v157-accuracy-result{grid-column:auto!important;min-height:135px!important}.exec-v156-stat{min-height:135px!important}}
 </style>
 </head>
-<body data-build="v1-78">
+<body data-build="v1-80">
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.78';
+const APP_VERSION = '1.80';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
-const APP_BUILD_ID = 'v1-78';
+const APP_BUILD_ID = 'v1-80';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
 
-// V1.78 performance: keep the login and ordinary work pages light.  Large
+// V1.80 performance: keep the login and ordinary work pages light.  Large
 // file/export/scanner libraries are fetched only after the related button is
 // pressed, and the browser may reuse the same Promise for the rest of the tab.
 const OPTIONAL_LIBRARY_SOURCES = Object.freeze({
@@ -22120,7 +22129,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.78':'e.g. Warehouse V1.78',
+  'เช่น Warehouse V1.80':'e.g. Warehouse V1.80',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -25227,10 +25236,14 @@ function changeDashboardSession(sessionId) {
 function refreshDashboardData() {
   invalidateDashboardCache(S._dashTab || _dashTab || 'summary');
   if (_dashboardLoadInFlight) return _dashboardLoadInFlight;
+  const dashboardTab = S._dashTab || _dashTab || 'summary';
   const loadingToken = startPageLoadingVisual({
     title:uiCopy('กำลังโหลดข้อมูล...','Loading data...'),
     subtitle:uiCopy('กำลังอัปเดตข้อมูลล่าสุดของ Session','Updating the latest Session data'),
-    blockingBudgetMs:(S._dashTab || _dashTab || 'summary') === 'summary' ? 0 : PAGE_LOADING_BLOCKING_BUDGET_MS,
+    // WMS now returns a compact RPC payload and/or a local snapshot.  Keep the
+    // real loader visible until real rows are painted; never replace it with a
+    // misleading blank "opened, syncing" page.
+    blockingBudgetMs:['summary','wms'].includes(dashboardTab) ? 0 : PAGE_LOADING_BLOCKING_BUDGET_MS,
   });
   const pending = Promise.resolve().then(() => loadSvDash());
   _dashboardLoadInFlight = pending;
@@ -27686,15 +27699,40 @@ function deriveAssignmentWorkflowStatus(snapshotRows, itemRounds, rules, storedS
     );
   });
   const hasDiff = itemStatuses.some(status => status === 'Diff');
-  const hasPending = itemStatuses.some(status => status === 'PENDING');
+  // An untouched Item is still part of the current Count round.  Previously
+  // only the literal PENDING status was counted here, so saving 1 of 100 Items
+  // could make the assignment look as though Round 1 had already finished.
+  const hasPending = itemStatuses.some(status => status === '' || status === 'PENDING');
   const allOK = itemStatuses.length > 0 && itemStatuses.every(status => status === 'OK');
+  const allTerminal = itemStatuses.length > 0
+    && itemStatuses.every(status => status === 'OK' || status === 'Diff');
+  const nextRequiredRound = determineNextRequiredCountRound(snapshots,roundsByItem,rules);
 
   let effectiveStatus = storedStatus || 'pending';
-  if (hasDiff) effectiveStatus = 'round3_done';
+  if (allTerminal && hasDiff) effectiveStatus = 'round3_done';
   else if (allOK) effectiveStatus = 'completed';
-  else if (started) effectiveStatus = highestRound >= 2 ? 'round2_done' : 'round1_done';
+  else if (started) {
+    // Keep a partially entered round in progress.  A round is marked done only
+    // when every Item required by that round is saved and the following round
+    // has not started yet.
+    const nextRoundStarted = snapshots.some(snapshot => {
+      const value = roundsByItem[snapshot.item_id]?.[nextRequiredRound];
+      return value !== undefined && value !== null && value !== '';
+    });
+    if (nextRequiredRound === 2 && !nextRoundStarted) effectiveStatus = 'round1_done';
+    else if (nextRequiredRound === 3 && !nextRoundStarted) effectiveStatus = 'round2_done';
+    else effectiveStatus = 'in_progress';
+  }
 
-  return { effectiveStatus, itemStatuses, hasDiff, hasPending, started, highestRound };
+  return {
+    effectiveStatus,
+    itemStatuses,
+    hasDiff,
+    hasPending,
+    started,
+    highestRound,
+    nextRequiredRound,
+  };
 }
 
 async function getSessionRules(sessionId) {
@@ -31770,8 +31808,8 @@ async function saveCountItemFromKeypad(input) {
     String(previous.type_issue || '') !== String(record.type_issue || '') ||
     String(previous.remark || '') !== String(record.remark || '') ||
     String(previous.photo_url || '') !== String(record.photo_url || '');
-  if (changed) {
-    await writeAuditRows([buildAuditRow(
+  const auditPromise = changed
+    ? writeAuditRows([buildAuditRow(
       window._countFoundContext?.sessionId,
       window._countFoundContext?.locationId,
       itemId,
@@ -31779,7 +31817,25 @@ async function saveCountItemFromKeypad(input) {
       previous ? countAuditValue(previous,round) : null,
       countAuditValue(record,round),
       assignmentId,
-    )]);
+    )])
+    : Promise.resolve(true);
+  // The physical OK key is itself a durable checkpoint.  Mark the Assignment
+  // in progress on the first saved Item of this page so leaving immediately
+  // after OK never leaves Round 2/3 displayed as a completed previous round.
+  const shouldMarkProgress = window._countFoundContext?.assignmentStatus !== 'in_progress';
+  const progressPromise = shouldMarkProgress
+    ? sb.from('assignments')
+        .update({ status:'in_progress' })
+        .eq('id',assignmentId)
+        .select('id,status')
+    : Promise.resolve(null);
+  const [progressResult] = await Promise.all([progressPromise,auditPromise]);
+  if (shouldMarkProgress) {
+    if (progressResult?.error || !progressResult?.data?.length) {
+      console.warn('Count Item saved but assignment progress update failed:',progressResult?.error?.message || 'no row');
+    } else {
+      window._countFoundContext.assignmentStatus = 'in_progress';
+    }
   }
 
   input.dataset.countSaved = 'true';
@@ -31901,7 +31957,7 @@ async function loadCCount() {
     sb.from('remark_options').select('id,label').eq('context','count').eq('active',true).order('label'),
     getSessionRules(asgn.session_id),
     sb.from('count_records')
-      .select('item_id,round,count_qty,remark,photo_url,type_issue')
+      .select('item_id,round,count_qty,actual_counter_name,remark,photo_url,type_issue')
       .eq('assignment_id',aid)
       .order('round'),
     loadCountTypeIssueOptions(),
@@ -32011,6 +32067,7 @@ async function loadCCount() {
     sessionId:asgn.session_id,
     locationId:asgn.location_id,
     locationCode:l.code,
+    assignmentStatus:asgn.status || 'pending',
   };
   window._countEntryRound = round;
   window._countEntryShowOH = showOH;
@@ -32243,7 +32300,8 @@ async function loadCCount() {
                  value="${v !== undefined ? v : ''}" placeholder="0"
                  oninput="handleCountQtyInput(this)"
                  onfocus="openCountNumericKeypad(this)" onclick="openCountNumericKeypad(this)"
-                 onkeydown="if(event.key==='Enter'){event.preventDefault();focusNextCountField(this)}">
+                 onkeydown="handleCountQtyHardwareConfirmKey(event,this)"
+                 onkeyup="handleCountQtyHardwareConfirmKey(event,this)">
                ${countEntryResultMarkup(it.id,v,v !== undefined)}`}
           ${ohDisplay}
         </div>
@@ -32388,13 +32446,21 @@ async function loadCCount() {
     <div class="count-submit-dock">
       <div id="ca"></div>
       <button class="btn btn-green" id="cb" style="width:100%"
+        data-default-label="✅ ยืนยันยอดที่กรอก · ไม่ต้องรอครบ"
         onclick="submitCount('${aid}',${round},'${ids}','${annualMode ? jid : ''}')">
-        ✅ ยืนยันรอบที่ ${round} · ${activeCountRows.length} ${round > 1 ? 'รายการที่ต้องนับใหม่' : 'รายการ'}
+        ✅ ยืนยันยอดที่กรอก · ไม่ต้องรอครบ
       </button>
+      <div class="count-partial-save-help">บันทึกเฉพาะ Item ที่มีเลข Count · Item ที่ยังว่างคงอยู่ในรอบเดิมและกลับมานับต่อได้</div>
     </div>
   </div>`;
 
-  window._selectedCounters = new Set((window._lastPickedCounterNames||[]).filter(n => (window._counterNames||[]).some(c=>c.name===n)));
+  const activeCounterNameSet = new Set((window._counterNames || []).map(counter => counter.name));
+  const savedCounterNames = actualCounterNamesFromRecords(prev)
+    .filter(name => activeCounterNameSet.has(name));
+  const preferredCounterNames = savedCounterNames.length
+    ? savedCounterNames
+    : (window._lastPickedCounterNames || []).filter(name => activeCounterNameSet.has(name));
+  window._selectedCounters = new Set(preferredCounterNames);
   renderCounterPicker();
   refreshCountEntrySummary();
   initializeCountTouchControls();
@@ -32426,6 +32492,7 @@ async function loadCCount() {
       .select('id,status');
     if (startAssignmentError) console.warn('count start failed:',startAssignmentError);
     else if (startedAssignments?.length) {
+      if (window._countFoundContext) window._countFoundContext.assignmentStatus = 'in_progress';
       await logAudit(
         asgn.session_id,
         asgn.location_id,
@@ -32642,6 +32709,131 @@ function setCountKeypadValue(nextValue) {
   updateCountNumericKeypadDisplay();
 }
 
+const _countHardwareConfirmAt = new WeakMap();
+
+function visibleCountInputs() {
+  return [...document.querySelectorAll('.count-handheld-page .cqty')]
+    .filter(field => !field.disabled && field.offsetParent !== null);
+}
+
+function nextPendingCountInput(currentInput,inputs=visibleCountInputs()) {
+  if (!inputs.length) return null;
+  const currentIndex = inputs.indexOf(currentInput);
+  const ordered = currentIndex >= 0
+    ? inputs.slice(currentIndex + 1).concat(inputs.slice(0,currentIndex))
+    : [...inputs];
+  return ordered.find(field => String(field.value || '').trim() === '')
+    || ordered.find(field => field.dataset.countSaved !== 'true')
+    || null;
+}
+
+function focusCountInputForEntry(input) {
+  if (!input) return false;
+  if (countNumericKeypadEnabled()) return openCountNumericKeypad(input);
+  focusHardwareScanTarget(input);
+  input.scrollIntoView({ block:'center',behavior:'smooth' });
+  return true;
+}
+
+async function confirmAndAdvanceCountInput(input,{ source='screen-keypad' }={}) {
+  if (!input?.classList?.contains('cqty') || input.disabled) return false;
+  if (input.dataset.countConfirmPending === 'true') return false;
+  normalizeCountQtyInput(input);
+  const value = String(input.value || '').trim();
+  if (!value) {
+    setCountEntryItemResult(input.dataset.itemId,'warning','กรอก QTY ก่อน');
+    if (source === 'handheld-ok') {
+      handheldScanFeedback(
+        'warning',
+        uiCopy('ยังไม่ได้บันทึก','Not Saved'),
+        '',
+        uiCopy('กรอกจำนวนแล้วกด OK อีกครั้ง','Enter a quantity and press OK again'),
+      );
+    }
+    navigator.vibrate?.(35);
+    return false;
+  }
+
+  input.dataset.countConfirmPending = 'true';
+  try {
+    const saved = await saveCountItemFromKeypad(input);
+    if (!saved) {
+      if (source === 'handheld-ok') {
+        handheldScanFeedback(
+          'error',
+          uiCopy('บันทึกไม่สำเร็จ','Save Failed'),
+          value,
+          uiCopy('ตรวจสอบผู้ตรวจนับหรือข้อมูลที่บังคับ','Check the counter and required information'),
+        );
+      }
+      navigator.vibrate?.([45,35,45]);
+      return false;
+    }
+
+    input.dispatchEvent(new Event('change',{ bubbles:true }));
+    const inputs = visibleCountInputs();
+    const allCountsComplete = inputs.length > 0
+      && inputs.every(field => String(field.value || '').trim() !== '');
+    const submitButton = Q('cb');
+    if (allCountsComplete && submitButton && !submitButton.disabled) {
+      closeCountNumericKeypad();
+      submitButton.click();
+      return true;
+    }
+
+    // When the Item was selected with a scanner, OK saves the quantity and
+    // returns to the scanner field.  Manual entry continues at the next Item
+    // that is still blank/unsaved.
+    if (window._hardwareScanReturnInputId && input.id === window._hardwareScanReturnInputId) {
+      focusNextCountField(input);
+      return true;
+    }
+    const nextInput = nextPendingCountInput(input,inputs);
+    if (nextInput) focusCountInputForEntry(nextInput);
+    if (source === 'handheld-ok') {
+      handheldScanFeedback(
+        'success',
+        uiCopy('บันทึก Count แล้ว','Count Saved'),
+        value,
+        nextInput
+          ? uiCopy('พร้อมกรอก Item ถัดไป','Ready for the next Item')
+          : uiCopy('บันทึกรายการนี้เรียบร้อย','This Item has been saved'),
+      );
+    }
+    return true;
+  } finally {
+    input.dataset.countConfirmPending = 'false';
+  }
+}
+
+function countQtyHardwareConfirmEvent(event) {
+  const key = String(event?.key || '').toLowerCase();
+  const code = String(event?.code || '').toLowerCase();
+  const legacyCode = Number(event?.which || event?.keyCode || 0);
+  return hardwareScanTerminalEvent(event)
+    || ['ok','accept','select','go','done'].includes(key)
+    || ['ok','accept','select'].includes(code)
+    // Android rugged WebViews may expose DPAD_CENTER (23) or Android ENTER
+    // (66) directly instead of translating the physical OK key to DOM 13.
+    || legacyCode === 23
+    || legacyCode === 66;
+}
+
+function handleCountQtyHardwareConfirmKey(event,input) {
+  if (S?.page !== 'c-count' || !countQtyHardwareConfirmEvent(event)) return;
+  event.preventDefault();
+  event.stopPropagation();
+  if (event.repeat) return;
+  const now = Date.now();
+  const lastConfirmedAt = Number(_countHardwareConfirmAt.get(input) || 0);
+  // Rugged Android terminals commonly emit both keydown and keyup for one OK
+  // press.  Treat the pair as one save so Count/audit rows are never duplicated.
+  if (now - lastConfirmedAt < 900) return;
+  _countHardwareConfirmAt.set(input,now);
+  const delay = event.isComposing ? 45 : 0;
+  setTimeout(() => confirmAndAdvanceCountInput(input,{ source:'handheld-ok' }),delay);
+}
+
 async function pressCountNumericKey(key) {
   const input = _countKeypadInput;
   if (!input) return;
@@ -32659,7 +32851,7 @@ async function pressCountNumericKey(key) {
       confirmButton.disabled = true;
       confirmButton.innerHTML = 'กำลัง<br>บันทึก';
     }
-    const saved = await saveCountItemFromKeypad(input);
+    const saved = await confirmAndAdvanceCountInput(input,{ source:'screen-keypad' });
     if (confirmButton) {
       confirmButton.disabled = false;
       confirmButton.innerHTML = 'ยืนยัน<br>และบันทึก';
@@ -32667,23 +32859,6 @@ async function pressCountNumericKey(key) {
     if (!saved) {
       navigator.vibrate?.([45,35,45]);
       return;
-    }
-    input.dispatchEvent(new Event('change',{ bubbles:true }));
-    const countInputs = [...document.querySelectorAll('.count-handheld-page .cqty')]
-      .filter(field => !field.disabled && field.offsetParent !== null);
-    const allCountsComplete = countInputs.length > 0
-      && countInputs.every(field => String(field.value || '').trim() !== '');
-    const submitButton = Q('cb');
-    if (allCountsComplete && submitButton && !submitButton.disabled) {
-      closeCountNumericKeypad();
-      submitButton.click();
-      return;
-    }
-    // บันทึก Item ปัจจุบันแล้วเลื่อนไป COUNT ที่ยังว่าง; เมื่อครบทุกช่องจึงยืนยันรอบ
-    const nextIncompleteInput = countInputs.find(field => String(field.value || '').trim() === '');
-    if (nextIncompleteInput) {
-      focusHardwareScanTarget(nextIncompleteInput);
-      openCountNumericKeypad(nextIncompleteInput);
     }
     return;
   }
@@ -33294,8 +33469,14 @@ async function handlePhoto(itemId,input) {
 async function submitCount(aid, round, idsStr, annualJobId='') {
   closeCountNumericKeypad();
   document.activeElement?.blur?.();
-  const ids = idsStr.split(',');
+  const ids = idsStr.split(',').map(value => String(value || '').trim()).filter(Boolean);
   const al  = Q('ca'), btn = Q('cb');
+  const defaultButtonText = btn?.dataset?.defaultLabel || '✅ ยืนยันยอดที่กรอก · ไม่ต้องรอครบ';
+  const restoreButton = () => {
+    if (!btn) return;
+    btn.disabled = false;
+    btn.textContent = defaultButtonText;
+  };
 
   const selectedNames = [...(window._selectedCounters || [])];
   if (!selectedNames.length) {
@@ -33303,15 +33484,20 @@ async function submitCount(aid, round, idsStr, annualJobId='') {
     return;
   }
   const actualCounterName = selectedNames.join(', ');
+  const filledIds = ids.filter(iid => {
+    const value = Q('q_'+iid)?.value;
+    return value !== '' && value !== undefined && value !== null;
+  });
+  if (!filledIds.length) {
+    al.innerHTML = '<div class="alert alert-red">กรอก Count อย่างน้อย 1 Item ก่อนกดยืนยัน</div>';
+    return;
+  }
+  const roundIsComplete = filledIds.length === ids.length;
 
   const recs = [];
   const foundPayloads = [];
-  for (const iid of ids) {
+  for (const iid of filledIds) {
     const v = Q('q_'+iid)?.value;
-    if (v === '' || v === undefined || v === null) {
-      al.innerHTML = `<div class="alert alert-red">กรอกจำนวนให้ครบทุกรายการ (ถ้าไม่มีสินค้าให้กรอก 0)</div>`;
-      return;
-    }
     const numericQty = Number(v);
     if (!Number.isFinite(numericQty) || numericQty < 0) {
       al.innerHTML = '<div class="alert alert-red">QTY ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป</div>';
@@ -33385,7 +33571,7 @@ async function submitCount(aid, round, idsStr, annualJobId='') {
     .select('item_id,count_qty,actual_counter_name,type_issue,remark,photo_url')
     .eq('assignment_id',aid)
     .eq('round',round)
-    .in('item_id',ids);
+    .in('item_id',filledIds);
   if (previousResult.error) {
     al.innerHTML = errBox(previousResult.error.message);
     return;
@@ -33394,18 +33580,18 @@ async function submitCount(aid, round, idsStr, annualJobId='') {
     (previousResult.data || []).map(record => [String(record.item_id),record])
   );
 
-  btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
+  btn.disabled = true; btn.textContent = roundIsComplete ? 'กำลังปิดรอบ...' : 'กำลังบันทึกความคืบหน้า...';
 
   const { error } = await sb.from('count_records')
     .upsert(recs, { onConflict:'assignment_id,item_id,round' });
 
   if (error) {
-    ids.forEach(iid => setCountEntryItemResult(iid,'warning','บันทึกไม่สำเร็จ'));
+    filledIds.forEach(iid => setCountEntryItemResult(iid,'warning','บันทึกไม่สำเร็จ'));
     al.innerHTML = errBox(error.message);
-    btn.disabled = false; btn.textContent = `✅ ยืนยันรอบที่ ${round}`; return;
+    restoreButton(); return;
   }
 
-  ids.forEach(iid => {
+  filledIds.forEach(iid => {
     const input = Q('q_'+iid);
     if (!input) return;
     input.dataset.countSaved = 'true';
@@ -33419,8 +33605,7 @@ async function submitCount(aid, round, idsStr, annualJobId='') {
     for (const payload of foundPayloads) await createFoundItemRecord(payload);
   } catch (foundError) {
     al.innerHTML = errBox(`บันทึกยอดว่างแล้ว แต่ส่งงานที่พบเพิ่มไม่สำเร็จ: ${foundError.message || foundError}`);
-    btn.disabled = false;
-    btn.textContent = `✅ ยืนยันรอบที่ ${round}`;
+    restoreButton();
     return;
   }
 
@@ -33428,7 +33613,7 @@ async function submitCount(aid, round, idsStr, annualJobId='') {
     .select('location_id,session_id,status').eq('id', aid).single();
   if (assignmentReadError || !asgn) {
     al.innerHTML = errBox(assignmentReadError?.message || 'ไม่พบ Assignment หลังบันทึกยอด');
-    btn.disabled = false; btn.textContent = `✅ ยืนยันรอบที่ ${round}`; return;
+    restoreButton(); return;
   }
 
   const countAuditRows = recs.flatMap(record => {
@@ -33452,6 +33637,52 @@ async function submitCount(aid, round, idsStr, annualJobId='') {
   });
   await writeAuditRows(countAuditRows);
 
+  if (!roundIsComplete) {
+    // A partial confirmation is a durable checkpoint, not the end of a Count
+    // round.  Persist only fields with a quantity and leave every blank Item in
+    // this same round so the handheld can resume later (even on another device).
+    const { data:progressRows,error:progressError } = await sb.from('assignments')
+      .update({ status:'in_progress' })
+      .eq('id',aid)
+      .select('id,status');
+    if (progressError || !progressRows?.length) {
+      al.innerHTML = errBox(progressError?.message || 'บันทึก Count แล้ว แต่ปรับสถานะงานระหว่างนับไม่สำเร็จ');
+      restoreButton();
+      return;
+    }
+    if (window._countFoundContext) window._countFoundContext.assignmentStatus = 'in_progress';
+    if (annualJobId) {
+      // Some Counter RLS policies intentionally block the Annual JOB master.
+      // The Assignment/count rows are the source of truth, so this is best-effort.
+      const annualProgress = await sb.from('annual_count_jobs')
+        .update({ status:'in_progress' })
+        .eq('id',annualJobId);
+      if (annualProgress.error) console.warn('Annual JOB partial status skipped:',annualProgress.error.message);
+    }
+    const savedCount = visibleCountInputs()
+      .filter(input => input.dataset.countSaved === 'true').length;
+    const remainingCount = Math.max(0,ids.length - savedCount);
+    await logAudit(
+      asgn.session_id,
+      asgn.location_id,
+      null,
+      'count_progress_saved',
+      `สถานะ ${asgn.status || 'pending'}`,
+      `บันทึกระหว่างนับ รอบ ${round} · ${savedCount}/${ids.length} Item · เหลือ ${remainingCount} · ผู้ตรวจนับ ${actualCounterName}`,
+      aid,
+    );
+    al.innerHTML = `<div class="alert alert-green">✅ บันทึกแล้ว ${savedCount}/${ids.length} Item · เหลือ ${remainingCount} Item และยังอยู่รอบที่ ${round}</div>`;
+    restoreButton();
+    await showCountResultPopup({
+      kind:'info',
+      title:'บันทึกความคืบหน้าแล้ว',
+      message:`${savedCount}/${ids.length} Item · เหลือ ${remainingCount} Item`,
+    });
+    const nextInput = nextPendingCountInput(null,visibleCountInputs());
+    if (nextInput) focusCountInputForEntry(nextInput);
+    return;
+  }
+
   const [snapshotResult,roundResult,rules] = await Promise.all([
     sb.from('stock_snapshot').select('item_id,onhand_qty')
       .eq('session_id', asgn.session_id).eq('location_id', asgn.location_id),
@@ -33460,7 +33691,7 @@ async function submitCount(aid, round, idsStr, annualJobId='') {
   ]);
   if (snapshotResult.error || roundResult.error) {
     al.innerHTML = errBox((snapshotResult.error || roundResult.error).message);
-    btn.disabled = false; btn.textContent = `✅ ยืนยันรอบที่ ${round}`; return;
+    restoreButton(); return;
   }
   const rawSnaps = snapshotResult.data;
   const rawAllRounds = roundResult.data;
@@ -33475,8 +33706,16 @@ async function submitCount(aid, round, idsStr, annualJobId='') {
     byItem[r.item_id][r.round] = +r.count_qty;
   });
 
-  const itemStatuses = Object.entries(byItem).map(([iid, v]) =>
-    computeItemStatus(ohMap[iid], v[1], v[2], v[3], rules));
+  const itemStatuses = snaps.map(snapshot => {
+    const values = byItem[snapshot.item_id] || {};
+    return computeItemStatus(
+      ohMap[snapshot.item_id],
+      values[1],
+      values[2],
+      values[3],
+      rules,
+    );
+  });
   const anyPending = itemStatuses.some(st => st === 'PENDING');
   const anyDiff    = itemStatuses.some(st => st === 'Diff');
   const needsMore  = anyPending || anyDiff;
@@ -33493,13 +33732,13 @@ async function submitCount(aid, round, idsStr, annualJobId='') {
       .select('id,status');
     if (startError || !startedRows?.length) {
       al.innerHTML = errBox(startError?.message || 'อัปเดตสถานะ Assignment ไม่สำเร็จ');
-      btn.disabled = false; btn.textContent = `✅ ยืนยันรอบที่ ${round}`; return;
+      restoreButton(); return;
     }
     try {
       await refreshAnnualJobsForLocation(asgn.session_id,asgn.location_id,annualJobId);
     } catch (statusError) {
       al.innerHTML = errBox(`บันทึกยอดแล้ว แต่สรุปสถานะงานไม่สำเร็จ: ${statusError.message || statusError}`);
-      btn.disabled = false; btn.textContent = `✅ ยืนยันรอบที่ ${round}`; return;
+      restoreButton(); return;
     }
   } else {
     const { data:updatedRows,error:updateError } = await sb.from('assignments')
@@ -33508,7 +33747,7 @@ async function submitCount(aid, round, idsStr, annualJobId='') {
       .select('id,status');
     if (updateError || !updatedRows?.length) {
       al.innerHTML = errBox(updateError?.message || 'อัปเดตสถานะ Assignment ไม่สำเร็จ');
-      btn.disabled = false; btn.textContent = `✅ ยืนยันรอบที่ ${round}`; return;
+      restoreButton(); return;
     }
   }
   await logAudit(
@@ -39825,6 +40064,289 @@ function handleSummaryZonePicker(value) {
   if (picker) picker.value = value;
 }
 
+const WMS_FAST_RPC_NAME_V179 = 'get_wms_workspace_v179';
+const WMS_FAST_CACHE_PREFIX_V179 = `${APP_BUILD_ID}:wms-workspace:`;
+const WMS_FAST_CACHE_TTL_MS_V179 = 12 * 60 * 60 * 1000;
+const _wmsFastRequestsV179 = new Map();
+
+function wmsFastCacheKeyV179(sessionId) {
+  return `${WMS_FAST_CACHE_PREFIX_V179}${me?.id || 'anonymous'}:${String(sessionId || '')}`;
+}
+
+function readWmsFastCacheV179(sessionId) {
+  try {
+    const raw = localStorage.getItem(wmsFastCacheKeyV179(sessionId));
+    if (!raw) return null;
+    const cached = JSON.parse(raw);
+    if (
+      String(cached?.sessionId || '') !== String(sessionId || '')
+      || String(cached?.userId || '') !== String(me?.id || '')
+      || !cached?.payload
+      || (Date.now() - Number(cached.savedAt || 0)) > WMS_FAST_CACHE_TTL_MS_V179
+    ) {
+      localStorage.removeItem(wmsFastCacheKeyV179(sessionId));
+      return null;
+    }
+    return cached;
+  } catch (error) {
+    console.warn('อ่าน WMS cache ไม่สำเร็จ:',error);
+    return null;
+  }
+}
+
+function writeWmsFastCacheV179(sessionId,payload) {
+  try {
+    localStorage.setItem(wmsFastCacheKeyV179(sessionId),JSON.stringify({
+      version:'1.80',
+      sessionId:String(sessionId || ''),
+      userId:String(me?.id || ''),
+      role:String(prof?.role || ''),
+      savedAt:Date.now(),
+      payload,
+    }));
+  } catch (error) {
+    // A full browser quota must never block the live WMS page.
+    console.warn('บันทึก WMS cache ไม่สำเร็จ:',error);
+  }
+}
+
+function invalidateWmsFastCacheV179(sessionId=S?._dashSid) {
+  try {
+    if (sessionId) localStorage.removeItem(wmsFastCacheKeyV179(sessionId));
+  } catch (_) {}
+}
+
+async function requestWmsFastPayloadV179(sessionId) {
+  const key = String(sessionId || '');
+  if (!key) throw new Error('ไม่พบ Session สำหรับโหลด WMS');
+  if (_wmsFastRequestsV179.has(key)) return _wmsFastRequestsV179.get(key);
+  const startedAt = performance.now();
+  const request = sb.rpc(WMS_FAST_RPC_NAME_V179,{ p_session_id:key })
+    .then(({ data,error }) => {
+      if (error) throw error;
+      if (!data || typeof data !== 'object') throw new Error('WMS RPC ไม่ได้ส่งข้อมูลกลับมา');
+      data._clientElapsedMs = Math.round(performance.now() - startedAt);
+      writeWmsFastCacheV179(key,data);
+      return data;
+    })
+    .finally(() => _wmsFastRequestsV179.delete(key));
+  _wmsFastRequestsV179.set(key,request);
+  return request;
+}
+
+function prefetchWmsFastPayloadV179(sessionId) {
+  if (!sessionId || !['admin','supervisor'].includes(prof?.role)) return;
+  const cached = readWmsFastCacheV179(sessionId);
+  if (cached && (Date.now() - Number(cached.savedAt || 0)) < 60_000) return;
+  requestWmsFastPayloadV179(sessionId).catch(error => {
+    console.warn('WMS prefetch ไม่สำเร็จ:',error?.message || error);
+  });
+}
+
+function normalizedWmsFastCountersV179(payload) {
+  const output = {};
+  Object.entries(payload?.actual_counters || {}).forEach(([assignmentId,values]) => {
+    const names = new Set();
+    (Array.isArray(values) ? values : [values]).forEach(value => {
+      splitActualCounterNames(value).forEach(name => names.add(name));
+    });
+    output[assignmentId] = [...names];
+  });
+  return output;
+}
+
+function mergeWmsFastAuditV179(rows,auditRows) {
+  const activeState = reduceActiveWmsRemarkAudit(auditRows || []);
+  const statusByItem = new Map();
+  const fixedState = value => {
+    const text = String(value ?? '').trim().toLocaleLowerCase('th');
+    if (!text) return null;
+    if (/ยังไม่ได้ตรวจสอบ|เปิดแก้ไข|not reviewed|unfixed|false/.test(text)) return false;
+    if (/ตรวจสอบแล้ว|ตรวจสอบเสร็จสิ้น|review completed|reviewed|fixed|true/.test(text)) return true;
+    return null;
+  };
+  [...(auditRows || [])]
+    .filter(row => row?.action === 'wms_status_change')
+    .sort((a,b) => (Date.parse(a?.created_at || '') || 0) - (Date.parse(b?.created_at || '') || 0))
+    .forEach(row => {
+      if (!row.assignment_id || !row.item_id) return;
+      const state = fixedState(row.new_value);
+      if (state !== null) statusByItem.set(`${row.assignment_id}|${row.item_id}`,state);
+    });
+
+  rows.forEach(row => {
+    const key = `${row.assignment_id || ''}|${row.item_id || ''}`;
+    const suppressed = activeState.suppressedByItem.get(key) || new Set();
+    const countNotes = Array.isArray(row.count_notes) ? row.count_notes : [];
+    const supervisorNote = String(row.supervisor_note || '').trim();
+    const incoming = [
+      ...(activeState.byItem.get(key) || []),
+      ...(activeState.byAssignment.get(row.assignment_id) || []).filter(note =>
+        !suppressed.has(String(note?.text || '').trim().toLocaleLowerCase('th'))),
+      ...(supervisorNote ? [{
+        text:supervisorNote,
+        source:'supervisor',
+        created_at:row.approved_at || row.created_at || null,
+      }] : []),
+      ...countNotes,
+    ];
+    const seen = new Set();
+    row.wms_notes = incoming.filter(note => {
+      const text = String(note?.text || note?.new_value || '').trim();
+      if (!text) return false;
+      const source = String(note?.source || 'wms').trim().toLocaleLowerCase('en-US');
+      const sourceLabel = String(note?.sourceLabel || '').trim().toLocaleLowerCase('th');
+      const noteKey = `${source}|${sourceLabel}|${text.toLocaleLowerCase('th')}`;
+      if (seen.has(noteKey)) return false;
+      seen.add(noteKey);
+      note.text = text;
+      return true;
+    });
+    if (!row.wms_fixed && statusByItem.get(key) === true) {
+      row.wms_fixed = true;
+      row._wmsFixedRecoveredFromAudit = true;
+    }
+  });
+  return rows;
+}
+
+function buildWmsFastWorkspaceHtmlV179(rows,asgnInfoMap,options={}) {
+  let wmsFilter = S._wmsFilter || 'all';
+  if (wmsFilter !== 'all' && !rows.some(item => wmsRowMatchesStatus(item,wmsFilter))) wmsFilter = 'all';
+  S._wmsFilter = wmsFilter;
+  const wmsZone = S._wmsZone || '';
+  const wmsRow = S._wmsRow || '';
+  const wmsLevel = S._wmsLevel || '';
+  const wmsUser = S._wmsUser || '';
+  const wmsLocSearch = S._wmsLocSearch || '';
+  const zones = new Set(), rowNumbers = new Set(), levels = new Set();
+  const users = {};
+  rows.forEach(item => {
+    const location = asgnInfoMap[item.assignment_id]?.locations || {};
+    if (location.zone) zones.add(location.zone);
+    if (location.row_no) rowNumbers.add(location.row_no);
+    if (location.level) levels.add(location.level);
+    if (item.approved_by) users[item.approved_by] = item.profiles?.name || '?';
+  });
+  const total = rows.length;
+  const pending = rows.filter(row => row._isPending).length;
+  const confirmed = rows.filter(row => !row._isPending);
+  const fixed = confirmed.filter(row => row.wms_fixed).length;
+  const unfixed = confirmed.length - fixed;
+  const percent = total ? Math.round((fixed / total) * 100) : 0;
+  const sourceLabel = options.fromCache
+    ? `แสดงข้อมูลจากเครื่องทันที · ซิงก์ล่าสุด ${escapeWmsText(workTrackerDate(options.generatedAt || options.savedAt))}`
+    : `ข้อมูลล่าสุดจากฐานข้อมูล · ${Number(options.elapsedMs || 0).toLocaleString(uiLocale())} ms`;
+
+  return `<div class="wms-workspace">
+    <div class="wms-feedback" id="wms-feedback" role="status" aria-live="polite" hidden></div>
+    <section class="wms-overview-shell">
+      <div class="wms-overview-head">
+        <div class="wms-overview-title">
+          <div class="wms-overview-icon">${wmsIconSvg('reviewed',25)}</div>
+          <div class="wms-overview-copy"><strong>ศูนย์ควบคุมการปรับยอด WMS</strong><span>${sourceLabel}</span></div>
+        </div>
+        <div class="wms-overview-total"><strong id="wms-total-count">${total}</strong><span>DIFF ทั้งหมด</span></div>
+      </div>
+      <div class="wms-progress-row"><span>ความคืบหน้าการตรวจสอบทั้งหมด</span><strong id="wms-fixed-percent">${percent}%</strong></div>
+      <div class="wms-progress-track"><span id="wms-fixed-progress" style="width:${percent}%"></span></div>
+      <div class="wms-kpi-grid">
+        <button type="button" class="wms-kpi-card pending ${wmsFilter==='pending'?'active':''}" data-wms-kpi="pending" onclick="setWmsStatusFilter('pending')">
+          <div class="wms-kpi-icon">${wmsIconSvg('search',21)}</div><div class="wms-kpi-copy"><strong id="wms-pending-count">${pending}</strong><span>รอคอนเฟิร์ม</span></div>
+        </button>
+        <button type="button" class="wms-kpi-card unfixed ${wmsFilter==='unfixed'?'active':''}" data-wms-kpi="unfixed" onclick="setWmsStatusFilter('unfixed')">
+          <div class="wms-kpi-icon">${wmsIconSvg('pending',21)}</div><div class="wms-kpi-copy"><strong id="wms-unfixed-count">${unfixed}</strong><span>ยังไม่ได้ตรวจสอบ</span></div>
+        </button>
+        <button type="button" class="wms-kpi-card fixed ${wmsFilter==='fixed'?'active':''}" data-wms-kpi="fixed" onclick="setWmsStatusFilter('fixed')">
+          <div class="wms-kpi-icon">${wmsIconSvg('reviewed',21)}</div><div class="wms-kpi-copy"><strong id="wms-fixed-count">${fixed}</strong><span>ตรวจสอบแล้ว</span></div>
+        </button>
+      </div>
+    </section>
+    <section class="wms-filter-panel">
+      <div class="wms-filter-heading"><strong>ตัวกรองรายการ</strong><span>เลือกหลายตัวกรองร่วมกันได้</span></div>
+      <div class="wms-filter-grid">
+        <div class="wms-filter-field"><label>ZONE</label><select id="wms-zone" onchange="updateWmsFilter('Zone',this.value)"><option value="">ทั้งหมด</option>${[...zones].sort().map(value=>`<option value="${escapeWmsText(value)}" ${wmsZone===value?'selected':''}>${escapeWmsText(value)}</option>`).join('')}</select></div>
+        <div class="wms-filter-field"><label>ROW</label><select id="wms-row" onchange="updateWmsFilter('Row',this.value)"><option value="">ทั้งหมด</option>${[...rowNumbers].sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true})).map(value=>`<option value="${escapeWmsText(value)}" ${String(wmsRow)===String(value)?'selected':''}>${escapeWmsText(value)}</option>`).join('')}</select></div>
+        <div class="wms-filter-field"><label>LEVEL</label><select id="wms-level" onchange="updateWmsFilter('Level',this.value)"><option value="">ทั้งหมด</option>${[...levels].sort().map(value=>`<option value="${escapeWmsText(value)}" ${wmsLevel===value?'selected':''}>${escapeWmsText(value)}</option>`).join('')}</select></div>
+        <div class="wms-filter-field"><label>USER ผู้คอนเฟิร์ม</label><select id="wms-user" onchange="updateWmsFilter('User',this.value)"><option value="">ทั้งหมด</option><option value="_pending" ${wmsUser==='_pending'?'selected':''}>รอคอนเฟิร์ม</option>${Object.entries(users).sort((a,b)=>a[1].localeCompare(b[1],'th')).map(([id,name])=>`<option value="${escapeWmsText(id)}" ${wmsUser===id?'selected':''}>${escapeWmsText(name)}</option>`).join('')}</select></div>
+        <div class="wms-filter-field"><label>สถานะ</label><select id="wms-status" onchange="updateWmsFilter('Filter',this.value)"><option value="all" ${wmsFilter==='all'?'selected':''}>ทั้งหมด</option><option value="unfixed" ${wmsFilter==='unfixed'?'selected':''}>ยังไม่ได้ตรวจสอบ</option><option value="fixed" ${wmsFilter==='fixed'?'selected':''}>ตรวจสอบแล้ว</option><option value="pending" ${wmsFilter==='pending'?'selected':''}>รอคอนเฟิร์ม</option></select></div>
+        <div class="wms-filter-field search"><label>ค้นหา LOCATION / ITEM</label><input id="wms-loc-search" value="${escapeWmsText(wmsLocSearch)}" placeholder="เช่น B-29-001-A หรือรหัส Item" oninput="updateWmsFilter('LocSearch',this.value)"></div>
+      </div>
+    </section>
+    <section class="wms-list-shell"><div class="wms-list-heading"><strong>รายการปรับยอด</strong><span class="wms-list-count" id="wms-visible-count">0 รายการ</span></div><div id="wms-list" data-location-sort-group></div></section>
+  </div>`;
+}
+
+function paintWmsFastPayloadV179(payload,context={}) {
+  const sessionId = String(context.sessionId || payload?.session_id || '');
+  if (!sessionId || String(payload?.session_id || sessionId) !== sessionId) return false;
+  let rows = Array.isArray(payload?.rows) ? payload.rows.map(row => ({ ...row })) : [];
+  rows = mergeWmsFastAuditV179(rows,payload?.audit_rows || []);
+  const activeDateFilter = dashboardDateRange();
+  if (activeDateFilter) rows = filterRowsByDashboardDate(rows,'_dashboardCountedAt');
+  const assignmentMap = payload?.assignments && typeof payload.assignments === 'object'
+    ? payload.assignments
+    : {};
+  const counters = normalizedWmsFastCountersV179(payload);
+  const countersByWork = {};
+  rows.forEach(row => { countersByWork[`${row.assignment_id}|${row.item_id}`] = counters[row.assignment_id] || []; });
+  window._wmsRows = rows;
+  window._wmsAsgnInfoMap = assignmentMap;
+  window._actualCountersByAssignment = counters;
+  window._actualCountersByWork = countersByWork;
+  window._wmsHistoryLoading = false;
+  window._wmsNoteOptions = Array.isArray(payload?.remark_options) ? payload.remark_options : [];
+  const view = buildWmsFastWorkspaceHtmlV179(rows,assignmentMap,{
+    fromCache:Boolean(context.fromCache),
+    savedAt:context.savedAt,
+    generatedAt:payload?.generated_at,
+    elapsedMs:payload?._clientElapsedMs,
+  });
+  const cache = {
+    userId:me?.id || '',
+    role:prof?.role || '',
+    sessionId,
+    dateFrom:selectedDateFrom,
+    dateTo:selectedDateTo,
+    loadedAt:Date.now(),
+    sessionOptionsHtml:context.sessionOptionsHtml || '',
+    views:{ wms:view },
+    wmsFast:true,
+  };
+  _dashboardViewCache = cache;
+  _dashboardViewCacheStore.set(dashboardViewCacheKey('wms',sessionId),cache);
+  return paintDashboardView('wms',cache);
+}
+
+async function loadWmsFastDashboardV179(context) {
+  const { sessionId,sessionOptionsHtml,isStaleLoad } = context;
+  const cached = readWmsFastCacheV179(sessionId);
+  if (cached?.payload) {
+    paintWmsFastPayloadV179(cached.payload,{
+      sessionId,
+      sessionOptionsHtml,
+      fromCache:true,
+      savedAt:cached.savedAt,
+    });
+    requestWmsFastPayloadV179(sessionId).then(payload => {
+      if (isStaleLoad?.() || String(S?._dashSid || '') !== String(sessionId) || (S._dashTab || _dashTab) !== 'wms') return;
+      paintWmsFastPayloadV179(payload,{ sessionId,sessionOptionsHtml,fromCache:false });
+    }).catch(error => {
+      console.warn('ซิงก์ WMS ล่าสุดไม่สำเร็จ ใช้ข้อมูล cache ต่อ:',error);
+      if (!isStaleLoad?.()) showWmsFeedback('ยังซิงก์ข้อมูลล่าสุดไม่ได้ · กำลังใช้ข้อมูลที่บันทึกในเครื่อง','error');
+    });
+    return true;
+  }
+  try {
+    const payload = await requestWmsFastPayloadV179(sessionId);
+    if (isStaleLoad?.()) return true;
+    return paintWmsFastPayloadV179(payload,{ sessionId,sessionOptionsHtml,fromCache:false });
+  } catch (error) {
+    console.warn('WMS fast path ไม่พร้อม จึงกลับไปใช้ตัวโหลดเดิม:',error);
+    return false;
+  }
+}
+
 async function loadSvDash() {
   if (!['admin','supervisor'].includes(prof?.role)) {
     goPrimary('c-tasks');
@@ -39881,6 +40403,22 @@ async function loadSvDash() {
     scheduleTabletViewportLayout(false);
     disconnectTabletAccuracyLayoutGuard();
     return;
+  }
+  // V1.80 retains the WMS fast path: this menu does not wait for the full Dashboard data graph.
+  // It paints a device snapshot immediately (when available), then refreshes
+  // one compact RPC payload in the background.  A missing RPC falls back to
+  // the existing legacy loader below, so deployments stay backward-compatible.
+  if (tab === 'wms') {
+    const handledByFastLoader = await loadWmsFastDashboardV179({
+      sessionId:curSid,
+      sessionOptionsHtml:sessOpts,
+      isStaleLoad,
+    });
+    if (handledByFastLoader || isStaleLoad()) return;
+  } else {
+    // Prime WMS while a manager is reading another dashboard tab.  In normal
+    // use the WMS screen is therefore already usable before it is opened.
+    setTimeout(() => prefetchWmsFastPayloadV179(curSid),0);
   }
   // Load menu-specific settings only.  V1.77 fetched both Layout documents in
   // front of almost every Dashboard tab even when they were never rendered.
@@ -41648,6 +42186,7 @@ async function toggleWmsFixed(vaId, checked, button) {
     showWmsFeedback(checked
       ? 'บันทึกแล้ว: ตรวจสอบรายการเรียบร้อย — เปิดกล่อง “ตรวจสอบแล้ว” เพื่อแก้ไขอีกครั้งได้'
       : 'เปิดแก้ไขอีกครั้งแล้ว: รายการย้ายกลับไปที่ “ยังไม่ได้ตรวจสอบ”');
+    invalidateWmsFastCacheV179();
     invalidateDashboardCache();
     refreshDashboardData();
   } catch (e) {
@@ -41793,6 +42332,7 @@ async function returnWmsForReview(vaId, assignmentId, itemId, button) {
     updateWmsOverview();
     renderWmsList();
     showWmsFeedback(`ส่ง ${locationCode} กลับให้หัวหน้าตรวจสอบใหม่แล้ว`);
+    invalidateWmsFastCacheV179();
     invalidateDashboardCache();
     refreshDashboardData();
   } catch (error) {
@@ -42032,6 +42572,7 @@ async function saveWmsNotes(assignmentId, itemId, key) {
       removedNotes.length ? `ยกเลิก ${removedNotes.length}` : '',
     ].filter(Boolean).join(' · ');
     showWmsFeedback(`อัปเดต Remark WMS แล้ว${summary ? ` · ${summary}` : ''}`);
+    invalidateWmsFastCacheV179();
   } catch (error) {
     console.error(error);
     showWmsFeedback('บันทึกหมายเหตุไม่สำเร็จ: ' + (error.message || error), 'error');
@@ -42219,6 +42760,7 @@ async function closeWmsLocation(assignmentId,button) {
     );
     renderWmsList();
     showWmsFeedback(`ปิดงาน ${locationCode} แล้ว · ตรวจครบ ${serverRows.length.toLocaleString(uiLocale())}/${serverRows.length.toLocaleString(uiLocale())} Item`);
+    invalidateWmsFastCacheV179();
     invalidateDashboardCache();
     refreshDashboardData();
   } catch (error) {
@@ -51988,7 +52530,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.78' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.80' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -52249,7 +52791,7 @@ async function exportBackupZip() {
       format:BACKUP_ZIP_FORMAT,
       version:BACKUP_ZIP_VERSION,
       created_at:new Date().toISOString(),
-      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.78',
+      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.80',
       excel_file:excelFileName,
       excel_sha256:excelSha256,
       excel_manifest_hash:built.manifestHash,
@@ -53522,7 +54064,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.78" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.80" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
