@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.69</title>
+<title>Cycle Count V1.72</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -20625,13 +20625,13 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
 @container zoneboard (min-width:761px){.exec-v156-zone-strip{grid-template-columns:minmax(125px,1.2fr) repeat(4,minmax(82px,.82fr)) minmax(190px,1.55fr)!important;align-items:stretch!important;gap:11px!important}.exec-v156-zone-name,.exec-v157-accuracy-result{grid-column:auto!important;min-height:135px!important}.exec-v156-stat{min-height:135px!important}}
 </style>
 </head>
-<body data-build="v1-69">
+<body data-build="v1-71">
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.69';
+const APP_VERSION = '1.72';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
-const APP_BUILD_ID = 'v1-69';
+const APP_BUILD_ID = 'v1-71';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
 // v31 defensive date helpers: prevent legacy cached/remaining references from crashing the dashboard.
 var selectedDateFrom = '';
@@ -23636,6 +23636,19 @@ let _executiveFilters = { zone:'', category:'', metric:'quantity' };
 let _executiveCategoryZoneFilter = '';
 let _executivePresentationSlide = 0;
 const DASHBOARD_CACHE_TTL_MS = 60000;
+// Keep recently rendered list pages in memory. These pages contain only
+// navigation/list controls; count-entry and edit forms are intentionally not
+// cached so unsaved work and permission checks always use a fresh screen.
+const PAGE_VIEW_CACHE_TTL_MS = Object.freeze({
+  'c-tasks':30000,
+  'sv-list':30000,
+  'ad-history':60000,
+  'ad-manage:sessions':30000,
+  'ad-manage:assign':30000,
+  'ad-manage:backup':60000,
+});
+const _pageViewCache = new Map();
+const _pageViewReadyKeys = new Set();
 const DASHBOARD_SESSION_STORAGE_PREFIX = 'cycle_count_dashboard_session_v1';
 const WAREHOUSE_LAYOUT_STORAGE_KEY = 'cycle_count_warehouse_layout_v1';
 const WAREHOUSE_LAYOUT_DRAFT_STORAGE_KEY = 'cycle_count_warehouse_layout_draft_v1';
@@ -23697,6 +23710,81 @@ function currentPageTitle(page,currentRole=prof?.role || 'counter') {
 
 function invalidateDashboardCache() {
   _dashboardViewCache = null;
+}
+
+function pageViewCacheDescriptor(state = S) {
+  const page = String(state?.page || '');
+  let routeKey = page;
+  if (page === 'ad-manage') {
+    const tab = String(state?._manageTab || _manageTab || 'sessions');
+    routeKey = `${page}:${tab}`;
+  }
+  const ttl = PAGE_VIEW_CACHE_TTL_MS[routeKey];
+  if (!ttl) return null;
+  return {
+    routeKey,
+    ttl,
+    key:`${me?.id || 'anonymous'}|${prof?.role || 'unknown'}|${routeKey}`,
+  };
+}
+
+function invalidatePageViewCache(routeKey = '') {
+  const normalized = String(routeKey || '');
+  for (const [key,entry] of _pageViewCache.entries()) {
+    if (!normalized || entry.routeKey === normalized || entry.routeKey.startsWith(`${normalized}:`)) {
+      _pageViewCache.delete(key);
+      _pageViewReadyKeys.delete(key);
+    }
+  }
+}
+
+function cacheCurrentPageView() {
+  const descriptor = pageViewCacheDescriptor(S);
+  const target = cnt();
+  if (!descriptor || !target || !_pageViewReadyKeys.has(descriptor.key)) return false;
+  if (target.querySelector('.page-loading-inline-placeholder')) return false;
+  _pageViewCache.set(descriptor.key,{
+    routeKey:descriptor.routeKey,
+    html:target.innerHTML,
+    loadedAt:Date.now(),
+  });
+  return true;
+}
+
+function markCurrentPageViewReady() {
+  const descriptor = pageViewCacheDescriptor(S);
+  if (!descriptor) return;
+  _pageViewReadyKeys.add(descriptor.key);
+  cacheCurrentPageView();
+}
+
+function restoreCachedPageView() {
+  const descriptor = pageViewCacheDescriptor(S);
+  const target = cnt();
+  if (!descriptor || !target) return false;
+  const cached = _pageViewCache.get(descriptor.key);
+  if (!cached) return false;
+  if ((Date.now() - cached.loadedAt) > descriptor.ttl) {
+    _pageViewCache.delete(descriptor.key);
+    _pageViewReadyKeys.delete(descriptor.key);
+    return false;
+  }
+  target.innerHTML = cached.html;
+  _pageViewReadyKeys.add(descriptor.key);
+  scheduleTabletViewportLayout(false);
+  return true;
+}
+
+function invalidateParentViewCacheForNavigation(fromPage,toPage) {
+  if (['c-count','c-found'].includes(fromPage) && toPage === 'c-tasks') {
+    invalidatePageViewCache('c-tasks');
+  }
+  if (['sv-detail','sv-found'].includes(fromPage) && toPage === 'sv-list') {
+    invalidatePageViewCache('sv-list');
+  }
+  if (fromPage === 'ad-new' && toPage === 'ad-manage') {
+    invalidatePageViewCache('ad-manage:sessions');
+  }
 }
 
 function dashboardSessionStorageKey() {
@@ -24920,6 +25008,7 @@ async function runPageLoaderWithTimeout(loader,pageRequestScope) {
   });
   try {
     const result = await Promise.race([Promise.resolve().then(loader),timeout]);
+    markCurrentPageViewReady();
     finishPageLoadingVisual(pageRequestScope?._loadingVisualToken);
     return result;
   } catch (error) {
@@ -25232,12 +25321,16 @@ function adminOnlyMessage() {
 }
 
 const BACKUP_FORMAT = 'CYCLE_COUNT_BACKUP';
-const BACKUP_FORMAT_VERSION = '10';
-const BACKUP_SUPPORTED_VERSIONS = new Set(['1','2','3','4','5','6','7','8','9','10']);
+const BACKUP_FORMAT_VERSION = '11';
+const BACKUP_SUPPORTED_VERSIONS = new Set(['1','2','3','4','5','6','7','8','9','10','11']);
 const BACKUP_BATCH_SIZE = 500;
 const BACKUP_EXCEL_CELL_LIMIT = 32767;
 const BACKUP_EXCEL_CHUNK_SIZE = 30000;
 const BACKUP_CHUNK_MARKER = '__cc_part_';
+const BACKUP_JSON_VALUE_PREFIX = '__CC_JSON_V11__:';
+const BACKUP_JSON_COLUMNS = new Set([
+  'attributes','remarks','counter_names_count1','counter_names_count2','counter_names_count3','old_value','new_value',
+]);
 const BACKUP_ZIP_FORMAT = 'CYCLE_COUNT_FULL_BACKUP';
 const BACKUP_ZIP_VERSION = 2;
 const BACKUP_SUPPORTED_ZIP_VERSIONS = new Set([1,2]);
@@ -25441,6 +25534,8 @@ function go(page, extra = {}, navOptions = {}) {
   const normalizedDestination = normalizeRoleNavigation(page,nextExtra);
   page = normalizedDestination.page;
   nextExtra = normalizedDestination.extra;
+  cacheCurrentPageView();
+  invalidateParentViewCacheForNavigation(currentPage,page);
   if (page !== 'sv-dash') delete nextExtra._dashAnchor;
 
   if (navOptions.resetHistory || page === 'login') _navStack = [];
@@ -25484,6 +25579,8 @@ function goPrimary(page) {
 function goBack() {
   const previousState = _navStack.pop();
   if (previousState?.page) {
+    cacheCurrentPageView();
+    invalidateParentViewCacheForNavigation(S?.page || '',previousState.page);
     S = { ...previousState };
     syncNavigationStateGlobals();
     render();
@@ -26174,6 +26271,17 @@ function render() {
     return;
   }
 
+  // Returning to a recently opened menu should be immediate. Dashboard/WMS
+  // reuses its existing session-aware data cache; safe list pages reuse a
+  // short-lived rendered view. Edit/count forms always continue below and
+  // load fresh data.
+  if (page === 'sv-dash' && paintCachedDashboardView(S._dashTab || _dashTab || 'summary')) {
+    return;
+  }
+  if (restoreCachedPageView()) {
+    return;
+  }
+
   pageRequestScope._loadingVisualToken = startPageLoadingVisual({
     title:uiCopy('กำลังโหลดข้อมูล...','Loading data...'),
     subtitle:uiCopy('กำลังเตรียมหน้าจอให้พร้อมใช้งาน','Preparing the page for use'),
@@ -26304,6 +26412,7 @@ function openManageMenu(tab) {
     alert('บัญชี Supervisor ไม่มีสิทธิ์เข้าถึงเมนูนี้');
     return;
   }
+  cacheCurrentPageView();
   _navStack = [];
   window._openNavGroup = 'manage';
   _manageTab = tab; S = { page:'ad-manage', _manageTab:tab };
@@ -27898,6 +28007,8 @@ async function doLogout() {
       await sb.rpc('release_user_login',{ p_session_token:token });
     } catch (_) {}
   }
+  invalidateDashboardCache();
+  invalidatePageViewCache();
   await clearLocalAuthSession();
   go('login');
 }
@@ -30742,7 +30853,12 @@ async function saveVarianceIssueMetadata(key, button) {
     showActionSuccessToast('บันทึก Type Issue, Remark และรูปถ่ายแล้ว',{ title:'บันทึกสำเร็จ' });
     if (context.mode === 'inline') {
       const container = Q(`vdetail_${context.inlineIndex}`);
-      if (container) await renderVarianceItemDetail(context.assignmentId,container,context.inlineIndex);
+      if (container) await renderVarianceItemDetail(
+        context.assignmentId,
+        container,
+        context.inlineIndex,
+        container.dataset.varianceTargetItem || '',
+      );
     } else await loadSvDetail();
   } catch (error) {
     alert(error?.message || error);
@@ -40640,15 +40756,21 @@ async function loadSvDash() {
     const counterNames = actualCountersByWork[actualCounterWorkKey(row.assignment_id,row.item_id)] || [];
     const counterValues = encodeURIComponent(JSON.stringify(counterNames));
     const varianceSearchText = [l?.code,item.code,item.description].filter(Boolean).join(' ');
+    const varianceItemSearchText = [item.code,item.description].filter(Boolean).join(' ');
     return `<div data-location-sort-code="${escapeWmsText(l?.code || '')}"
       data-variance-filter-row data-variance-index="${i}"
+      data-variance-assignment-id="${escapeWmsText(row.assignment_id || '')}"
+      data-variance-item-id="${escapeWmsText(row.item_id || '')}"
       data-variance-zone="${escapeWmsText(l?.zone ?? '')}"
       data-variance-row="${escapeWmsText(l?.row_no ?? '')}"
       data-variance-level="${escapeWmsText(l?.level ?? '')}"
       data-variance-counters="${escapeWmsText(counterValues)}"
+      data-variance-location-search="${escapeWmsText(l?.code || '')}"
+      data-variance-item-search="${escapeWmsText(varianceItemSearchText)}"
       data-variance-search="${escapeWmsText(varianceSearchText)}"
       style="border-bottom:1px solid var(--theme-border-color);padding:14px 0">
-      <div class="tab-row" style="display:flex;align-items:center;gap:12px;padding:10px;flex-wrap:wrap" onclick="toggleVarianceDetail('${row.assignment_id}',${i})">
+      <div class="tab-row" style="display:flex;align-items:center;gap:12px;padding:10px;flex-wrap:wrap"
+        onclick="toggleVarianceDetailFromRow(this.closest('[data-variance-filter-row]'))">
         <div style="flex:1;min-width:0">
           <div class="mono" style="font-size:16px;font-weight:800;color:var(--text-main)">${l?.code||'?'}</div>
           <div class="mono" style="font-size:14px;color:var(--text-main);margin-top:5px;font-weight:800"><span data-i18n-skip>${escapeWmsText(item.code || '?')}</span></div>
@@ -41831,6 +41953,15 @@ function refreshVarianceDependentFilters() {
 
 function updateVarianceFilter(key, value) {
   S['_variance'+key] = value;
+  if (key === 'Search' && _svDashOpenVarianceIdx !== null) {
+    const detail = Q('vdetail_' + _svDashOpenVarianceIdx);
+    if (detail) {
+      detail.style.display = 'none';
+      detail.innerHTML = '';
+      delete detail.dataset.varianceTargetItem;
+    }
+    _svDashOpenVarianceIdx = null;
+  }
   if (key !== 'Search') refreshVarianceDependentFilters();
   renderVarianceList();
 }
@@ -41856,6 +41987,25 @@ function renderVarianceList() {
   if (count) count.textContent = `${visible.toLocaleString(uiLocale())} รายการ`;
   const empty = Q('variance-filter-empty');
   if (empty) empty.hidden = rows.length === 0 || visible > 0;
+}
+
+function varianceDetailTargetItemFromRow(node) {
+  if (!node) return '';
+  const search = String(S._varianceSearch || '').trim().toLocaleLowerCase('th');
+  if (!search) return '';
+  const itemText = String(node.dataset.varianceItemSearch || '').toLocaleLowerCase('th');
+  return itemText.includes(search) ? String(node.dataset.varianceItemId || '') : '';
+}
+
+function toggleVarianceDetailFromRow(node) {
+  if (!node) return;
+  const index = Number(node.dataset.varianceIndex);
+  if (!Number.isInteger(index)) return;
+  toggleVarianceDetail(
+    String(node.dataset.varianceAssignmentId || ''),
+    index,
+    varianceDetailTargetItemFromRow(node),
+  );
 }
 
 function refreshWmsDependentFilters() {
@@ -42433,7 +42583,7 @@ function varianceLocationCloseHtml({ aid,total,confirmed,mode='detail',inlineInd
   </div>`;
 }
 
-async function toggleVarianceDetail(aid, idx) {
+async function toggleVarianceDetail(aid, idx, targetItemId='') {
   const prevIdx = _svDashOpenVarianceIdx;
   if (prevIdx !== null && prevIdx !== idx) {
     const prevEl = Q('vdetail_' + prevIdx);
@@ -42446,11 +42596,14 @@ async function toggleVarianceDetail(aid, idx) {
   }
   _svDashOpenVarianceIdx = idx;
   el.style.display = 'block';
+  el.dataset.varianceTargetItem = String(targetItemId || '');
   el.innerHTML = `<div class="load" style="padding:20px;font-size:13px;font-weight:600;text-align:center">⏳ กำลังโหลดรายละเอียด...</div>`;
-  await renderVarianceItemDetail(aid, el, idx);
+  await renderVarianceItemDetail(aid, el, idx, targetItemId);
 }
 
-async function renderVarianceItemDetail(aid, container, idx) {
+async function renderVarianceItemDetail(aid, container, idx, targetItemId='') {
+  const requestedItemId = String(targetItemId || container?.dataset?.varianceTargetItem || '').trim();
+  if (container) container.dataset.varianceTargetItem = requestedItemId;
   const { data: asgn } = await sb.from('assignments')
     .select('id,status,location_id,session_id,assigned_to,locations(code,zone,area)')
     .eq('id', aid).single();
@@ -42494,6 +42647,7 @@ async function renderVarianceItemDetail(aid, container, idx) {
   const approvalByItem = new Map((approvalResult.data || []).map(row => [row.item_id,row]));
   let varRows = '';
   const reviewSummary = { total:0,draft:0,confirmed:0 };
+  const locationReviewSummary = { total:0,draft:0,confirmed:0 };
   for (const s of snaps || []) {
     const it = s.items;
     const emptyLocation = isEmptyLocationItem(it?.code);
@@ -42518,6 +42672,10 @@ async function renderVarianceItemDetail(aid, container, idx) {
     const reviewState = varianceReviewState(approval);
     const confirmed = reviewState === 'confirmed';
     const reviewFinalQty = approval?.final_qty ?? suggested;
+    locationReviewSummary.total += 1;
+    if (reviewState === 'confirmed') locationReviewSummary.confirmed += 1;
+    else if (reviewState === 'draft') locationReviewSummary.draft += 1;
+    if (requestedItemId && String(it.id) !== requestedItemId) continue;
     reviewSummary.total += 1;
     if (reviewState === 'confirmed') reviewSummary.confirmed += 1;
     else if (reviewState === 'draft') reviewSummary.draft += 1;
@@ -42565,7 +42723,9 @@ async function renderVarianceItemDetail(aid, container, idx) {
     </div>`;
   }
   if (!varRows) {
-    varRows = `<div style="padding:28px;text-align:center;color:var(--text-muted);font-weight:700">ไม่มี ITEM ที่เป็น DIFF ใน Location นี้</div>`;
+    varRows = `<div style="padding:28px;text-align:center;color:var(--text-muted);font-weight:700">${
+      requestedItemId ? 'ไม่พบ ITEM ที่ค้นหาในรายการ DIFF นี้' : 'ไม่มี ITEM ที่เป็น DIFF ใน Location นี้'
+    }</div>`;
   }
 
   let maxRoundCounted = 0;
@@ -42575,13 +42735,14 @@ async function renderVarianceItemDetail(aid, container, idx) {
   const userOpts = otherUsers.map(u=>`<option value="${u.id}">${escapeWmsText(u.name)}</option>`).join('');
 
   container.innerHTML = `
+    ${requestedItemId ? `<div class="alert alert-blue" style="margin:14px 14px 0;font-size:12px">แสดงเฉพาะ ITEM ที่ตรงกับคำค้นหา</div>` : ''}
     ${varianceReviewProgressHtml(reviewSummary)}
     <div>${varRows}</div>
     ${varianceReviewToolbarHtml({ aid,...reviewSummary,mode:'inline',inlineIndex:idx })}
     <div style="padding:16px 20px;border-top:1px solid var(--theme-border-color)">
       <div class="alert alert-blue" style="font-size:12px;margin-bottom:14px">บันทึกร่างเพื่อพักงาน หรือยืนยันแยกทีละ Item ได้ ข้อมูลจะเปิดต่อจากเครื่องอื่นได้</div>
       <div id="vda_${idx}"></div>
-      ${varianceLocationCloseHtml({ aid,...reviewSummary,mode:'inline',inlineIndex:idx })}
+      ${varianceLocationCloseHtml({ aid,...locationReviewSummary,mode:'inline',inlineIndex:idx })}
       ${nextPhysicalRound <= 3 ? `
       <div style="background:var(--theme-card-bg);border:1px solid var(--theme-border-color);border-radius:20px;padding:16px;margin-top:10px">
         <div style="font-size:13px;font-weight:800;color:var(--primary-blue);margin-bottom:10px">🔄 จ่ายงานรอบที่ ${nextPhysicalRound} ให้ User</div>
@@ -42701,7 +42862,12 @@ async function refreshVarianceReviewView(aid,mode='detail',inlineIndex='') {
   invalidateDashboardCache();
   if (mode === 'inline') {
     const container = Q(`vdetail_${inlineIndex}`);
-    if (container) await renderVarianceItemDetail(aid,container,inlineIndex);
+    if (container) await renderVarianceItemDetail(
+      aid,
+      container,
+      inlineIndex,
+      container.dataset.varianceTargetItem || '',
+    );
   } else {
     await loadSvDetail();
   }
@@ -43482,6 +43648,7 @@ async function loadAdManage() {
   else if (tab === 'info') await renderManageDataInfo(mc);
   else if (tab === 'backup') await renderManageBackup(mc);
   else await renderManageImport(mc);
+  markCurrentPageViewReady();
 }
 
 const COUNT_RULE_PRESETS = Object.freeze({
@@ -49442,8 +49609,8 @@ async function renderManageBackup(container) {
       Excel จะเปิดที่ชีต Data_Count ซึ่งรวมข้อมูล Stock / LPN และ Found_Work ที่ไม่ถูกปฏิเสธของ Session โดยไม่กรองเฉพาะ Gain / Lost
       พร้อม Location, Zone, LPN, Lot, Inventory Status, Item, Stock Onhand ราย LPN/Lot,
       AL Qty และ Count 1–3 ซึ่งกระจายยอดนับจาก LPN บนลงล่างและคำนวณ Variance ราย LPN,
-      ผู้ตรวจนับและเวลานับแยกรอบ, หมายเหตุ, รูปถ่าย และสถานะ WMS ให้ทีมอื่นนำไปใช้ต่อได้<br>
-      <span style="font-size:11px">แสดงเฉพาะ Data_Count, Found_Work, Info_Master, Session_Summary และ README · ข้อมูลระบบที่จำเป็นถูกซ่อนไว้เพื่อให้ Restore ได้ · บัญชี User Login และรหัสผ่านไม่อยู่ในไฟล์</span>
+      ผู้ตรวจนับและเวลานับแยกรอบ, Count Remark, WMS Remark, รูปถ่าย และสถานะ WMS ให้ทีมอื่นนำไปใช้ต่อได้<br>
+      <span style="font-size:11px">แสดง Data_Count, Count_History, WMS_Remarks, Found_Work, Info_Master, Session_Summary และ README · Counts, Audit และ Remarks ที่จำเป็นต่อ Restore ถูกซ่อนไว้และตรวจ checksum แยกกัน · บัญชี User Login และรหัสผ่านไม่อยู่ในไฟล์</span>
     </div>
     <div class="backup-grid">
       <details class="admin-master-group" open>
@@ -49766,7 +49933,9 @@ function backupRowsForExcel(rows, columns, formatVersion=BACKUP_FORMAT_VERSION) 
     const output = {};
     columns.forEach(column => {
       let value = row?.[column];
-      if (value && typeof value === 'object' && !(value instanceof Date)) {
+      if (Number(formatVersion) >= 11 && BACKUP_JSON_COLUMNS.has(column)) {
+        value = BACKUP_JSON_VALUE_PREFIX + JSON.stringify(value === undefined ? null : value);
+      } else if (value && typeof value === 'object' && !(value instanceof Date)) {
         try { value = JSON.stringify(value); }
         catch (_) { value = String(value); }
       }
@@ -49794,10 +49963,14 @@ function backupRowsForExcel(rows, columns, formatVersion=BACKUP_FORMAT_VERSION) 
 }
 
 function backupRowsFromExcel(rows, columns, formatVersion) {
-  const jsonColumns = new Set(['attributes','remarks','counter_names_count1','counter_names_count2','counter_names_count3','old_value','new_value']);
   const restoreJsonColumns = output => {
-    jsonColumns.forEach(column => {
+    BACKUP_JSON_COLUMNS.forEach(column => {
       if (!columns.includes(column) || typeof output[column] !== 'string' || !output[column].trim()) return;
+      if (Number(formatVersion) >= 11 && output[column].startsWith(BACKUP_JSON_VALUE_PREFIX)) {
+        try { output[column] = JSON.parse(output[column].slice(BACKUP_JSON_VALUE_PREFIX.length)); }
+        catch (_) { throw new Error(`ข้อมูล JSON ในคอลัมน์ ${column} ไม่ถูกต้อง`); }
+        return;
+      }
       try { output[column] = JSON.parse(output[column]); } catch (_) {}
     });
     return output;
@@ -49948,7 +50121,40 @@ function validateBackupRestoreData(dataBySheet) {
       throw new Error(`Item ${itemId} ไม่มี code แต่ไม่ใช่รายการ Location ว่างที่ถูกต้อง`);
     }
   });
+  (dataBySheet.Audit || []).forEach((row,index) => {
+    if (row.action !== 'wms_note') return;
+    if (!backupRestoreValuePresent(row.assignment_id)) {
+      throw new Error(`Audit แถว ${index + 2} เป็น Remark WMS แต่ไม่มี assignment_id`);
+    }
+    if (!backupRestoreValuePresent(row.new_value)) {
+      throw new Error(`Audit แถว ${index + 2} เป็น Remark WMS แต่ไม่มีข้อความ`);
+    }
+  });
   return {emptyLocationItems:emptyItems.length};
+}
+
+function validateBackupRemarkManifest(dataBySheet,manifestMap) {
+  if (Number(manifestMap?.format_version || 0) < 11) return null;
+  const actual = {
+    countRemarks:(dataBySheet.Counts || []).filter(row => backupRestoreValuePresent(row.remark)).length,
+    wmsRemarks:(dataBySheet.Audit || []).filter(row => row.action === 'wms_note').length,
+    wmsOptions:(dataBySheet.Remarks || []).filter(row => String(row.context || '').trim().toLowerCase() === 'wms').length,
+  };
+  const expected = {
+    countRemarks:Number(manifestMap['remark_count:Counts']),
+    wmsRemarks:Number(manifestMap['remark_count:Audit_WMS']),
+    wmsOptions:Number(manifestMap['remark_count:Remarks_WMS_Options']),
+  };
+  Object.keys(actual).forEach(key => {
+    if (!Number.isInteger(expected[key]) || expected[key] < 0 || expected[key] !== actual[key]) {
+      throw new Error(`จำนวน ${key} ไม่ตรงกับ Manifest: พบ ${actual[key]}, Manifest ${manifestMap[
+        key === 'countRemarks' ? 'remark_count:Counts'
+          : key === 'wmsRemarks' ? 'remark_count:Audit_WMS'
+            : 'remark_count:Remarks_WMS_Options'
+      ] ?? '-'}`);
+    }
+  });
+  return actual;
 }
 
 function backupManifestRowsForExcel(entries, formatVersion) {
@@ -50224,7 +50430,7 @@ function backupTeamSheetColumns(photoBackupMode='storage_url_preserved') {
       col('area','Area',14), col('item','Item',24), col('description','Description',44),
       col('round','Count Round',13,'number'), col('countQty','Count Qty',14,'number'),
       col('actualCounter','Actual Counter',22), col('countedBy','Recorded By User',20),
-      col('countedAt','Counted At (Bangkok)',22), col('typeIssue','Type Issue',22), col('remark','Remark',34),
+      col('countedAt','Counted At (Bangkok)',22), col('typeIssue','Type Issue',22), col('remark','Count Remark',34),
       col('photoUrl','Photo URL',44,'url'), col('assignmentStatus','Assignment Status',18),
       col('sessionId','Session ID',38), col('assignmentId','Assignment ID',38),
       col('locationId','Location ID',38), col('itemId','Item ID',38), col('countRecordId','Count Record ID',38),
@@ -50256,7 +50462,8 @@ function backupTeamSheetColumns(photoBackupMode='storage_url_preserved') {
       col('count3','Count 3',13,'number'), col('count3Counter','Actual Counter3',22),
       col('count3Time','Count 3 Time',22),
       col('physicalCount','Physical Count',16,'number'), col('variance','Variance',14,'number'),
-      col('typeIssue','Type Issue',22), col('remark','Remark',34), ...photoColumns,
+      col('typeIssue','Type Issue',22), col('remark','Count Remark',34),
+      col('wmsRemark','WMS Remark',42), ...photoColumns,
       col('result','Gain / Lost',14), col('approvalResolution','Resolution',24),
       col('reviewStatus','สถานะตรวจ Item',24), col('releasedToWms','ส่งต่อ WMS',22),
       col('supervisorNote','Supervisor Note',34), col('approvedBy','Approved By',20),
@@ -50286,6 +50493,13 @@ function backupTeamSheetColumns(photoBackupMode='storage_url_preserved') {
       col('attributes','ข้อมูลเพิ่มเติม (JSON)',70),
       col('updatedBy','Updated By',20), col('updatedAt','Updated At (Bangkok)',22),
     ],
+    WMS_Remarks: [
+      col('session','Session',28), col('location','Location',18), col('zone','Zone',16),
+      col('rowNo','Row',10), col('level','Level',10), col('item','Item',24),
+      col('description','Description',44), col('wmsRemark','WMS Remark',52),
+      col('recordedBy','Recorded By',22), col('recordedAt','Recorded At (Bangkok)',22),
+      col('scope','Remark Scope',18),
+    ],
     Transaction_History: [
       col('createdAt','Transaction Time (Bangkok)',22), col('action','Action',26),
       col('session','Session',28), col('location','Location',18), col('zone','Zone',16),
@@ -50305,7 +50519,8 @@ function backupTeamSheetColumns(photoBackupMode='storage_url_preserved') {
       col('physicalCount','Physical Count',16,'number'), col('variance','Net Variance',14,'number'),
       col('diffItems','Diff Items',12,'number'), col('matchItems','Match Items',12,'number'),
       col('stockAccuracy','Stock Accuracy %',17,'number'), col('wmsPending','WMS Pending',14,'number'),
-      col('wmsFixed','WMS Fixed',12,'number'),
+      col('wmsFixed','WMS Fixed',12,'number'), col('countRemarks','Count Remarks',15,'number'),
+      col('wmsRemarks','WMS Remarks',15,'number'),
     ],
   };
 }
@@ -50355,6 +50570,32 @@ function buildTeamBackupData(dataBySheet) {
   const sessionLocationKey = (sessionId,locationId) => `${sessionId || ''}|${locationId || ''}`;
   const assignmentItemKey = (assignmentId,itemId) => `${assignmentId || ''}|${itemId || ''}`;
   const stockKey = (sessionId,locationId,itemId) => `${sessionId || ''}|${locationId || ''}|${itemId || ''}`;
+  const auditDisplayText = value => {
+    if (value === null || value === undefined) return '';
+    if (typeof value !== 'object') return String(value).trim();
+    try { return JSON.stringify(value); }
+    catch (_) { return String(value); }
+  };
+  const wmsRemarkAuditRows = audits.filter(row => row.action === 'wms_note');
+  const wmsRemarksByItem = new Map();
+  const wmsRemarksByAssignment = new Map();
+  wmsRemarkAuditRows.forEach(row => {
+    if (!row.assignment_id) return;
+    const target = row.item_id ? wmsRemarksByItem : wmsRemarksByAssignment;
+    const key = row.item_id
+      ? assignmentItemKey(row.assignment_id,row.item_id)
+      : String(row.assignment_id);
+    if (!target.has(key)) target.set(key,[]);
+    target.get(key).push(row);
+  });
+  const wmsRemarkForWork = (assignmentId,itemId) => [
+    ...(wmsRemarksByAssignment.get(String(assignmentId || '')) || []),
+    ...(wmsRemarksByItem.get(assignmentItemKey(assignmentId,itemId)) || []),
+  ]
+    .sort((a,b) => (Date.parse(a.created_at || '') || 0) - (Date.parse(b.created_at || '') || 0))
+    .map(row => auditDisplayText(row.new_value))
+    .filter(Boolean)
+    .join(' | ');
   const jobCodesByStockKey = new Map();
   annualJobItems.forEach(jobItem => {
     const job = annualJobById.get(String(jobItem.job_id || '')) || {};
@@ -50508,6 +50749,7 @@ function buildTeamBackupData(dataBySheet) {
       wmsLocationClosedAt:backupDateForTeam(assignment?.wms_closed_at),
       typeIssue:typeIssueName(finalCountRecord?.type_issue || latestTypeIssueRecord?.type_issue || ''),
       remark:finalCountRecord?.remark || latestRemarkRecord?.remark || '',
+      wmsRemark:wmsRemarkForWork(assignment?.id,itemId),
       photoUrl:finalCountRecord?.photo_url || latestPhotoRecord?.photo_url || '',
       sessionId, assignmentId:assignment?.id || '',
       locationId, itemId, hasApproval:approvalConfirmed,
@@ -50579,7 +50821,7 @@ function buildTeamBackupData(dataBySheet) {
     count2:null, count2Counter:'', count2Time:'',
     count3:null, count3Counter:'', count3Time:'',
     physicalCount:null, variance:null, result:'ยังไม่ได้นับ',
-    typeIssue:'', remark:'', photoUrl:'', approvalResolution:'', reviewStatus:'ยังไม่ได้ตรวจ',
+    typeIssue:'', remark:'', wmsRemark:wmsRemarkForWork(assignment?.id,itemId), photoUrl:'', approvalResolution:'', reviewStatus:'ยังไม่ได้ตรวจ',
     releasedToWms:'', supervisorNote:'',
     approvedBy:'', approvedAt:'', wmsStatus:'', wmsFixedBy:'', wmsFixedAt:'',
     assignedUser:profileName(assignment?.assigned_to),
@@ -50728,7 +50970,7 @@ function buildTeamBackupData(dataBySheet) {
     });
   };
   const itemLevelTextFields = [
-    'typeIssue','remark','approvalResolution','reviewStatus','releasedToWms','supervisorNote','approvedBy','approvedAt',
+    'typeIssue','remark','wmsRemark','approvalResolution','reviewStatus','releasedToWms','supervisorNote','approvedBy','approvedAt',
     'wmsStatus','wmsFixedBy','wmsFixedAt',
   ];
   const dataCountGroupKey = row => stockKey(
@@ -50856,6 +51098,26 @@ function buildTeamBackupData(dataBySheet) {
     };
   }).sort((a,b) => String(a.createdAt).localeCompare(String(b.createdAt)));
 
+  const wmsRemarkRows = wmsRemarkAuditRows.map(audit => {
+    const assignment = assignmentById.get(String(audit.assignment_id || '')) || {};
+    const sessionId = audit.session_id || assignment.session_id || '';
+    const locationId = audit.location_id || assignment.location_id || '';
+    const session = sessionById.get(String(sessionId)) || {};
+    const location = locationById.get(String(locationId)) || {};
+    const item = itemById.get(String(audit.item_id || '')) || {};
+    return {
+      session:session.name || '', location:location.code || '', zone:location.zone || '',
+      rowNo:location.row_no || '', level:location.level || '', item:item.code || '',
+      description:item.description || '', wmsRemark:auditDisplayText(audit.new_value),
+      recordedBy:profileName(audit.performed_by), recordedAt:backupDateForTeam(audit.created_at),
+      scope:audit.item_id ? 'Item' : 'Location',
+    };
+  }).sort((a,b) =>
+    String(a.session).localeCompare(String(b.session),'th')
+    || String(a.location).localeCompare(String(b.location),'en',{numeric:true})
+    || String(a.item).localeCompare(String(b.item),'en',{numeric:true})
+    || String(a.recordedAt).localeCompare(String(b.recordedAt)));
+
   const foundItemRows = foundItems.map(found => {
     const session = sessionById.get(String(found.session_id || '')) || {};
     const location = locationById.get(String(found.location_id || '')) || {};
@@ -50907,6 +51169,7 @@ function buildTeamBackupData(dataBySheet) {
     const sessionDetails = stockDetails.filter(row => String(row.session_id) === String(session.id));
     const sessionExportRows = dataCountRows.filter(row => String(row.sessionId) === String(session.id));
     const sessionCounts = countHistory.filter(row => String(row.sessionId) === String(session.id));
+    const sessionWmsRemarks = wmsRemarkAuditRows.filter(row => String(row.session_id) === String(session.id));
     const countedData = sessionData.filter(row => row.physicalCount !== null);
     const absVariance = countedData.reduce((sum,row) => sum + Math.abs(Number(row.variance || 0)),0);
     const stockBase = countedData.reduce((sum,row) => sum + Math.abs(Number(row.stockOnhand || 0)),0);
@@ -50928,6 +51191,8 @@ function buildTeamBackupData(dataBySheet) {
       stockAccuracy:Number(accuracy.toFixed(2)),
       wmsPending:varianceWms.filter(row => String(row.sessionId) === String(session.id) && row.wmsStatus === 'ยังไม่แก้ WMS').length,
       wmsFixed:varianceWms.filter(row => String(row.sessionId) === String(session.id) && row.wmsStatus === 'แก้ไขแล้ว').length,
+      countRemarks:sessionCounts.filter(row => normalizeImportText(row.remark)).length,
+      wmsRemarks:sessionWmsRemarks.length,
       sessionId:session.id || '',
     };
   });
@@ -51009,10 +51274,12 @@ function buildTeamBackupData(dataBySheet) {
     || String(a.item).localeCompare(String(b.item),'en',{numeric:true}));
   return {
     Data_Count:dataCountRows,
+    Count_History:countHistory,
     Paper_Form_Count:paperRows.filter(row => row.sourceType !== 'paper_found'),
     Paper_Found_Work:paperRows.filter(row => row.sourceType === 'paper_found'),
     Found_Work:foundItemRows,
     Info_Master:dataInfoRows,
+    WMS_Remarks:wmsRemarkRows,
     Session_Summary:sessionSummary,
   };
 }
@@ -51169,6 +51436,11 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     rowCounts[spec.sheet] = rows.length;
     sheetHashes[spec.sheet] = backupRowsChecksum(rows, spec.columns, formatVersion);
   });
+  const remarkIntegrity = {
+    countRemarks:(dataBySheet.Counts || []).filter(row => backupRestoreValuePresent(row.remark)).length,
+    wmsRemarks:(dataBySheet.Audit || []).filter(row => row.action === 'wms_note').length,
+    wmsOptions:(dataBySheet.Remarks || []).filter(row => String(row.context || '').trim().toLowerCase() === 'wms').length,
+  };
 
   const manifestEntries = [
     { key:'backup_format', value:BACKUP_FORMAT },
@@ -51179,6 +51451,9 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
     { key:'photo_backup_mode', value:photoBackupMode },
+    { key:'remark_count:Counts', value:String(remarkIntegrity.countRemarks) },
+    { key:'remark_count:Audit_WMS', value:String(remarkIntegrity.wmsRemarks) },
+    { key:'remark_count:Remarks_WMS_Options', value:String(remarkIntegrity.wmsOptions) },
     ...BACKUP_SHEET_SPECS.flatMap(spec => [
       { key:`rows:${spec.sheet}`, value:String(rowCounts[spec.sheet]) },
       { key:`hash:${spec.sheet}`, value:sheetHashes[spec.sheet] },
@@ -51200,12 +51475,16 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     ? applyOfflinePhotoLinks(teamData,photoBackupEntries)
     : { linkedRows:0,linkedPhotoFiles:0,rowsWithoutPhoto:0 };
   const teamColumns = backupTeamSheetColumns(photoBackupMode);
-  ['Data_Count','Paper_Form_Count','Paper_Found_Work','Found_Work','Info_Master','Session_Summary']
+  ['Data_Count','Count_History','WMS_Remarks','Paper_Form_Count','Paper_Found_Work','Found_Work','Info_Master','Session_Summary']
     .forEach(sheetName => appendTeamBackupSheet(workbook,sheetName,teamData[sheetName],teamColumns[sheetName]));
 
   const readme = [
     ['CYCLE COUNT BACKUP','ไฟล์ข้อมูลการนับที่ทีมอื่นอ่าน ใช้งานต่อ และ Restore กลับเข้าระบบได้'],
-    ['Data_Count','ข้อมูล Stock / LPN และ Found_Work ที่ไม่ถูกปฏิเสธทั้งหมดของ Session: 1 แถวต่อ LPN/Lot พร้อม Location, Zone, Item, Description, Status, UOM, Count, Physical Count และ Variance ครบถ้วน'],
+    ['Data_Count','ข้อมูล Stock / LPN และ Found_Work ที่ไม่ถูกปฏิเสธทั้งหมดของ Session: 1 แถวต่อ LPN/Lot พร้อม Location, Zone, Item, Description, Status, UOM, Count, Physical Count, Variance, Count Remark และ WMS Remark แยกคอลัมน์ชัดเจน'],
+    ['Count Remark','หมายเหตุจากการตรวจนับปกติ เก็บจริงในชีตระบบ Counts และไม่ปะปนกับ WMS Remark'],
+    ['Count_History','ประวัติการตรวจนับทุกครั้งและทุก Round พร้อม Count Remark, Type Issue, ผู้บันทึก และเวลา เพื่อไม่ให้หมายเหตุรอบก่อนถูกซ่อนด้วยผลรอบล่าสุด'],
+    ['WMS_Remarks','ประวัติหมายเหตุที่บันทึกจากหน้าปรับปรุงยอด WMS แสดงทีละรายการ พร้อม Session, Location, Item, ผู้บันทึก และเวลา; ข้อมูลจริงเก็บในชีตระบบ Audit'],
+    ['Remark Options','ตัวเลือกหมายเหตุของเมนูเก็บในชีตระบบ Remarks แยกจากข้อความที่เคยบันทึกจริงใน Audit'],
     ['เลข JOB','เชื่อมจาก Annual JOB ตาม Session + Location + Item; รายการที่ไม่ได้อยู่ใน Annual JOB จะแสดงว่าง'],
     ['Count 1–3','กระจายยอดนับจาก LPN แถวบนลงล่าง โดยเติมได้ไม่เกิน Stock Onhand ของแต่ละ LPN และนำยอดคงเหลือทั้งหมดใส่ LPN แถวสุดท้าย จากนั้นคำนวณ Physical Count และ Variance แยกราย LPN'],
     ['Type Issue','แสดงข้อความที่ผู้ใช้เลือกจริง ณ เวลาบันทึก ไม่แสดงรหัสภายใน CUSTOM_... และไม่เปลี่ยนตามการแก้ชื่อตัวเลือกในอนาคต'],
@@ -51218,14 +51497,14 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     ['Paper_Form_Count','ข้อมูลที่ Admin กรอกจากใบ Form Count แยกจากผลนับผ่านระบบ พร้อม OH ที่แก้ในใบ, Count 1–3, Variance, Item Issue, ผู้ตรวจนับหลายคน และผลเทียบกับ System Physical'],
     ['Paper_Found_Work','รายการเจองานเพิ่มที่ Admin ลงจากใบและจบในเมนูกรอกผลจากใบ โดยไม่ส่งเข้าคิวตรวจสอบ Found Work ปกติ'],
     ['Info_Master','ข้อมูล Item, CATEGORY, Description, UOM และฟิลด์เสริมจาก Item Master ที่ใช้ Match ในระบบ'],
-    ['Session_Summary','สรุป Unique ITEM, Stock Lines, LPN/Lot Rows, จำนวนแถว Data_Count, รูปถ่าย, ผลการนับ, Stock Accuracy และสถานะ WMS แยก Session'],
+    ['Session_Summary','สรุป Unique ITEM, Stock Lines, LPN/Lot Rows, จำนวนแถว Data_Count, รูปถ่าย, Count Remark, WMS Remark, ผลการนับ, Stock Accuracy และสถานะ WMS แยก Session'],
     ['การใช้งานต่อ','ทีมสามารถกรอง คัดลอก หรือแก้ไขชีตข้อมูลที่มองเห็นได้ เพราะ Restore จะอ่านเฉพาะชีตระบบที่ซ่อนไว้'],
     ['ข้อความยาว','Backup Format v6 จะแบ่งข้อความที่ยาวเกินข้อจำกัด Excel เป็นคอลัมน์ __cc_part_2, 3... และประกอบกลับอัตโนมัติเมื่อ Restore'],
     ['คำเตือน Restore','ชีตข้อมูลระบบที่จำเป็นต่อ Restore ถูกซ่อนไว้ ห้ามเปิด แก้ชื่อ หรือลบชีตเหล่านั้น'],
     ['รูปถ่าย',photoBackupMode === 'embedded_zip'
       ? 'รูปจริงถูกเก็บในโฟลเดอร์ Photos ภายใน ZIP พร้อม checksum เปิดจาก Excel แบบออฟไลน์ได้หลังแตก ZIP และ Restore กลับ path เดิมได้'
       : 'เก็บเป็น URL และระบบจะรักษาไฟล์รูปใน Storage เมื่อลบผ่านเมนู Backup'],
-    ['ข้อมูลระบบ','ข้อมูล Restore ยังอยู่ครบ รวมข้อมูลใบและ Transaction History แต่ชีตระบบถูกซ่อนไว้เพื่อป้องกันการแก้โดยไม่ตั้งใจ'],
+    ['ข้อมูลระบบ','ข้อมูล Restore ยังอยู่ครบ รวม Counts (Remark ตรวจนับ), Audit (Remark WMS), Remarks (ตัวเลือก), ข้อมูลใบ และ Transaction History แต่ชีตระบบถูกซ่อนไว้เพื่อป้องกันการแก้โดยไม่ตั้งใจ'],
     ['รหัสระบบ','Session ID, Assignment ID, Location ID และ Item ID ถูกนำออกจากชีตที่ทีมใช้งาน แต่ยังอยู่ครบในชีตระบบที่ซ่อนสำหรับ Restore'],
     ['User Login','ไฟล์นี้ไม่เก็บรหัสผ่านและไม่สร้างบัญชี Auth ใหม่; Profiles ใช้เป็นข้อมูลอ้างอิง'],
     ['วิธี Restore','เมนู จัดการงาน / Sessions → Backup / Restore → เลือกไฟล์นี้'],
@@ -51441,7 +51720,7 @@ async function exportBackupZip() {
     const manifestSha256 = await backupSha256Hex(new Blob([JSON.stringify(manifestBase)]));
     const zipManifest = {...manifestBase,manifest_sha256:manifestSha256};
     zip.file('manifest.json',JSON.stringify(zipManifest,null,2));
-    zip.file('README.txt',`Cycle Count Full Backup\n\nวิธีเปิดรูปหลังลบออกจากระบบ\n1. แตกไฟล์ ZIP ก่อนใช้งาน\n2. เก็บไฟล์ Excel และโฟลเดอร์ ${BACKUP_PHOTO_FOLDER} ไว้ในโฟลเดอร์เดียวกัน\n3. เปิด ${excelFileName}\n4. ในชีต Data_Count หรือ Found_Work กดคำว่า "เปิดรูป"\n\nห้ามเปิด Excel จากใน ZIP โดยตรง ห้ามย้าย Excel ออกเดี่ยว ๆ และห้ามเปลี่ยนชื่อโฟลเดอร์ ${BACKUP_PHOTO_FOLDER}\n\nExcel: ${excelFileName}\nPhotos: ${photoManifest.length}\nCreated: ${zipManifest.created_at}\nRestore: Admin > Backup / Restore\n`);
+    zip.file('README.txt',`Cycle Count Full Backup\n\nวิธีเปิดรูปหลังลบออกจากระบบ\n1. แตกไฟล์ ZIP ก่อนใช้งาน\n2. เก็บไฟล์ Excel และโฟลเดอร์ ${BACKUP_PHOTO_FOLDER} ไว้ในโฟลเดอร์เดียวกัน\n3. เปิด ${excelFileName}\n4. ในชีต Data_Count หรือ Found_Work กดคำว่า "เปิดรูป"\n5. Remark ตรวจนับอยู่ใน Data_Count คอลัมน์ Count Remark และ Remark WMS อยู่ทั้งคอลัมน์ WMS Remark กับชีต WMS_Remarks\n\nห้ามเปิด Excel จากใน ZIP โดยตรง ห้ามย้าย Excel ออกเดี่ยว ๆ และห้ามเปลี่ยนชื่อโฟลเดอร์ ${BACKUP_PHOTO_FOLDER}\n\nExcel: ${excelFileName}\nPhotos: ${photoManifest.length}\nWMS Remarks: ${Number(built.businessCounts?.WMS_Remarks || 0)}\nCreated: ${zipManifest.created_at}\nRestore: Admin > Backup / Restore\n`);
     setBackupProgress(88,'กำลังรวมเป็น ZIP ไฟล์เดียว...','export');
     const zipBlob = await zip.generateAsync({type:'blob',compression:'STORE',streamFiles:true},metadata => {
       setBackupProgress(88 + Math.round(metadata.percent*.1),`กำลังสร้าง ZIP ${Math.round(metadata.percent)}%`,'export');
@@ -51461,11 +51740,12 @@ async function exportBackupZip() {
     if (alertBox) alertBox.innerHTML = `<div class="alert alert-green" style="line-height:1.65">
       ✅ ดาวน์โหลด <strong>${escapeWmsText(zipFileName)}</strong> แล้ว · 1 ไฟล์<br>
       Excel ${formatFileBytes(excelBuffer.byteLength)} · รูป ${photoManifest.length.toLocaleString(uiLocale())} ไฟล์ (${formatFileBytes(downloadedBytes)}) · ZIP ${formatFileBytes(zipBlob.size)}<br>
+      Remark WMS ${Number(built.businessCounts?.WMS_Remarks || 0).toLocaleString(uiLocale())} รายการ · แสดงใน Data_Count และ WMS_Remarks<br>
       ลิงก์ <strong>เปิดรูป</strong> ใน Excel ${Number(built.photoLinkStats?.linkedRows || 0).toLocaleString(uiLocale())} แถว · รูปที่เชื่อมสำเร็จ ${Number(built.photoLinkStats?.linkedPhotoFiles || 0).toLocaleString(uiLocale())} ไฟล์<br>
       <span style="font-size:11px">แตก ZIP ก่อนเปิด Excel · เก็บ Excel และโฟลเดอร์ Photos ไว้ด้วยกัน · กด “เปิดรูป” เพื่อดูรูปแบบออฟไลน์</span><br>
       <span style="font-size:11px">ระบบตรวจ Excel, รูป และ checksum ครบก่อนเปิดปุ่มลบข้อมูล</span>
     </div>`;
-    showActionSuccess('สร้าง Backup ZIP ครบทั้งข้อมูลและรูปแล้ว',{title:'Backup ครบชุดสำเร็จ',detail:zipFileName,facts:[{label:'รูป',value:photoManifest.length.toLocaleString(uiLocale())},{label:'ลิงก์ใน Excel',value:Number(built.photoLinkStats?.linkedRows || 0).toLocaleString(uiLocale())},{label:'ขนาด ZIP',value:formatFileBytes(zipBlob.size)}]});
+    showActionSuccess('สร้าง Backup ZIP ครบทั้งข้อมูลและรูปแล้ว',{title:'Backup ครบชุดสำเร็จ',detail:zipFileName,facts:[{label:'รูป',value:photoManifest.length.toLocaleString(uiLocale())},{label:'Remark WMS',value:Number(built.businessCounts?.WMS_Remarks || 0).toLocaleString(uiLocale())},{label:'ขนาด ZIP',value:formatFileBytes(zipBlob.size)}]});
     if (Q('backup-after-mode')?.value === 'delete' && deleteArea) deleteArea.hidden = false;
   } catch (error) {
     console.error(error);
@@ -51538,6 +51818,7 @@ async function exportBackupExcel() {
     if (alertBox) alertBox.innerHTML = `<div class="alert alert-green" style="line-height:1.65">
       ✅ ดาวน์โหลด <strong>${escapeWmsText(fileName)}</strong> แล้ว<br>
       ชีต Data_Count พร้อมใช้งาน ${Number(built.businessCounts?.Data_Count || 0).toLocaleString()} แถว ·
+      WMS Remark ${Number(built.businessCounts?.WMS_Remarks || 0).toLocaleString()} รายการ ·
       Session Summary ${Number(built.businessCounts?.Session_Summary || 0).toLocaleString()} รายการ<br>
       ข้อมูลระบบ ${Object.values(built.rowCounts).reduce((sum,value)=>sum+Number(value||0),0).toLocaleString()} แถว · checksum ${built.manifestHash}
     </div>`;
@@ -51768,6 +52049,11 @@ async function readBackupExcelFile(event) {
     }
 
     validateBackupRestoreData(dataBySheet);
+    const remarkCounts = validateBackupRemarkManifest(dataBySheet,manifest.map) || {
+      countRemarks:(dataBySheet.Counts || []).filter(row => backupRestoreValuePresent(row.remark)).length,
+      wmsRemarks:(dataBySheet.Audit || []).filter(row => row.action === 'wms_note').length,
+      wmsOptions:(dataBySheet.Remarks || []).filter(row => String(row.context || '').trim().toLowerCase() === 'wms').length,
+    };
 
     _backupParsed = {
       fileName:file.name,
@@ -51776,6 +52062,7 @@ async function readBackupExcelFile(event) {
       rowCounts,
       dataBySheet,
       photoArchive,
+      remarkCounts,
     };
     const totalRows = Object.values(rowCounts).reduce((sum,value)=>sum+Number(value||0),0);
     const previewCounts = {
@@ -51786,6 +52073,7 @@ async function readBackupExcelFile(event) {
       <div class="alert alert-green" style="line-height:1.6">
         ✅ ไฟล์ถูกต้อง · ${manifest.sessionIds.length} Session · ${totalRows.toLocaleString()} แถว<br>
         ${photoArchive ? `รูปใน ZIP ${Number(photoArchive.manifest.photo_count||0).toLocaleString(uiLocale())} ไฟล์ · ${formatFileBytes(photoArchive.manifest.photo_bytes||0)}<br>` : 'ไฟล์ Excel ไม่มีรูปจริง · Restore เฉพาะข้อมูล<br>'}
+        Remark ตรวจนับ ${remarkCounts.countRemarks.toLocaleString(uiLocale())} · Remark WMS ${remarkCounts.wmsRemarks.toLocaleString(uiLocale())} · ตัวเลือก WMS ${remarkCounts.wmsOptions.toLocaleString(uiLocale())}<br>
         สร้างเมื่อ ${manifest.map.created_at ? new Date(manifest.map.created_at).toLocaleString(uiLocale()) : '-'}
       </div>
       ${backupCountCards(previewCounts)}`;
@@ -51865,6 +52153,53 @@ async function restoreBackupBatch(spec,batch) {
   await invokeAdminBackup('restore_batch',{table:spec.table,rows:batch});
 }
 
+async function verifyRestoredRemarkData(dataBySheet) {
+  const checks = [
+    {
+      label:'Remark ตรวจนับ', table:'count_records',
+      rows:(dataBySheet.Counts || []).filter(row => backupRestoreValuePresent(row.remark)),
+      columns:['remark'],
+    },
+    {
+      label:'Remark WMS', table:'audit_log',
+      rows:(dataBySheet.Audit || []).filter(row => row.action === 'wms_note'),
+      columns:['session_id','assignment_id','item_id','action','new_value'],
+    },
+    {
+      label:'ตัวเลือก Remark WMS', table:'remark_options',
+      rows:(dataBySheet.Remarks || []).filter(row => String(row.context || '').trim().toLowerCase() === 'wms'),
+      columns:['context','label'],
+    },
+  ];
+  const verified = {};
+  for (const check of checks) {
+    const expectedRows = check.rows || [];
+    const ids = expectedRows.map(row => row.id).filter(Boolean);
+    if (ids.length !== expectedRows.length) throw new Error(`${check.label} มีแถวที่ไม่มี ID`);
+    const restoredRows = await fetchBackupRowsByValues(
+      check.table,
+      ['id',...check.columns],
+      'id',
+      ids,
+    );
+    const restoredById = new Map(restoredRows.map(row => [String(row.id),row]));
+    expectedRows.forEach((expected,index) => {
+      const actual = restoredById.get(String(expected.id));
+      if (!actual) throw new Error(`${check.label} หลัง Restore ขาด ID ${expected.id}`);
+      check.columns.forEach(column => {
+        if (backupCanonicalValue(actual[column]) !== backupCanonicalValue(expected[column])) {
+          throw new Error(`${check.label} หลัง Restore ค่า ${column} ไม่ตรง (แถว ${index + 1}, ID ${expected.id})`);
+        }
+      });
+    });
+    if (restoredById.size !== expectedRows.length) {
+      throw new Error(`${check.label} หลัง Restore จำนวนไม่ตรง: พบ ${restoredById.size}, ต้องมี ${expectedRows.length}`);
+    }
+    verified[check.label] = expectedRows.length;
+  }
+  return verified;
+}
+
 async function restoreBackupExcel() {
   if (prof?.role !== 'admin') { adminOnlyMessage(); return; }
   if (!_backupParsed) { alert('กรุณาเลือกและตรวจไฟล์ Backup ก่อน'); return; }
@@ -51890,7 +52225,9 @@ async function restoreBackupExcel() {
         await new Promise(resolve => setTimeout(resolve,0));
       }
     }
-    setBackupProgress(98,'กำลังตรวจจำนวนข้อมูลหลัง Restore...');
+    setBackupProgress(98,'กำลังอ่านกลับและตรวจ Remark หลัง Restore...');
+    const verifiedRemarks = await verifyRestoredRemarkData(_backupParsed.dataBySheet);
+    setBackupProgress(99,'Remark ครบแล้ว · กำลังตรวจจำนวนข้อมูลทั้งหมด...');
     const result = await invokeAdminBackup('complete_restore', {
       session_ids:_backupParsed.sessionIds,
       file_name:_backupParsed.fileName,
@@ -51900,6 +52237,9 @@ async function restoreBackupExcel() {
     setBackupProgress(100,'Restore สำเร็จและตรวจจำนวนครบ');
     if (alertBox) alertBox.innerHTML = `<div class="alert alert-green" style="line-height:1.65">
       ✅ Restore สำเร็จ ข้อมูล Session และความสัมพันธ์กลับมาครบ<br>
+      Remark ตรวจนับ ${Number(verifiedRemarks['Remark ตรวจนับ'] || 0).toLocaleString(uiLocale())} ·
+      Remark WMS ${Number(verifiedRemarks['Remark WMS'] || 0).toLocaleString(uiLocale())} ·
+      ตัวเลือก WMS ${Number(verifiedRemarks['ตัวเลือก Remark WMS'] || 0).toLocaleString(uiLocale())}<br>
       ${backupCountCards(result.actual)}
     </div>`;
     showActionSuccess('กู้คืนข้อมูล Session และตรวจสอบความสัมพันธ์ครบถ้วนแล้ว', {
@@ -51907,6 +52247,7 @@ async function restoreBackupExcel() {
       facts:[
         {label:'จำนวน Session',value:_backupParsed.sessionIds.length.toLocaleString(uiLocale())},
         {label:'จำนวนข้อมูล',value:totalRows.toLocaleString(uiLocale())},
+        {label:'Remark WMS',value:Number(verifiedRemarks['Remark WMS'] || 0).toLocaleString(uiLocale())},
         {label:'รูปที่ Restore',value:Number(photoResult.restored||0).toLocaleString(uiLocale())},
       ],
     });
