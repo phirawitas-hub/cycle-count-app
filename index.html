@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.73</title>
+<title>Cycle Count V1.75</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -10682,15 +10682,31 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
 }
 .wms-note-selection.has-selection { color:var(--theme-wms-note-text);background:var(--theme-wms-note-bg); }
 .wms-note-inline {
-  grid-column:1 / -1;
   width:100%;
-  margin-top:3px;
   padding:10px 12px;
   border:1px solid var(--theme-wms-workspace-border);
   border-radius:13px;
   background:var(--theme-wms-note-bg);
   color:var(--theme-wms-note-text);
   text-align:left;
+}
+.wms-note-inline-stack {
+  grid-column:1 / -1;
+  display:grid;
+  width:100%;
+  gap:7px;
+  margin-top:3px;
+}
+.wms-note-inline-stack[hidden] { display:none; }
+.wms-note-inline.is-saved {
+  border-color:var(--theme-wms-workspace-border);
+  background:var(--theme-wms-note-bg);
+  color:var(--theme-wms-note-text);
+}
+.wms-note-inline.is-count-note {
+  border-color:var(--theme-wms-workspace-border);
+  background:var(--theme-wms-count-bg);
+  color:var(--theme-text-color);
 }
 .wms-note-inline.is-draft {
   border-color:var(--theme-warning-color);
@@ -20629,7 +20645,7 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.73';
+const APP_VERSION = '1.75';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = 'v1-71';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -41622,22 +41638,27 @@ function toggleWmsNoteMenu(event, key) {
 function updateWmsNoteSelectionPreview(key) {
   const menu = Q(`wms_note_menu_${key}`);
   const preview = Q(`wms_note_selection_${key}`);
-  const inline = Q(`wms_note_inline_${key}`);
+  const draftInline = Q(`wms_note_draft_${key}`);
+  const inlineStack = Q(`wms_note_inline_${key}`);
   if (!menu || !preview) return;
   const selected = [...menu.querySelectorAll('.wms-note-option input[type="checkbox"]:checked')]
+    .filter(box => box.dataset.saved !== 'true')
     .map(box => box.value.trim())
     .filter(Boolean);
   preview.innerHTML = selected.length
-    ? `${translateUiText('เลือกแล้ว')}: <span data-i18n-skip>${escapeWmsText(selected.join(' · '))}</span>`
-    : translateUiText('ยังไม่ได้เลือกหมายเหตุ');
+    ? `หมายเหตุใหม่ที่เลือก: <span data-i18n-skip>${escapeWmsText(selected.join(' · '))}</span>`
+    : 'ยังไม่ได้เลือกหมายเหตุใหม่';
   preview.classList.toggle('has-selection', selected.length > 0);
-  if (inline) {
-    inline.hidden = selected.length === 0;
-    inline.classList.add('is-draft');
-    const label = inline.querySelector('span');
-    const value = inline.querySelector('strong');
+  if (draftInline) {
+    draftInline.hidden = selected.length === 0;
+    const label = draftInline.querySelector('span');
+    const value = draftInline.querySelector('strong');
     if (label) label.textContent = 'หมายเหตุที่กำลังเลือก (ยังไม่บันทึก)';
     if (value) value.textContent = selected.join(' · ');
+  }
+  if (inlineStack) {
+    const savedInline = inlineStack.querySelector('.wms-note-inline.is-saved');
+    inlineStack.hidden = !savedInline && selected.length === 0;
   }
 }
 
@@ -41666,6 +41687,7 @@ async function addCustomWmsNoteOption(event, key) {
       checkbox.type = 'checkbox';
       checkbox.value = result.row.label;
       checkbox.checked = true;
+      checkbox.dataset.saved = 'false';
       checkbox.addEventListener('change', () => updateWmsNoteSelectionPreview(key));
       const span = document.createElement('span');
       span.textContent = result.row.label;
@@ -42278,6 +42300,7 @@ function renderWmsList() {
     const noteOptions = (window._wmsNoteOptions || []).map(option => `
       <label class="wms-note-option">
         <input type="checkbox" value="${escapeWmsText(option.label)}"
+          data-saved="${savedNoteTexts.has(String(option.label || '').trim()) ? 'true' : 'false'}"
           ${savedNoteTexts.has(String(option.label || '').trim()) ? 'checked' : ''}
           onchange="updateWmsNoteSelectionPreview('${noteKey}')">
         <span data-i18n-skip>${escapeWmsText(option.label)}</span>
@@ -42299,8 +42322,8 @@ function renderWmsList() {
               onclick="toggleWmsNoteMenu(event,'${noteKey}')" aria-label="ปิด">${wmsIconSvg('close',16)}</button>
           </div>
           <div class="wms-note-option-list" id="wms_note_options_${noteKey}">${noteOptions}</div>
-          <div class="wms-note-selection ${notes.length?'has-selection':''}" id="wms_note_selection_${noteKey}">
-            ${notes.length ? `แสดงแล้ว: <span data-i18n-skip>${notes.map(note => escapeWmsText(wmsHistoricalNoteDisplayText(note))).filter(Boolean).join(' · ')}</span>` : 'ยังไม่ได้เลือกหมายเหตุ'}
+          <div class="wms-note-selection" id="wms_note_selection_${noteKey}">
+            ยังไม่ได้เลือกหมายเหตุใหม่
           </div>
           ${prof?.role === 'admin' ? `<div class="wms-note-add-row">
             <input id="wms_note_custom_${noteKey}" type="text" maxlength="120"
@@ -42318,10 +42341,27 @@ function renderWmsList() {
           </button>
         </div>
       </div>`;
+    const savedCountNotesHtml = notes
+      .filter(note => note?.source === 'count' || note?.source === 'supervisor')
+      .map(note => escapeWmsText(wmsHistoricalNoteDisplayText(note))).filter(Boolean).join(' · ');
+    const savedWmsNotesHtml = notes
+      .filter(note => !note?.source || note?.source === 'wms')
+      .map(note => escapeWmsText(wmsHistoricalNoteDisplayText(note))).filter(Boolean).join(' · ');
+    const hasSavedNotes = Boolean(savedCountNotesHtml || savedWmsNotesHtml);
     const noteInline = `
-      <div class="wms-note-inline" id="wms_note_inline_${noteKey}" ${notes.length ? '' : 'hidden'}>
-        <span>หมายเหตุที่บันทึกแล้ว</span>
-        <strong data-i18n-skip>${notes.map(note => escapeWmsText(wmsHistoricalNoteDisplayText(note))).filter(Boolean).join(' · ')}</strong>
+      <div class="wms-note-inline-stack" id="wms_note_inline_${noteKey}" ${hasSavedNotes ? '' : 'hidden'}>
+        ${savedCountNotesHtml ? `<div class="wms-note-inline is-saved is-count-note">
+          <span>หมายเหตุการตรวจนับที่บันทึกแล้ว</span>
+          <strong data-i18n-skip>${savedCountNotesHtml}</strong>
+        </div>` : ''}
+        ${savedWmsNotesHtml ? `<div class="wms-note-inline is-saved is-wms-note">
+          <span>หมายเหตุปรับปรุงยอด WMS ที่บันทึกแล้ว</span>
+          <strong data-i18n-skip>${savedWmsNotesHtml}</strong>
+        </div>` : ''}
+        <div class="wms-note-inline is-draft" id="wms_note_draft_${noteKey}" hidden>
+          <span>หมายเหตุที่กำลังเลือก (ยังไม่บันทึก)</span>
+          <strong data-i18n-skip></strong>
+        </div>
       </div>`;
 
     const countCell = (label, value, extraClass='') => `<div class="wms-count-cell ${extraClass}">
@@ -49779,6 +49819,23 @@ async function fetchBackupRowsByValues(table, columns, filterColumn, values) {
   return output;
 }
 
+async function fetchBackupWmsRemarksByAssignments(columns, assignmentIds) {
+  const cleanIds = [...new Set((assignmentIds || []).filter(Boolean))];
+  if (!cleanIds.length) return [];
+  const output = [];
+  for (let start = 0; start < cleanIds.length; start += 50) {
+    const batch = cleanIds.slice(start,start + 50);
+    const rows = await fetchAllBackupRows('audit_log',columns,query => {
+      query = batch.length === 1
+        ? query.eq('assignment_id',batch[0])
+        : query.in('assignment_id',batch);
+      return query.eq('action','wms_note');
+    });
+    output.push(...rows);
+  }
+  return output;
+}
+
 async function fetchBackupExactCountByValues(table, filterColumn, values) {
   const cleanValues = [...new Set((values || []).filter(Boolean))];
   if (!cleanValues.length) return 0;
@@ -50308,7 +50365,31 @@ async function collectBackupData(sessionIds) {
     setBackupProgress(Math.round(index / BACKUP_SHEET_SPECS.length * 72),
       `กำลังอ่าน ${spec.sheet} (${index + 1}/${BACKUP_SHEET_SPECS.length})...`, 'export');
     let rows = [];
-    if (spec.scope === 'master' || spec.scope === 'reference') {
+    if (spec.sheet === 'Audit') {
+      // Legacy WMS notes can have assignment_id while session_id/location_id
+      // is missing. Read by both routes, merge by Audit ID, then enrich from
+      // the selected Assignment so no historical Remark disappears in Backup.
+      const selectedAssignments = dataBySheet.Assignments || [];
+      const assignmentIds = selectedAssignments.map(row => row.id).filter(Boolean);
+      const assignmentMap = new Map(selectedAssignments.map(row => [String(row.id),row]));
+      const [sessionAuditRows,assignmentAuditRows] = await Promise.all([
+        fetchBackupRowsByValues(spec.table,spec.columns,'session_id',cleanSessionIds),
+        fetchBackupWmsRemarksByAssignments(spec.columns,assignmentIds),
+      ]);
+      const auditById = new Map();
+      [...sessionAuditRows,...assignmentAuditRows].forEach(row => {
+        const assignment = assignmentMap.get(String(row.assignment_id || '')) || null;
+        const normalized = assignment
+          ? {
+              ...row,
+              session_id:assignment.session_id || row.session_id || null,
+              location_id:row.location_id || assignment.location_id || null,
+            }
+          : row;
+        auditById.set(String(row.id),normalized);
+      });
+      rows = [...auditById.values()];
+    } else if (spec.scope === 'master' || spec.scope === 'reference') {
       rows = await fetchAllBackupRows(spec.table, spec.columns);
     } else if (spec.scope === 'session') {
       const filterColumn = spec.table === 'count_sessions' ? 'id' : 'session_id';
@@ -50581,19 +50662,58 @@ function buildTeamBackupData(dataBySheet) {
   const wmsRemarkAuditRows = audits.filter(row => row.action === 'wms_note');
   const wmsRemarksByItem = new Map();
   const wmsRemarksByAssignment = new Map();
+  const wmsRemarksByBusinessItem = new Map();
+  const wmsRemarksByBusinessLocation = new Map();
+  const addWmsRemarkToMap = (map,key,row) => {
+    if (!key) return;
+    if (!map.has(key)) map.set(key,[]);
+    map.get(key).push(row);
+  };
   wmsRemarkAuditRows.forEach(row => {
     if (!row.assignment_id) return;
+    const auditAssignment = assignmentById.get(String(row.assignment_id || '')) || {};
+    const auditSessionId = row.session_id || auditAssignment.session_id || '';
+    const auditLocationId = row.location_id || auditAssignment.location_id || '';
     const target = row.item_id ? wmsRemarksByItem : wmsRemarksByAssignment;
     const key = row.item_id
       ? assignmentItemKey(row.assignment_id,row.item_id)
       : String(row.assignment_id);
-    if (!target.has(key)) target.set(key,[]);
-    target.get(key).push(row);
+    addWmsRemarkToMap(target,key,row);
+    if (auditSessionId && auditLocationId) {
+      if (row.item_id) {
+        addWmsRemarkToMap(
+          wmsRemarksByBusinessItem,
+          stockKey(auditSessionId,auditLocationId,row.item_id),
+          row,
+        );
+      } else {
+        addWmsRemarkToMap(
+          wmsRemarksByBusinessLocation,
+          sessionLocationKey(auditSessionId,auditLocationId),
+          row,
+        );
+      }
+    }
   });
-  const wmsRemarkForWork = (assignmentId,itemId) => [
-    ...(wmsRemarksByAssignment.get(String(assignmentId || '')) || []),
-    ...(wmsRemarksByItem.get(assignmentItemKey(assignmentId,itemId)) || []),
-  ]
+  const wmsRemarkForWork = (assignmentId,itemId,sessionId='',locationId='') => {
+    const candidates = [
+      ...(wmsRemarksByAssignment.get(String(assignmentId || '')) || []),
+      ...(wmsRemarksByItem.get(assignmentItemKey(assignmentId,itemId)) || []),
+      ...(wmsRemarksByBusinessLocation.get(sessionLocationKey(sessionId,locationId)) || []),
+      ...(wmsRemarksByBusinessItem.get(stockKey(sessionId,locationId,itemId)) || []),
+    ];
+    const seen = new Set();
+    return candidates.filter(row => {
+      const identity = row.id
+        ? `ID:${row.id}`
+        : [row.assignment_id,row.item_id,row.created_at,auditDisplayText(row.new_value)].join('|');
+      if (seen.has(identity)) return false;
+      seen.add(identity);
+      return true;
+    });
+  };
+  const wmsRemarkTextForWork = (assignmentId,itemId,sessionId='',locationId='') =>
+    wmsRemarkForWork(assignmentId,itemId,sessionId,locationId)
     .sort((a,b) => (Date.parse(a.created_at || '') || 0) - (Date.parse(b.created_at || '') || 0))
     .map(row => auditDisplayText(row.new_value))
     .filter(Boolean)
@@ -50751,7 +50871,7 @@ function buildTeamBackupData(dataBySheet) {
       wmsLocationClosedAt:backupDateForTeam(assignment?.wms_closed_at),
       typeIssue:typeIssueName(finalCountRecord?.type_issue || latestTypeIssueRecord?.type_issue || ''),
       remark:finalCountRecord?.remark || latestRemarkRecord?.remark || '',
-      wmsRemark:wmsRemarkForWork(assignment?.id,itemId),
+      wmsRemark:wmsRemarkTextForWork(assignment?.id,itemId,sessionId,locationId),
       photoUrl:finalCountRecord?.photo_url || latestPhotoRecord?.photo_url || '',
       sessionId, assignmentId:assignment?.id || '',
       locationId, itemId, hasApproval:approvalConfirmed,
@@ -50823,7 +50943,7 @@ function buildTeamBackupData(dataBySheet) {
     count2:null, count2Counter:'', count2Time:'',
     count3:null, count3Counter:'', count3Time:'',
     physicalCount:null, variance:null, result:'ยังไม่ได้นับ',
-    typeIssue:'', remark:'', wmsRemark:wmsRemarkForWork(assignment?.id,itemId), photoUrl:'', approvalResolution:'', reviewStatus:'ยังไม่ได้ตรวจ',
+    typeIssue:'', remark:'', wmsRemark:wmsRemarkTextForWork(assignment?.id,itemId,sessionId,locationId), photoUrl:'', approvalResolution:'', reviewStatus:'ยังไม่ได้ตรวจ',
     releasedToWms:'', supervisorNote:'',
     approvedBy:'', approvedAt:'', wmsStatus:'', wmsFixedBy:'', wmsFixedAt:'',
     assignedUser:profileName(assignment?.assigned_to),
@@ -51119,6 +51239,31 @@ function buildTeamBackupData(dataBySheet) {
     || String(a.location).localeCompare(String(b.location),'en',{numeric:true})
     || String(a.item).localeCompare(String(b.item),'en',{numeric:true})
     || String(a.recordedAt).localeCompare(String(b.recordedAt)));
+
+  // Never release a readable Backup that silently drops a saved WMS Remark.
+  // The raw Audit sheet remains the Restore source of truth, while Data_Count
+  // and WMS_Remarks must expose every saved message to the team as well.
+  if (wmsRemarkRows.length !== wmsRemarkAuditRows.length
+    || wmsRemarkRows.some(row => !normalizeImportText(row.wmsRemark))) {
+    throw new Error('หยุดสร้าง Backup: ชีต WMS_Remarks มีจำนวนหรือข้อความไม่ครบ');
+  }
+  const missingWmsRemarkCoverage = wmsRemarkAuditRows.filter(audit => {
+    const assignment = assignmentById.get(String(audit.assignment_id || '')) || {};
+    const sessionId = audit.session_id || assignment.session_id || '';
+    const locationId = audit.location_id || assignment.location_id || '';
+    const itemId = audit.item_id || '';
+    const text = auditDisplayText(audit.new_value);
+    if (!sessionId || !locationId || !text) return true;
+    const matchingRows = dataCountRows.filter(row =>
+      String(row.sessionId || '') === String(sessionId)
+      && String(row.locationId || '') === String(locationId)
+      && (!itemId || String(row.itemId || '') === String(itemId))
+    );
+    return !matchingRows.some(row => String(row.wmsRemark || '').includes(text));
+  });
+  if (missingWmsRemarkCoverage.length) {
+    throw new Error(`หยุดสร้าง Backup: WMS Remark จับคู่ลง Data_Count ไม่ครบ ${missingWmsRemarkCoverage.length} รายการ`);
+  }
 
   const foundItemRows = foundItems.map(found => {
     const session = sessionById.get(String(found.session_id || '')) || {};
