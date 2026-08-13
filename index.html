@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.76</title>
+<title>Cycle Count V1.77</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -20655,13 +20655,13 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
 @container zoneboard (min-width:761px){.exec-v156-zone-strip{grid-template-columns:minmax(125px,1.2fr) repeat(4,minmax(82px,.82fr)) minmax(190px,1.55fr)!important;align-items:stretch!important;gap:11px!important}.exec-v156-zone-name,.exec-v157-accuracy-result{grid-column:auto!important;min-height:135px!important}.exec-v156-stat{min-height:135px!important}}
 </style>
 </head>
-<body data-build="v1-76">
+<body data-build="v1-77">
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.76';
+const APP_VERSION = '1.77';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
-const APP_BUILD_ID = 'v1-76';
+const APP_BUILD_ID = 'v1-77';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
 // v31 defensive date helpers: prevent legacy cached/remaining references from crashing the dashboard.
 var selectedDateFrom = '';
@@ -40045,10 +40045,10 @@ async function loadSvDash() {
   const wmsHistoryPromise = tab === 'wms' && wmsHistoryAssignmentIds.length
     ? fetchSupabaseRowsByValues(
         'audit_log',
-        'id,session_id,assignment_id,item_id,action,new_value,created_at',
+        'id,session_id,assignment_id,item_id,action,old_value,new_value,created_at',
         'assignment_id',
         wmsHistoryAssignmentIds,
-        query => query.in('action',['wms_note','wms_status_change']),
+        query => query.in('action',['wms_note','wms_note_removed','wms_status_change']),
       )
     : Promise.resolve({ data:[],error:null });
   const [
@@ -40089,17 +40089,9 @@ async function loadSvDash() {
       if (state === null || !row.assignment_id || !row.item_id) return;
       wmsStatusAuditMap[`${row.assignment_id}|${row.item_id}`] = state;
     });
-  (wmsNoteRows||[]).filter(n => n.action === 'wms_note').forEach(n => {
-    const note = { id:n.id, text:n.new_value || '', created_at:n.created_at, source:'wms' };
-    if (n.item_id) {
-      const key = `${n.assignment_id}|${n.item_id}`;
-      if (!wmsNoteMap[key]) wmsNoteMap[key] = [];
-      wmsNoteMap[key].push(note);
-    } else if (n.assignment_id) {
-      if (!assignmentWmsNoteMap[n.assignment_id]) assignmentWmsNoteMap[n.assignment_id] = [];
-      assignmentWmsNoteMap[n.assignment_id].push(note);
-    }
-  });
+  const activeWmsRemarkState = reduceActiveWmsRemarkAudit(wmsNoteRows || []);
+  activeWmsRemarkState.byItem.forEach((notes,key) => { wmsNoteMap[key] = notes; });
+  activeWmsRemarkState.byAssignment.forEach((notes,key) => { assignmentWmsNoteMap[key] = notes; });
   (rawCounts || []).forEach(record => {
     const remark = String(record.remark || '').trim();
     const typeIssue = String(record.type_issue || '').trim();
@@ -40137,9 +40129,11 @@ async function loadSvDash() {
   const historicalWmsNotesFor = (assignmentId,itemId,approval=null) => {
     const key = `${assignmentId || ''}|${itemId || ''}`;
     const supervisorNote = String(approval?.supervisor_note || '').trim();
+    const itemSuppressed = activeWmsRemarkState.suppressedByItem.get(key) || new Set();
     return mergeHistoricalWmsNotes(
       wmsNoteMap[key] || [],
-      assignmentWmsNoteMap[assignmentId] || [],
+      (assignmentWmsNoteMap[assignmentId] || []).filter(note =>
+        !itemSuppressed.has(String(note?.text || '').trim().toLocaleLowerCase('th'))),
       supervisorNote ? [{ text:supervisorNote, source:'supervisor', created_at:approval?.approved_at || null }] : [],
       countRemarkMap[key] || [],
     );
@@ -41659,27 +41653,39 @@ function updateWmsNoteSelectionPreview(key) {
   const draftInline = Q(`wms_note_draft_${key}`);
   const inlineStack = Q(`wms_note_inline_${key}`);
   if (!menu || !preview) return;
-  const selected = [...menu.querySelectorAll('.wms-note-option input[type="checkbox"]:checked')]
-    .filter(box => box.dataset.saved !== 'true')
+  const options = [...menu.querySelectorAll('.wms-note-option input[type="checkbox"]')];
+  const added = options
+    .filter(box => box.checked && box.dataset.saved !== 'true')
     .map(box => box.value.trim())
     .filter(Boolean);
-  preview.innerHTML = selected.length
-    ? `หมายเหตุใหม่ที่เลือก: <span data-i18n-skip>${escapeWmsText(selected.join(' · '))}</span>`
-    : 'ยังไม่ได้เลือกหมายเหตุใหม่';
-  preview.classList.toggle('has-selection', selected.length > 0);
+  const removed = options
+    .filter(box => !box.checked && box.dataset.saved === 'true')
+    .map(box => box.value.trim())
+    .filter(Boolean);
+  const changes = [
+    added.length ? `เพิ่ม: <span data-i18n-skip>${escapeWmsText(added.join(' · '))}</span>` : '',
+    removed.length ? `ยกเลิก: <span data-i18n-skip>${escapeWmsText(removed.join(' · '))}</span>` : '',
+  ].filter(Boolean);
+  preview.innerHTML = changes.length
+    ? changes.join('<br>')
+    : 'ยังไม่มีการเปลี่ยนแปลง';
+  preview.classList.toggle('has-selection', changes.length > 0);
   if (draftInline) {
-    draftInline.hidden = selected.length === 0;
+    draftInline.hidden = changes.length === 0;
     const label = draftInline.querySelector('span');
     const value = draftInline.querySelector('strong');
-    if (label) label.textContent = 'Remark WMS ที่กำลังเลือก (ยังไม่บันทึก)';
-    if (value) value.textContent = selected.join(' · ');
+    if (label) label.textContent = 'การแก้ไข Remark WMS (ยังไม่บันทึก)';
+    if (value) value.textContent = [
+      added.length ? `เพิ่ม: ${added.join(' · ')}` : '',
+      removed.length ? `ยกเลิก: ${removed.join(' · ')}` : '',
+    ].filter(Boolean).join(' | ');
   }
   if (inlineStack) {
     const hasSavedValue = Boolean(
       [...inlineStack.querySelectorAll('.wms-note-inline.is-saved')]
         .some(node => !node.classList.contains('is-empty-note'))
     );
-    inlineStack.hidden = !hasSavedValue && selected.length === 0;
+    inlineStack.hidden = !hasSavedValue && changes.length === 0;
   }
 }
 
@@ -41730,17 +41736,13 @@ async function saveWmsNotes(assignmentId, itemId, key) {
   const menu = Q(`wms_note_menu_${key}`);
   const saveBtn = Q(`wms_note_save_${key}`);
   if (!menu) return;
-  const notes = [...new Set(
-    [...menu.querySelectorAll('.wms-note-option input[type="checkbox"]')]
-      .filter(box => box.checked)
-      .map(box => box.value.trim())
-      .filter(Boolean)
-  )];
-  if (!notes.length) {
-    alert('กรุณาเลือกหรือเพิ่มหมายเหตุอย่างน้อย 1 ข้อ');
-    return;
-  }
-
+  const selectedNoteMap = new Map();
+  [...menu.querySelectorAll('.wms-note-option input[type="checkbox"]')]
+    .filter(box => box.checked)
+    .map(box => box.value.trim())
+    .filter(Boolean)
+    .forEach(note => selectedNoteMap.set(note.toLocaleLowerCase('th'),note));
+  const notes = [...selectedNoteMap.values()];
   const assignment = window._wmsAsgnInfoMap?.[assignmentId];
   const target = (window._wmsRows || [])
     .find(v => String(v.assignment_id || '') === String(assignmentId || '')
@@ -41749,63 +41751,57 @@ async function saveWmsNotes(assignmentId, itemId, key) {
     showWmsFeedback('ไม่พบรายการที่ต้องบันทึก กรุณารีเฟรชหน้าแล้วลองใหม่','error');
     return;
   }
-  const existingNoteTexts = new Set(
+  const noteKey = text => String(text || '').trim().toLocaleLowerCase('th');
+  const existingByKey = new Map(
     (target?.wms_notes || [])
       .filter(note => !note.source || note.source === 'wms')
-      .map(note => String(note.text || note.new_value || '').trim()).filter(Boolean)
+      .map(note => String(note.text || note.new_value || '').trim())
+      .filter(Boolean)
+      .map(note => [noteKey(note),note])
   );
-  const newNotes = notes.filter(note => !existingNoteTexts.has(note));
-  if (!newNotes.length) {
-    showWmsFeedback('หมายเหตุที่เลือกแสดงอยู่ในรายการแล้ว');
+  const selectedByKey = new Map(notes.map(note => [noteKey(note),note]));
+  const newNotes = notes.filter(note => !existingByKey.has(noteKey(note)));
+  const removedNotes = [...existingByKey.entries()]
+    .filter(([key]) => !selectedByKey.has(key))
+    .map(([,note]) => note);
+  if (!newNotes.length && !removedNotes.length) {
+    showWmsFeedback('Remark WMS ไม่มีการเปลี่ยนแปลง');
     renderWmsList();
     return;
   }
-  const rows = newNotes.map(note => ({
-    session_id: S._dashSid || assignment?.session_id || null,
-    location_id: assignment?.location_id || null,
-    item_id: itemId || null,
-    assignment_id: assignmentId || null,
-    action: 'wms_note',
-    old_value: null,
-    new_value: note,
-    performed_by: me?.id || null,
-  }));
 
   try {
     if (saveBtn) {
       saveBtn.disabled = true;
       saveBtn.innerHTML = 'กำลังบันทึก...';
     }
-    const persistedRows = await persistWmsRemarks({
+    const persistedRows = await syncWmsRemarks({
       assignment,
       assignmentId,
       itemId,
-      rows,
+      selectedNotes:notes,
+      newNotes,
+      removedNotes,
     });
 
     if (target) {
       const countNotes = (target.wms_notes || [])
         .filter(note => note?.source === 'count' || note?.source === 'supervisor');
-      const oldWmsNotes = (target.wms_notes || [])
-        .filter(note => !note?.source || note?.source === 'wms');
-      const receivedWmsNotes = (persistedRows || []).map((row,index) => ({
+      const activeWmsNotes = (persistedRows || []).map((row,index) => ({
         id:row.id || `saved_${Date.now()}_${index}`,
         text:String(row.new_value || row.text || '').trim(),
         created_at:row.created_at || new Date().toISOString(),
         source:'wms',
       })).filter(note => note.text);
-      const seenWms = new Set();
-      const mergedWms = [...oldWmsNotes,...receivedWmsNotes].filter(note => {
-        const noteKey = String(note?.text || note?.new_value || '').trim().toLocaleLowerCase('th');
-        if (!noteKey || seenWms.has(noteKey)) return false;
-        seenWms.add(noteKey);
-        return true;
-      });
-      target.wms_notes = [...countNotes,...mergedWms];
+      target.wms_notes = [...countNotes,...activeWmsNotes];
     }
     closeWmsNoteMenus();
     renderWmsList();
-    showWmsFeedback(`บันทึก Remark WMS แล้ว ${newNotes.length} รายการ`);
+    const summary = [
+      newNotes.length ? `เพิ่ม ${newNotes.length}` : '',
+      removedNotes.length ? `ยกเลิก ${removedNotes.length}` : '',
+    ].filter(Boolean).join(' · ');
+    showWmsFeedback(`อัปเดต Remark WMS แล้ว${summary ? ` · ${summary}` : ''}`);
   } catch (error) {
     console.error(error);
     showWmsFeedback('บันทึกหมายเหตุไม่สำเร็จ: ' + (error.message || error), 'error');
@@ -41859,29 +41855,34 @@ function isMissingWmsRemarkRpc(error) {
   const code = String(error?.code || '').toUpperCase();
   const message = String(error?.message || error || '');
   return code === 'PGRST202'
-    || (/save_wms_remarks_v176/i.test(message) && /not found|schema cache|could not find/i.test(message));
+    || (/set_wms_remarks_v177/i.test(message) && /not found|schema cache|could not find/i.test(message));
 }
 
 function wmsRemarkSaveError(error) {
   const code = String(error?.code || '').toUpperCase();
   const message = String(error?.message || error || 'บันทึกไม่สำเร็จ');
   if (code === '42501' || /row-level security|permission denied|policy/i.test(message)) {
-    return new Error('ฐานข้อมูลยังไม่อนุญาตให้บันทึก Remark WMS กรุณารันไฟล์ Cycle_Count_v176_WMS_Remark.sql ใน Supabase SQL Editor 1 ครั้ง');
+    return new Error('ฐานข้อมูลยังไม่อนุญาตให้แก้ไข Remark WMS กรุณารันไฟล์ Cycle_Count_v177_WMS_Remark.sql ใน Supabase SQL Editor 1 ครั้ง');
   }
   return error instanceof Error ? error : new Error(message);
 }
 
-async function persistWmsRemarks({ assignment, assignmentId, itemId, rows }) {
+async function syncWmsRemarks({ assignment, assignmentId, itemId, selectedNotes, newNotes, removedNotes }) {
   const sessionId = S._dashSid || assignment?.session_id || null;
   const locationId = assignment?.location_id || null;
-  const noteTexts = rows.map(row => String(row.new_value || '').trim()).filter(Boolean);
-  if (!sessionId || !assignmentId || !locationId || !itemId || !noteTexts.length) {
+  const activeNoteMap = new Map();
+  (selectedNotes || [])
+    .map(note => String(note || '').trim())
+    .filter(Boolean)
+    .forEach(note => activeNoteMap.set(note.toLocaleLowerCase('th'),note));
+  const noteTexts = [...activeNoteMap.values()];
+  if (!sessionId || !assignmentId || !locationId || !itemId) {
     throw new Error('ข้อมูล Session / Location / Item ไม่ครบ กรุณารีเฟรชหน้าแล้วลองใหม่');
   }
 
   // Preferred path: save atomically and require the database to return the
   // rows it actually persisted. This prevents false success under Audit RLS.
-  const rpcResult = await sb.rpc('save_wms_remarks_v176', {
+  const rpcResult = await sb.rpc('set_wms_remarks_v177', {
     p_session_id:sessionId,
     p_assignment_id:assignmentId,
     p_location_id:locationId,
@@ -41890,20 +41891,37 @@ async function persistWmsRemarks({ assignment, assignmentId, itemId, rows }) {
   });
   if (!rpcResult.error) {
     const savedRows = Array.isArray(rpcResult.data?.notes) ? rpcResult.data.notes : [];
-    if (!savedRows.length) throw new Error('ฐานข้อมูลไม่ส่ง Remark WMS ที่บันทึกกลับมา กรุณาลองใหม่');
+    if (savedRows.length !== noteTexts.length) {
+      throw new Error('Remark WMS ที่ฐานข้อมูลบันทึกกลับมาไม่ตรงกับรายการที่เลือก กรุณาลองใหม่');
+    }
     return savedRows;
   }
   if (!isMissingWmsRemarkRpc(rpcResult.error)) throw wmsRemarkSaveError(rpcResult.error);
 
-  // Compatibility fallback before the one-time SQL patch has been installed.
+  // Compatibility fallback: append both add/remove events. We never delete
+  // Audit history, so a removed Remark can still be inspected later.
+  const eventRows = [
+    ...(newNotes || []).map(note => ({
+      session_id:sessionId,location_id:locationId,item_id:itemId,
+      assignment_id:assignmentId,action:'wms_note',old_value:null,
+      new_value:note,performed_by:me?.id || null,
+    })),
+    ...(removedNotes || []).map(note => ({
+      session_id:sessionId,location_id:locationId,item_id:itemId,
+      assignment_id:assignmentId,action:'wms_note_removed',old_value:note,
+      new_value:'ยกเลิก Remark WMS',performed_by:me?.id || null,
+    })),
+  ];
   const directResult = await sb.from('audit_log')
-    .insert(rows)
-    .select('id,session_id,assignment_id,item_id,action,new_value,created_at');
+    .insert(eventRows)
+    .select('id,session_id,assignment_id,item_id,action,old_value,new_value,created_at');
   if (directResult.error) throw wmsRemarkSaveError(directResult.error);
-  if (!Array.isArray(directResult.data) || directResult.data.length !== rows.length) {
-    throw new Error('ตรวจสอบการบันทึก Remark WMS ไม่สำเร็จ กรุณารันไฟล์ Cycle_Count_v176_WMS_Remark.sql ใน Supabase SQL Editor 1 ครั้ง');
+  if (!Array.isArray(directResult.data) || directResult.data.length !== eventRows.length) {
+    throw new Error('ตรวจสอบการแก้ไข Remark WMS ไม่สำเร็จ กรุณารันไฟล์ Cycle_Count_v177_WMS_Remark.sql ใน Supabase SQL Editor 1 ครั้ง');
   }
-  return directResult.data;
+  return noteTexts.map((text,index) => ({
+    id:`active_${Date.now()}_${index}`,new_value:text,created_at:new Date().toISOString(),
+  }));
 }
 
 async function closeWmsLocation(assignmentId,button) {
@@ -42203,6 +42221,58 @@ function wmsHistoricalNoteDisplayText(note) {
   return text;
 }
 
+function reduceActiveWmsRemarkAudit(auditRows=[]) {
+  const itemState = new Map();
+  const assignmentState = new Map();
+  const stateFor = record => {
+    if (record?.item_id) {
+      const key = `${record.assignment_id || ''}|${record.item_id}`;
+      if (!itemState.has(key)) itemState.set(key,new Map());
+      return itemState.get(key);
+    }
+    const key = String(record?.assignment_id || '');
+    if (!assignmentState.has(key)) assignmentState.set(key,new Map());
+    return assignmentState.get(key);
+  };
+
+  [...(auditRows || [])]
+    .filter(record => ['wms_note','wms_note_removed'].includes(record?.action))
+    .sort((a,b) => {
+      const timeDiff = (Date.parse(a?.created_at || '') || 0) - (Date.parse(b?.created_at || '') || 0);
+      return timeDiff || String(a?.id || '').localeCompare(String(b?.id || ''));
+    })
+    .forEach(record => {
+      if (!record?.assignment_id) return;
+      const text = String(
+        record.action === 'wms_note_removed'
+          ? (record.old_value || record.new_value || '')
+          : (record.new_value || '')
+      ).trim();
+      if (!text) return;
+      const noteKey = text.toLocaleLowerCase('th');
+      const state = stateFor(record);
+      if (record.action === 'wms_note_removed') {
+        state.set(noteKey,null);
+      } else {
+        state.set(noteKey,{
+          id:record.id,
+          text,
+          created_at:record.created_at || null,
+          source:'wms',
+        });
+      }
+    });
+
+  return {
+    byItem:new Map([...itemState].map(([key,value]) => [key,[...value.values()].filter(Boolean)])),
+    byAssignment:new Map([...assignmentState].map(([key,value]) => [key,[...value.values()].filter(Boolean)])),
+    suppressedByItem:new Map([...itemState].map(([key,value]) => [
+      key,
+      new Set([...value.entries()].filter(([,note]) => !note).map(([noteKey]) => noteKey)),
+    ])),
+  };
+}
+
 function mergeLoadedWmsAuditHistory(auditRows,sessionId) {
   if (String(S._dashSid || '') !== String(sessionId || '')) return false;
   const rows = window._wmsRows || [];
@@ -42211,8 +42281,9 @@ function mergeLoadedWmsAuditHistory(auditRows,sessionId) {
     return false;
   }
 
-  const notesByItem = new Map();
-  const notesByAssignment = new Map();
+  const activeRemarkState = reduceActiveWmsRemarkAudit(auditRows || []);
+  const notesByItem = activeRemarkState.byItem;
+  const notesByAssignment = activeRemarkState.byAssignment;
   const latestStatusByItem = new Map();
   const auditFixedState = value => {
     const text = String(value ?? '').trim().toLocaleLowerCase('th');
@@ -42231,23 +42302,8 @@ function mergeLoadedWmsAuditHistory(auditRows,sessionId) {
         if (state !== null) latestStatusByItem.set(`${record.assignment_id}|${record.item_id}`,state);
         return;
       }
-      if (record.action !== 'wms_note') return;
-      const text = String(record.new_value || '').trim();
-      if (!text) return;
-      const note = {
-        id:record.id,
-        text,
-        created_at:record.created_at || null,
-        source:'wms',
-      };
-      if (record.item_id) {
-        const key = `${record.assignment_id}|${record.item_id}`;
-        if (!notesByItem.has(key)) notesByItem.set(key,[]);
-        notesByItem.get(key).push(note);
-      } else {
-        if (!notesByAssignment.has(record.assignment_id)) notesByAssignment.set(record.assignment_id,[]);
-        notesByAssignment.get(record.assignment_id).push(note);
-      }
+      // Remark add/remove events were already reduced above. This loop only
+      // restores the latest WMS completion state.
     });
 
   let changed = false;
@@ -42255,24 +42311,21 @@ function mergeLoadedWmsAuditHistory(auditRows,sessionId) {
     const key = `${row.assignment_id || ''}|${row.item_id || ''}`;
     const incoming = [
       ...(notesByItem.get(key) || []),
-      ...(notesByAssignment.get(row.assignment_id) || []),
+      ...(notesByAssignment.get(row.assignment_id) || []).filter(note =>
+        !(activeRemarkState.suppressedByItem.get(key) || new Set())
+          .has(String(note?.text || '').trim().toLocaleLowerCase('th'))),
     ];
     const current = Array.isArray(row.wms_notes) ? row.wms_notes : [];
-    const seen = new Set(current.map(note => {
-      const source = String(note?.source || 'wms').trim().toLocaleLowerCase('en-US');
-      const text = String(note?.text || note?.new_value || '').trim().toLocaleLowerCase('th');
-      return text ? `${source}|${text}` : '';
-    }).filter(Boolean));
-    const missing = incoming.filter(note => {
-      const text = String(note.text || '').trim().toLocaleLowerCase('th');
-      const source = String(note?.source || 'wms').trim().toLocaleLowerCase('en-US');
-      const noteKey = text ? `${source}|${text}` : '';
-      if (!noteKey || seen.has(noteKey)) return false;
-      seen.add(noteKey);
-      return true;
-    });
-    if (missing.length) {
-      row.wms_notes = [...current,...missing];
+    const nonWmsNotes = current.filter(note => note?.source === 'count' || note?.source === 'supervisor');
+    const currentWmsKey = current
+      .filter(note => !note?.source || note.source === 'wms')
+      .map(note => String(note?.text || note?.new_value || '').trim().toLocaleLowerCase('th'))
+      .filter(Boolean).sort().join('|');
+    const incomingWmsKey = incoming
+      .map(note => String(note?.text || '').trim().toLocaleLowerCase('th'))
+      .filter(Boolean).sort().join('|');
+    if (currentWmsKey !== incomingWmsKey) {
+      row.wms_notes = [...nonWmsNotes,...incoming];
       changed = true;
     }
     if (!row.wms_fixed && latestStatusByItem.get(key) === true) {
@@ -42418,7 +42471,7 @@ function renderWmsList() {
           </div>
           <div class="wms-note-option-list" id="wms_note_options_${noteKey}">${noteOptions}</div>
           <div class="wms-note-selection" id="wms_note_selection_${noteKey}">
-            ยังไม่ได้เลือกหมายเหตุใหม่
+            ยังไม่มีการเปลี่ยนแปลง
           </div>
           ${prof?.role === 'admin' ? `<div class="wms-note-add-row">
             <input id="wms_note_custom_${noteKey}" type="text" maxlength="120"
