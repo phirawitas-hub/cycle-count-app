@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.67</title>
+<title>Cycle Count V1.68</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -20625,13 +20625,13 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
 @container zoneboard (min-width:761px){.exec-v156-zone-strip{grid-template-columns:minmax(125px,1.2fr) repeat(4,minmax(82px,.82fr)) minmax(190px,1.55fr)!important;align-items:stretch!important;gap:11px!important}.exec-v156-zone-name,.exec-v157-accuracy-result{grid-column:auto!important;min-height:135px!important}.exec-v156-stat{min-height:135px!important}}
 </style>
 </head>
-<body data-build="v1-67">
+<body data-build="v1-68">
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.67';
+const APP_VERSION = '1.68';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
-const APP_BUILD_ID = 'v1-67';
+const APP_BUILD_ID = 'v1-68';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
 // v31 defensive date helpers: prevent legacy cached/remaining references from crashing the dashboard.
 var selectedDateFrom = '';
@@ -39861,27 +39861,38 @@ async function loadSvDash() {
   const allItemIds = [...new Set(wmsRows.map(v => v.item_id).filter(Boolean))];
   const allApproverIds = [...new Set(wmsRows.map(v => v.approved_by).filter(Boolean))];
   const wmsHistoryAssignmentIds = [...new Set(wmsRows.map(v => v.assignment_id).filter(Boolean))];
+  const wmsHistoryPromise = tab === 'wms' && wmsHistoryAssignmentIds.length
+    ? fetchSupabaseRowsByValues(
+        'audit_log',
+        'id,session_id,assignment_id,item_id,action,new_value,created_at',
+        'assignment_id',
+        wmsHistoryAssignmentIds,
+        query => query.in('action',['wms_note','wms_status_change']),
+      )
+    : Promise.resolve({ data:[],error:null });
   const wmsHistoryRead = tab === 'wms' && wmsHistoryAssignmentIds.length
     ? Promise.race([
-        fetchSupabaseRowsByValues(
-          'audit_log',
-          'id,session_id,assignment_id,item_id,action,new_value,created_at',
-          'assignment_id',
-          wmsHistoryAssignmentIds,
-          query => query.in('action',['wms_note','wms_status_change']),
-        ),
+        wmsHistoryPromise,
+        // Do not make the whole Dashboard wait for a large audit history.
+        // The same Promise continues below and hydrates every old Remark as
+        // soon as the server finishes returning it.
         new Promise(resolve => setTimeout(() => resolve({
           data:[],
-          error:{ message:'ข้ามการโหลดประวัติ WMS เนื่องจากใช้เวลานานเกิน 4 วินาที' },
-        }),4000)),
+          error:null,
+          _deferred:true,
+        }),900)),
       ])
-    : Promise.resolve({ data:[],error:null });
-  const [{ data: itemsData }, { data: approversData }, { data: wmsNoteRows, error: wmsNoteError }] = await Promise.all([
+    : wmsHistoryPromise;
+  const [
+    { data: itemsData },
+    { data: approversData },
+    { data: wmsNoteRows, error: wmsNoteError, _deferred:wmsHistoryDeferred },
+  ] = await Promise.all([
     fetchSupabaseRowsByValues('items', 'id,code,description', 'id', allItemIds),
     fetchSupabaseRowsByValues('profiles', 'id,name', 'id', allApproverIds),
     // Only the WMS tab needs its historical notes/status. Limit the query to
-    // assignments that are actually in the WMS queue and never block the page
-    // longer than four seconds.
+    // assignments that are actually in the WMS queue. A slow result is merged
+    // into the already-rendered workspace instead of being discarded.
     wmsHistoryRead,
   ]);
   if (isStaleLoad()) return;
@@ -40124,6 +40135,27 @@ async function loadSvDash() {
   window._wmsAsgnInfoMap = asgnInfoMap;
   window._actualCountersByAssignment = actualCountersByAssignment;
   window._actualCountersByWork = actualCountersByWork;
+  window._wmsHistoryLoading = Boolean(tab === 'wms' && wmsHistoryDeferred);
+  if (tab === 'wms' && wmsHistoryDeferred) {
+    const historySessionId = curSid;
+    wmsHistoryPromise.then(result => {
+      if (isStaleLoad() || String(S._dashSid || '') !== String(historySessionId || '')) return;
+      window._wmsHistoryLoading = false;
+      if (result?.error) {
+        console.warn('โหลด Remark เดิมของ WMS ไม่สำเร็จ:',result.error.message);
+        renderWmsList();
+        showWmsFeedback('โหลด Remark เดิมไม่สำเร็จ กรุณากดรีเฟรชข้อมูลอีกครั้ง','error');
+        return;
+      }
+      mergeLoadedWmsAuditHistory(result?.data || [],historySessionId);
+    }).catch(error => {
+      if (isStaleLoad() || String(S._dashSid || '') !== String(historySessionId || '')) return;
+      window._wmsHistoryLoading = false;
+      console.warn('โหลด Remark เดิมของ WMS ไม่สำเร็จ:',error);
+      renderWmsList();
+      showWmsFeedback('โหลด Remark เดิมไม่สำเร็จ กรุณากดรีเฟรชข้อมูลอีกครั้ง','error');
+    });
+  }
 
   // One accuracy record represents one physical Location + Item pair.
   // Counting rounds and reassignment must not create additional accuracy items.
@@ -41903,6 +41935,87 @@ function wmsHistoricalNoteDisplayText(note) {
   return text;
 }
 
+function mergeLoadedWmsAuditHistory(auditRows,sessionId) {
+  if (String(S._dashSid || '') !== String(sessionId || '')) return false;
+  const rows = window._wmsRows || [];
+  if (!rows.length) {
+    renderWmsList();
+    return false;
+  }
+
+  const notesByItem = new Map();
+  const notesByAssignment = new Map();
+  const latestStatusByItem = new Map();
+  const auditFixedState = value => {
+    const text = String(value ?? '').trim().toLocaleLowerCase('th');
+    if (!text) return null;
+    if (/ยังไม่ได้ตรวจสอบ|เปิดแก้ไข|not reviewed|unfixed|false/.test(text)) return false;
+    if (/ตรวจสอบแล้ว|ตรวจสอบเสร็จสิ้น|review completed|reviewed|fixed|true/.test(text)) return true;
+    return null;
+  };
+
+  [...(auditRows || [])]
+    .sort((a,b) => (Date.parse(a?.created_at || '') || 0) - (Date.parse(b?.created_at || '') || 0))
+    .forEach(record => {
+      if (!record?.assignment_id) return;
+      if (record.action === 'wms_status_change' && record.item_id) {
+        const state = auditFixedState(record.new_value);
+        if (state !== null) latestStatusByItem.set(`${record.assignment_id}|${record.item_id}`,state);
+        return;
+      }
+      if (record.action !== 'wms_note') return;
+      const text = String(record.new_value || '').trim();
+      if (!text) return;
+      const note = {
+        id:record.id,
+        text,
+        created_at:record.created_at || null,
+        source:'wms',
+      };
+      if (record.item_id) {
+        const key = `${record.assignment_id}|${record.item_id}`;
+        if (!notesByItem.has(key)) notesByItem.set(key,[]);
+        notesByItem.get(key).push(note);
+      } else {
+        if (!notesByAssignment.has(record.assignment_id)) notesByAssignment.set(record.assignment_id,[]);
+        notesByAssignment.get(record.assignment_id).push(note);
+      }
+    });
+
+  let changed = false;
+  rows.forEach(row => {
+    const key = `${row.assignment_id || ''}|${row.item_id || ''}`;
+    const incoming = [
+      ...(notesByItem.get(key) || []),
+      ...(notesByAssignment.get(row.assignment_id) || []),
+    ];
+    const current = Array.isArray(row.wms_notes) ? row.wms_notes : [];
+    const seen = new Set(current.map(note =>
+      String(note?.text || note?.new_value || '').trim().toLocaleLowerCase('th')
+    ).filter(Boolean));
+    const missing = incoming.filter(note => {
+      const noteKey = String(note.text || '').trim().toLocaleLowerCase('th');
+      if (!noteKey || seen.has(noteKey)) return false;
+      seen.add(noteKey);
+      return true;
+    });
+    if (missing.length) {
+      row.wms_notes = [...current,...missing];
+      changed = true;
+    }
+    if (!row.wms_fixed && latestStatusByItem.get(key) === true) {
+      row.wms_fixed = true;
+      row._wmsFixedRecoveredFromAudit = true;
+      changed = true;
+    }
+  });
+
+  updateWmsOverview();
+  renderWmsList();
+  if (changed) showWmsFeedback('โหลด Remark และสถานะยืนยันเดิมกลับมาเรียบร้อยแล้ว');
+  return changed;
+}
+
 function renderWmsList() {
   const container = Q('wms-list');
   if (!container) return;
@@ -41980,6 +42093,7 @@ function renderWmsList() {
     const varAmt = +v.variance;
     const noteKey = wmsDomKey(v.assignment_id, v.item_id);
     const notes = Array.isArray(v.wms_notes) ? v.wms_notes : [];
+    const historyLoading = Boolean(window._wmsHistoryLoading);
     const actualCounterText = escapeWmsText(
       (window._actualCountersByAssignment?.[v.assignment_id] || []).join(', ') || 'ไม่ระบุผู้ตรวจนับ'
     );
@@ -42020,7 +42134,7 @@ function renderWmsList() {
           aria-expanded="false"
           aria-controls="wms_note_menu_${noteKey}">
           ${wmsIconSvg('note')}
-          <span>${notes.length ? `หมายเหตุ ${notes.length}` : 'เพิ่มหมายเหตุ'}</span>
+          <span>${notes.length ? `หมายเหตุ ${notes.length}` : historyLoading ? 'กำลังโหลด Remark เดิม...' : 'เพิ่มหมายเหตุ'}</span>
           ${notes.length ? `<span class="wms-note-count">${notes.length}</span>` : ''}
         </button>
         <div class="wms-note-menu" id="wms_note_menu_${noteKey}" hidden onclick="event.stopPropagation()">
