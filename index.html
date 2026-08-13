@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.66</title>
+<title>Cycle Count V1.67</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -20625,13 +20625,13 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
 @container zoneboard (min-width:761px){.exec-v156-zone-strip{grid-template-columns:minmax(125px,1.2fr) repeat(4,minmax(82px,.82fr)) minmax(190px,1.55fr)!important;align-items:stretch!important;gap:11px!important}.exec-v156-zone-name,.exec-v157-accuracy-result{grid-column:auto!important;min-height:135px!important}.exec-v156-stat{min-height:135px!important}}
 </style>
 </head>
-<body data-build="v1-66">
+<body data-build="v1-67">
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.66';
+const APP_VERSION = '1.67';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
-const APP_BUILD_ID = 'v1-66';
+const APP_BUILD_ID = 'v1-67';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
 // v31 defensive date helpers: prevent legacy cached/remaining references from crashing the dashboard.
 var selectedDateFrom = '';
@@ -34935,7 +34935,7 @@ async function fetchPagedSupabaseRows(table, columns, applyFilters = query => qu
   }
 }
 
-async function fetchSupabaseRowsByValues(table, columns, filterColumn, values) {
+async function fetchSupabaseRowsByValues(table, columns, filterColumn, values, applyExtraFilters = query => query) {
   const uniqueValues = [...new Set((values || []).filter(Boolean))];
   if (!uniqueValues.length) return { data: [], error: null };
 
@@ -34945,7 +34945,7 @@ async function fetchSupabaseRowsByValues(table, columns, filterColumn, values) {
     const result = await fetchPagedSupabaseRows(
       table,
       columns,
-      query => query.in(filterColumn, batch),
+      query => applyExtraFilters(query.in(filterColumn, batch)),
     );
     if (result.error) return result;
     rows.push(...(result.data || []));
@@ -39860,17 +39860,29 @@ async function loadSvDash() {
 
   const allItemIds = [...new Set(wmsRows.map(v => v.item_id).filter(Boolean))];
   const allApproverIds = [...new Set(wmsRows.map(v => v.approved_by).filter(Boolean))];
+  const wmsHistoryAssignmentIds = [...new Set(wmsRows.map(v => v.assignment_id).filter(Boolean))];
+  const wmsHistoryRead = tab === 'wms' && wmsHistoryAssignmentIds.length
+    ? Promise.race([
+        fetchSupabaseRowsByValues(
+          'audit_log',
+          'id,session_id,assignment_id,item_id,action,new_value,created_at',
+          'assignment_id',
+          wmsHistoryAssignmentIds,
+          query => query.in('action',['wms_note','wms_status_change']),
+        ),
+        new Promise(resolve => setTimeout(() => resolve({
+          data:[],
+          error:{ message:'ข้ามการโหลดประวัติ WMS เนื่องจากใช้เวลานานเกิน 4 วินาที' },
+        }),4000)),
+      ])
+    : Promise.resolve({ data:[],error:null });
   const [{ data: itemsData }, { data: approversData }, { data: wmsNoteRows, error: wmsNoteError }] = await Promise.all([
     fetchSupabaseRowsByValues('items', 'id,code,description', 'id', allItemIds),
     fetchSupabaseRowsByValues('profiles', 'id,name', 'id', allApproverIds),
-    // Resolve by Assignment instead of Session so legacy notes whose
-    // session_id was missing are still recovered for the correct work item.
-    fetchSupabaseRowsByValues(
-      'audit_log',
-      'id,session_id,assignment_id,item_id,action,new_value,created_at',
-      'assignment_id',
-      allAsgnIds,
-    ),
+    // Only the WMS tab needs its historical notes/status. Limit the query to
+    // assignments that are actually in the WMS queue and never block the page
+    // longer than four seconds.
+    wmsHistoryRead,
   ]);
   if (isStaleLoad()) return;
   const itemMap = Object.fromEntries((itemsData||[]).map(i => [i.id, i]));
