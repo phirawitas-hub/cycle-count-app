@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.68</title>
+<title>Cycle Count V1.69</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -20625,13 +20625,13 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
 @container zoneboard (min-width:761px){.exec-v156-zone-strip{grid-template-columns:minmax(125px,1.2fr) repeat(4,minmax(82px,.82fr)) minmax(190px,1.55fr)!important;align-items:stretch!important;gap:11px!important}.exec-v156-zone-name,.exec-v157-accuracy-result{grid-column:auto!important;min-height:135px!important}.exec-v156-stat{min-height:135px!important}}
 </style>
 </head>
-<body data-build="v1-68">
+<body data-build="v1-69">
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.68';
+const APP_VERSION = '1.69';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
-const APP_BUILD_ID = 'v1-68';
+const APP_BUILD_ID = 'v1-69';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
 // v31 defensive date helpers: prevent legacy cached/remaining references from crashing the dashboard.
 var selectedDateFrom = '';
@@ -20939,7 +20939,10 @@ const LOGIN_SESSION_TOKEN_STORAGE_KEY = 'cycle_count_login_token_v1';
 const LOGIN_HEARTBEAT_INTERVAL_MS = 45000;
 const LOGIN_SESSION_TTL_SECONDS = 300;
 const SUPABASE_REQUEST_TIMEOUT_MS = 15000;
-const PAGE_LOAD_TIMEOUT_MS = 22000;
+// Large Sessions can legitimately need more than 22 seconds on a slow VPN.
+// Individual database requests still stop after 15 seconds, while this outer
+// guard only prevents the complete page workflow from running forever.
+const PAGE_LOAD_TIMEOUT_MS = 45000;
 
 let sb, me, prof;
 let S = {};
@@ -26284,7 +26287,13 @@ function openDashboardMenu(tab) {
     if (paintCachedDashboardView(tab)) return;
     const target = cnt();
     if (target) target.innerHTML = dashboardLoadingHtml();
-    if (_dashboardLoadInFlight) return;
+    if (_dashboardLoadInFlight) {
+      // A slow tab must never lock every other Dashboard menu. Abort only the
+      // stale page request and immediately start loading the tab just chosen.
+      beginPageRequestScope();
+      _dashboardLoadInFlight = null;
+      invalidateDashboardCache();
+    }
     refreshDashboardData();
     return;
   }
@@ -39513,10 +39522,12 @@ async function loadSvDash() {
     disconnectTabletAccuracyLayoutGuard();
     return;
   }
-  /* V1.19: entering Warehouse Layout must always check the central master.
-     Realtime remains the fast path; this forced read also covers reconnects. */
-  await Promise.all([loadWarehouseLayoutConfig(tab === 'layout'),loadPlanLocationConfig(tab === 'layout')]);
-  if (isStaleLoad()) return;
+  /* Warehouse Layout settings are unrelated to the operational WMS queue.
+     Do not place two extra network reads in front of that page. */
+  if (tab !== 'wms') {
+    await Promise.all([loadWarehouseLayoutConfig(tab === 'layout'),loadPlanLocationConfig(tab === 'layout')]);
+    if (isStaleLoad()) return;
+  }
 
   const [
     { data: asgns, error:assignmentsError },
@@ -39537,11 +39548,13 @@ async function loadSvDash() {
         .order('id'),
     ),
     sb.from('remark_options').select('id,label').eq('context','wms').eq('active',true).order('label'),
-    sb.from('found_items')
-      .select('id,session_id,status,source_type,location_code,license_plate,lot,inventory_status,item_code,description,uom,qty,actual_counter_name,discovered_at,profiles!found_items_discovered_by_fkey(name)')
-      .eq('session_id',curSid)
-      .eq('status','pending_review')
-      .order('discovered_at',{ ascending:true }),
+    tab === 'wms'
+      ? Promise.resolve({ data:[],error:null })
+      : sb.from('found_items')
+          .select('id,session_id,status,source_type,location_code,license_plate,lot,inventory_status,item_code,description,uom,qty,actual_counter_name,discovered_at,profiles!found_items_discovered_by_fkey(name)')
+          .eq('session_id',curSid)
+          .eq('status','pending_review')
+          .order('discovered_at',{ ascending:true }),
   ]);
   if (isStaleLoad()) return;
   if (assignmentsError) throw assignmentsError;
@@ -39559,7 +39572,16 @@ async function loadSvDash() {
   asgns.forEach(a => { asgnInfoMap[a.id] = a; });
 
   const allAsgnIds = asgns.map(a => a.id);
-  const [countResult, snapshotResult, detailResult, annualJobsResult, annualJobItemsResult, rules, paperResult] = await Promise.all([
+  const [
+    countResult,
+    snapshotResult,
+    detailResult,
+    annualJobsResult,
+    annualJobItemsResult,
+    rules,
+    paperResult,
+    varianceApprovalResult,
+  ] = await Promise.all([
     fetchSupabaseRowsByValues(
       'count_records',
       'id,assignment_id,item_id,round,count_qty,counted_by,counted_at,actual_counter_name,type_issue,remark,photo_url',
@@ -39571,21 +39593,27 @@ async function loadSvDash() {
       'id,location_id,item_id,onhand_qty,al_qty,locations(code,zone,row_no,level),items(code,description,uom,category)',
       query => query.eq('session_id', curSid),
     ),
-    fetchPagedSupabaseRows(
-      'stock_snapshot_detail',
-      'location_id,item_id,license_plate,lot,inventory_status,qty,uom',
-      query => query.eq('session_id',curSid),
-    ),
-    fetchPagedSupabaseRows(
-      'annual_count_jobs',
-      'id,job_code,assigned_to,status,profiles!assigned_to(name)',
-      query => query.eq('session_id',curSid).order('job_no'),
-    ),
-    fetchPagedSupabaseRows(
-      'annual_count_job_items',
-      'job_id,location_id,item_id,sort_order',
-      query => query.eq('session_id',curSid).order('sort_order'),
-    ),
+    tab === 'wms'
+      ? Promise.resolve({ data:[],error:null })
+      : fetchPagedSupabaseRows(
+          'stock_snapshot_detail',
+          'location_id,item_id,license_plate,lot,inventory_status,qty,uom',
+          query => query.eq('session_id',curSid),
+        ),
+    tab === 'wms'
+      ? Promise.resolve({ data:[],error:null })
+      : fetchPagedSupabaseRows(
+          'annual_count_jobs',
+          'id,job_code,assigned_to,status,profiles!assigned_to(name)',
+          query => query.eq('session_id',curSid).order('job_no'),
+        ),
+    tab === 'wms'
+      ? Promise.resolve({ data:[],error:null })
+      : fetchPagedSupabaseRows(
+          'annual_count_job_items',
+          'job_id,location_id,item_id,sort_order',
+          query => query.eq('session_id',curSid).order('sort_order'),
+        ),
     getSessionRules(curSid),
     tab === 'executive' && prof?.role === 'admin'
       ? fetchPagedSupabaseRows(
@@ -39594,6 +39622,14 @@ async function loadSvDash() {
           query => query.eq('session_id',curSid).eq('source_type','paper_form'),
         )
       : Promise.resolve({ data:[], error:null }),
+    // Start confirmed approval history beside Counts and Snapshots instead of
+    // waiting for those large reads to finish and then doing another phase.
+    fetchSupabaseRowsByValues(
+      'variance_approvals',
+      '*',
+      'assignment_id',
+      allAsgnIds,
+    ),
   ]);
   if (isStaleLoad()) return;
   if (countResult.error || snapshotResult.error || detailResult.error || annualJobsResult.error || annualJobItemsResult.error) {
@@ -39767,16 +39803,9 @@ async function loadSvDash() {
   };
 
   try {
-    const { data: vaData, error: vaErr } = await fetchSupabaseRowsByValues(
-      'variance_approvals',
-      // Deployments of this app exist with either approved_at or the legacy
-      // created_at timestamp. Selecting an explicit missing column makes the
-      // whole request fail, so read the row shape that actually exists and
-      // normalize it below.
-      '*',
-      'assignment_id',
-      allAsgnIds,
-    );
+    // This request was started together with Counts and Snapshots above. Keep
+    // the broad row shape for compatibility with historical deployments.
+    const { data: vaData, error: vaErr } = varianceApprovalResult || { data:[],error:null };
 
     if (vaErr) {
       vaError = vaErr;
@@ -39808,12 +39837,14 @@ async function loadSvDash() {
     ...rawCounts.map(record => record.counted_by),
     ...trackerApprovalRows.flatMap(approval => [approval.approved_by,approval.wms_fixed_by]),
   ].filter(Boolean))];
-  const trackerActorResult = await fetchSupabaseRowsByValues(
-    'profiles',
-    'id,name',
-    'id',
-    trackerActorIds,
-  );
+  const trackerActorResult = tab === 'wms'
+    ? { data:[],error:null }
+    : await fetchSupabaseRowsByValues(
+        'profiles',
+        'id,name',
+        'id',
+        trackerActorIds,
+      );
   if (isStaleLoad()) return;
   if (trackerActorResult.error) console.warn('โหลดชื่อผู้ทำรายการสำหรับหน้าติดตามไม่สำเร็จ:',trackerActorResult.error.message);
   const trackerActorMap = Object.fromEntries((trackerActorResult.data || []).map(profile => [profile.id,profile.name]));
