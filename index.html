@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.83</title>
+<title>Cycle Count V1.85</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -21,7 +21,7 @@
 <noscript><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <!-- Supabase -->
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.min.js"></script>
-<!-- V1.83: ป๊อปอัพจ่ายงานซ้ำทำต่อเนื่อง หัวข้องาน Handheld ไม่ล้น และแถบความคืบหน้าติดด้านบนทุกอุปกรณ์ -->
+<!-- V1.85: แถบความคืบหน้าการนับยึดใต้ Header ตามความสูงจริงทุกอุปกรณ์ -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
 <style>
@@ -20861,7 +20861,9 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
 body.count-page-active #app .count-handheld-page .count-entry-progress {
   position:sticky !important;
   z-index:86 !important;
-  top:calc(var(--topbar-height) + 4px) !important;
+  /* V1.85: use the measured Header height.  The desktop/iPad Header is
+     visually 104px although the old root token is only 70px. */
+  top:calc(var(--count-sticky-header-height, var(--topbar-height, 70px)) + 6px) !important;
   border:1px solid color-mix(in srgb,var(--theme-primary-color) 22%,var(--theme-border-color)) !important;
   background:var(--theme-card-bg) !important;
   background:color-mix(in srgb,var(--theme-card-bg) 94%,var(--theme-primary-color)) !important;
@@ -21011,21 +21013,222 @@ body.count-page-active #app .count-handheld-page .count-entry-progress {
   }
 
   body.count-page-active #app .count-handheld-page .count-entry-progress {
-    top:54px !important;
+    top:calc(var(--count-sticky-header-height, 52px) + 4px) !important;
   }
+}
+
+/* V1.85 · Keep the progress strip visibly below the sticky Header on every
+   viewport, including iPad landscape/portrait and desktop zoom changes. */
+body.count-page-active #app .topbar {
+  z-index:100 !important;
+}
+body.count-page-active #app .count-handheld-page .count-entry-progress {
+  scroll-margin-top:calc(var(--count-sticky-header-height, var(--topbar-height, 70px)) + 16px);
+  transform:translateZ(0);
+}
+
+/* V1.84 · Focused supervisor DIFF queue and selectable next-round Locations. */
+#app .variance-queue-overview {
+  display:grid;
+  gap:14px;
+  margin-bottom:18px;
+  padding:18px;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 22%,var(--theme-border-color));
+  border-radius:22px;
+  background:var(--theme-card-bg);
+  box-shadow:0 12px 28px rgba(20,65,68,.08);
+}
+#app .variance-queue-overview-head {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+  flex-wrap:wrap;
+}
+#app .variance-queue-overview-copy strong {
+  display:block;
+  color:var(--theme-heading-color);
+  font-size:18px;
+  font-weight:900;
+}
+#app .variance-queue-overview-copy span {
+  display:block;
+  margin-top:4px;
+  color:var(--theme-muted-text-color);
+  font-size:11px;
+  font-weight:700;
+}
+#app .variance-queue-overview-percent {
+  color:var(--theme-primary-color);
+  font-size:28px;
+  font-weight:900;
+  line-height:1;
+}
+#app .variance-queue-kpis {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:9px;
+}
+#app .variance-queue-kpi {
+  min-width:0;
+  padding:12px 14px;
+  border-radius:16px;
+  background:color-mix(in srgb,var(--theme-primary-color) 6%,var(--theme-card-bg));
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--theme-primary-color) 12%,transparent);
+}
+#app .variance-queue-kpi.is-pending {
+  background:color-mix(in srgb,var(--theme-danger-color) 9%,var(--theme-card-bg));
+}
+#app .variance-queue-kpi span,
+#app .variance-queue-kpi strong { display:block; }
+#app .variance-queue-kpi span {
+  color:var(--theme-muted-text-color);
+  font-size:9px;
+  font-weight:850;
+}
+#app .variance-queue-kpi strong {
+  margin-top:4px;
+  color:var(--theme-heading-color);
+  font-size:22px;
+  font-weight:900;
+}
+#app .variance-queue-track {
+  height:9px;
+  overflow:hidden;
+  border-radius:99px;
+  background:color-mix(in srgb,var(--theme-primary-color) 12%,var(--theme-card-bg));
+}
+#app .variance-queue-track > span {
+  display:block;
+  width:var(--variance-queue-progress,0%);
+  height:100%;
+  border-radius:inherit;
+  background:var(--theme-primary-color);
+}
+#app .variance-queue-work-title {
+  color:var(--theme-heading-color);
+  font-size:11px;
+  font-weight:900;
+}
+#app .variance-queue-work-list {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:8px;
+}
+#app .variance-queue-work {
+  min-width:0;
+  padding:10px 12px;
+  border:1px solid color-mix(in srgb,var(--theme-danger-color) 18%,var(--theme-border-color));
+  border-radius:14px;
+  background:color-mix(in srgb,var(--theme-danger-color) 5%,var(--theme-card-bg));
+}
+#app .variance-queue-work strong,
+#app .variance-queue-work span { display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+#app .variance-queue-work strong { color:var(--theme-heading-color);font-size:11px;font-weight:900; }
+#app .variance-queue-work span { margin-top:4px;color:var(--theme-muted-text-color);font-size:9px;font-weight:700; }
+
+#app .variance-detail-location {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:14px 14px 10px;
+  padding:12px 14px;
+  border-radius:16px;
+  background:color-mix(in srgb,var(--theme-primary-color) 7%,var(--theme-card-bg));
+}
+#app .variance-detail-location > span {
+  padding:4px 8px;
+  border-radius:999px;
+  color:var(--theme-primary-text);
+  background:var(--theme-primary-color);
+  font-size:9px;
+  font-weight:900;
+}
+#app .variance-detail-location strong { color:var(--theme-heading-color);font-size:15px;font-weight:900; }
+#app .variance-detail-location small { color:var(--theme-muted-text-color);font-size:10px;font-weight:700; }
+#app .variance-review-step { display:grid;gap:10px; }
+#app .variance-review-step-head {
+  display:flex;
+  align-items:center;
+  gap:9px;
+  padding-bottom:8px;
+  border-bottom:1px solid var(--theme-border-color);
+}
+#app .variance-review-step-head > b {
+  display:grid;
+  place-items:center;
+  width:26px;
+  height:26px;
+  flex:0 0 auto;
+  border-radius:50%;
+  color:var(--theme-primary-text);
+  background:var(--theme-primary-color);
+  font-size:11px;
+}
+#app .variance-review-step-head strong,
+#app .variance-review-step-head small { display:block; }
+#app .variance-review-step-head strong { color:var(--theme-heading-color);font-size:12px;font-weight:900; }
+#app .variance-review-step-head small { margin-top:2px;color:var(--theme-muted-text-color);font-size:9px;font-weight:700; }
+#app .variance-review-step-actions { padding:12px;border-radius:16px;background:color-mix(in srgb,var(--theme-primary-color) 5%,var(--theme-card-bg)); }
+#app .variance-more-options { margin-top:12px;border:1px solid var(--theme-border-color);border-radius:16px;background:var(--theme-card-bg); }
+#app .variance-more-options > summary { padding:12px 14px;cursor:pointer;color:var(--theme-muted-text-color);font-size:11px;font-weight:850; }
+#app .variance-more-options > div { padding:0 14px 14px; }
+
+#app .r23-filter-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
+#app .r23-selection-tools {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin:0 0 10px;
+  padding:9px 11px;
+  border-radius:13px;
+  background:color-mix(in srgb,var(--theme-primary-color) 7%,var(--theme-card-bg));
+}
+#app .r23-selection-tools strong { color:var(--theme-heading-color);font-size:11px;font-weight:900; }
+#app .r23-selection-tools div { display:flex;gap:7px;flex-wrap:wrap; }
+#app .r23-location-card {
+  position:relative;
+  display:grid;
+  grid-template-columns:22px minmax(0,1fr);
+  align-items:start;
+  gap:8px;
+  cursor:pointer;
+  transition:border-color .15s ease,background .15s ease,transform .15s ease;
+}
+#app .r23-location-card:hover { transform:translateY(-1px);border-color:var(--theme-primary-color); }
+#app .r23-location-card.is-selected {
+  border-color:var(--theme-primary-color);
+  background:color-mix(in srgb,var(--theme-primary-color) 13%,var(--theme-card-bg));
+}
+#app .r23-location-card input { width:18px;height:18px;margin:1px 0 0;accent-color:var(--theme-primary-color); }
+#app .r23-location-copy { min-width:0; }
+#app .r23-location-copy strong,
+#app .r23-location-copy span { display:block; }
+
+@media (max-width:1050px) {
+  #app .variance-queue-work-list { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  #app .r23-filter-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:700px) {
+  #app .variance-queue-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  #app .variance-queue-work-list { grid-template-columns:1fr; }
+  #app .variance-detail-location { align-items:flex-start;flex-wrap:wrap; }
+  #app .r23-filter-grid { grid-template-columns:1fr; }
+  #app .r23-selection-tools { align-items:stretch;flex-direction:column; }
 }
 </style>
 </head>
-<body data-build="v1-83">
+<body data-build="v1-85">
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.83';
+const APP_VERSION = '1.85';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
-const APP_BUILD_ID = 'v1-83';
+const APP_BUILD_ID = 'v1-85';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
 
-// V1.83 performance: keep the login and ordinary work pages light.  Large
+// V1.84 performance: keep the login and ordinary work pages light.  Large
 // file/export/scanner libraries are fetched only after the related button is
 // pressed, and the browser may reuse the same Promise for the rest of the tab.
 const OPTIONAL_LIBRARY_SOURCES = Object.freeze({
@@ -22484,7 +22687,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.83':'e.g. Warehouse V1.83',
+  'เช่น Warehouse V1.85':'e.g. Warehouse V1.85',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -26594,6 +26797,56 @@ const rs=getComputedStyle(document.documentElement);
     </div>`;
 }
 
+let _countStickyHeaderObserver = null;
+let _countStickyHeaderFrame = 0;
+
+function stopCountStickyHeaderTracking() {
+  if (_countStickyHeaderObserver) {
+    _countStickyHeaderObserver.disconnect();
+    _countStickyHeaderObserver = null;
+  }
+  if (_countStickyHeaderFrame) {
+    cancelAnimationFrame(_countStickyHeaderFrame);
+    _countStickyHeaderFrame = 0;
+  }
+  Q('app')?.style.removeProperty('--count-sticky-header-height');
+}
+
+function syncCountStickyHeaderOffset() {
+  const app = Q('app');
+  const header = app?.querySelector('.topbar');
+  if (!app || !header || S?.page !== 'c-count') return;
+  const height = Math.ceil(header.getBoundingClientRect().height);
+  if (height > 0) app.style.setProperty('--count-sticky-header-height',`${height}px`);
+}
+
+function startCountStickyHeaderTracking() {
+  stopCountStickyHeaderTracking();
+  if (S?.page !== 'c-count') return;
+  const header = Q('app')?.querySelector('.topbar');
+  if (!header) return;
+  const update = () => {
+    _countStickyHeaderFrame = 0;
+    syncCountStickyHeaderOffset();
+  };
+  syncCountStickyHeaderOffset();
+  _countStickyHeaderFrame = requestAnimationFrame(() => {
+    update();
+    _countStickyHeaderFrame = requestAnimationFrame(update);
+  });
+  if (typeof ResizeObserver === 'function') {
+    _countStickyHeaderObserver = new ResizeObserver(() => {
+      if (_countStickyHeaderFrame) cancelAnimationFrame(_countStickyHeaderFrame);
+      _countStickyHeaderFrame = requestAnimationFrame(update);
+    });
+    _countStickyHeaderObserver.observe(header);
+  }
+}
+
+window.addEventListener('resize',syncCountStickyHeaderOffset,{ passive:true });
+window.addEventListener('orientationchange',syncCountStickyHeaderOffset,{ passive:true });
+window.visualViewport?.addEventListener('resize',syncCountStickyHeaderOffset,{ passive:true });
+
 function render() {
   const normalizedRoute = normalizeRoleNavigation(S?.page || home(),S || {});
   S = { ...S, ...normalizedRoute.extra, page:normalizedRoute.page };
@@ -26841,6 +27094,7 @@ function render() {
       </div>
     </div>`;
 
+  startCountStickyHeaderTracking();
   scheduleTabletViewportLayout(false);
 
   if (window.__CYCLE_COUNT_PREVIEW__) {
@@ -41993,10 +42247,64 @@ async function loadSvDash() {
   // The Variance page and the WMS workspace must use the same item-level
   // queue. One Location can contain several DIFF items, so grouping only by
   // Assignment/Location silently hid the remaining items from this page.
+  // Supervisor page is a focused exception queue.  Approved rows belong to
+  // the WMS workspace and must not remain mixed with "รอยืนยันผล" here.
+  const varianceWorkflowByWork = new Map();
+  [
+    ...wmsWorkspaceRows.filter(isWmsQueueRow),
+    ...trackerApprovalRows.filter(row => Number(row?.variance) !== 0).map(row => ({ ...row,_isPending:false })),
+  ].forEach(row => {
+    const key = summaryWorkKey(row.assignment_id,row.item_id,'__EMPTY__');
+    if (!key) return;
+    const previous = varianceWorkflowByWork.get(key);
+    const rank = value => value?.wms_fixed ? 3 : (value?._isPending ? 1 : 2);
+    if (!previous || rank(row) > rank(previous)) varianceWorkflowByWork.set(key,row);
+  });
+  const varianceWorkflowRows = [...varianceWorkflowByWork.values()];
   const needsFollowUp = sortRowsByLocation(
-    wmsWorkspaceRows.filter(isWmsQueueRow),
+    varianceWorkflowRows.filter(row => row._isPending),
     row => asgnInfoMap[row.assignment_id]?.locations?.code,
   );
+  const varianceWorkflowTotal = varianceWorkflowRows.length;
+  const varianceWorkflowForwarded = Math.max(0,varianceWorkflowTotal-needsFollowUp.length);
+  const varianceWorkflowPercent = varianceWorkflowTotal
+    ? Math.round((varianceWorkflowForwarded/varianceWorkflowTotal)*100)
+    : 100;
+  const pendingVarianceLocations = new Map();
+  needsFollowUp.forEach(row => {
+    const location = asgnInfoMap[row.assignment_id]?.locations || {};
+    const key = location.code || row.assignment_id || '?';
+    if (!pendingVarianceLocations.has(key)) {
+      pendingVarianceLocations.set(key,{ code:key,items:[] });
+    }
+    pendingVarianceLocations.get(key).items.push(row.items?.code || 'Location ว่าง');
+  });
+  const pendingVarianceLocationRows = [...pendingVarianceLocations.values()];
+  const pendingVarianceWorkCards = pendingVarianceLocationRows.slice(0,8).map(entry => {
+    const itemLabels = [...new Set(entry.items.filter(Boolean))];
+    const preview = itemLabels.slice(0,3).join(', ');
+    return `<div class="variance-queue-work">
+      <strong class="mono">${escapeWmsText(entry.code)}</strong>
+      <span>${itemLabels.length.toLocaleString(uiLocale())} Item${preview ? ` · ${escapeWmsText(preview)}${itemLabels.length > 3 ? '…' : ''}` : ''}</span>
+    </div>`;
+  }).join('');
+  const varianceQueueOverviewHtml = `<section class="variance-queue-overview" style="--variance-queue-progress:${varianceWorkflowPercent}%">
+    <div class="variance-queue-overview-head">
+      <div class="variance-queue-overview-copy">
+        <strong>ความคืบหน้างานยืนยันผล</strong>
+        <span>หน้านี้แสดงเฉพาะ DIFF ที่ Supervisor ยังต้องยืนยัน</span>
+      </div>
+      <div class="variance-queue-overview-percent">${varianceWorkflowPercent}%</div>
+    </div>
+    <div class="variance-queue-kpis">
+      <div class="variance-queue-kpi"><span>DIFF ทั้งหมด</span><strong>${varianceWorkflowTotal.toLocaleString(uiLocale())}</strong></div>
+      <div class="variance-queue-kpi"><span>ยืนยันแล้ว</span><strong>${varianceWorkflowForwarded.toLocaleString(uiLocale())}</strong></div>
+      <div class="variance-queue-kpi is-pending"><span>เหลือรอยืนยัน</span><strong>${needsFollowUp.length.toLocaleString(uiLocale())}</strong></div>
+      <div class="variance-queue-kpi is-pending"><span>Location ที่เหลือ</span><strong>${pendingVarianceLocationRows.length.toLocaleString(uiLocale())}</strong></div>
+    </div>
+    <div class="variance-queue-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${varianceWorkflowPercent}"><span></span></div>
+    ${pendingVarianceWorkCards ? `<div class="variance-queue-work-title">งานที่ยังเหลือ</div><div class="variance-queue-work-list">${pendingVarianceWorkCards}${pendingVarianceLocationRows.length > 8 ? `<div class="variance-queue-work"><strong>และอีก ${(pendingVarianceLocationRows.length-8).toLocaleString(uiLocale())} Location</strong><span>ใช้ตัวกรองด้านล่างเพื่อดูรายการ</span></div>` : ''}</div>` : ''}
+  </section>`;
   const varianceRowsHtml = needsFollowUp.length ? needsFollowUp.map((row, i) => {
     const assignment = asgnInfoMap[row.assignment_id] || {};
     const l = assignment.locations;
@@ -42011,11 +42319,7 @@ async function loadSvDash() {
     const varianceColor = Number.isFinite(varianceValue) && varianceValue > 0
       ? 'var(--accent-green)'
       : 'var(--accent-red)';
-    const si = row._isPending
-      ? { cls:'tag-red', lbl:'DIFF · รอยืนยันผล' }
-      : (row.wms_fixed
-        ? { cls:'tag-green', lbl:'DIFF · ตรวจ WMS เสร็จแล้ว' }
-        : { cls:'tag-blue', lbl:'DIFF · รอตรวจสอบ WMS' });
+    const si = { cls:'tag-red', lbl:'DIFF · รอยืนยันผล' };
     const counterNames = actualCountersByWork[actualCounterWorkKey(row.assignment_id,row.item_id)] || [];
     const counterValues = encodeURIComponent(JSON.stringify(counterNames));
     const varianceSearchText = [l?.code,item.code,item.description].filter(Boolean).join(' ');
@@ -42051,9 +42355,7 @@ async function loadSvDash() {
       <div id="vdetail_${i}" style="display:none;background:var(--theme-card-bg);margin-top:12px;border-radius:16px;overflow:hidden;box-shadow:inset 0 0 0 1px var(--theme-border-color)"></div>
     </div>`;
   }).join('') : `<div style="padding:40px 0;text-align:center;color:var(--text-muted);font-size:15px; font-weight:600;">${
-    visiblePendingFoundRows.length
-      ? 'ไม่มี Variance จากงาน Cycle Count ที่ต้องตรวจสอบ'
-      : '🎉 ไม่มี Variance ที่ต้องตรวจสอบตอนนี้'
+    '🎉 ไม่มี DIFF ที่รอยืนยันผลตอนนี้'
   }</div>`;
 
   let varianceReportRows = '';
@@ -42330,8 +42632,8 @@ async function loadSvDash() {
     </div>`;
 
   const varianceTabHtml = `
-    ${pendingFoundVarianceHtml(visiblePendingFoundRows)}
-    <section class="wms-filter-panel" style="margin-top:${visiblePendingFoundRows.length ? '18px' : '0'}">
+    ${varianceQueueOverviewHtml}
+    <section class="wms-filter-panel">
       <div class="wms-filter-heading">
         <strong>ตัวกรองรายการ</strong>
         <span>เลือกหลายตัวกรองร่วมกันได้</span>
@@ -42367,7 +42669,7 @@ async function loadSvDash() {
 
     <section class="wms-list-shell">
       <div class="wms-list-heading">
-        <strong>Variance จากงาน Cycle Count</strong>
+        <strong>DIFF · รอยืนยันผล</strong>
         <span class="wms-list-count" id="variance-visible-count">0 รายการ</span>
       </div>
       <div id="variance-list" data-location-sort-group>${varianceRowsHtml}</div>
@@ -43367,10 +43669,8 @@ function renderVarianceList() {
 
 function varianceDetailTargetItemFromRow(node) {
   if (!node) return '';
-  const search = String(S._varianceSearch || '').trim().toLocaleLowerCase('th');
-  if (!search) return '';
-  const itemText = String(node.dataset.varianceItemSearch || '').toLocaleLowerCase('th');
-  return itemText.includes(search) ? String(node.dataset.varianceItemId || '') : '';
+  // A list row is exactly one Location + Item work unit.
+  return String(node.dataset.varianceItemId || '');
 }
 
 function toggleVarianceDetailFromRow(node) {
@@ -43941,12 +44241,12 @@ function varianceReviewProgressHtml(summary={}) {
   const percent = total ? Math.round((confirmed/total)*100) : 0;
   return `<section class="variance-location-progress" style="--variance-review-progress:${percent}%">
     <div class="variance-location-progress-copy">
-      <strong>ตรวจแล้ว ${confirmed.toLocaleString(uiLocale())} / ${total.toLocaleString(uiLocale())} Item</strong>
-      <span>${percent}% · บันทึกแยกทีละ Item และกลับมาทำต่อจากเครื่องอื่นได้</span>
+      <strong>ความคืบหน้า Location</strong>
+      <span>ยืนยันแล้ว ${confirmed.toLocaleString(uiLocale())} จาก ${total.toLocaleString(uiLocale())} Item · ${percent}%</span>
     </div>
     <div class="variance-location-progress-stats">
-      <div class="variance-location-progress-stat"><strong>${unreviewed.toLocaleString(uiLocale())}</strong><span>ยังไม่ได้ตรวจ</span></div>
-      <div class="variance-location-progress-stat"><strong>${draft.toLocaleString(uiLocale())}</strong><span>บันทึกร่าง</span></div>
+      <div class="variance-location-progress-stat"><strong>${unreviewed.toLocaleString(uiLocale())}</strong><span>รอตรวจ</span></div>
+      <div class="variance-location-progress-stat"><strong>${draft.toLocaleString(uiLocale())}</strong><span>ร่าง</span></div>
       <div class="variance-location-progress-stat"><strong>${confirmed.toLocaleString(uiLocale())}</strong><span>ยืนยันแล้ว</span></div>
     </div>
     <div class="variance-location-progress-track"><span></span></div>
@@ -44009,12 +44309,12 @@ function varianceLocationCloseHtml({ aid,total,confirmed,mode='detail',inlineInd
   return `<div class="variance-location-close">
     <button class="btn btn-green" type="button" onclick='finalizeVarianceLocation(${args},this)' ${ready?'':'disabled'}>
       ${ready
-        ? (total ? '✓ ปิดงาน Location และส่งต่อ WMS' : '✓ ปิดงาน Location · ไม่พบ DIFF')
-        : `ยืนยันให้ครบอีก ${(total-confirmed).toLocaleString(uiLocale())} Item`}
+        ? (total ? '✓ ตรวจครบแล้ว · ส่งต่อ WMS' : '✓ จบ Location · ไม่พบ DIFF')
+        : `เหลืออีก ${(total-confirmed).toLocaleString(uiLocale())} Item`}
     </button>
     <small>${ready
-      ? (total ? 'ตรวจครบแล้ว กดเพื่อปิด Location และส่ง Item ที่เป็น DIFF ไปขั้นตอนปรับยอด WMS' : 'ยอดตรงหลังตรวจสอบหรือแก้ OH จึงไม่มีรายการส่งไป WMS')
-      : 'ระบบยังไม่ส่งงานไป WMS จนกว่าจะยืนยันครบทุก Item'}</small>
+      ? (total ? 'ยืนยันครบทุก Item แล้ว สามารถส่งงาน Location นี้ไปขั้นตอน WMS ได้' : 'ยอดตรงหลังตรวจสอบหรือแก้ OH จึงไม่มีรายการส่งไป WMS')
+      : 'ตรวจและยืนยันทีละ Item ได้ ระบบเก็บความคืบหน้าให้อัตโนมัติ'}</small>
   </div>`;
 }
 
@@ -44040,7 +44340,7 @@ async function renderVarianceItemDetail(aid, container, idx, targetItemId='') {
   const requestedItemId = String(targetItemId || container?.dataset?.varianceTargetItem || '').trim();
   if (container) container.dataset.varianceTargetItem = requestedItemId;
   const { data: asgn } = await sb.from('assignments')
-    .select('id,status,location_id,session_id,assigned_to,locations(code,zone,area)')
+    .select('id,status,location_id,session_id,assigned_to,locations(code,zone,area,row_no,level)')
     .eq('id', aid).single();
 
   if (!asgn) { container.innerHTML = `<div class="alert alert-red" style="margin:10px">ไม่พบข้อมูล</div>`; return; }
@@ -44115,13 +44415,15 @@ async function renderVarianceItemDetail(aid, container, idx, targetItemId='') {
     if (reviewState === 'confirmed') reviewSummary.confirmed += 1;
     else if (reviewState === 'draft') reviewSummary.draft += 1;
 
+    const issueEditor = varianceIssueEditorHtml(v,`variance_inline_${idx}_${it.id}`,it,{
+      assignmentId:aid,sessionId:asgn.session_id,locationId:asgn.location_id,
+      mode:'inline',inlineIndex:idx,locked:confirmed,
+    });
     varRows += `<div class="vrow ${st.row} variance-review-item is-review-${reviewState}"
         data-variance-review-assignment="${escapeWmsText(aid)}" data-variance-review-item="${escapeWmsText(it.id)}"
         data-variance-review-state="${reviewState}">
       <div class="variance-review-heading">
         <div class="variance-review-heading-left">
-          ${confirmed ? '' : `<input class="variance-review-select" type="checkbox" value="${escapeWmsText(it.id)}"
-            aria-label="เลือก ${escapeWmsText(it?.code || 'Item')}" onchange="refreshVarianceReviewSelection('${aid}')">`}
           <div class="variance-review-heading-copy">
             <div class="mono">${
               emptyLocation ? '<span class="tag tag-blue">Location ว่าง</span>' : escapeWmsText(it?.code || '')
@@ -44136,25 +44438,30 @@ async function renderVarianceItemDetail(aid, container, idx, targetItemId='') {
           <span class="tag ${st.cls}">${st.lbl}</span>
         </div>
       </div>
-      <div class="variance-counter-line">R1: ${fmt(v[1])} · R2: ${fmt(v[2])} · R3: ${fmt(v[3])}</div>
-      ${varianceIssueEditorHtml(v,`variance_inline_${idx}_${it.id}`,it,{
-        assignmentId:aid,sessionId:asgn.session_id,locationId:asgn.location_id,
-        mode:'inline',inlineIndex:idx,locked:confirmed,
-      })}
-      ${varianceQuantitySummaryHtml({
-        itemId:it.id,
-        oh:s.onhand_qty,
-        al:alQty,
-        r1,
-        r2,
-        r3,
-        finalQty:reviewFinalQty,
-        editableOH:!confirmed,
-        locked:confirmed,
-        sessionId:asgn.session_id,
-        locationId:asgn.location_id,
-      })}
-      ${varianceReviewActionHtml({ aid,itemId:it.id,state:reviewState,mode:'inline',inlineIndex:idx })}
+      <section class="variance-review-step">
+        <div class="variance-review-step-head"><b>1</b><div><strong>ตรวจสอบยอด</strong><small>เทียบ OH กับยอดนับ แล้วระบุยอดยืนยัน</small></div></div>
+        ${varianceQuantitySummaryHtml({
+          itemId:it.id,
+          oh:s.onhand_qty,
+          al:alQty,
+          r1,
+          r2,
+          r3,
+          finalQty:reviewFinalQty,
+          editableOH:!confirmed,
+          locked:confirmed,
+          sessionId:asgn.session_id,
+          locationId:asgn.location_id,
+        })}
+      </section>
+      <section class="variance-review-step">
+        <div class="variance-review-step-head"><b>2</b><div><strong>ตรวจสอบหลักฐาน</strong><small>Type Issue, Remark และรูปถ่ายจากผู้ตรวจนับ</small></div></div>
+        ${issueEditor || '<div style="color:var(--theme-muted-text-color);font-size:11px;font-weight:700">ไม่มีหลักฐานเพิ่มเติม</div>'}
+      </section>
+      <section class="variance-review-step variance-review-step-actions">
+        <div class="variance-review-step-head"><b>3</b><div><strong>บันทึกผล</strong><small>พักเป็นร่างหรือยืนยัน Item นี้</small></div></div>
+        ${varianceReviewActionHtml({ aid,itemId:it.id,state:reviewState,mode:'inline',inlineIndex:idx })}
+      </section>
     </div>`;
   }
   if (!varRows) {
@@ -44169,23 +44476,25 @@ async function renderVarianceItemDetail(aid, container, idx, targetItemId='') {
   const otherUsers = (users||[]).filter(u => u.id !== asgn.assigned_to);
   const userOpts = otherUsers.map(u=>`<option value="${u.id}">${escapeWmsText(u.name)}</option>`).join('');
 
+  const locationMeta = [asgn.locations?.zone,asgn.locations?.row_no ? `Row ${asgn.locations.row_no}` : '',asgn.locations?.level ? `Level ${asgn.locations.level}` : '']
+    .filter(Boolean).join(' · ');
   container.innerHTML = `
-    ${requestedItemId ? `<div class="alert alert-blue" style="margin:14px 14px 0;font-size:12px">แสดงเฉพาะ ITEM ที่ตรงกับคำค้นหา</div>` : ''}
-    ${varianceReviewProgressHtml(reviewSummary)}
+    <div class="variance-detail-location"><span>LOCATION</span><strong class="mono">${escapeWmsText(asgn.locations?.code || '?')}</strong>${locationMeta ? `<small>${escapeWmsText(locationMeta)}</small>` : ''}</div>
+    ${varianceReviewProgressHtml(locationReviewSummary)}
     <div>${varRows}</div>
-    ${varianceReviewToolbarHtml({ aid,...reviewSummary,mode:'inline',inlineIndex:idx })}
     <div style="padding:16px 20px;border-top:1px solid var(--theme-border-color)">
-      <div class="alert alert-blue" style="font-size:12px;margin-bottom:14px">บันทึกร่างเพื่อพักงาน หรือยืนยันแยกทีละ Item ได้ ข้อมูลจะเปิดต่อจากเครื่องอื่นได้</div>
       <div id="vda_${idx}"></div>
       ${varianceLocationCloseHtml({ aid,...locationReviewSummary,mode:'inline',inlineIndex:idx })}
       ${nextPhysicalRound <= 3 ? `
-      <div style="background:var(--theme-card-bg);border:1px solid var(--theme-border-color);border-radius:20px;padding:16px;margin-top:10px">
-        <div style="font-size:13px;font-weight:800;color:var(--primary-blue);margin-bottom:10px">🔄 จ่ายงานรอบที่ ${nextPhysicalRound} ให้ User</div>
+      <details class="variance-more-options">
+        <summary>ตัวเลือกเพิ่มเติม · จ่ายงานนับรอบ ${nextPhysicalRound}</summary>
+        <div>
         ${otherUsers.length ? `<div style="display:flex;gap:10px">
           <select id="vreassign_${idx}" style="flex:1">${userOpts}</select>
           <button class="btn btn-green btn-sm" onclick="doReassignUser('${aid}','${idx}',${nextPhysicalRound})" style="flex-shrink:0">จ่ายงาน</button>
         </div>` : `<div style="font-size:13px;font-weight:600;color:var(--text-muted)">ไม่มี User อื่นในระบบให้เลือก</div>`}
-      </div>` : ''}
+        </div>
+      </details>` : ''}
     </div>`;
 }
 
@@ -44318,7 +44627,8 @@ async function saveVarianceReviewItem(aid,itemId,mode,inlineIndex,status,button)
       status === 'confirmed' ? 'ยืนยัน Item แล้ว' : 'บันทึกร่าง Item แล้ว',
       { title:status === 'confirmed' ? 'ยืนยันสำเร็จ' : 'บันทึกร่างสำเร็จ' },
     );
-    await refreshVarianceReviewView(aid,mode,inlineIndex);
+    if (status === 'confirmed' && mode === 'inline') await refreshDashboardData();
+    else await refreshVarianceReviewView(aid,mode,inlineIndex);
   } catch (error) {
     if (alertBox) alertBox.innerHTML = `<div class="alert alert-red">❌ ${escapeWmsText(error.message || error)}</div>`;
     if (button) button.disabled = false;
@@ -44334,7 +44644,8 @@ async function confirmSelectedVarianceReviewItems(aid,mode,inlineIndex,button) {
   try {
     await persistVarianceReviewRows(aid,itemIds,'confirmed');
     showActionSuccessToast(`ยืนยัน ${itemIds.length.toLocaleString(uiLocale())} Item แล้ว`,{ title:'ยืนยันรายการสำเร็จ' });
-    await refreshVarianceReviewView(aid,mode,inlineIndex);
+    if (mode === 'inline') await refreshDashboardData();
+    else await refreshVarianceReviewView(aid,mode,inlineIndex);
   } catch (error) {
     if (alertBox) alertBox.innerHTML = `<div class="alert alert-red">❌ ${escapeWmsText(error.message || error)}</div>`;
     if (button) button.disabled = false;
@@ -45930,14 +46241,15 @@ async function renderManageAssign(container) {
               <span class="assign-chevron"></span>
             </summary>
             <div class="assign-round-body">
-              <div class="assign-filter-grid">
+              <div class="assign-filter-grid r23-filter-grid">
                 <div><label>รอบงาน</label><select id="r23-round" onchange="handleR23FilterChange('round')">
                   <option value="round1_done">รอบ 2</option>
                   <option value="round2_done">รอบ 3</option>
                   <option value="round3_done">รอบ Supervisor</option>
                 </select></div>
                 <div><label>ZONE</label><select id="r23-zone" onchange="handleR23FilterChange('zone')"><option value="">ทั้งหมด</option></select></div>
-                <div><label>ROW</label><select id="r23-row" onchange="refreshR23Preview()"><option value="">ทั้งหมด</option></select></div>
+                <div><label>ROW</label><select id="r23-row" onchange="handleR23FilterChange('row')"><option value="">ทั้งหมด</option></select></div>
+                <div><label>LEVEL</label><select id="r23-level" onchange="handleR23FilterChange('level')"><option value="">ทั้งหมด</option></select></div>
               </div>
               <div class="fg"><label>ผู้รับงาน</label><select id="r23-user">${userOpts}</select></div>
               <div id="r23-preview" class="assign-live-preview">กรุณาเลือก Session ก่อน</div>
@@ -46248,6 +46560,9 @@ async function handleAssignSessionChange() {
   if (Q('annual-job-filter')) Q('annual-job-filter').value = 'all';
   if (Q('r23-zone')) Q('r23-zone').value = '';
   if (Q('r23-row')) Q('r23-row').value = '';
+  if (Q('r23-level')) Q('r23-level').value = '';
+  window._r23SelectedAssignmentIds = new Set();
+  window._r23Asgns = [];
   if (!hasSession) return;
 
   const savedMode = S._round1ModeBySession?.[baseConfig.sessionId];
@@ -47144,25 +47459,44 @@ async function refreshR23Preview() {
     return;
   }
 
-  const selectedRowBeforeRefresh = Q('r23-row')?.value || '';
-  const zoneFacetAssignments = asgns.filter(assignment =>
-    !selectedRowBeforeRefresh || String(assignment.locations?.row_no ?? '') === String(selectedRowBeforeRefresh)
-  );
-  fillDependentSelect('r23-zone', zoneFacetAssignments.map(a => a.locations?.zone));
+  const currentZone = Q('r23-zone')?.value || '';
+  const currentRow = Q('r23-row')?.value || '';
+  const currentLevel = Q('r23-level')?.value || '';
+  fillDependentSelect('r23-zone',asgns.filter(a =>
+    (!currentRow || String(a.locations?.row_no ?? '') === String(currentRow))
+      && (!currentLevel || String(a.locations?.level ?? '') === String(currentLevel))
+  ).map(a => a.locations?.zone));
   const zone = Q('r23-zone')?.value || '';
-  const zoneAssignments = (asgns||[]).filter(a => !zone || a.locations?.zone === zone);
-  fillDependentSelect('r23-row', zoneAssignments.map(a => a.locations?.row_no));
+  fillDependentSelect('r23-row',asgns.filter(a =>
+    (!zone || String(a.locations?.zone ?? '') === String(zone))
+      && (!currentLevel || String(a.locations?.level ?? '') === String(currentLevel))
+  ).map(a => a.locations?.row_no));
   const row = Q('r23-row')?.value || '';
+  fillDependentSelect('r23-level',asgns.filter(a =>
+    (!zone || String(a.locations?.zone ?? '') === String(zone))
+      && (!row || String(a.locations?.row_no ?? '') === String(row))
+  ).map(a => a.locations?.level));
+  const level = Q('r23-level')?.value || '';
 
-  const filtered = zoneAssignments.filter(a => {
+  const filtered = asgns.filter(a => {
+    if (zone && String(a.locations?.zone ?? '') !== String(zone)) return false;
     if (row && String(a.locations?.row_no ?? '') !== String(row)) return false;
+    if (level && String(a.locations?.level ?? '') !== String(level)) return false;
     return true;
   });
-  window._r23Asgns = filtered;
+  window._r23EligibleAsgns = filtered;
+  const selectedIds = window._r23SelectedAssignmentIds instanceof Set
+    ? window._r23SelectedAssignmentIds
+    : new Set();
+  const validIds = new Set(filtered.map(assignment => String(assignment.id)));
+  [...selectedIds].forEach(id => { if (!validIds.has(String(id))) selectedIds.delete(id); });
+  window._r23SelectedAssignmentIds = selectedIds;
+  window._r23Asgns = filtered.filter(assignment => selectedIds.has(String(assignment.id)));
 
   if (!filtered.length) {
     prev.innerHTML = `<span style="color:var(--text-muted)">ไม่มี Location ในสถานะที่เลือก</span>`;
     btn.disabled = true;
+    btn.textContent = 'ยืนยันจ่ายงาน';
     return;
   }
   const itemCountByLocation = new Map();
@@ -47175,10 +47509,18 @@ async function refreshR23Preview() {
   const totalCountJobs = filtered.reduce(
     (sum,assignment) => sum + Number(itemCountByLocation.get(assignment.location_id) || 0),0,
   );
-  const visible = filtered.slice(0,60);
+  const visible = filtered.slice(0,120);
+  window._r23VisibleAssignmentIds = visible.map(assignment => String(assignment.id));
   prev.innerHTML = `<div class="r23-summary-grid">
     <div class="r23-summary-card"><strong>${filtered.length.toLocaleString(uiLocale())}</strong><span>LOCATION ที่พร้อมจ่ายรอบถัดไป</span></div>
     <div class="r23-summary-card"><strong>${totalCountJobs.toLocaleString(uiLocale())}</strong><span>รายการงานนับทั้งหมด</span></div>
+  </div>
+  <div class="r23-selection-tools">
+    <strong id="r23-selected-count">เลือกแล้ว ${selectedIds.size.toLocaleString(uiLocale())} Location</strong>
+    <div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="selectVisibleR23Locations(true)">เลือกทั้งหมดที่แสดง</button>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="selectVisibleR23Locations(false)">ล้าง</button>
+    </div>
   </div>
   <div class="r23-location-list">
     ${visible.map(assignment => {
@@ -47186,20 +47528,73 @@ async function refreshR23Preview() {
       const count = Number(itemCountByLocation.get(assignment.location_id) || 0);
       const detail = [location.zone,location.row_no ? `Row ${location.row_no}` : '',location.level ? `Lv.${location.level}` : '']
         .filter(Boolean).join(' · ');
-      return `<div class="r23-location-card">
-        <strong>${escapeWmsText(location.code || '?')}</strong>
-        <span>${count.toLocaleString(uiLocale())} งานนับ${detail ? ` · ${escapeWmsText(detail)}` : ''}</span>
-      </div>`;
+      const assignmentId = String(assignment.id || '');
+      const checked = selectedIds.has(assignmentId);
+      return `<label class="r23-location-card ${checked?'is-selected':''}" data-r23-assignment-id="${escapeWmsText(assignmentId)}">
+        <input type="checkbox" ${checked?'checked':''} onchange='toggleR23LocationSelection(${JSON.stringify(assignmentId)},this.checked)'>
+        <span class="r23-location-copy"><strong>${escapeWmsText(location.code || '?')}</strong>
+          <span>${count.toLocaleString(uiLocale())} งานนับ${detail ? ` · ${escapeWmsText(detail)}` : ''}</span></span>
+      </label>`;
     }).join('')}
-    ${filtered.length > visible.length ? `<div class="r23-location-more">และอีก ${(filtered.length-visible.length).toLocaleString(uiLocale())} Location</div>` : ''}
+    ${filtered.length > visible.length ? `<div class="r23-location-more">แสดง 120 Location แรก · ใช้ตัวกรองเพื่อเลือกงานที่เหลืออีก ${(filtered.length-visible.length).toLocaleString(uiLocale())} Location</div>` : ''}
   </div>`;
-  btn.disabled = false;
+  updateR23SelectionUi();
+}
+
+function updateR23SelectionUi() {
+  const selectedIds = window._r23SelectedAssignmentIds instanceof Set
+    ? window._r23SelectedAssignmentIds
+    : new Set();
+  const eligible = window._r23EligibleAsgns || [];
+  window._r23Asgns = eligible.filter(assignment => selectedIds.has(String(assignment.id)));
+  document.querySelectorAll('[data-r23-assignment-id]').forEach(card => {
+    const selected = selectedIds.has(String(card.dataset.r23AssignmentId || ''));
+    card.classList.toggle('is-selected',selected);
+    const checkbox = card.querySelector('input[type="checkbox"]');
+    if (checkbox) checkbox.checked = selected;
+  });
+  const count = Q('r23-selected-count');
+  if (count) count.textContent = `เลือกแล้ว ${window._r23Asgns.length.toLocaleString(uiLocale())} Location`;
+  const btn = Q('r23-btn');
+  if (btn) {
+    btn.disabled = window._r23Asgns.length === 0;
+    btn.textContent = window._r23Asgns.length
+      ? `ยืนยันจ่ายงาน (${window._r23Asgns.length.toLocaleString(uiLocale())} Location)`
+      : 'กรุณาเลือก Location';
+  }
+}
+
+function toggleR23LocationSelection(assignmentId,checked) {
+  const selectedIds = window._r23SelectedAssignmentIds instanceof Set
+    ? window._r23SelectedAssignmentIds
+    : new Set();
+  if (checked) selectedIds.add(String(assignmentId));
+  else selectedIds.delete(String(assignmentId));
+  window._r23SelectedAssignmentIds = selectedIds;
+  updateR23SelectionUi();
+}
+
+function selectVisibleR23Locations(checked) {
+  const selectedIds = window._r23SelectedAssignmentIds instanceof Set
+    ? window._r23SelectedAssignmentIds
+    : new Set();
+  (window._r23VisibleAssignmentIds || []).forEach(id => {
+    if (checked) selectedIds.add(String(id));
+    else selectedIds.delete(String(id));
+  });
+  window._r23SelectedAssignmentIds = selectedIds;
+  updateR23SelectionUi();
 }
 
 async function doR23Assign() {
-  const uid = Q('r23-user')?.value; const asgns = window._r23Asgns || [];
+  const uid = Q('r23-user')?.value;
+  const selectedIds = window._r23SelectedAssignmentIds instanceof Set
+    ? window._r23SelectedAssignmentIds
+    : new Set();
+  const asgns = (window._r23EligibleAsgns || []).filter(assignment => selectedIds.has(String(assignment.id)));
   if (!uid || !asgns.length) return;
   Q('r23-btn').disabled = true; Q('r23-preview').innerHTML = `<span>⏳ กำลังเปลี่ยนผู้รับมอบหมายงาน ${asgns.length} รายการ...</span>`;
+  try {
   const newLabel = Q('r23-user').options[Q('r23-user').selectedIndex]?.textContent || '';
   const previousUserIds = [...new Set(asgns.map(a => a.assigned_to).filter(Boolean))];
   const { data: previousUsers } = previousUserIds.length
@@ -47210,11 +47605,12 @@ async function doR23Assign() {
   const BATCH = 200;
   for (let i = 0; i < asgns.length; i += BATCH) {
     const chunk = asgns.slice(i, i+BATCH);
+    const assignedAt = new Date().toISOString();
+    const updateResult = await sb.from('assignments').update({ assigned_to:uid,assigned_at:assignedAt })
+      .in('id',chunk.map(assignment => assignment.id)).select('id');
+    if (updateResult.error) throw updateResult.error;
+    if ((updateResult.data || []).length !== chunk.length) throw new Error('จ่ายงานได้ไม่ครบ กรุณารีเฟรชแล้วลองใหม่');
     for (const a of chunk) {
-      await sb.from('assignments').update({
-        assigned_to:uid,
-        assigned_at:new Date().toISOString(),
-      }).eq('id', a.id);
       reassignmentAuditRows.push(buildAuditRow(
         a.session_id,
         a.location_id,
@@ -47231,7 +47627,11 @@ async function doR23Assign() {
   const locationIds = [...new Set(asgns.map(assignment => assignment.location_id).filter(Boolean))];
   Q('r23-preview').innerHTML = '';
   invalidateAssignmentWorkspaceCache(sid);
-  Q('r23-btn').disabled = false; window._r23Asgns = []; refreshLocs(); refreshBulkFilters();
+  window._r23SelectedAssignmentIds = new Set();
+  window._r23Asgns = [];
+  window._r23EligibleAsgns = [];
+  Q('r23-btn').disabled = true;
+  refreshLocs(); refreshBulkFilters();
   showAssignmentSuccessModal({
     count:locationIds.length,
     unit:'Location',
@@ -47239,6 +47639,13 @@ async function doR23Assign() {
     detail:'เปลี่ยนผู้รับมอบหมายงานในรอบถัดไปเรียบร้อยแล้ว',
     printAction:() => printCountForm(locationIds,sid),
   });
+  } catch (error) {
+    console.error(error);
+    invalidateAssignmentWorkspaceCache(Q('as-sess')?.value || '');
+    Q('r23-preview').innerHTML = `<div class="alert alert-red">❌ จ่ายงานไม่สำเร็จ: ${escapeWmsText(error.message || error)}</div>`;
+    Q('r23-btn').disabled = false;
+    Q('r23-btn').textContent = `ลองจ่ายงานอีกครั้ง (${asgns.length.toLocaleString(uiLocale())} Location)`;
+  }
 }
 
 function getNormalLocationRows() {
@@ -53061,7 +53468,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.83' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.85' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -53322,7 +53729,7 @@ async function exportBackupZip() {
       format:BACKUP_ZIP_FORMAT,
       version:BACKUP_ZIP_VERSION,
       created_at:new Date().toISOString(),
-      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.83',
+      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.85',
       excel_file:excelFileName,
       excel_sha256:excelSha256,
       excel_manifest_hash:built.manifestHash,
@@ -54595,7 +55002,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.83" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.85" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
