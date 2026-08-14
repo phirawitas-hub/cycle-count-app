@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.80</title>
+<title>Cycle Count V1.81</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -21,7 +21,7 @@
 <noscript><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <!-- Supabase -->
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.min.js"></script>
-<!-- V1.80: ปุ่ม OK ของ Handheld และปุ่มยืนยันบันทึก Count บางส่วนได้ โดยคง WMS Fast RPC/Fallback เดิม -->
+<!-- V1.81: เพิ่มปุ่มพักงานและไปต่อ บันทึกเฉพาะ Count ที่กรอกและคง Item ว่างไว้ในรอบเดิม -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
 <style>
@@ -10011,11 +10011,76 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
   font-weight:900;
   line-height:1.35;
 }
+.count-pause-modal {
+  width:min(560px,100%);
+  padding:28px;
+  text-align:left;
+}
+.count-pause-head {
+  display:grid;
+  grid-template-columns:64px minmax(0,1fr);
+  gap:16px;
+  align-items:center;
+}
+.count-pause-head .count-result-icon {
+  width:64px;
+  height:64px;
+  margin:0;
+}
+.count-pause-head .count-result-icon svg { width:36px;height:36px; }
+.count-pause-title {
+  margin:0;
+  color:var(--theme-heading-color);
+  font-size:28px;
+  font-weight:900;
+  line-height:1.2;
+}
+.count-pause-location {
+  margin-top:5px;
+  color:var(--theme-primary-color);
+  font-size:15px;
+  font-weight:900;
+  overflow-wrap:anywhere;
+}
+.count-pause-summary {
+  margin-top:20px;
+  padding:16px 18px;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 24%,transparent);
+  border-radius:17px;
+  color:var(--theme-heading-color);
+  background:color-mix(in srgb,var(--theme-primary-color) 9%,var(--theme-card-bg));
+  font-size:17px;
+  font-weight:900;
+  line-height:1.45;
+}
+.count-pause-note {
+  margin:13px 2px 0;
+  color:var(--theme-muted-text-color);
+  font-size:13px;
+  font-weight:700;
+  line-height:1.55;
+}
+.count-pause-actions {
+  display:grid;
+  grid-template-columns:minmax(0,.82fr) minmax(0,1.3fr);
+  gap:10px;
+  margin-top:22px;
+}
+.count-pause-actions .btn { min-height:52px;font-weight:900; }
 @media (max-width:600px) {
   .count-result-backdrop { padding:12px; }
   .count-result-modal { padding:28px 18px 20px;border-radius:24px; }
   .count-result-icon { width:78px;height:78px;margin-bottom:14px; }
   .count-result-icon svg { width:46px;height:46px; }
+  .count-pause-modal { padding:22px 17px 17px; }
+  .count-pause-head { grid-template-columns:54px minmax(0,1fr);gap:12px; }
+  .count-pause-head .count-result-icon { width:54px;height:54px;margin:0; }
+  .count-pause-head .count-result-icon svg { width:30px;height:30px; }
+  .count-pause-title { font-size:23px; }
+  .count-pause-location { font-size:13px; }
+  .count-pause-summary { margin-top:16px;padding:13px 14px;font-size:14px; }
+  .count-pause-note { font-size:11px; }
+  .count-pause-actions { grid-template-columns:1fr;gap:8px;margin-top:17px; }
 }
 
 /* v127 — language settings */
@@ -14382,6 +14447,22 @@ margin-top:8px;
   text-transform:uppercase;
 }
 .count-submit-dock { padding:16px 20px; }
+.count-submit-actions {
+  display:grid;
+  grid-template-columns:minmax(0,.82fr) minmax(0,1.35fr);
+  gap:9px;
+}
+.count-pause-button {
+  min-height:52px;
+  border:1px solid color-mix(in srgb,var(--theme-warning-color) 58%,var(--theme-border-color));
+  color:color-mix(in srgb,var(--theme-warning-color) 72%,var(--theme-heading-color));
+  background:color-mix(in srgb,var(--theme-warning-color) 10%,var(--theme-card-bg));
+  font-weight:900;
+}
+.count-pause-button:hover {
+  border-color:var(--theme-warning-color);
+  background:color-mix(in srgb,var(--theme-warning-color) 18%,var(--theme-card-bg));
+}
 .count-partial-save-help {
   margin-top:8px;
   color:var(--theme-muted-text-color);
@@ -14693,6 +14774,8 @@ margin-top:8px;
     font-size:14px;
     font-weight:900;
   }
+  .count-submit-actions { grid-template-columns:minmax(0,.88fr) minmax(0,1.2fr);gap:7px; }
+  .count-pause-button { min-height:54px;padding:8px 6px;font-size:12px;border-radius:16px; }
   .count-partial-save-help { margin-top:6px; font-size:9px; line-height:1.3; }
 
   /* Scanner fallback remains usable on devices whose camera API is restricted. */
@@ -20661,16 +20744,16 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
 @container zoneboard (min-width:761px){.exec-v156-zone-strip{grid-template-columns:minmax(125px,1.2fr) repeat(4,minmax(82px,.82fr)) minmax(190px,1.55fr)!important;align-items:stretch!important;gap:11px!important}.exec-v156-zone-name,.exec-v157-accuracy-result{grid-column:auto!important;min-height:135px!important}.exec-v156-stat{min-height:135px!important}}
 </style>
 </head>
-<body data-build="v1-80">
+<body data-build="v1-81">
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.80';
+const APP_VERSION = '1.81';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
-const APP_BUILD_ID = 'v1-80';
+const APP_BUILD_ID = 'v1-81';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
 
-// V1.80 performance: keep the login and ordinary work pages light.  Large
+// V1.81 performance: keep the login and ordinary work pages light.  Large
 // file/export/scanner libraries are fetched only after the related button is
 // pressed, and the browser may reuse the same Promise for the rest of the tab.
 const OPTIONAL_LIBRARY_SOURCES = Object.freeze({
@@ -22129,7 +22212,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.80':'e.g. Warehouse V1.80',
+  'เช่น Warehouse V1.81':'e.g. Warehouse V1.81',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -26908,6 +26991,74 @@ function showCountResultPopup(options={}) {
   });
 }
 
+let _countPauseContext = null;
+let _countPausePreviousOverflow = '';
+
+function closeCountPauseConfirm() {
+  Q('count-pause-backdrop')?.remove();
+  _countPauseContext = null;
+  document.body.style.overflow = _countPausePreviousOverflow;
+}
+
+function openCountPauseConfirm(aid,round,idsStr,annualJobId='') {
+  if (Q('count-pause-backdrop')) closeCountPauseConfirm();
+  closeCountNumericKeypad();
+  document.activeElement?.blur?.();
+  const ids = String(idsStr || '').split(',').map(value => value.trim()).filter(Boolean);
+  const enteredCount = ids.filter(itemId => {
+    const value = Q('q_'+itemId)?.value;
+    return value !== '' && value !== undefined && value !== null;
+  }).length;
+  const remainingCount = Math.max(0,ids.length - enteredCount);
+  const locationCode = window._countFoundContext?.locationCode || 'Location ปัจจุบัน';
+  _countPauseContext = { aid,round,idsStr,annualJobId };
+  _countPausePreviousOverflow = document.body.style.overflow;
+  document.body.style.overflow = 'hidden';
+
+  const backdrop = document.createElement('div');
+  backdrop.id = 'count-pause-backdrop';
+  backdrop.className = 'count-result-backdrop';
+  backdrop.setAttribute('role','dialog');
+  backdrop.setAttribute('aria-modal','true');
+  backdrop.setAttribute('aria-labelledby','count-pause-title');
+  backdrop.innerHTML = `
+    <section class="count-result-modal count-pause-modal is-warning" onclick="event.stopPropagation()">
+      <div class="count-pause-head">
+        <div class="count-result-icon" aria-hidden="true">${stableUiIconSvg('info')}</div>
+        <div>
+          <h2 class="count-pause-title" id="count-pause-title">พักงานนี้?</h2>
+          <div class="count-pause-location">${escapeWmsText(locationCode)}</div>
+        </div>
+      </div>
+      <div class="count-pause-summary">มี Count ${enteredCount}/${ids.length} Item · เหลือ ${remainingCount} Item</div>
+      <p class="count-pause-note">ระบบจะบันทึกเฉพาะ Item ที่มี Count เก็บ Item ที่ยังว่างไว้ในรอบเดิม แล้วเปิด Location ถัดไปทันที</p>
+      <div class="count-pause-actions">
+        <button class="btn btn-ghost" type="button" onclick="closeCountPauseConfirm()">ยกเลิก</button>
+        <button class="btn btn-green" id="count-pause-confirm-button" type="button" onclick="confirmCountPauseAndContinue()">พักงานและไปต่อ</button>
+      </div>
+    </section>`;
+  document.body.appendChild(backdrop);
+  requestAnimationFrame(() => Q('count-pause-confirm-button')?.focus());
+}
+
+async function confirmCountPauseAndContinue() {
+  const context = _countPauseContext;
+  if (!context) return;
+  const button = Q('count-pause-confirm-button');
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'กำลังพักงาน...';
+  }
+  closeCountPauseConfirm();
+  await submitCount(
+    context.aid,
+    context.round,
+    context.idsStr,
+    context.annualJobId,
+    { pauseAndContinue:true },
+  );
+}
+
 function showActionSuccessToast(message, options={}) {
   const cleanMessage = cleanSuccessMessage(message);
   if (!cleanMessage) return;
@@ -27156,6 +27307,10 @@ document.addEventListener('keydown', event => {
   }
   if (event.key === 'Escape' && Q('wms-import-result-backdrop')) {
     closeWmsImportResult();
+    return;
+  }
+  if (event.key === 'Escape' && Q('count-pause-backdrop')) {
+    closeCountPauseConfirm();
     return;
   }
   if (event.key === 'Escape' && Q('count-result-backdrop')) {
@@ -28897,8 +29052,8 @@ async function continueToNextMyTaskAfterCount() {
   if (!target) {
     await showCountResultPopup({
       kind:'info',
-      title:'ครบทุกงาน',
-      message:'ไม่มีงานค้าง',
+      title:request.isPaused ? 'พักงานแล้ว' : 'ครบทุกงาน',
+      message:request.isPaused ? 'ไม่มีงานถัดไป' : 'ไม่มีงานค้าง',
     });
     return false;
   }
@@ -28909,8 +29064,9 @@ async function continueToNextMyTaskAfterCount() {
   return true;
 }
 
-function returnToMyTasksAndOpenNextCount(aid,assignment,annualJobId='') {
+function returnToMyTasksAndOpenNextCount(aid,assignment,annualJobId='',options={}) {
   const request = buildNextCountNavigationRequest(aid,assignment,annualJobId);
+  request.isPaused = options?.isPaused === true;
   go('c-tasks',{
     _autoOpenNextCount:request,
   });
@@ -32445,11 +32601,17 @@ async function loadCCount() {
     <div class="card card-flush count-items-card">${items}</div>
     <div class="count-submit-dock">
       <div id="ca"></div>
-      <button class="btn btn-green" id="cb" style="width:100%"
-        data-default-label="✅ ยืนยันยอดที่กรอก · ไม่ต้องรอครบ"
-        onclick="submitCount('${aid}',${round},'${ids}','${annualMode ? jid : ''}')">
-        ✅ ยืนยันยอดที่กรอก · ไม่ต้องรอครบ
-      </button>
+      <div class="count-submit-actions">
+        <button class="btn count-pause-button" id="countPauseButton" type="button"
+          onclick="openCountPauseConfirm('${aid}',${round},'${ids}','${annualMode ? jid : ''}')">
+          พักงานและไปต่อ
+        </button>
+        <button class="btn btn-green" id="cb" style="width:100%"
+          data-default-label="✅ ยืนยันยอดที่กรอก · ไม่ต้องรอครบ"
+          onclick="submitCount('${aid}',${round},'${ids}','${annualMode ? jid : ''}')">
+          ✅ ยืนยันยอดที่กรอก · ไม่ต้องรอครบ
+        </button>
+      </div>
       <div class="count-partial-save-help">บันทึกเฉพาะ Item ที่มีเลข Count · Item ที่ยังว่างคงอยู่ในรอบเดิมและกลับมานับต่อได้</div>
     </div>
   </div>`;
@@ -33466,9 +33628,10 @@ async function handlePhoto(itemId,input) {
   }
 }
 
-async function submitCount(aid, round, idsStr, annualJobId='') {
+async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
   closeCountNumericKeypad();
   document.activeElement?.blur?.();
+  const pauseAndContinue = options?.pauseAndContinue === true;
   const ids = idsStr.split(',').map(value => String(value || '').trim()).filter(Boolean);
   const al  = Q('ca'), btn = Q('cb');
   const defaultButtonText = btn?.dataset?.defaultLabel || '✅ ยืนยันยอดที่กรอก · ไม่ต้องรอครบ';
@@ -33478,18 +33641,62 @@ async function submitCount(aid, round, idsStr, annualJobId='') {
     btn.textContent = defaultButtonText;
   };
 
-  const selectedNames = [...(window._selectedCounters || [])];
-  if (!selectedNames.length) {
-    al.innerHTML = `<div class="alert alert-red">⚠️ กรุณาเลือก "ผู้ตรวจนับ" อย่างน้อย 1 คนก่อนบันทึกยอดนับ</div>`;
-    return;
-  }
-  const actualCounterName = selectedNames.join(', ');
   const filledIds = ids.filter(iid => {
     const value = Q('q_'+iid)?.value;
     return value !== '' && value !== undefined && value !== null;
   });
+  const selectedNames = [...(window._selectedCounters || [])];
+  if (filledIds.length && !selectedNames.length) {
+    al.innerHTML = `<div class="alert alert-red">⚠️ กรุณาเลือก "ผู้ตรวจนับ" อย่างน้อย 1 คนก่อนบันทึกยอดนับ</div>`;
+    return;
+  }
+  const actualCounterName = selectedNames.join(', ');
   if (!filledIds.length) {
-    al.innerHTML = '<div class="alert alert-red">กรอก Count อย่างน้อย 1 Item ก่อนกดยืนยัน</div>';
+    if (!pauseAndContinue) {
+      al.innerHTML = '<div class="alert alert-red">กรอก Count อย่างน้อย 1 Item ก่อนกดยืนยัน</div>';
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'กำลังพักงาน...';
+    const { data:asgn,error:assignmentReadError } = await sb.from('assignments')
+      .select('location_id,session_id,status').eq('id',aid).single();
+    if (assignmentReadError || !asgn) {
+      al.innerHTML = errBox(assignmentReadError?.message || 'ไม่พบ Assignment ที่ต้องการพัก');
+      restoreButton();
+      return;
+    }
+    const { data:progressRows,error:progressError } = await sb.from('assignments')
+      .update({ status:'in_progress' })
+      .eq('id',aid)
+      .select('id,status');
+    if (progressError || !progressRows?.length) {
+      al.innerHTML = errBox(progressError?.message || 'พักงานไม่สำเร็จ');
+      restoreButton();
+      return;
+    }
+    if (window._countFoundContext) window._countFoundContext.assignmentStatus = 'in_progress';
+    if (annualJobId) {
+      const annualProgress = await sb.from('annual_count_jobs')
+        .update({ status:'in_progress' })
+        .eq('id',annualJobId);
+      if (annualProgress.error) console.warn('Annual JOB pause status skipped:',annualProgress.error.message);
+    }
+    const savedCount = visibleCountInputs()
+      .filter(input => input.dataset.countSaved === 'true').length;
+    const remainingCount = Math.max(0,ids.length - savedCount);
+    await logAudit(
+      asgn.session_id,
+      asgn.location_id,
+      null,
+      'count_paused',
+      `สถานะ ${asgn.status || 'pending'}`,
+      `พักงาน รอบ ${round} · บันทึกแล้ว ${savedCount}/${ids.length} Item · เหลือ ${remainingCount}`,
+      aid,
+    );
+    window._photoMap = {};
+    showActionSuccessToast(`บันทึกแล้ว ${savedCount}/${ids.length} Item · เปิดงานถัดไป`, { title:'พักงานแล้ว' });
+    if (await openNextCountFromCachedTasks(aid,asgn,'in_progress',annualJobId)) return;
+    returnToMyTasksAndOpenNextCount(aid,asgn,annualJobId,{ isPaused:true });
     return;
   }
   const roundIsComplete = filledIds.length === ids.length;
@@ -33580,7 +33787,10 @@ async function submitCount(aid, round, idsStr, annualJobId='') {
     (previousResult.data || []).map(record => [String(record.item_id),record])
   );
 
-  btn.disabled = true; btn.textContent = roundIsComplete ? 'กำลังปิดรอบ...' : 'กำลังบันทึกความคืบหน้า...';
+  btn.disabled = true;
+  btn.textContent = pauseAndContinue
+    ? 'กำลังพักงาน...'
+    : (roundIsComplete ? 'กำลังปิดรอบ...' : 'กำลังบันทึกความคืบหน้า...');
 
   const { error } = await sb.from('count_records')
     .upsert(recs, { onConflict:'assignment_id,item_id,round' });
@@ -33637,7 +33847,7 @@ async function submitCount(aid, round, idsStr, annualJobId='') {
   });
   await writeAuditRows(countAuditRows);
 
-  if (!roundIsComplete) {
+  if (!roundIsComplete || pauseAndContinue) {
     // A partial confirmation is a durable checkpoint, not the end of a Count
     // round.  Persist only fields with a quantity and leave every blank Item in
     // this same round so the handheld can resume later (even on another device).
@@ -33666,11 +33876,22 @@ async function submitCount(aid, round, idsStr, annualJobId='') {
       asgn.session_id,
       asgn.location_id,
       null,
-      'count_progress_saved',
+      pauseAndContinue ? 'count_paused' : 'count_progress_saved',
       `สถานะ ${asgn.status || 'pending'}`,
-      `บันทึกระหว่างนับ รอบ ${round} · ${savedCount}/${ids.length} Item · เหลือ ${remainingCount} · ผู้ตรวจนับ ${actualCounterName}`,
+      pauseAndContinue
+        ? `พักงาน รอบ ${round} · บันทึกแล้ว ${savedCount}/${ids.length} Item · เหลือ ${remainingCount} · ผู้ตรวจนับ ${actualCounterName}`
+        : `บันทึกระหว่างนับ รอบ ${round} · ${savedCount}/${ids.length} Item · เหลือ ${remainingCount} · ผู้ตรวจนับ ${actualCounterName}`,
       aid,
     );
+    if (pauseAndContinue) {
+      al.innerHTML = `<div class="alert alert-green">✅ พักงานแล้ว · บันทึก ${savedCount}/${ids.length} Item · เหลือ ${remainingCount} Item ในรอบที่ ${round}</div>`;
+      restoreButton();
+      window._photoMap = {};
+      showActionSuccessToast(`บันทึกแล้ว ${savedCount}/${ids.length} Item · เปิดงานถัดไป`, { title:'พักงานแล้ว' });
+      if (await openNextCountFromCachedTasks(aid,asgn,'in_progress',annualJobId)) return;
+      returnToMyTasksAndOpenNextCount(aid,asgn,annualJobId,{ isPaused:true });
+      return;
+    }
     al.innerHTML = `<div class="alert alert-green">✅ บันทึกแล้ว ${savedCount}/${ids.length} Item · เหลือ ${remainingCount} Item และยังอยู่รอบที่ ${round}</div>`;
     restoreButton();
     await showCountResultPopup({
@@ -40097,7 +40318,7 @@ function readWmsFastCacheV179(sessionId) {
 function writeWmsFastCacheV179(sessionId,payload) {
   try {
     localStorage.setItem(wmsFastCacheKeyV179(sessionId),JSON.stringify({
-      version:'1.80',
+      version:'1.81',
       sessionId:String(sessionId || ''),
       userId:String(me?.id || ''),
       role:String(prof?.role || ''),
@@ -40404,7 +40625,7 @@ async function loadSvDash() {
     disconnectTabletAccuracyLayoutGuard();
     return;
   }
-  // V1.80 retains the WMS fast path: this menu does not wait for the full Dashboard data graph.
+  // V1.81 retains the WMS fast path: this menu does not wait for the full Dashboard data graph.
   // It paints a device snapshot immediately (when available), then refreshes
   // one compact RPC payload in the background.  A missing RPC falls back to
   // the existing legacy loader below, so deployments stay backward-compatible.
@@ -52530,7 +52751,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.80' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.81' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -52791,7 +53012,7 @@ async function exportBackupZip() {
       format:BACKUP_ZIP_FORMAT,
       version:BACKUP_ZIP_VERSION,
       created_at:new Date().toISOString(),
-      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.80',
+      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.81',
       excel_file:excelFileName,
       excel_sha256:excelSha256,
       excel_manifest_hash:built.manifestHash,
@@ -54064,7 +54285,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.80" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.81" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
