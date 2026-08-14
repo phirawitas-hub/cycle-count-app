@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.81</title>
+<title>Cycle Count V1.82</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -21,7 +21,7 @@
 <noscript><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <!-- Supabase -->
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.min.js"></script>
-<!-- V1.81: เพิ่มปุ่มพักงานและไปต่อ บันทึกเฉพาะ Count ที่กรอกและคง Item ว่างไว้ในรอบเดิม -->
+<!-- V1.82: ปรับหน้า Handheld ให้หัวข้อและปุ่มกะทัดรัด พร้อมแถบความคืบหน้าแบบติดด้านบน -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
 <style>
@@ -20742,18 +20742,132 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
 
 /* V1.65 · Keep each Zone on one horizontal strip until the screen is truly narrow. */
 @container zoneboard (min-width:761px){.exec-v156-zone-strip{grid-template-columns:minmax(125px,1.2fr) repeat(4,minmax(82px,.82fr)) minmax(190px,1.55fr)!important;align-items:stretch!important;gap:11px!important}.exec-v156-zone-name,.exec-v157-accuracy-result{grid-column:auto!important;min-height:135px!important}.exec-v156-stat{min-height:135px!important}}
+
+/* V1.82 · Rugged Handheld count-page density and sticky progress. */
+@media (max-width:760px) {
+  body.count-page-active #app .topbar {
+    height:52px !important;
+    min-height:52px !important;
+    padding:0 7px !important;
+    gap:4px !important;
+  }
+  body.count-page-active #app .topbar-left {
+    flex:1 1 auto !important;
+    min-width:0 !important;
+    gap:4px !important;
+  }
+  body.count-page-active #app .mobile-sidebar-trigger,
+  body.count-page-active #app .page-back-btn,
+  body.count-page-active #app .top-out-btn {
+    width:36px !important;
+    min-width:36px !important;
+    height:36px !important;
+    padding:0 !important;
+    border-radius:11px !important;
+  }
+  body.count-page-active #app .topbar-title[data-compact-title] {
+    flex:1 1 auto !important;
+    min-width:0 !important;
+    max-width:none !important;
+    overflow:hidden !important;
+    color:transparent !important;
+    font-size:0 !important;
+    line-height:1 !important;
+    text-overflow:clip !important;
+    white-space:nowrap !important;
+  }
+  body.count-page-active #app .topbar-title[data-compact-title]::after {
+    content:attr(data-compact-title);
+    display:block;
+    overflow:hidden;
+    color:var(--theme-heading-color);
+    font-family:'Mitr','Sarabun',sans-serif;
+    font-size:clamp(13px,3.5vw,15px);
+    font-weight:850;
+    line-height:1.15;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  body.count-page-active #app .topbar-right { flex:0 0 auto !important;gap:3px !important; }
+
+  body.count-page-active #app .count-handheld-page .count-entry-progress {
+    position:sticky !important;
+    z-index:86 !important;
+    top:54px !important;
+    display:grid !important;
+    grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+    gap:4px !important;
+    margin:6px -2px 8px !important;
+    padding:4px !important;
+    overflow:visible !important;
+    border:1px solid color-mix(in srgb,var(--theme-primary-color) 22%,var(--theme-border-color)) !important;
+    border-radius:12px !important;
+    background:var(--theme-card-bg) !important;
+    background:color-mix(in srgb,var(--theme-card-bg) 94%,var(--theme-primary-color)) !important;
+    box-shadow:0 6px 17px rgba(12,63,66,.16) !important;
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+  }
+  body.count-page-active #app .count-entry-progress-item {
+    min-width:0 !important;
+    min-height:38px !important;
+    padding:5px 2px !important;
+    border-radius:9px !important;
+    box-shadow:none !important;
+  }
+  body.count-page-active #app .count-entry-progress-item strong {
+    overflow:hidden;
+    font-size:13px !important;
+    line-height:1 !important;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  body.count-page-active #app .count-entry-progress-item span {
+    margin-top:3px !important;
+    overflow:hidden;
+    font-size:7px !important;
+    line-height:1.1 !important;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  body.count-page-active #app .count-submit-dock {
+    margin:0 -8px calc(-18px - env(safe-area-inset-bottom)) !important;
+    padding:5px 6px calc(5px + env(safe-area-inset-bottom)) !important;
+    background:var(--theme-page-bg) !important;
+    background:color-mix(in srgb,var(--theme-page-bg) 96%,transparent) !important;
+    box-shadow:0 -5px 16px rgba(20,65,68,.10) !important;
+  }
+  body.count-page-active #app .count-submit-actions {
+    grid-template-columns:minmax(0,1.22fr) minmax(0,.78fr) !important;
+    gap:5px !important;
+  }
+  body.count-page-active #app .count-submit-dock .count-submit-actions .btn {
+    width:100% !important;
+    height:40px !important;
+    min-height:40px !important;
+    padding:4px 6px !important;
+    border-radius:11px !important;
+    font-size:10.5px !important;
+    font-weight:900 !important;
+    line-height:1.15 !important;
+    white-space:nowrap !important;
+  }
+  body.count-page-active #app .count-submit-dock #cb { font-size:11px !important; }
+  body.count-page-active #app .count-partial-save-help { display:none !important; }
+}
 </style>
 </head>
-<body data-build="v1-81">
+<body data-build="v1-82">
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.81';
+const APP_VERSION = '1.82';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
-const APP_BUILD_ID = 'v1-81';
+const APP_BUILD_ID = 'v1-82';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
 
-// V1.81 performance: keep the login and ordinary work pages light.  Large
+// V1.82 performance: keep the login and ordinary work pages light.  Large
 // file/export/scanner libraries are fetched only after the related button is
 // pressed, and the browser may reuse the same Promise for the rest of the tab.
 const OPTIONAL_LIBRARY_SOURCES = Object.freeze({
@@ -22212,7 +22326,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.81':'e.g. Warehouse V1.81',
+  'เช่น Warehouse V1.82':'e.g. Warehouse V1.82',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -26335,6 +26449,7 @@ function render() {
   const isLoginPage = ['login','reset-password'].includes(page);
   document.body.classList.toggle('app-shell-mode', !isLoginPage);
   document.body.classList.toggle('login-page-active', isLoginPage);
+  document.body.classList.toggle('count-page-active', page === 'c-count');
   if (page === 'login') { paintLogin(); return; }
   if (page === 'reset-password') { paintResetPassword(); return; }
 
@@ -26539,7 +26654,7 @@ function render() {
               </svg>
             </button>
             ${pageBackButtonHtml(page)}
-            <h1 class="topbar-title">${pageTitle}</h1>
+            <h1 class="topbar-title"${page === 'c-count' ? ` data-compact-title="${escapeWmsText(uiCopy('บันทึกผลนับ','Count'))}"` : ''}>${pageTitle}</h1>
           </div>
           <div class="topbar-right">
             <div class="user-profile">
@@ -32607,9 +32722,9 @@ async function loadCCount() {
           พักงานและไปต่อ
         </button>
         <button class="btn btn-green" id="cb" style="width:100%"
-          data-default-label="✅ ยืนยันยอดที่กรอก · ไม่ต้องรอครบ"
+          data-default-label="ยืนยันยอด"
           onclick="submitCount('${aid}',${round},'${ids}','${annualMode ? jid : ''}')">
-          ✅ ยืนยันยอดที่กรอก · ไม่ต้องรอครบ
+          ยืนยันยอด
         </button>
       </div>
       <div class="count-partial-save-help">บันทึกเฉพาะ Item ที่มีเลข Count · Item ที่ยังว่างคงอยู่ในรอบเดิมและกลับมานับต่อได้</div>
@@ -33634,7 +33749,7 @@ async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
   const pauseAndContinue = options?.pauseAndContinue === true;
   const ids = idsStr.split(',').map(value => String(value || '').trim()).filter(Boolean);
   const al  = Q('ca'), btn = Q('cb');
-  const defaultButtonText = btn?.dataset?.defaultLabel || '✅ ยืนยันยอดที่กรอก · ไม่ต้องรอครบ';
+  const defaultButtonText = btn?.dataset?.defaultLabel || 'ยืนยันยอด';
   const restoreButton = () => {
     if (!btn) return;
     btn.disabled = false;
@@ -40318,7 +40433,7 @@ function readWmsFastCacheV179(sessionId) {
 function writeWmsFastCacheV179(sessionId,payload) {
   try {
     localStorage.setItem(wmsFastCacheKeyV179(sessionId),JSON.stringify({
-      version:'1.81',
+      version:'1.82',
       sessionId:String(sessionId || ''),
       userId:String(me?.id || ''),
       role:String(prof?.role || ''),
@@ -40625,7 +40740,7 @@ async function loadSvDash() {
     disconnectTabletAccuracyLayoutGuard();
     return;
   }
-  // V1.81 retains the WMS fast path: this menu does not wait for the full Dashboard data graph.
+  // V1.82 retains the WMS fast path: this menu does not wait for the full Dashboard data graph.
   // It paints a device snapshot immediately (when available), then refreshes
   // one compact RPC payload in the background.  A missing RPC falls back to
   // the existing legacy loader below, so deployments stay backward-compatible.
@@ -52751,7 +52866,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.81' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.82' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -53012,7 +53127,7 @@ async function exportBackupZip() {
       format:BACKUP_ZIP_FORMAT,
       version:BACKUP_ZIP_VERSION,
       created_at:new Date().toISOString(),
-      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.81',
+      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.82',
       excel_file:excelFileName,
       excel_sha256:excelSha256,
       excel_manifest_hash:built.manifestHash,
@@ -54285,7 +54400,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.81" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.82" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
