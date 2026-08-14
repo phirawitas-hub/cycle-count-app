@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.85</title>
+<title>Cycle Count V1.86</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -21,7 +21,7 @@
 <noscript><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <!-- Supabase -->
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.min.js"></script>
-<!-- V1.85: แถบความคืบหน้าการนับยึดใต้ Header ตามความสูงจริงทุกอุปกรณ์ -->
+<!-- V1.86: ลดรายละเอียดซ้ำในกราฟความคืบหน้างานยืนยันผล -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
 <style>
@@ -21105,28 +21105,6 @@ body.count-page-active #app .count-handheld-page .count-entry-progress {
   border-radius:inherit;
   background:var(--theme-primary-color);
 }
-#app .variance-queue-work-title {
-  color:var(--theme-heading-color);
-  font-size:11px;
-  font-weight:900;
-}
-#app .variance-queue-work-list {
-  display:grid;
-  grid-template-columns:repeat(4,minmax(0,1fr));
-  gap:8px;
-}
-#app .variance-queue-work {
-  min-width:0;
-  padding:10px 12px;
-  border:1px solid color-mix(in srgb,var(--theme-danger-color) 18%,var(--theme-border-color));
-  border-radius:14px;
-  background:color-mix(in srgb,var(--theme-danger-color) 5%,var(--theme-card-bg));
-}
-#app .variance-queue-work strong,
-#app .variance-queue-work span { display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
-#app .variance-queue-work strong { color:var(--theme-heading-color);font-size:11px;font-weight:900; }
-#app .variance-queue-work span { margin-top:4px;color:var(--theme-muted-text-color);font-size:9px;font-weight:700; }
-
 #app .variance-detail-location {
   display:flex;
   align-items:center;
@@ -21207,25 +21185,23 @@ body.count-page-active #app .count-handheld-page .count-entry-progress {
 #app .r23-location-copy span { display:block; }
 
 @media (max-width:1050px) {
-  #app .variance-queue-work-list { grid-template-columns:repeat(2,minmax(0,1fr)); }
   #app .r23-filter-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
 @media (max-width:700px) {
   #app .variance-queue-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); }
-  #app .variance-queue-work-list { grid-template-columns:1fr; }
   #app .variance-detail-location { align-items:flex-start;flex-wrap:wrap; }
   #app .r23-filter-grid { grid-template-columns:1fr; }
   #app .r23-selection-tools { align-items:stretch;flex-direction:column; }
 }
 </style>
 </head>
-<body data-build="v1-85">
+<body data-build="v1-86">
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.85';
+const APP_VERSION = '1.86';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
-const APP_BUILD_ID = 'v1-85';
+const APP_BUILD_ID = 'v1-86';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
 
 // V1.84 performance: keep the login and ordinary work pages light.  Large
@@ -22687,7 +22663,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.85':'e.g. Warehouse V1.85',
+  'เช่น Warehouse V1.86':'e.g. Warehouse V1.86',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -42280,14 +42256,6 @@ async function loadSvDash() {
     pendingVarianceLocations.get(key).items.push(row.items?.code || 'Location ว่าง');
   });
   const pendingVarianceLocationRows = [...pendingVarianceLocations.values()];
-  const pendingVarianceWorkCards = pendingVarianceLocationRows.slice(0,8).map(entry => {
-    const itemLabels = [...new Set(entry.items.filter(Boolean))];
-    const preview = itemLabels.slice(0,3).join(', ');
-    return `<div class="variance-queue-work">
-      <strong class="mono">${escapeWmsText(entry.code)}</strong>
-      <span>${itemLabels.length.toLocaleString(uiLocale())} Item${preview ? ` · ${escapeWmsText(preview)}${itemLabels.length > 3 ? '…' : ''}` : ''}</span>
-    </div>`;
-  }).join('');
   const varianceQueueOverviewHtml = `<section class="variance-queue-overview" style="--variance-queue-progress:${varianceWorkflowPercent}%">
     <div class="variance-queue-overview-head">
       <div class="variance-queue-overview-copy">
@@ -42303,7 +42271,6 @@ async function loadSvDash() {
       <div class="variance-queue-kpi is-pending"><span>Location ที่เหลือ</span><strong>${pendingVarianceLocationRows.length.toLocaleString(uiLocale())}</strong></div>
     </div>
     <div class="variance-queue-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${varianceWorkflowPercent}"><span></span></div>
-    ${pendingVarianceWorkCards ? `<div class="variance-queue-work-title">งานที่ยังเหลือ</div><div class="variance-queue-work-list">${pendingVarianceWorkCards}${pendingVarianceLocationRows.length > 8 ? `<div class="variance-queue-work"><strong>และอีก ${(pendingVarianceLocationRows.length-8).toLocaleString(uiLocale())} Location</strong><span>ใช้ตัวกรองด้านล่างเพื่อดูรายการ</span></div>` : ''}</div>` : ''}
   </section>`;
   const varianceRowsHtml = needsFollowUp.length ? needsFollowUp.map((row, i) => {
     const assignment = asgnInfoMap[row.assignment_id] || {};
@@ -53468,7 +53435,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.85' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.86' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -53729,7 +53696,7 @@ async function exportBackupZip() {
       format:BACKUP_ZIP_FORMAT,
       version:BACKUP_ZIP_VERSION,
       created_at:new Date().toISOString(),
-      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.85',
+      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.86',
       excel_file:excelFileName,
       excel_sha256:excelSha256,
       excel_manifest_hash:built.manifestHash,
@@ -55002,7 +54969,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.85" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.86" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
