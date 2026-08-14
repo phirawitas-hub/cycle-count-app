@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.82</title>
+<title>Cycle Count V1.83</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -21,7 +21,7 @@
 <noscript><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <!-- Supabase -->
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.min.js"></script>
-<!-- V1.82: ปรับหน้า Handheld ให้หัวข้อและปุ่มกะทัดรัด พร้อมแถบความคืบหน้าแบบติดด้านบน -->
+<!-- V1.83: ป๊อปอัพจ่ายงานซ้ำทำต่อเนื่อง หัวข้องาน Handheld ไม่ล้น และแถบความคืบหน้าติดด้านบนทุกอุปกรณ์ -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
 <style>
@@ -20743,7 +20743,7 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
 /* V1.65 · Keep each Zone on one horizontal strip until the screen is truly narrow. */
 @container zoneboard (min-width:761px){.exec-v156-zone-strip{grid-template-columns:minmax(125px,1.2fr) repeat(4,minmax(82px,.82fr)) minmax(190px,1.55fr)!important;align-items:stretch!important;gap:11px!important}.exec-v156-zone-name,.exec-v157-accuracy-result{grid-column:auto!important;min-height:135px!important}.exec-v156-stat{min-height:135px!important}}
 
-/* V1.82 · Rugged Handheld count-page density and sticky progress. */
+/* V1.83 · Rugged Handheld count-page density and sticky progress. */
 @media (max-width:760px) {
   body.count-page-active #app .topbar {
     height:52px !important;
@@ -20856,18 +20856,176 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
   body.count-page-active #app .count-submit-dock #cb { font-size:11px !important; }
   body.count-page-active #app .count-partial-save-help { display:none !important; }
 }
+
+/* V1.83 · Keep Count progress visible on every device and prevent Assigned Work overflow. */
+body.count-page-active #app .count-handheld-page .count-entry-progress {
+  position:sticky !important;
+  z-index:86 !important;
+  top:calc(var(--topbar-height) + 4px) !important;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 22%,var(--theme-border-color)) !important;
+  background:var(--theme-card-bg) !important;
+  background:color-mix(in srgb,var(--theme-card-bg) 94%,var(--theme-primary-color)) !important;
+  box-shadow:0 7px 20px rgba(12,63,66,.14) !important;
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+}
+
+.expired-session-empty {
+  padding:22px 16px;
+  border:1px dashed color-mix(in srgb,var(--theme-success-color,#23845a) 45%,var(--theme-border-color));
+  border-radius:16px;
+  color:var(--theme-success-color,#23845a);
+  background:color-mix(in srgb,var(--theme-success-color,#23845a) 7%,var(--theme-card-bg));
+  font-size:14px;
+  font-weight:800;
+  text-align:center;
+}
+
+@media (max-width:760px) {
+  body.count-page-active #app .topbar-title[data-compact-title] {
+    -webkit-text-fill-color:transparent !important;
+  }
+  body.count-page-active #app .topbar-title[data-compact-title]::after {
+    -webkit-text-fill-color:var(--theme-heading-color);
+  }
+  body.task-page-active #app .topbar {
+    height:52px !important;
+    min-height:52px !important;
+    padding:0 7px !important;
+    gap:4px !important;
+  }
+  body.task-page-active #app .topbar-left {
+    flex:1 1 auto !important;
+    min-width:0 !important;
+    gap:4px !important;
+  }
+  body.task-page-active #app .mobile-sidebar-trigger,
+  body.task-page-active #app .page-back-btn,
+  body.task-page-active #app .top-out-btn {
+    width:36px !important;
+    min-width:36px !important;
+    height:36px !important;
+    padding:0 !important;
+    border-radius:11px !important;
+  }
+  body.task-page-active #app .topbar-title[data-compact-title] {
+    flex:1 1 auto !important;
+    min-width:0 !important;
+    max-width:none !important;
+    overflow:hidden !important;
+    color:transparent !important;
+    -webkit-text-fill-color:transparent !important;
+    font-size:0 !important;
+    line-height:1 !important;
+    white-space:nowrap !important;
+  }
+  body.task-page-active #app .topbar-title[data-compact-title]::after {
+    content:attr(data-compact-title);
+    display:block;
+    overflow:hidden;
+    color:var(--theme-heading-color);
+    -webkit-text-fill-color:var(--theme-heading-color);
+    font-family:'Mitr','Sarabun',sans-serif;
+    font-size:clamp(13px,3.5vw,15px);
+    font-weight:850;
+    line-height:1.15;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  body.task-page-active #app .topbar-right {
+    flex:0 0 auto !important;
+    min-width:0 !important;
+    gap:3px !important;
+  }
+  body.task-page-active #app .page-content {
+    min-width:0 !important;
+    overflow-x:hidden !important;
+  }
+  body.task-page-active #app .my-task-progress-card {
+    min-width:0 !important;
+    padding:12px !important;
+    overflow:hidden !important;
+  }
+  body.task-page-active #app .my-task-progress-head {
+    gap:8px !important;
+    min-width:0 !important;
+    margin-bottom:8px !important;
+  }
+  body.task-page-active #app .my-task-progress-head > span:first-child { font-size:12px !important; }
+  body.task-page-active #app .my-task-progress-head > span:last-child { font-size:16px !important;white-space:nowrap; }
+  body.task-page-active #app .my-task-progress-tags {
+    display:grid !important;
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    gap:6px !important;
+    min-width:0 !important;
+    margin-top:9px !important;
+  }
+  body.task-page-active #app .my-task-progress-tags .tag {
+    min-width:0 !important;
+    padding:5px 7px !important;
+    overflow:hidden !important;
+    font-size:10px !important;
+    line-height:1.25 !important;
+    text-align:center !important;
+    text-overflow:ellipsis !important;
+    white-space:nowrap !important;
+  }
+  body.task-page-active #app .my-task-date-filter {
+    display:grid !important;
+    grid-template-columns:minmax(0,1fr) !important;
+    gap:8px !important;
+    margin-top:12px !important;
+    padding:9px !important;
+  }
+  body.task-page-active #app .my-task-date-label { margin:0 !important;font-size:11px !important; }
+  body.task-page-active #app .my-task-date-buttons { display:grid !important;grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:6px !important; }
+  body.task-page-active #app .my-task-date-buttons .btn,
+  body.task-page-active #app .my-task-scan-button {
+    min-width:0 !important;
+    min-height:40px !important;
+    padding:7px 9px !important;
+    font-size:11px !important;
+    line-height:1.2 !important;
+    white-space:normal !important;
+  }
+  body.task-page-active #app .my-task-date-filter input[type="date"] {
+    width:100% !important;
+    min-width:0 !important;
+    min-height:42px !important;
+    font-size:12px !important;
+  }
+  body.task-page-active #app :is(.task-list-actions-outside,.task-filter-card,.task-filter-collapsible,#mt-list) {
+    min-width:0 !important;
+    max-width:100% !important;
+  }
+  body.task-page-active #app .task-filter-toggle-copy { min-width:0 !important; }
+  body.task-page-active #app .task-filter-toggle-text {
+    min-width:0 !important;
+    overflow:hidden !important;
+  }
+  body.task-page-active #app .task-filter-toggle-text strong {
+    overflow:hidden !important;
+    font-size:12px !important;
+    text-overflow:ellipsis !important;
+    white-space:nowrap !important;
+  }
+
+  body.count-page-active #app .count-handheld-page .count-entry-progress {
+    top:54px !important;
+  }
+}
 </style>
 </head>
-<body data-build="v1-82">
+<body data-build="v1-83">
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.82';
+const APP_VERSION = '1.83';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
-const APP_BUILD_ID = 'v1-82';
+const APP_BUILD_ID = 'v1-83';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
 
-// V1.82 performance: keep the login and ordinary work pages light.  Large
+// V1.83 performance: keep the login and ordinary work pages light.  Large
 // file/export/scanner libraries are fetched only after the related button is
 // pressed, and the browser may reuse the same Promise for the rest of the tab.
 const OPTIONAL_LIBRARY_SOURCES = Object.freeze({
@@ -22326,7 +22484,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.82':'e.g. Warehouse V1.82',
+  'เช่น Warehouse V1.83':'e.g. Warehouse V1.83',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -26450,6 +26608,7 @@ function render() {
   document.body.classList.toggle('app-shell-mode', !isLoginPage);
   document.body.classList.toggle('login-page-active', isLoginPage);
   document.body.classList.toggle('count-page-active', page === 'c-count');
+  document.body.classList.toggle('task-page-active', page === 'c-tasks');
   if (page === 'login') { paintLogin(); return; }
   if (page === 'reset-password') { paintResetPassword(); return; }
 
@@ -26654,7 +26813,11 @@ function render() {
               </svg>
             </button>
             ${pageBackButtonHtml(page)}
-            <h1 class="topbar-title"${page === 'c-count' ? ` data-compact-title="${escapeWmsText(uiCopy('บันทึกผลนับ','Count'))}"` : ''}>${pageTitle}</h1>
+            <h1 class="topbar-title"${page === 'c-count'
+              ? ` data-compact-title="${escapeWmsText(uiCopy('บันทึกผลนับ','Count'))}"`
+              : page === 'c-tasks'
+                ? ` data-compact-title="${escapeWmsText(uiCopy('งานของฉัน','My Work'))}"`
+                : ''}>${pageTitle}</h1>
           </div>
           <div class="topbar-right">
             <div class="user-profile">
@@ -28878,19 +29041,19 @@ async function loadCTasks() {
     </div>`;
 
   cnt().innerHTML = `
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <div class="card my-task-progress-card">
+      <div class="my-task-progress-head" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <span style="font-size:14px;font-weight:700;color:var(--text-muted)">ความคืบหน้า</span>
         <span style="font-size:18px;font-weight:800;color:var(--primary-blue);font-family:'Fredoka'">${done} / ${total}</span>
       </div>
       <div class="prog"><div class="prog-fill" style="width:${pct}%"></div></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      <div class="my-task-progress-tags" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
         <span class="tag tag-green">✓ นับครบ ${done}</span>
         <span class="tag tag-amber">DIFF รอหัวหน้า ${variancePending}</span>
         <span class="tag tag-gray">ยังต้องนับ ${stillCounting}</span>
       </div>
       ${myTaskDateFilterHtml()}
-      ${(asgns.length || annualJobs.length) ? `<button class="btn btn-blue" style="margin-top:24px;width:100%" onclick="openScanner()">📷 สแกน Location</button>` : ''}
+      ${(asgns.length || annualJobs.length) ? `<button class="btn btn-blue my-task-scan-button" style="margin-top:24px;width:100%" onclick="openScanner()">📷 สแกน Location</button>` : ''}
       ${(asgns.length || annualJobs.length) ? hardwareLaserCaptureHtml(
         'task_hardware_scan',
         'task-location',
@@ -32701,16 +32864,16 @@ async function loadCCount() {
         : `📦 ${snaps.length} รายการ — กรอกจำนวนที่นับได้จริง (Location ว่างให้กรอก 0)`}</div>
       <div class="count-entry-progress" aria-label="สรุปผลการนับรายการสินค้า">
         <div class="count-entry-progress-item">
-          <strong id="countProgressSaved">0/${activeCountRows.length}</strong><span>${round > 1 ? 'บันทึกรอบนี้' : 'บันทึกแล้ว'}</span>
+          <strong id="countProgressSaved">0/${activeCountRows.length}</strong><span>บันทึกแล้ว</span>
         </div>
         <div class="count-entry-progress-item is-match">
-          <strong id="countProgressMatch">${window._countEntryResolvedCount}</strong><span>${round > 1 ? 'ผ่านแล้ว' : (showOH ? 'ตรง' : 'ผ่าน')}</span>
+          <strong id="countProgressMatch">${window._countEntryResolvedCount}</strong><span>ตรง / ผ่าน</span>
         </div>
         <div class="count-entry-progress-item is-diff">
-          <strong id="countProgressDiff">${round > 1 ? activeCountRows.length : 0}</strong><span>${round > 1 ? 'ต้องนับใหม่' : (showOH ? 'DIFF' : 'ต้องนับซ้ำ')}</span>
+          <strong id="countProgressDiff">${round > 1 ? activeCountRows.length : 0}</strong><span>DIFF / ต้องนับใหม่</span>
         </div>
         <div class="count-entry-progress-item is-remaining">
-          <strong id="countProgressRemaining">${activeCountRows.length}</strong><span>${round > 1 ? 'ยังไม่กรอก' : 'คงเหลือ'}</span>
+          <strong id="countProgressRemaining">${activeCountRows.length}</strong><span>คงเหลือ</span>
         </div>
       </div>
     <div class="card card-flush count-items-card">${items}</div>
@@ -40433,7 +40596,7 @@ function readWmsFastCacheV179(sessionId) {
 function writeWmsFastCacheV179(sessionId,payload) {
   try {
     localStorage.setItem(wmsFastCacheKeyV179(sessionId),JSON.stringify({
-      version:'1.82',
+      version:'1.83',
       sessionId:String(sessionId || ''),
       userId:String(me?.id || ''),
       role:String(prof?.role || ''),
@@ -40740,7 +40903,7 @@ async function loadSvDash() {
     disconnectTabletAccuracyLayoutGuard();
     return;
   }
-  // V1.82 retains the WMS fast path: this menu does not wait for the full Dashboard data graph.
+  // V1.83 retains the WMS fast path: this menu does not wait for the full Dashboard data graph.
   // It paints a device snapshot immediately (when available), then refreshes
   // one compact RPC payload in the background.  A missing RPC falls back to
   // the existing legacy loader below, so deployments stay backward-compatible.
@@ -45820,8 +45983,8 @@ async function renderManageAssign(container) {
           </div>
           <div class="expired-session-groups" id="expired-session-groups"></div>
           <div class="expired-session-actions">
-            <button class="btn btn-blue" type="button" onclick="chooseExpiredAssignmentsForNewUser()">เปลี่ยนคน</button>
-            <button class="btn btn-ghost" type="button" onclick="closeExpiredAssignmentPrompt()">ไว้ทีหลัง</button>
+            <button class="btn btn-blue" id="expired-change-user-button" type="button" onclick="chooseExpiredAssignmentsForNewUser()">เปลี่ยนคน</button>
+            <button class="btn btn-ghost" type="button" onclick="closeExpiredAssignmentPrompt()">ปิด</button>
           </div>
         </div>
       </div>
@@ -47911,23 +48074,42 @@ function expiredAssignmentGroups() {
     || String(a.userName).localeCompare(String(b.userName),'th'));
 }
 
-function showExpiredAssignmentPrompt(sessionId) {
+function renderExpiredAssignmentPromptContent(options={}) {
   const assignments = window._expiredAssignments || [];
   const modal = Q('expired-session-modal');
   const groupsNode = Q('expired-session-groups');
   const summaryNode = Q('expired-session-modal-summary');
-  if (!modal || !groupsNode || !assignments.length || _expiredPromptSessionId === sessionId) return;
-  _expiredPromptSessionId = sessionId;
+  const changeUserButton = Q('expired-change-user-button');
+  if (!modal || !groupsNode) return false;
   const groups = expiredAssignmentGroups();
-  if (summaryNode) summaryNode.textContent = `พบ ${assignments.length.toLocaleString(uiLocale())} Location จาก ${groups.length.toLocaleString(uiLocale())} ผู้รับเดิม`;
-  groupsNode.innerHTML = groups.map(group => `<div class="expired-session-group">
-    <div><strong>${escapeWmsText(group.userName)}</strong><span>${group.assignments.length.toLocaleString(uiLocale())} Location</span></div>
-    <button class="btn btn-amber btn-sm" type="button" ${group.userId ? '' : 'disabled'}
-      onclick="reassignExpiredGroupToPrevious('${escapeWmsText(group.userId)}')">จ่ายคนเดิม</button>
-  </div>`).join('');
+  if (assignments.length) {
+    if (summaryNode) summaryNode.textContent = `เหลือ ${assignments.length.toLocaleString(uiLocale())} Location จาก ${groups.length.toLocaleString(uiLocale())} ผู้รับเดิม`;
+    groupsNode.innerHTML = groups.map(group => `<div class="expired-session-group">
+      <div><strong>${escapeWmsText(group.userName)}</strong><span>${group.assignments.length.toLocaleString(uiLocale())} Location</span></div>
+      <button class="btn btn-amber btn-sm" type="button" ${group.userId ? '' : 'disabled'}
+        onclick="reassignExpiredGroupToPrevious('${escapeWmsText(group.userId)}',this)">จ่ายคนเดิม</button>
+    </div>`).join('');
+  } else {
+    if (summaryNode) summaryNode.textContent = 'จัดการงานหมดเวลาครบแล้ว กดปิดเมื่อพร้อม';
+    groupsNode.innerHTML = `<div class="expired-session-empty">✓ ไม่มีงานหมดเวลาที่รอจ่ายใหม่แล้ว</div>`;
+  }
+  if (changeUserButton) changeUserButton.disabled = assignments.length === 0;
+  if (options.focus === true) {
+    (modal.querySelector('.expired-session-group button:not(:disabled)')
+      || modal.querySelector('button:not(:disabled)'))?.focus({ preventScroll:true });
+  }
+  return true;
+}
+
+function showExpiredAssignmentPrompt(sessionId) {
+  const assignments = window._expiredAssignments || [];
+  const modal = Q('expired-session-modal');
+  if (!modal || !assignments.length || _expiredPromptSessionId === sessionId) return;
+  _expiredPromptSessionId = sessionId;
+  renderExpiredAssignmentPromptContent();
   modal.hidden = false;
   document.body.classList.add('expired-session-modal-open');
-  modal.querySelector('button:not(:disabled)')?.focus({ preventScroll:true });
+  renderExpiredAssignmentPromptContent({ focus:true });
 }
 
 function chooseExpiredAssignmentsForNewUser() {
@@ -47938,13 +48120,24 @@ function chooseExpiredAssignmentsForNewUser() {
   requestAnimationFrame(() => Q('normal-free-user')?.focus({ preventScroll:true }));
 }
 
-async function reassignExpiredGroupToPrevious(userId) {
+async function reassignExpiredGroupToPrevious(userId,triggerButton=null) {
   if (!userId) return;
   const assignmentIds = (window._expiredAssignments || [])
     .filter(row => String(row.expired_from || '') === String(userId))
     .map(row => row.id)
     .filter(Boolean);
-  await reassignExpiredAssignments(userId,assignmentIds);
+  if (triggerButton) {
+    triggerButton.disabled = true;
+    triggerButton.textContent = 'กำลังจ่าย...';
+  }
+  try {
+    await reassignExpiredAssignments(userId,assignmentIds);
+  } finally {
+    if (triggerButton?.isConnected) {
+      triggerButton.disabled = false;
+      triggerButton.textContent = 'จ่ายคนเดิม';
+    }
+  }
 }
 
 async function reassignExpiredAssignments(userIdOverride='',assignmentIdsOverride=null) {
@@ -47953,6 +48146,7 @@ async function reassignExpiredAssignments(userIdOverride='',assignmentIdsOverrid
   const userId = userIdOverride || userSelect?.value;
   const assignmentIds = Array.isArray(assignmentIdsOverride) ? assignmentIdsOverride : selectedExpiredAssignmentIds();
   if (!sessionId || !userId || !assignmentIds.length) return;
+  const promptWasOpen = Q('expired-session-modal')?.hidden === false;
   const button = Q('expired-work-reassign-btn');
   if (button) { button.disabled = true;button.textContent = 'กำลังจ่ายงาน...'; }
   const previousRows = (window._expiredAssignments || []).filter(row => assignmentIds.includes(row.id));
@@ -47976,11 +48170,12 @@ async function reassignExpiredAssignments(userIdOverride='',assignmentIdsOverrid
   )));
   invalidateAssignmentWorkspaceCache(sessionId);
   _expiredSelectedAssignmentIds.clear();
-  closeExpiredAssignmentPrompt();
   await Promise.all([refreshLocs(),refreshBulkFilters()]);
+  if (promptWasOpen) renderExpiredAssignmentPromptContent({ focus:true });
   showActionSuccess(`จ่ายงานหมดเวลาใหม่ ${assignmentIds.length.toLocaleString(uiLocale())} Location แล้ว`,{
     title:'จ่ายงานใหม่สำเร็จ',
     facts:[{ label:'ผู้รับงาน',value:userName }],
+    mode:'toast',
   });
 }
 
@@ -52866,7 +53061,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.82' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.83' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -53127,7 +53322,7 @@ async function exportBackupZip() {
       format:BACKUP_ZIP_FORMAT,
       version:BACKUP_ZIP_VERSION,
       created_at:new Date().toISOString(),
-      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.82',
+      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.83',
       excel_file:excelFileName,
       excel_sha256:excelSha256,
       excel_manifest_hash:built.manifestHash,
@@ -54400,7 +54595,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.82" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.83" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
