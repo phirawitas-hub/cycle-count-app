@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.86</title>
+<title>Cycle Count V1.87</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -21,7 +21,7 @@
 <noscript><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <!-- Supabase -->
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.min.js"></script>
-<!-- V1.86: ลดรายละเอียดซ้ำในกราฟความคืบหน้างานยืนยันผล -->
+<!-- V1.87: แก้ iPad แนวตั้ง/แนวนอนไม่ให้กรอบล้น และป้องกันป๊อปอัพหลักฐานปิดเองบนหน้าจอสัมผัส -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
 <style>
@@ -21193,15 +21193,162 @@ body.count-page-active #app .count-handheld-page .count-entry-progress {
   #app .r23-filter-grid { grid-template-columns:1fr; }
   #app .r23-selection-tools { align-items:stretch;flex-direction:column; }
 }
+
+/* V1.87 · iPad portrait/landscape containment and stable issue-dialog portal. */
+body.count-issue-open { overscroll-behavior:none; }
+.count-issue-backdrop {
+  width:100vw;
+  width:100dvw;
+  height:100vh;
+  height:100dvh;
+  max-width:none !important;
+  box-sizing:border-box;
+  isolation:isolate;
+}
+.count-issue-modal {
+  width:min(720px,calc(100vw - 28px));
+  width:min(720px,calc(100dvw - 28px));
+  max-width:calc(100vw - 28px);
+  max-width:calc(100dvw - 28px);
+  max-height:calc(100vh - 28px);
+  max-height:calc(100dvh - 28px);
+  box-sizing:border-box;
+}
+.count-issue-modal-body {
+  min-width:0;
+  -webkit-overflow-scrolling:touch;
+}
+.count-issue-modal :is(input,select,textarea,button) { max-width:100%;box-sizing:border-box; }
+
+#dash-content,
+#dash-content > *,
+#dash-content :is(.variance-queue-overview,.wms-filter-panel,.wms-list-shell,#variance-list,
+  [data-variance-filter-row],.variance-list-row-summary,.variance-detail-location,
+  .variance-location-progress,.variance-review-item,.variance-review-step,.variance-qty-grid),
+#dash-content :is(.wms-overview-shell,#wms-list,.wms-row) {
+  min-width:0;
+  max-width:100%;
+  box-sizing:border-box;
+}
+#dash-content .variance-list-row { overflow:hidden; }
+#dash-content .variance-list-row-summary { width:100%; }
+#dash-content .variance-list-row-side {
+  min-width:0;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:9px;
+}
+#dash-content .variance-list-row-metrics {
+  min-width:210px;
+  display:grid;
+  grid-template-columns:repeat(3,minmax(64px,1fr));
+  gap:7px;
+}
+#dash-content .variance-list-row-metrics > div {
+  min-width:0;
+  padding:8px 10px;
+  border-radius:12px;
+  background:var(--theme-soft-bg);
+  text-align:center;
+}
+#dash-content .variance-list-row-metrics > div > div {
+  color:var(--text-muted);
+  font-size:9px;
+  font-weight:800;
+}
+#dash-content .variance-list-row-metrics strong {
+  display:block;
+  margin-top:2px;
+  overflow:hidden;
+  color:var(--text-main);
+  font-size:15px;
+  font-weight:800;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+#dash-content .variance-list-row-side .tag { flex:0 0 auto; }
+#dash-content .variance-list-row-side .caret { flex:0 0 auto;font-size:18px; }
+
+/* iPad landscape and compact desktop widths. */
+@media (min-width:769px) and (max-width:1180px) {
+  #dash-content .wms-filter-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  #dash-content .wms-filter-field.search { grid-column:span 2; }
+  #dash-content .wms-list-shell { padding-left:12px;padding-right:12px; }
+  #dash-content .variance-list-row-summary {
+    display:grid !important;
+    grid-template-columns:minmax(0,1fr);
+    gap:12px !important;
+  }
+  #dash-content .variance-list-row-side {
+    width:100%;
+    justify-content:space-between;
+  }
+  #dash-content .variance-list-row-metrics { flex:1 1 auto;max-width:420px; }
+  #dash-content .variance-location-progress { grid-template-columns:1fr; }
+  #dash-content .variance-review-heading { flex-wrap:wrap; }
+}
+
+/* iPad portrait and narrower tablets. */
+@media (max-width:768px) {
+  #dash-content .wms-filter-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  #dash-content .wms-filter-field.search { grid-column:1 / -1; }
+  #dash-content .wms-filter-panel { padding:14px; }
+  #dash-content .wms-list-shell { padding:5px 10px 9px; }
+  #dash-content .variance-list-row { padding-left:0 !important;padding-right:0 !important; }
+  #dash-content .variance-list-row-summary {
+    display:grid !important;
+    grid-template-columns:minmax(0,1fr);
+    gap:10px !important;
+    padding:10px 6px !important;
+  }
+  #dash-content .variance-list-row-side {
+    width:100%;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto auto;
+  }
+  #dash-content .variance-list-row-metrics {
+    grid-column:1 / -1;
+    width:100%;
+    min-width:0;
+    max-width:none;
+  }
+  #dash-content .variance-list-row-side .tag { justify-self:start; }
+  #dash-content .variance-list-row-side .caret { justify-self:end; }
+  #dash-content .variance-review-heading { flex-wrap:wrap; }
+  #dash-content .variance-review-heading > div:last-child { width:100%;justify-content:flex-start !important; }
+  #dash-content .variance-location-progress { grid-template-columns:1fr; }
+  #dash-content .variance-qty-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  #dash-content .variance-result-cell { grid-column:1 / -1; }
+  .count-issue-backdrop { padding:10px; }
+  .count-issue-modal {
+    width:calc(100dvw - 20px);
+    max-width:calc(100dvw - 20px);
+    max-height:calc(100dvh - 20px);
+    border-radius:20px;
+  }
+  .count-issue-modal-head { padding:14px 16px; }
+  .count-issue-modal-head h3 { font-size:17px; }
+  .count-issue-modal-body { padding:14px 16px; }
+  .count-issue-modal-foot { padding:11px 16px 14px; }
+}
+
+@media (max-width:520px) {
+  #dash-content .wms-filter-grid { grid-template-columns:1fr; }
+  #dash-content .wms-filter-field.search { grid-column:auto; }
+  #dash-content .variance-queue-kpis { grid-template-columns:1fr 1fr; }
+  #dash-content .variance-list-row-metrics { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .count-issue-modal-foot { grid-template-columns:1fr; }
+}
 </style>
 </head>
-<body data-build="v1-86">
+<body data-build="v1-87">
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.86';
+const APP_VERSION = '1.87';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
-const APP_BUILD_ID = 'v1-86';
+const APP_BUILD_ID = 'v1-87';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
 
 // V1.84 performance: keep the login and ordinary work pages light.  Large
@@ -22663,7 +22810,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.86':'e.g. Warehouse V1.86',
+  'เช่น Warehouse V1.87':'e.g. Warehouse V1.87',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -31702,11 +31849,11 @@ function varianceIssueEditorHtml(roundMap, key, item, context={}) {
   return `<div class="variance-issue-summary" id="variance_issue_summary_${safeKey}">
     <div class="variance-issue-summary-head">
       ${varianceIssueSummaryInner(evidence)}
-      <button type="button" class="btn btn-blue btn-sm" onclick="toggleExtra('${safeKey}')">✎ แก้ไข / เพิ่มข้อมูล</button>
+      <button type="button" class="btn btn-blue btn-sm" onclick="toggleExtra(event,'${safeKey}')">✎ แก้ไข / เพิ่มข้อมูล</button>
     </div>
   </div>
   <div class="item-extra count-issue-backdrop" id="extra_${safeKey}" role="dialog" aria-modal="true"
-    aria-labelledby="count_issue_title_${safeKey}" onclick="if(event.target===this)closeCountIssueModal('${safeKey}')">
+    aria-labelledby="count_issue_title_${safeKey}">
     <section class="count-issue-modal" onclick="event.stopPropagation()">
       <header class="count-issue-modal-head">
         <div><h3 id="count_issue_title_${safeKey}">Type Issue / Remark / รูปถ่าย</h3><p data-i18n-skip>${escapeWmsText(item?.code || '')}</p></div>
@@ -32944,7 +33091,7 @@ async function loadCCount() {
         </div>
         ${resolvedBeforeRound
           ? '<span class="count-resolved-check" aria-label="ผ่านแล้ว">✓</span>'
-          : `<button class="item-toggle ${hasExtra?'has':''}" id="tg_${it.id}" onclick="toggleExtra('${it.id}')" title="หมายเหตุ/รูป">📝</button>`}
+          : `<button class="item-toggle ${hasExtra?'has':''}" id="tg_${it.id}" onclick="toggleExtra(event,'${it.id}')" title="หมายเหตุ/รูป">📝</button>`}
         <div class="count-value-stack">
           ${resolvedBeforeRound
             ? `<span class="count-qty-label">COUNT R${countEntryRow.resolvedRound}</span>
@@ -32973,8 +33120,7 @@ async function loadCCount() {
       ${detailMobileHtml}
       ${resolvedBeforeRound ? `<div class="count-resolved-note">✓ ITEM นี้ตรงจากรอบก่อนแล้ว · แสดงเพื่ออ้างอิงเท่านั้น ไม่ต้องนับซ้ำ</div>` : ''}
       <div class="item-extra count-issue-backdrop" id="extra_${it.id}" ${resolvedBeforeRound ? 'style="display:none"' : ''}
-        role="dialog" aria-modal="true" aria-labelledby="count_issue_title_${it.id}"
-        onclick="if(event.target===this)closeCountIssueModal('${it.id}')">
+        role="dialog" aria-modal="true" aria-labelledby="count_issue_title_${it.id}">
         <section class="count-issue-modal" onclick="event.stopPropagation()">
           <header class="count-issue-modal-head">
             <div><h3 id="count_issue_title_${it.id}">Remark / รูปถ่าย</h3><p data-i18n-skip>${escapeWmsText(it?.code || '')}</p></div>
@@ -33865,26 +34011,60 @@ async function addCustomCountRemark(event, itemId) {
 }
 
 let _countIssuePreviousOverflow = '';
+const _countIssuePortalOrigins = new Map();
 
-function toggleExtra(itemId) {
+function toggleExtra(eventOrItemId,itemIdMaybe) {
+  const event = typeof eventOrItemId === 'string' ? null : eventOrItemId;
+  const itemId = typeof eventOrItemId === 'string' ? eventOrItemId : itemIdMaybe;
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
   const el = Q('extra_'+itemId);
   if (!el) return;
   document.querySelectorAll('.count-issue-backdrop.open').forEach(node => {
-    if (node !== el) node.classList.remove('open');
+    if (node !== el && node.id?.startsWith('extra_')) {
+      closeCountIssueModal(node.id.replace(/^extra_/,''));
+    }
   });
+  // iPad Safari treats fixed elements inside an overflow/transform ancestor as
+  // part of that ancestor. Move the dialog to body while it is open so it can
+  // never be clipped by a variance/detail card or receive click-through events.
+  if (!_countIssuePortalOrigins.has(String(itemId))) {
+    _countIssuePortalOrigins.set(String(itemId),{
+      parent:el.parentNode,
+      next:el.nextSibling,
+    });
+  }
+  if (el.parentNode !== document.body) document.body.appendChild(el);
   _countIssuePreviousOverflow = document.body.style.overflow;
   document.body.style.overflow = 'hidden';
+  document.body.classList.add('count-issue-open');
   el.classList.add('open');
   refreshCountIssueRequirement(itemId);
-  requestAnimationFrame(() => Q(`count_type_issue_${itemId}`)?.focus());
+  // Do not autofocus a select on touch devices. iPad Safari may dismiss the
+  // native select and synthesize a click behind it, which used to close the
+  // evidence dialog before the user could save.
+  if (navigator.maxTouchPoints === 0 && window.matchMedia?.('(pointer:fine)').matches) {
+    requestAnimationFrame(() => Q(`count_type_issue_${itemId}`)?.focus());
+  }
 }
 
 function closeCountIssueModal(itemId) {
   const el = Q('extra_'+itemId);
   if (el) el.classList.remove('open');
   closeCountRemarkDropdowns();
-  document.body.style.overflow = _countIssuePreviousOverflow;
-  _countIssuePreviousOverflow = '';
+  const origin = _countIssuePortalOrigins.get(String(itemId));
+  if (el && origin?.parent?.isConnected) {
+    if (origin.next?.parentNode === origin.parent) origin.parent.insertBefore(el,origin.next);
+    else origin.parent.appendChild(el);
+  } else if (el && origin) {
+    el.remove();
+  }
+  _countIssuePortalOrigins.delete(String(itemId));
+  if (!document.querySelector('.count-issue-backdrop.open,.count-photo-camera-backdrop')) {
+    document.body.style.overflow = _countIssuePreviousOverflow;
+    document.body.classList.remove('count-issue-open');
+    _countIssuePreviousOverflow = '';
+  }
 }
 
 function confirmCountIssueModal(itemId) {
@@ -42291,7 +42471,7 @@ async function loadSvDash() {
     const counterValues = encodeURIComponent(JSON.stringify(counterNames));
     const varianceSearchText = [l?.code,item.code,item.description].filter(Boolean).join(' ');
     const varianceItemSearchText = [item.code,item.description].filter(Boolean).join(' ');
-    return `<div data-location-sort-code="${escapeWmsText(l?.code || '')}"
+    return `<div class="variance-list-row" data-location-sort-code="${escapeWmsText(l?.code || '')}"
       data-variance-filter-row data-variance-index="${i}"
       data-variance-assignment-id="${escapeWmsText(row.assignment_id || '')}"
       data-variance-item-id="${escapeWmsText(row.item_id || '')}"
@@ -42303,21 +42483,23 @@ async function loadSvDash() {
       data-variance-item-search="${escapeWmsText(varianceItemSearchText)}"
       data-variance-search="${escapeWmsText(varianceSearchText)}"
       style="border-bottom:1px solid var(--theme-border-color);padding:14px 0">
-      <div class="tab-row" style="display:flex;align-items:center;gap:12px;padding:10px;flex-wrap:wrap"
+      <div class="tab-row variance-list-row-summary" style="display:flex;align-items:center;gap:12px;padding:10px;flex-wrap:wrap"
         onclick="toggleVarianceDetailFromRow(this.closest('[data-variance-filter-row]'))">
-        <div style="flex:1;min-width:0">
+        <div class="variance-list-row-copy" style="flex:1;min-width:0">
           <div class="mono" style="font-size:16px;font-weight:800;color:var(--text-main)">${l?.code||'?'}</div>
           <div class="mono" style="font-size:14px;color:var(--text-main);margin-top:5px;font-weight:800"><span data-i18n-skip>${escapeWmsText(item.code || '?')}</span></div>
           <div style="font-size:12px;color:var(--text-muted);margin-top:2px;font-weight:600"><span data-i18n-skip>${escapeWmsText(item.description || '')}</span></div>
           <div style="font-size:12px;color:var(--text-muted);margin-top:5px;font-weight:600">👤 ผู้ตรวจนับ: <span data-i18n-skip>${escapeWmsText(counterNames.join(', ') || translateUiText('ไม่ระบุผู้ตรวจนับ'))}</span> · <span data-i18n-skip>${[l?.zone,l?.row_no,l?.level].filter(Boolean).join(' · ')}</span></div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(3,minmax(64px,auto));gap:7px;align-items:stretch">
-          <div style="padding:8px 10px;border-radius:12px;background:var(--theme-soft-bg);text-align:center"><div style="font-size:9px;color:var(--text-muted);font-weight:800">OH</div><div style="font-size:15px;color:var(--text-main);font-weight:800">${row._oh ?? '—'}</div></div>
-          <div style="padding:8px 10px;border-radius:12px;background:var(--theme-soft-bg);text-align:center"><div style="font-size:9px;color:var(--text-muted);font-weight:800">COUNT</div><div style="font-size:15px;color:var(--text-main);font-weight:800">${latestCount ?? '—'}</div></div>
-          <div style="padding:8px 10px;border-radius:12px;background:var(--theme-soft-bg);text-align:center"><div style="font-size:9px;color:var(--text-muted);font-weight:800">DIFF</div><div style="font-size:15px;color:${varianceColor};font-weight:800">${varianceLabel}</div></div>
+        <div class="variance-list-row-side">
+          <div class="variance-list-row-metrics">
+            <div><div>OH</div><strong>${row._oh ?? '—'}</strong></div>
+            <div><div>COUNT</div><strong>${latestCount ?? '—'}</strong></div>
+            <div><div>DIFF</div><strong style="color:${varianceColor}">${varianceLabel}</strong></div>
+          </div>
+          <span class="tag ${si.cls}">${si.lbl}</span>
+          <span class="caret" aria-hidden="true">▾</span>
         </div>
-        <span class="tag ${si.cls}">${si.lbl}</span>
-        <span class="caret" style="font-size:18px">▾</span>
       </div>
       <div id="vdetail_${i}" style="display:none;background:var(--theme-card-bg);margin-top:12px;border-radius:16px;overflow:hidden;box-shadow:inset 0 0 0 1px var(--theme-border-color)"></div>
     </div>`;
@@ -53435,7 +53617,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.86' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.87' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -53696,7 +53878,7 @@ async function exportBackupZip() {
       format:BACKUP_ZIP_FORMAT,
       version:BACKUP_ZIP_VERSION,
       created_at:new Date().toISOString(),
-      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.86',
+      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.87',
       excel_file:excelFileName,
       excel_sha256:excelSha256,
       excel_manifest_hash:built.manifestHash,
@@ -54969,7 +55151,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.86" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.87" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
