@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.89</title>
+<title>Cycle Count V1.90</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -24,6 +24,7 @@
 <!-- V1.87: แก้ iPad แนวตั้ง/แนวนอนไม่ให้กรอบล้น และป้องกันป๊อปอัพหลักฐานปิดเองบนหน้าจอสัมผัส -->
 <!-- V1.88: เมนูทั่วไปใช้หน้าจอโหลดเดียวจนข้อมูลจริงพร้อม พร้อมเร่งการเปิดซ้ำด้วย stale-while-revalidate cache -->
 <!-- V1.89: เพิ่ม Location/Item/Pcs ในกล่อง Variance และ WMS พร้อมย้าย Profile/Logout ไปท้าย Sidebar -->
+<!-- V1.90: ขยายแถบ Profile ท้าย Sidebar ให้แสดงชื่อเต็มและระดับผู้ใช้โดยไม่ตัดข้อความ -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
 <style>
@@ -21381,60 +21382,79 @@ body.count-issue-open { overscroll-behavior:none; }
 }
 #app .variance-queue-overview .workflow-scope-grid { margin-bottom:12px; }
 
-/* V1.89 · Profile and log-out controls live at the bottom of the Sidebar. */
+/* V1.90 · Full-name Profile and log-out controls at the bottom of the Sidebar. */
 #app .sidebar-footer.sidebar-account-footer {
   display:grid;
   grid-template-columns:minmax(0,1fr) auto;
-  align-items:center;
-  gap:7px;
+  align-items:stretch;
+  gap:6px;
   padding:12px 0 0;
-  margin:0 16px 12px;
+  margin:0 10px 12px;
   color:var(--theme-sidebar-bottom-text) !important;
   text-align:left;
 }
 #app .sidebar-account-profile {
   min-width:0;
-  min-height:42px;
+  min-height:54px;
   display:flex;
-  align-items:center;
+  align-items:flex-start;
   gap:8px;
-  padding:5px 8px 5px 5px;
+  padding:7px;
   border:1px solid color-mix(in srgb,var(--theme-sidebar-divider) 72%,transparent);
   border-radius:16px;
   background:color-mix(in srgb,var(--theme-sidebar-start) 82%,#fff 18%);
 }
 #app .sidebar-account-avatar {
-  width:31px;
-  height:31px;
-  flex:0 0 31px;
+  width:36px;
+  height:36px;
+  flex:0 0 36px;
   overflow:hidden;
   font-size:12px;
 }
 #app .sidebar-account-avatar img { width:100%;height:100%;object-fit:cover; }
+#app .sidebar-account-copy {
+  min-width:0;
+  flex:1 1 auto;
+  display:flex;
+  flex-direction:column;
+  align-self:center;
+  gap:2px;
+}
 #app .sidebar-account-name {
   min-width:0;
-  overflow:hidden;
+  overflow:visible;
   color:var(--theme-sidebar-bottom-text) !important;
-  font-size:11px;
-  font-weight:850;
-  text-overflow:ellipsis;
-  white-space:nowrap;
+  font-size:11.5px;
+  font-weight:900;
+  line-height:1.3;
+  overflow-wrap:anywhere;
+  text-overflow:clip;
+  white-space:normal;
+}
+#app .sidebar-account-role {
+  color:color-mix(in srgb,var(--theme-sidebar-bottom-text) 72%,transparent) !important;
+  font-size:9px;
+  font-weight:750;
+  line-height:1.2;
+  white-space:normal;
 }
 #app .sidebar-account-logout {
-  min-width:42px;
-  min-height:42px;
+  min-width:88px;
+  min-height:54px;
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  gap:6px;
-  padding:8px 10px;
+  gap:5px;
+  padding:8px;
   border:1px solid color-mix(in srgb,var(--theme-danger-color) 32%,transparent);
   border-radius:16px;
   background:color-mix(in srgb,var(--theme-danger-color) 12%,var(--theme-sidebar-end));
   color:color-mix(in srgb,var(--theme-danger-color) 82%,#fff) !important;
   font-family:inherit;
-  font-size:10px;
+  font-size:9.5px;
   font-weight:850;
+  line-height:1.2;
+  white-space:nowrap;
   cursor:pointer;
 }
 #app .sidebar-account-logout:hover,
@@ -21472,7 +21492,12 @@ body.count-issue-open { overscroll-behavior:none; }
   margin:auto;
 }
 #app .sidebar.collapsed .sidebar-account-profile { justify-content:center; }
-#app .sidebar.collapsed .sidebar-account-name,
+#app .sidebar.collapsed .sidebar-account-avatar {
+  width:32px;
+  height:32px;
+  flex-basis:32px;
+}
+#app .sidebar.collapsed .sidebar-account-copy,
 #app .sidebar.collapsed .sidebar-account-logout span { display:none !important; }
 @media (max-width:900px) {
   #app .workflow-scope-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
@@ -21481,7 +21506,7 @@ body.count-issue-open { overscroll-behavior:none; }
   #app .sidebar.collapsed .sidebar-footer.sidebar-account-footer {
     grid-template-columns:minmax(0,1fr) auto;
     width:auto;
-    margin:0 16px 12px !important;
+    margin:0 10px 12px !important;
   }
   #app .sidebar.collapsed .sidebar-account-profile,
   #app .sidebar.collapsed .sidebar-account-logout {
@@ -21490,7 +21515,12 @@ body.count-issue-open { overscroll-behavior:none; }
     margin:0;
   }
   #app .sidebar.collapsed .sidebar-account-profile { justify-content:flex-start; }
-  #app .sidebar.collapsed .sidebar-account-name,
+  #app .sidebar.collapsed .sidebar-account-avatar {
+    width:36px;
+    height:36px;
+    flex-basis:36px;
+  }
+  #app .sidebar.collapsed .sidebar-account-copy { display:flex !important; }
   #app .sidebar.collapsed .sidebar-account-logout span { display:block !important; }
 }
 @media (max-width:520px) {
@@ -21500,13 +21530,13 @@ body.count-issue-open { overscroll-behavior:none; }
 }
 </style>
 </head>
-<body data-build="v1-89">
+<body data-build="v1-90">
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.89';
+const APP_VERSION = '1.90';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
-const APP_BUILD_ID = 'v1-89';
+const APP_BUILD_ID = 'v1-90';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
 
 // V1.84 performance: keep the login and ordinary work pages light.  Large
@@ -22968,7 +22998,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.89':'e.g. Warehouse V1.89',
+  'เช่น Warehouse V1.90':'e.g. Warehouse V1.90',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -27258,6 +27288,11 @@ function render() {
   const profileAvatarHtml = profileAvatar
     ? `<img src="${profileAvatar}" alt="รูปประจำตัว ${escapeWmsText(prof?.name || 'User')}">`
     : escapeWmsText((prof?.name || 'U').charAt(0).toUpperCase());
+  const profileRoleLabel = prof?.role === 'admin'
+    ? 'Admin'
+    : prof?.role === 'supervisor'
+      ? 'Supervisor'
+      : uiCopy('ผู้ตรวจนับ','Counter');
 
   Q('app').innerHTML = `
     ${tabletViewportControlsHtml()}
@@ -27294,7 +27329,10 @@ function render() {
         <div class="sidebar-footer sidebar-account-footer">
           <div class="sidebar-account-profile" title="${escapeWmsText(prof?.name || uiCopy('โปรไฟล์','Profile'))}">
             <div class="user-avatar sidebar-account-avatar ${profileAvatar ? 'has-photo' : ''}">${profileAvatarHtml}</div>
-            <span class="sidebar-account-name">${escapeWmsText(prof?.name || '')}</span>
+            <span class="sidebar-account-copy">
+              <strong class="sidebar-account-name">${escapeWmsText(prof?.name || '')}</strong>
+              <small class="sidebar-account-role">${escapeWmsText(profileRoleLabel)}</small>
+            </span>
           </div>
           <button class="sidebar-account-logout" type="button" onclick="doLogout()" aria-label="${uiCopy('ออกจากระบบ','Log out')}" title="${uiCopy('ออกจากระบบ','Log out')}">
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -53768,7 +53806,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.89' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.90' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -54029,7 +54067,7 @@ async function exportBackupZip() {
       format:BACKUP_ZIP_FORMAT,
       version:BACKUP_ZIP_VERSION,
       created_at:new Date().toISOString(),
-      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.89',
+      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.90',
       excel_file:excelFileName,
       excel_sha256:excelSha256,
       excel_manifest_hash:built.manifestHash,
@@ -55302,7 +55340,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.89" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.90" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
