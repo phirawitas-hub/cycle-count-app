@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.91</title>
+<title>Cycle Count V1.94</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -26,6 +26,8 @@
 <!-- V1.89: เพิ่ม Location/Item/Pcs ในกล่อง Variance และ WMS พร้อมย้าย Profile/Logout ไปท้าย Sidebar -->
 <!-- V1.90: ขยายแถบ Profile ท้าย Sidebar ให้แสดงชื่อเต็มและระดับผู้ใช้โดยไม่ตัดข้อความ -->
 <!-- V1.91: จัด Profile และ Logout ท้าย Sidebar เป็น 2 แถว พร้อมสีพื้นตัดกันและปุ่ม Logout ขนาดกะทัดรัด -->
+<!-- V1.92: รวม Profile และ Logout ในกรอบสีขาวแถวเดียวกัน พร้อมข้อความสีดำและปุ่มขนาดเล็กชิดขวา -->
+<!-- V1.94: แสดง Location, Item และ Pcs ภายในกล่องสถานะแต่ละกล่องของ Variance และ WMS -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
 <style>
@@ -21345,72 +21347,103 @@ body.count-issue-open { overscroll-behavior:none; }
   .count-issue-modal-foot { grid-template-columns:1fr; }
 }
 
-/* V1.89 · Shared Location / Item / Pcs detail row for Variance and WMS. */
-#app .workflow-scope-grid {
+/* V1.94 · Location / Item / Pcs live inside each workflow status card. */
+#app .variance-queue-kpis { grid-template-columns:repeat(3,minmax(0,1fr)); }
+#app .variance-queue-kpi {
+  min-height:132px;
+  display:flex;
+  flex-direction:column;
+}
+#app .wms-kpi-card {
+  min-height:150px;
+  align-items:start;
+}
+#app .workflow-status-details {
+  grid-column:1 / -1;
+  width:100%;
+  min-width:0;
   display:grid;
   grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:10px;
-  margin-top:12px;
+  gap:6px;
+  margin:11px 0 0;
+  padding:10px 0 0;
+  border-top:1px solid color-mix(in srgb,currentColor 18%,transparent);
 }
-#app .workflow-scope-kpi {
+#app .variance-queue-kpi .workflow-status-details { margin-top:auto; }
+#app .workflow-status-details > div {
   min-width:0;
-  padding:12px 14px;
-  border:1px solid color-mix(in srgb,var(--theme-primary-color) 16%,var(--theme-border-color));
-  border-radius:16px;
-  background:color-mix(in srgb,var(--theme-primary-color) 5%,var(--theme-card-bg));
+  padding:7px 6px;
+  border-radius:10px;
+  background:color-mix(in srgb,var(--theme-card-bg) 70%,transparent);
+  text-align:center;
 }
-#app .workflow-scope-kpi.is-pieces {
-  background:color-mix(in srgb,var(--theme-warning-color) 9%,var(--theme-card-bg));
+#app .workflow-status-details dt,
+#app .workflow-status-details dd {
+  display:block;
+  margin:0;
+  padding:0;
 }
-#app .workflow-scope-kpi span,
-#app .workflow-scope-kpi strong { display:block; }
-#app .workflow-scope-kpi span {
+#app .workflow-status-details dt {
   overflow:hidden;
   color:var(--theme-muted-text-color);
-  font-size:10px;
+  font-size:8.5px;
   font-weight:850;
   line-height:1.25;
   text-overflow:ellipsis;
   white-space:nowrap;
 }
-#app .workflow-scope-kpi strong {
+#app .workflow-status-details dd {
   margin-top:4px;
   color:var(--theme-heading-color);
   font-family:'Fredoka','Mitr','Sarabun',sans-serif;
-  font-size:24px;
+  font-size:17px;
   font-weight:900;
   line-height:1;
 }
-#app .variance-queue-overview .workflow-scope-grid { margin-bottom:12px; }
+@media (max-width:700px) {
+  #app .variance-queue-kpis { grid-template-columns:1fr; }
+}
 
-/* V1.91 · Two-row Profile and compact log-out controls at the Sidebar bottom. */
+/* V1.93 · 64px Profile card with black text and icon-only log-out. */
 #app .sidebar-footer.sidebar-account-footer {
   display:grid;
-  grid-template-columns:minmax(0,1fr);
-  align-items:stretch;
-  gap:8px;
-  padding:12px 0 0;
+  grid-template-columns:minmax(0,1fr) 32px;
+  align-items:center;
+  gap:4px;
+  width:auto;
+  height:64px;
+  min-height:64px;
+  max-height:64px;
+  padding:6px;
   margin:0 10px 12px;
-  color:var(--theme-sidebar-bottom-text) !important;
+  box-sizing:border-box;
+  border:1px solid #dedede !important;
+  border-radius:16px;
+  background:#fff !important;
+  color:#111 !important;
+  -webkit-text-fill-color:#111 !important;
+  box-shadow:0 7px 18px rgba(0,0,0,.12);
   text-align:left;
+  overflow:hidden;
 }
 #app .sidebar-account-profile {
   width:100%;
   min-width:0;
-  min-height:58px;
+  height:50px;
+  min-height:0;
   display:flex;
-  align-items:flex-start;
-  gap:8px;
-  padding:7px;
-  border:1px solid color-mix(in srgb,var(--theme-primary-color) 30%,var(--theme-border-color));
-  border-radius:17px;
-  background:color-mix(in srgb,var(--theme-card-bg) 92%,#fff 8%);
-  box-shadow:0 6px 16px color-mix(in srgb,var(--theme-heading-color) 12%,transparent);
+  align-items:center;
+  gap:7px;
+  padding:2px;
+  border:0;
+  border-radius:12px;
+  background:#fff !important;
+  box-shadow:none;
 }
 #app .sidebar-account-avatar {
-  width:36px;
-  height:36px;
-  flex:0 0 36px;
+  width:34px;
+  height:34px;
+  flex:0 0 34px;
   overflow:hidden;
   font-size:12px;
 }
@@ -21426,8 +21459,9 @@ body.count-issue-open { overscroll-behavior:none; }
 #app .sidebar-account-name {
   min-width:0;
   overflow:visible;
-  color:var(--theme-heading-color) !important;
-  font-size:12.5px;
+  color:#111 !important;
+  -webkit-text-fill-color:#111 !important;
+  font-size:11px;
   font-weight:900;
   line-height:1.3;
   overflow-wrap:anywhere;
@@ -21435,28 +21469,32 @@ body.count-issue-open { overscroll-behavior:none; }
   white-space:normal;
 }
 #app .sidebar-account-role {
-  color:var(--theme-primary-color) !important;
-  font-size:9.5px;
+  color:#111 !important;
+  -webkit-text-fill-color:#111 !important;
+  font-size:8.5px;
   font-weight:750;
   line-height:1.2;
   white-space:normal;
 }
 #app .sidebar-account-logout {
-  width:max-content;
-  min-width:0;
-  min-height:36px;
+  width:32px;
+  min-width:32px;
+  height:32px;
+  min-height:32px;
   justify-self:end;
+  align-self:center;
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  gap:5px;
-  padding:7px 11px;
-  border:1px solid color-mix(in srgb,var(--theme-danger-color) 42%,var(--theme-border-color));
-  border-radius:13px;
-  background:color-mix(in srgb,var(--theme-card-bg) 88%,var(--theme-danger-color) 12%);
-  color:var(--theme-danger-color) !important;
+  gap:0;
+  padding:0;
+  border:1px solid #d8d8d8;
+  border-radius:10px;
+  background:#f5f5f5 !important;
+  color:#111 !important;
+  -webkit-text-fill-color:#111 !important;
   font-family:inherit;
-  font-size:10px;
+  font-size:0;
   font-weight:850;
   line-height:1.2;
   white-space:nowrap;
@@ -21464,14 +21502,14 @@ body.count-issue-open { overscroll-behavior:none; }
 }
 #app .sidebar-account-logout:hover,
 #app .sidebar-account-logout:focus-visible {
-  border-color:var(--theme-danger-color);
-  background:color-mix(in srgb,var(--theme-card-bg) 78%,var(--theme-danger-color) 22%);
+  border-color:#b8b8b8;
+  background:#ececec !important;
   outline:none;
 }
 #app .sidebar-account-logout svg {
-  width:15px;
-  height:15px;
-  flex:0 0 15px;
+  width:14px;
+  height:14px;
+  flex:0 0 14px;
   fill:none;
   stroke:currentColor;
   stroke-width:2;
@@ -21483,73 +21521,80 @@ body.count-issue-open { overscroll-behavior:none; }
 #app .sidebar.collapsed .sidebar-footer.sidebar-account-footer {
   display:grid !important;
   grid-template-columns:1fr;
-  width:54px;
-  padding-top:9px !important;
+  width:60px;
+  height:88px;
+  min-height:88px;
+  max-height:88px;
+  padding:6px !important;
   margin:0 auto 10px !important;
 }
 #app .sidebar.collapsed .sidebar-account-profile,
 #app .sidebar.collapsed .sidebar-account-logout {
-  width:44px;
-  min-width:44px;
-  height:42px;
-  min-height:42px;
-  padding:5px;
+  width:32px;
+  min-width:32px;
+  height:32px;
+  min-height:32px;
+  padding:0;
   margin:auto;
 }
 #app .sidebar.collapsed .sidebar-account-profile { justify-content:center; }
 #app .sidebar.collapsed .sidebar-account-avatar {
-  width:32px;
-  height:32px;
-  flex-basis:32px;
+  width:28px;
+  height:28px;
+  flex-basis:28px;
 }
 #app .sidebar.collapsed .sidebar-account-copy,
 #app .sidebar.collapsed .sidebar-account-logout span { display:none !important; }
-@media (max-width:900px) {
-  #app .workflow-scope-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
-}
 @media (max-width:768px) {
   #app .sidebar.collapsed .sidebar-footer.sidebar-account-footer {
-    grid-template-columns:minmax(0,1fr);
+    grid-template-columns:minmax(0,1fr) 32px;
     width:auto;
+    height:64px;
+    min-height:64px;
+    max-height:64px;
+    padding:6px !important;
     margin:0 10px 12px !important;
   }
   #app .sidebar.collapsed .sidebar-account-profile {
     width:100%;
     min-width:0;
+    height:50px;
+    min-height:0;
+    padding:2px;
     margin:0;
   }
   #app .sidebar.collapsed .sidebar-account-logout {
-    width:max-content;
-    min-width:0;
-    height:36px;
-    min-height:36px;
-    padding:7px 11px;
+    width:32px;
+    min-width:32px;
+    height:32px;
+    min-height:32px;
+    padding:0;
     margin:0;
     justify-self:end;
   }
   #app .sidebar.collapsed .sidebar-account-profile { justify-content:flex-start; }
   #app .sidebar.collapsed .sidebar-account-avatar {
-    width:36px;
-    height:36px;
-    flex-basis:36px;
+    width:34px;
+    height:34px;
+    flex-basis:34px;
   }
   #app .sidebar.collapsed .sidebar-account-copy { display:flex !important; }
   #app .sidebar.collapsed .sidebar-account-logout span { display:block !important; }
 }
 @media (max-width:520px) {
-  #app .workflow-scope-grid { grid-template-columns:1fr; }
-  #app .workflow-scope-kpi { display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px; }
-  #app .workflow-scope-kpi strong { margin-top:0; }
+  #app .variance-queue-kpis { grid-template-columns:1fr; }
+  #app .variance-queue-kpi,
+  #app .wms-kpi-card { min-height:0; }
 }
 </style>
 </head>
-<body data-build="v1-91">
+<body data-build="v1-94">
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.91';
+const APP_VERSION = '1.94';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
-const APP_BUILD_ID = 'v1-91';
+const APP_BUILD_ID = 'v1-94';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
 
 // V1.84 performance: keep the login and ordinary work pages light.  Large
@@ -23011,7 +23056,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.91':'e.g. Warehouse V1.91',
+  'เช่น Warehouse V1.94':'e.g. Warehouse V1.94',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -27352,7 +27397,6 @@ function render() {
               <path d="M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5"></path>
               <path d="m15 8 4 4-4 4M19 12H8"></path>
             </svg>
-            <span>${uiCopy('ออกจากระบบ','Log out')}</span>
           </button>
         </div>
       </aside>
@@ -41251,13 +41295,13 @@ function workflowQuantityMetrics(rows=[],assignmentMap={}) {
   };
 }
 
-function workflowQuantityMetricsHtml(metrics,prefix='workflow') {
+function workflowStatusDetailsHtml(metrics) {
   const format = value => Number(value || 0).toLocaleString(uiLocale(),{ maximumFractionDigits:3 });
-  return `<div class="workflow-scope-grid" aria-label="${uiCopy('รายละเอียดปริมาณงาน','Work quantity details')}">
-    <div class="workflow-scope-kpi"><span>Location</span><strong id="${prefix}-location-count">${format(metrics?.locations)}</strong></div>
-    <div class="workflow-scope-kpi"><span>Item</span><strong id="${prefix}-item-count">${format(metrics?.items)}</strong></div>
-    <div class="workflow-scope-kpi is-pieces"><span>${uiCopy('จำนวนงาน (Pcs)','Work quantity (Pcs)')}</span><strong id="${prefix}-pcs-count">${format(metrics?.pieces)}</strong></div>
-  </div>`;
+  return `<dl class="workflow-status-details" aria-label="${uiCopy('รายละเอียดปริมาณงานของสถานะนี้','Work quantity details for this status')}">
+    <div><dt>Location</dt><dd>${format(metrics?.locations)}</dd></div>
+    <div><dt>Item</dt><dd>${format(metrics?.items)}</dd></div>
+    <div><dt>${uiCopy('จำนวนงาน (Pcs)','Work quantity (Pcs)')}</dt><dd>${format(metrics?.pieces)}</dd></div>
+  </dl>`;
 }
 
 function mergeWmsFastAuditV179(rows,auditRows) {
@@ -41334,12 +41378,17 @@ function buildWmsFastWorkspaceHtmlV179(rows,asgnInfoMap,options={}) {
     if (item.approved_by) users[item.approved_by] = item.profiles?.name || '?';
   });
   const total = rows.length;
-  const pending = rows.filter(row => row._isPending).length;
-  const confirmed = rows.filter(row => !row._isPending);
-  const fixed = confirmed.filter(row => row.wms_fixed).length;
-  const unfixed = confirmed.length - fixed;
+  const pendingRows = rows.filter(row => row._isPending);
+  const confirmedRows = rows.filter(row => !row._isPending);
+  const fixedRows = confirmedRows.filter(row => row.wms_fixed);
+  const unfixedRows = confirmedRows.filter(row => !row.wms_fixed);
+  const pending = pendingRows.length;
+  const fixed = fixedRows.length;
+  const unfixed = unfixedRows.length;
   const percent = total ? Math.round((fixed / total) * 100) : 0;
-  const quantityMetrics = workflowQuantityMetrics(rows,asgnInfoMap);
+  const pendingMetrics = workflowQuantityMetrics(pendingRows,asgnInfoMap);
+  const unfixedMetrics = workflowQuantityMetrics(unfixedRows,asgnInfoMap);
+  const fixedMetrics = workflowQuantityMetrics(fixedRows,asgnInfoMap);
   const sourceLabel = options.fromCache
     ? `แสดงข้อมูลจากเครื่องทันที · ซิงก์ล่าสุด ${escapeWmsText(workTrackerDate(options.generatedAt || options.savedAt))}`
     : `ข้อมูลล่าสุดจากฐานข้อมูล · ${Number(options.elapsedMs || 0).toLocaleString(uiLocale())} ms`;
@@ -41358,16 +41407,18 @@ function buildWmsFastWorkspaceHtmlV179(rows,asgnInfoMap,options={}) {
       <div class="wms-progress-track"><span id="wms-fixed-progress" style="width:${percent}%"></span></div>
       <div class="wms-kpi-grid">
         <button type="button" class="wms-kpi-card pending ${wmsFilter==='pending'?'active':''}" data-wms-kpi="pending" onclick="setWmsStatusFilter('pending')">
-          <div class="wms-kpi-icon">${wmsIconSvg('search',21)}</div><div class="wms-kpi-copy"><strong id="wms-pending-count">${pending}</strong><span>รอคอนเฟิร์ม</span></div>
+          <div class="wms-kpi-icon">${wmsIconSvg('search',21)}</div><div class="wms-kpi-copy"><strong id="wms-pending-count">${pending}</strong><span>รอยืนยันผล</span></div>
+          ${workflowStatusDetailsHtml(pendingMetrics)}
         </button>
         <button type="button" class="wms-kpi-card unfixed ${wmsFilter==='unfixed'?'active':''}" data-wms-kpi="unfixed" onclick="setWmsStatusFilter('unfixed')">
-          <div class="wms-kpi-icon">${wmsIconSvg('pending',21)}</div><div class="wms-kpi-copy"><strong id="wms-unfixed-count">${unfixed}</strong><span>ยังไม่ได้ตรวจสอบ</span></div>
+          <div class="wms-kpi-icon">${wmsIconSvg('pending',21)}</div><div class="wms-kpi-copy"><strong id="wms-unfixed-count">${unfixed}</strong><span>รอตรวจสอบ</span></div>
+          ${workflowStatusDetailsHtml(unfixedMetrics)}
         </button>
         <button type="button" class="wms-kpi-card fixed ${wmsFilter==='fixed'?'active':''}" data-wms-kpi="fixed" onclick="setWmsStatusFilter('fixed')">
-          <div class="wms-kpi-icon">${wmsIconSvg('reviewed',21)}</div><div class="wms-kpi-copy"><strong id="wms-fixed-count">${fixed}</strong><span>ตรวจสอบแล้ว</span></div>
+          <div class="wms-kpi-icon">${wmsIconSvg('reviewed',21)}</div><div class="wms-kpi-copy"><strong id="wms-fixed-count">${fixed}</strong><span>ตรวจสอบเสร็จสิ้น</span></div>
+          ${workflowStatusDetailsHtml(fixedMetrics)}
         </button>
       </div>
-      ${workflowQuantityMetricsHtml(quantityMetrics,'wms')}
     </section>
     <section class="wms-filter-panel">
       <div class="wms-filter-heading"><strong>ตัวกรองรายการ</strong><span>เลือกหลายตัวกรองร่วมกันได้</span></div>
@@ -42619,22 +42670,15 @@ async function loadSvDash() {
     varianceWorkflowRows.filter(row => row._isPending),
     row => asgnInfoMap[row.assignment_id]?.locations?.code,
   );
+  const confirmedVarianceRows = varianceWorkflowRows.filter(row => !row._isPending);
   const varianceWorkflowTotal = varianceWorkflowRows.length;
-  const varianceWorkflowForwarded = Math.max(0,varianceWorkflowTotal-needsFollowUp.length);
+  const varianceWorkflowForwarded = confirmedVarianceRows.length;
   const varianceWorkflowPercent = varianceWorkflowTotal
     ? Math.round((varianceWorkflowForwarded/varianceWorkflowTotal)*100)
     : 100;
-  const varianceQuantityMetrics = workflowQuantityMetrics(varianceWorkflowRows,asgnInfoMap);
-  const pendingVarianceLocations = new Map();
-  needsFollowUp.forEach(row => {
-    const location = asgnInfoMap[row.assignment_id]?.locations || {};
-    const key = location.code || row.assignment_id || '?';
-    if (!pendingVarianceLocations.has(key)) {
-      pendingVarianceLocations.set(key,{ code:key,items:[] });
-    }
-    pendingVarianceLocations.get(key).items.push(row.items?.code || 'Location ว่าง');
-  });
-  const pendingVarianceLocationRows = [...pendingVarianceLocations.values()];
+  const varianceAllMetrics = workflowQuantityMetrics(varianceWorkflowRows,asgnInfoMap);
+  const varianceConfirmedMetrics = workflowQuantityMetrics(confirmedVarianceRows,asgnInfoMap);
+  const variancePendingMetrics = workflowQuantityMetrics(needsFollowUp,asgnInfoMap);
   const varianceQueueOverviewHtml = `<section class="variance-queue-overview" style="--variance-queue-progress:${varianceWorkflowPercent}%">
     <div class="variance-queue-overview-head">
       <div class="variance-queue-overview-copy">
@@ -42644,12 +42688,10 @@ async function loadSvDash() {
       <div class="variance-queue-overview-percent">${varianceWorkflowPercent}%</div>
     </div>
     <div class="variance-queue-kpis">
-      <div class="variance-queue-kpi"><span>DIFF ทั้งหมด</span><strong>${varianceWorkflowTotal.toLocaleString(uiLocale())}</strong></div>
-      <div class="variance-queue-kpi"><span>ยืนยันแล้ว</span><strong>${varianceWorkflowForwarded.toLocaleString(uiLocale())}</strong></div>
-      <div class="variance-queue-kpi is-pending"><span>เหลือรอยืนยัน</span><strong>${needsFollowUp.length.toLocaleString(uiLocale())}</strong></div>
-      <div class="variance-queue-kpi is-pending"><span>Location ที่เหลือ</span><strong>${pendingVarianceLocationRows.length.toLocaleString(uiLocale())}</strong></div>
+      <div class="variance-queue-kpi"><span>DIFF ทั้งหมด</span><strong>${varianceWorkflowTotal.toLocaleString(uiLocale())}</strong>${workflowStatusDetailsHtml(varianceAllMetrics)}</div>
+      <div class="variance-queue-kpi"><span>ยืนยันแล้ว</span><strong>${varianceWorkflowForwarded.toLocaleString(uiLocale())}</strong>${workflowStatusDetailsHtml(varianceConfirmedMetrics)}</div>
+      <div class="variance-queue-kpi is-pending"><span>เหลือรอยืนยัน</span><strong>${needsFollowUp.length.toLocaleString(uiLocale())}</strong>${workflowStatusDetailsHtml(variancePendingMetrics)}</div>
     </div>
-    ${workflowQuantityMetricsHtml(varianceQuantityMetrics,'variance')}
     <div class="variance-queue-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${varianceWorkflowPercent}"><span></span></div>
   </section>`;
   const varianceRowsHtml = needsFollowUp.length ? needsFollowUp.map((row, i) => {
@@ -43054,14 +43096,19 @@ async function loadSvDash() {
   });
 
   const wmsTotalCount = wmsWorkspaceRows.length;
-  const wmsPendingCount = wmsWorkspaceRows.filter(v => v._isPending).length;
+  const wmsPendingRows = wmsWorkspaceRows.filter(v => v._isPending);
   const wmsConfirmedRows = wmsWorkspaceRows.filter(v => !v._isPending);
-  const wmsFixedCount = wmsConfirmedRows.filter(v => v.wms_fixed).length;
-  const wmsUnfixedCount = wmsConfirmedRows.length - wmsFixedCount;
+  const wmsFixedRows = wmsConfirmedRows.filter(v => v.wms_fixed);
+  const wmsUnfixedRows = wmsConfirmedRows.filter(v => !v.wms_fixed);
+  const wmsPendingCount = wmsPendingRows.length;
+  const wmsFixedCount = wmsFixedRows.length;
+  const wmsUnfixedCount = wmsUnfixedRows.length;
   const wmsFixedPercent = wmsTotalCount > 0
     ? Math.round((wmsFixedCount / wmsTotalCount) * 100)
     : 0;
-  const wmsQuantityMetrics = workflowQuantityMetrics(wmsWorkspaceRows,asgnInfoMap);
+  const wmsPendingMetrics = workflowQuantityMetrics(wmsPendingRows,asgnInfoMap);
+  const wmsUnfixedMetrics = workflowQuantityMetrics(wmsUnfixedRows,asgnInfoMap);
+  const wmsFixedMetrics = workflowQuantityMetrics(wmsFixedRows,asgnInfoMap);
 
   const errorBanner = vaError 
     ? `<div class="alert alert-red" style="margin-bottom:14px;font-size:13px">⚠️ ไม่สามารถดึงข้อมูลคอนเฟิร์มแล้วได้</div>`
@@ -43093,20 +43140,22 @@ async function loadSvDash() {
           <button type="button" class="wms-kpi-card pending ${wmsFilter==='pending'?'active':''}" data-wms-kpi="pending"
             onclick="setWmsStatusFilter('pending')">
             <div class="wms-kpi-icon">${wmsIconSvg('search',21)}</div>
-            <div class="wms-kpi-copy"><strong id="wms-pending-count">${wmsPendingCount}</strong><span>รอคอนเฟิร์ม</span></div>
+            <div class="wms-kpi-copy"><strong id="wms-pending-count">${wmsPendingCount}</strong><span>รอยืนยันผล</span></div>
+            ${workflowStatusDetailsHtml(wmsPendingMetrics)}
           </button>
           <button type="button" class="wms-kpi-card unfixed ${wmsFilter==='unfixed'?'active':''}" data-wms-kpi="unfixed"
             onclick="setWmsStatusFilter('unfixed')">
             <div class="wms-kpi-icon">${wmsIconSvg('pending',21)}</div>
-            <div class="wms-kpi-copy"><strong id="wms-unfixed-count">${wmsUnfixedCount}</strong><span>ยังไม่ได้ตรวจสอบ</span></div>
+            <div class="wms-kpi-copy"><strong id="wms-unfixed-count">${wmsUnfixedCount}</strong><span>รอตรวจสอบ</span></div>
+            ${workflowStatusDetailsHtml(wmsUnfixedMetrics)}
           </button>
           <button type="button" class="wms-kpi-card fixed ${wmsFilter==='fixed'?'active':''}" data-wms-kpi="fixed"
             onclick="setWmsStatusFilter('fixed')">
             <div class="wms-kpi-icon">${wmsIconSvg('reviewed',21)}</div>
-            <div class="wms-kpi-copy"><strong id="wms-fixed-count">${wmsFixedCount}</strong><span>ตรวจสอบแล้ว</span></div>
+            <div class="wms-kpi-copy"><strong id="wms-fixed-count">${wmsFixedCount}</strong><span>ตรวจสอบเสร็จสิ้น</span></div>
+            ${workflowStatusDetailsHtml(wmsFixedMetrics)}
           </button>
         </div>
-        ${workflowQuantityMetricsHtml(wmsQuantityMetrics,'wms')}
       </section>
 
       <section class="wms-filter-panel">
@@ -53819,7 +53868,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.91' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.94' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -54080,7 +54129,7 @@ async function exportBackupZip() {
       format:BACKUP_ZIP_FORMAT,
       version:BACKUP_ZIP_VERSION,
       created_at:new Date().toISOString(),
-      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.91',
+      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.94',
       excel_file:excelFileName,
       excel_sha256:excelSha256,
       excel_manifest_hash:built.manifestHash,
@@ -55353,7 +55402,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.91" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.94" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
