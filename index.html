@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.94</title>
+<title>Cycle Count V1.97</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -28,6 +28,9 @@
 <!-- V1.91: จัด Profile และ Logout ท้าย Sidebar เป็น 2 แถว พร้อมสีพื้นตัดกันและปุ่ม Logout ขนาดกะทัดรัด -->
 <!-- V1.92: รวม Profile และ Logout ในกรอบสีขาวแถวเดียวกัน พร้อมข้อความสีดำและปุ่มขนาดเล็กชิดขวา -->
 <!-- V1.94: แสดง Location, Item และ Pcs ภายในกล่องสถานะแต่ละกล่องของ Variance และ WMS -->
+<!-- V1.95: ใช้คำศัพท์ภาษาไทยมาตรฐาน ยอดเกิน/ยอดขาด/ตำแหน่งจัดเก็บ/สินค้า/โซน/แถว/ระดับ ทุกเมนู -->
+<!-- V1.96: คงคำศัพท์คลังสินค้า Gain/Lost/Location/Item/Zone/Row/Level เป็นภาษาอังกฤษในหน้าภาษาไทย -->
+<!-- V1.97: ปรับ UX/UI ความคืบหน้างานยืนยันผลให้ใช้รูปแบบเดียวกับศูนย์ควบคุม WMS โดยคงข้อมูลเดิม -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
 <style>
@@ -21035,14 +21038,13 @@ body.count-page-active #app .count-handheld-page .count-entry-progress {
 
 /* V1.84 · Focused supervisor DIFF queue and selectable next-round Locations. */
 #app .variance-queue-overview {
-  display:grid;
-  gap:14px;
+  display:block;
   margin-bottom:18px;
-  padding:18px;
-  border:1px solid color-mix(in srgb,var(--theme-primary-color) 22%,var(--theme-border-color));
-  border-radius:22px;
-  background:var(--theme-card-bg);
-  box-shadow:0 12px 28px rgba(20,65,68,.08);
+  padding:22px;
+  border:1px solid var(--theme-wms-workspace-border);
+  border-radius:26px;
+  background:var(--theme-wms-workspace-bg);
+  box-shadow:0 16px 34px rgba(0,109,119,.08);
 }
 #app .variance-queue-overview-head {
   display:flex;
@@ -21400,6 +21402,18 @@ body.count-issue-open { overscroll-behavior:none; }
   font-weight:900;
   line-height:1;
 }
+
+/* V1.97 · Variance progress uses the same visual system as the WMS control centre. */
+#app .variance-queue-overview.wms-overview-shell .wms-overview-head { margin-bottom:18px; }
+#app .variance-status-card {
+  cursor:default;
+  user-select:none;
+}
+#app .variance-status-card:hover {
+  border-color:transparent;
+  transform:none;
+}
+#app .variance-status-card .workflow-status-details { margin-top:11px; }
 @media (max-width:700px) {
   #app .variance-queue-kpis { grid-template-columns:1fr; }
 }
@@ -21588,13 +21602,13 @@ body.count-issue-open { overscroll-behavior:none; }
 }
 </style>
 </head>
-<body data-build="v1-94">
+<body data-build="v1-97">
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.94';
+const APP_VERSION = '1.97';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
-const APP_BUILD_ID = 'v1-94';
+const APP_BUILD_ID = 'v1-97';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
 
 // V1.84 performance: keep the login and ordinary work pages light.  Large
@@ -22723,7 +22737,7 @@ const UI_EN_EXACT = Object.freeze({
   'ตัวเลข/รายละเอียด':'Values / Details',
   'ข้อความ OK':'OK Status Text',
   'ข้อความ Gain':'Inventory Gain Text',
-  'ข้อความ Lost':'Inventory Loss Text',
+  'ข้อความ Lost':'Inventory Lost Text',
   'สรุปการปรับยอด WMS บน Dashboard':'WMS Inventory Adjustment Summary on Dashboard',
   'สีรายละเอียด':'Supporting Text Color',
   'สีตัวเลขหลัก':'Primary Value Color',
@@ -23056,7 +23070,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.94':'e.g. Warehouse V1.94',
+  'เช่น Warehouse V1.97':'e.g. Warehouse V1.97',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -23146,7 +23160,7 @@ const UI_EN_EXACT = Object.freeze({
   'รายการสินค้า':'Items',
   'ความถูกต้อง':'Accuracy',
   'ยอดเกิน':'Gain',
-  'ยอดขาด':'Loss',
+  'ยอดขาด':'Lost',
   'แล้ว':'Done',
   'ว่าง':'Empty',
   'หรือ':'Or',
@@ -23165,14 +23179,14 @@ const UI_TH_SYSTEM_EXACT = Object.freeze({
   'All':'ทั้งหมด',
   'JOB':'งาน',
   'Job':'งาน',
-  'ZONE':'โซน',
-  'Zone':'โซน',
-  'ROW':'แถว',
-  'Row':'แถว',
-  'LEVEL':'ระดับ',
-  'Level':'ระดับ',
-  'LOCATION':'ตำแหน่งจัดเก็บ',
-  'Location':'ตำแหน่งจัดเก็บ',
+  'ZONE':'Zone',
+  'Zone':'Zone',
+  'ROW':'Row',
+  'Row':'Row',
+  'LEVEL':'Level',
+  'Level':'Level',
+  'LOCATION':'Location',
+  'Location':'Location',
   'Work status':'สถานะงาน',
   'Work Status':'สถานะงาน',
   'Latest Count Round':'รอบการตรวจนับล่าสุด',
@@ -23225,19 +23239,51 @@ const UI_TH_SYSTEM_EXACT = Object.freeze({
   'Session Status':'สถานะรอบการตรวจนับ',
   'Counting Work':'งานตรวจนับ',
   'completed':'เสร็จสิ้น',
-  'Locations':'ตำแหน่งจัดเก็บ',
-  'ITEM':'รายการสินค้า',
+  'Locations':'Location',
+  'ITEM':'Item',
+  'Item':'Item',
+  'Items':'Item',
   'Work':'งาน',
   'Progress':'ความคืบหน้า',
   'Accuracy':'ความถูกต้อง',
-  'GAIN':'ยอดเกิน',
-  'LOST':'ยอดขาด',
+  'GAIN':'Gain',
+  'Gain':'Gain',
+  'LOST':'Lost',
+  'Lost':'Lost',
+  'LOSS':'Lost',
+  'Loss':'Lost',
 });
 
 const UI_TH_DYNAMIC_PATTERNS = Object.freeze([
   [/^Show\s+([\d,.]+)\s+of\s+([\d,.]+)\s+items$/i,'แสดง $1 จาก $2 รายการ'],
   [/^Page\s+([\d,.]+)\s*\/\s*([\d,.]+)$/i,'หน้า $1 / $2'],
 ]);
+
+// V1.96 · Keep these seven approved warehouse terms in English even when
+// the surrounding interface is Thai. Operational values remain protected.
+const UI_PREFERRED_WAREHOUSE_TERMINOLOGY = Object.freeze([
+  [/ตำแหน่งจัดเก็บ|โลเคชั่น|\bStorage\s+Locations?\b|\bLocations?\b/gi,'Location'],
+  [/(^|[^ก-๙])สินค้า(?=$|[^ก-๙])/g,'$1Item'],
+  [/\bItems?\b/gi,'Item'],
+  [/โซน|\bZones?\b/gi,'Zone'],
+  [/(^|[^ก-๙])แถว(?=$|[^ก-๙])/g,'$1Row'],
+  [/\bRows?\b/gi,'Row'],
+  [/(^|[^ก-๙])ระดับ(?=$|[^ก-๙])/g,'$1Level'],
+  [/\bLevels?\b/gi,'Level'],
+  [/ยอดเกิน|\bGains?\b/gi,'Gain'],
+  [/ยอดขาด|\b(?:Lost|Loss(?:es)?)\b/gi,'Lost'],
+]);
+
+function normalizePreferredWarehouseTerminology(value) {
+  let output = String(value ?? '');
+  UI_PREFERRED_WAREHOUSE_TERMINOLOGY.forEach(([pattern,replacement]) => {
+    output = output.replace(pattern,replacement);
+  });
+  return output
+    .replace(/([ก-๙])(?=(?:Gain|Lost|Location|Item|Zone|Row|Level)\b)/g,'$1 ')
+    .replace(/\b(Gain|Lost|Location|Item|Zone|Row|Level)(?=[ก-๙])/g,'$1 ')
+    .replace(/[ \t]{2,}/g,' ');
+}
 
 const UI_EN_REPLACEMENTS = Object.freeze([
   ['กำลังบันทึกและซิงก์','Saving and syncing'],
@@ -23853,7 +23899,9 @@ function uiLocale() {
 // Use explicit bilingual copy for high-visibility screens. This avoids
 // depending on post-render word replacement and guarantees correct spacing.
 function uiCopy(thai, english) {
-  return currentUiLanguage() === 'en' ? String(english ?? '') : String(thai ?? '');
+  return currentUiLanguage() === 'en'
+    ? String(english ?? '')
+    : normalizePreferredWarehouseTerminology(String(thai ?? ''));
 }
 
 function replaceUiEnglishPhrase(value,thai,english) {
@@ -23880,15 +23928,16 @@ function translateUiText(value) {
   if (!core) return source;
   if (currentUiLanguage() === 'th') {
     const approvedThai = UI_TH_SYSTEM_EXACT[core];
-    if (approvedThai) return `${leading}${approvedThai}${trailing}`;
+    if (approvedThai) return `${leading}${normalizePreferredWarehouseTerminology(approvedThai)}${trailing}`;
     let dynamicThai = core;
     UI_TH_DYNAMIC_PATTERNS.forEach(([pattern,replacement]) => {
       dynamicThai = dynamicThai.replace(pattern,replacement);
     });
+    dynamicThai = normalizePreferredWarehouseTerminology(dynamicThai);
     if (dynamicThai !== core) return `${leading}${dynamicThai}${trailing}`;
     if (!/[ก-๙]/.test(core)) return source;
     const formal = UI_TH_FORMAL_EXACT[core];
-    return formal ? `${leading}${formal}${trailing}` : source;
+    return formal ? `${leading}${normalizePreferredWarehouseTerminology(formal)}${trailing}` : source;
   }
   if (!/[ก-๙]/.test(core)) return source;
   const exact = UI_EN_EXACT[core];
@@ -27084,8 +27133,8 @@ const rs=getComputedStyle(document.documentElement);
         </article>
 
         <section class="summary-metrics-grid summary-metrics-grid-clean summary-metrics-grid-square summary-metrics-grid-minimal">
-          <article class="summary-metric-wrap"><div class="summary-metric-card no-icon-card square-card tone-mint"><strong class="metric-value">22</strong></div><div class="summary-metric-title" data-i18n-skip>Location</div></article>
-          <article class="summary-metric-wrap sku-highlight"><div class="summary-metric-card no-icon-card square-card tone-lilac"><strong class="metric-value">38</strong></div><div class="summary-metric-title" data-i18n-skip>Item</div></article>
+          <article class="summary-metric-wrap"><div class="summary-metric-card no-icon-card square-card tone-mint"><strong class="metric-value">22</strong></div><div class="summary-metric-title">Location</div></article>
+          <article class="summary-metric-wrap sku-highlight"><div class="summary-metric-card no-icon-card square-card tone-lilac"><strong class="metric-value">38</strong></div><div class="summary-metric-title">Item</div></article>
           <article class="summary-metric-wrap"><div class="summary-metric-card no-icon-card square-card tone-sand"><strong class="metric-value">15</strong></div><div class="summary-metric-title" data-i18n-skip>OH</div></article>
           <article class="summary-metric-wrap"><div class="summary-metric-card no-icon-card square-card tone-peach"><strong class="metric-value">3</strong></div><div class="summary-metric-title" data-i18n-skip>Counter</div></article>
         </section>
@@ -30138,7 +30187,7 @@ function renderMyTasks() {
               onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openAnnualJobCount('${job.id}','${item.id}')}">
               <span class="my-job-work-seq">${String(index+1).padStart(2,'0')}</span>
               <div class="row-body">
-                <div class="my-job-work-location mono">${escapeWmsText(location.code || 'ไม่ระบุ Location')}</div>
+                <div class="my-job-work-location mono">${escapeWmsText(location.code || uiCopy('ไม่ระบุตำแหน่งจัดเก็บ','Location Not Specified'))}</div>
                 <div class="my-job-work-item"><strong>${group.items.length.toLocaleString(uiLocale())} ITEM ใน JOB</strong> · ${escapeWmsText(productSummary)}</div>
                 ${locationMeta ? `<div class="row-sub">${escapeWmsText(locationMeta)}</div>` : ''}
               </div>
@@ -30181,7 +30230,7 @@ function renderMyTasks() {
     const l   = a.locations;
     const si  = tagInfo(a.status);
     const can = assignmentCanOpenCount(a.status);
-    const sub = [l.zone, l.area, l.row_no && 'Row '+l.row_no, l.level && 'Lv.'+l.level].filter(Boolean).join(' · ');
+    const sub = [l.zone, l.area, l.row_no && 'Row '+l.row_no, l.level && 'Level '+l.level].filter(Boolean).join(' · ');
     html += `<div class="row ${can?'click':''}" data-location-sort-code="${escapeWmsText(l.code || '')}" ${can?`onclick="go('c-count',{aid:'${a.id}'})"`:''}>
       <div class="row-body">
         <div class="row-title mono">${l.code}</div>
@@ -32389,7 +32438,7 @@ function pendingFoundVarianceHtml(rows=[]) {
           <div class="row click found-review-row" data-location-sort-code="${escapeWmsText(row.location_code || '')}"
             onclick="go('sv-found',{fid:'${escapeWmsText(row.id)}'})">
             <div class="row-body">
-              <div class="row-title mono">${escapeWmsText(row.location_code || 'ไม่ระบุ Location')} · ${escapeWmsText(row.item_code || 'ไม่ระบุ Item')}</div>
+              <div class="row-title mono">${escapeWmsText(row.location_code || uiCopy('ไม่ระบุ Location','Location Not Specified'))} · ${escapeWmsText(row.item_code || uiCopy('ไม่ระบุ Item','Item Not Specified'))}</div>
               <div class="row-sub"><span data-i18n-skip>${escapeWmsText(row.description || 'ไม่ระบุ Description')}</span> · LPN <span data-i18n-skip>${escapeWmsText(row.license_plate || '—')}</span> · Lot <span data-i18n-skip>${escapeWmsText(row.lot || '—')}</span> · <span data-i18n-skip>${escapeWmsText(row.inventory_status || 'ไม่ระบุ Status')}</span> · QTY ${Number(row.qty || 0).toLocaleString(uiLocale())} <span data-i18n-skip>${escapeWmsText(row.uom || '')}</span></div>
               <div class="found-review-source">${row.source_type==='empty_location'?'Location ว่าง':'＋ เจองานเพิ่ม'} · <span data-i18n-skip>${escapeWmsText(row.actual_counter_name || row.profiles?.name || 'ไม่ระบุผู้ตรวจนับ')}</span></div>
             </div>
@@ -32957,7 +33006,7 @@ async function loadCCount() {
   let round = annualMode ? 1 : null;
 
   const l   = asgn.locations;
-  const sub = [l.zone, l.area, l.row_no && 'Row '+l.row_no, l.level && 'Lv.'+l.level].filter(Boolean).join(' · ');
+  const sub = [l.zone, l.area, l.row_no && 'Row '+l.row_no, l.level && 'Level '+l.level].filter(Boolean).join(' · ');
 
   const [{ data: rawSnaps }, { data: rawDetails }, { data: sessInfo }, { data: counterNames }, { data: countRemarkRows }, rules, existingCountsResult] = await Promise.all([
     sb.from('stock_snapshot')
@@ -35269,11 +35318,11 @@ function renderAdminFormCountQueue() {
   list.innerHTML = filtered.map(assignment => {
     const location = assignment.locations || {};
     const locationCode = location.code || 'ไม่ระบุ Location';
-    const sub = [location.zone,location.row_no && `Row ${location.row_no}`,location.level && `Lv.${location.level}`].filter(Boolean).join(' · ');
+    const sub = [location.zone,location.row_no && `Row ${location.row_no}`,location.level && `Level ${location.level}`].filter(Boolean).join(' · ');
     const roundLabel = adminFormCountRoundLabel(assignment);
     const done = ['completed','approved'].includes(assignment.status);
     return `<button type="button" class="afc-work-card ${String(assignment.id)===activeId?'is-active':''}" onclick="selectAdminFormCountAssignment('${assignment.id}')">
-      <span><strong data-i18n-skip>${escapeWmsText(locationCode)}</strong><small data-i18n-skip>${escapeWmsText(sub || 'Location')} · ${escapeWmsText(assignment.profiles?.name || 'ไม่ระบุ User')}</small></span>
+      <span><strong data-i18n-skip>${escapeWmsText(locationCode)}</strong><small data-i18n-skip>${escapeWmsText(sub || uiCopy('ตำแหน่งจัดเก็บ','Location'))} · ${escapeWmsText(assignment.profiles?.name || 'ไม่ระบุ User')}</small></span>
       <b class="afc-round-chip ${done?'is-done':''}">${escapeWmsText(roundLabel)}</b>
     </button>`;
   }).join('');
@@ -35408,8 +35457,8 @@ function renderAdminFormCountWorkspace() {
     return `<tr class="${round && !row.required?'afc-resolved-row':''}">
       <td class="afc-seq is-sticky-1">${index+1}</td>
       <td class="afc-location is-sticky-2" data-i18n-skip>${escapeWmsText(location.code || '')}</td>
-      <td class="afc-item is-sticky-3" data-i18n-skip>${row.emptyLocation?'<span class="afc-resolved-label">Location ว่าง</span>':escapeWmsText(row.itemCode)}</td>
-      <td class="afc-description" data-i18n-skip title="${escapeWmsText(row.description)}">${row.emptyLocation?'Item ว่างจาก WMS':escapeWmsText(row.description)}</td>
+      <td class="afc-item is-sticky-3" data-i18n-skip>${row.emptyLocation?`<span class="afc-resolved-label">${uiCopy('ตำแหน่งจัดเก็บว่าง','Empty Location')}</span>`:escapeWmsText(row.itemCode)}</td>
+      <td class="afc-description" data-i18n-skip title="${escapeWmsText(row.description)}">${row.emptyLocation?uiCopy('ไม่พบ Item ใน WMS','No Item in WMS'):escapeWmsText(row.description)}</td>
       <td class="afc-status" data-i18n-skip>${escapeWmsText(row.inventoryStatus || '—')}</td>
       <td class="afc-unit" data-i18n-skip>${escapeWmsText(row.uom || '—')}</td>
       ${showOH?`<td class="afc-oh">${Number(row.snapshot.onhand_qty || 0).toLocaleString(uiLocale())}</td>`:''}
@@ -35423,7 +35472,7 @@ function renderAdminFormCountWorkspace() {
     </tr>`;
   }).join('');
   workspace.innerHTML = `<div class="afc-work-head">
-      <div class="afc-work-title"><h3 data-i18n-skip>${escapeWmsText(location.code || 'Location')}</h3><p data-i18n-skip>${escapeWmsText([location.zone,location.area,location.row_no&&`Row ${location.row_no}`,location.level&&`Lv.${location.level}`].filter(Boolean).join(' · ') || 'Location')} · ${escapeWmsText(assignment.profiles?.name || 'ไม่ระบุ User')}</p></div>
+      <div class="afc-work-title"><h3 data-i18n-skip>${escapeWmsText(location.code || uiCopy('ตำแหน่งจัดเก็บ','Location'))}</h3><p data-i18n-skip>${escapeWmsText([location.zone,location.area,location.row_no&&`${uiCopy('แถว','Row')} ${location.row_no}`,location.level&&`${uiCopy('ระดับ','Level')} ${location.level}`].filter(Boolean).join(' · ') || uiCopy('ตำแหน่งจัดเก็บ','Location'))} · ${escapeWmsText(assignment.profiles?.name || 'ไม่ระบุ User')}</p></div>
       <div class="afc-work-meta"><span>${escapeWmsText(current.session?.name || '')}</span><span>${round?`COUNT ${round}`:'นับครบแล้ว'}</span><span>${showOH?'แสดง OH':'🔒 Blind Count'}</span></div>
     </div>
     <div class="afc-entry-settings">
@@ -37098,7 +37147,7 @@ function renderWorkTrackerList() {
       const varianceText = variance === null ? '—' : `${variance > 0 ? '+' : ''}${Number(variance).toLocaleString(uiLocale())}`;
       return `<tr>
         <td><div class="work-tracker-main" data-i18n-skip>${escapeWmsText(row.jobCode || '—')}</div></td>
-        <td><div class="work-tracker-main mono">${escapeWmsText(row.location || '—')}</div><div class="work-tracker-sub" data-i18n-skip>${[row.zone,row.row && `Row ${row.row}`,row.level && `Lv.${row.level}`].filter(Boolean).map(escapeWmsText).join(' · ') || '—'}</div></td>
+        <td><div class="work-tracker-main mono">${escapeWmsText(row.location || '—')}</div><div class="work-tracker-sub" data-i18n-skip>${[row.zone,row.row && `${uiCopy('แถว','Row')} ${row.row}`,row.level && `${uiCopy('ระดับ','Level')} ${row.level}`].filter(Boolean).map(escapeWmsText).join(' · ') || '—'}</div></td>
         <td><div class="work-tracker-main mono">${escapeWmsText(row.item || '—')}</div><div class="work-tracker-sub" data-i18n-skip>${escapeWmsText(row.description || '')}</div><div class="work-tracker-sub"><span data-i18n-skip>${escapeWmsText(row.category || translateUiText('ไม่ระบุ CATEGORY'))}</span> · <span data-i18n-skip>${escapeWmsText(row.uom || translateUiText('ไม่ระบุ UOM'))}</span></div></td>
         <td><strong>${row.oh.toLocaleString(uiLocale())}</strong><div class="work-tracker-sub">AL ${row.al.toLocaleString(uiLocale())}</div></td>
         <td><div class="work-tracker-main">${row.lpnCount.toLocaleString(uiLocale())} LPN</div><div class="work-tracker-sub" data-i18n-skip title="${escapeWmsText(row.lpnList)}">${escapeWmsText(row.lpnList || '—')}</div><div class="work-tracker-sub">Lot: <span data-i18n-skip>${escapeWmsText(row.lotList || '—')}</span></div></td>
@@ -40847,7 +40896,7 @@ function executiveV154ZoneAccuracyHtml(groups) {
       const percentOfPcs = value => row.totalPcs ? (Number(value || 0)/row.totalPcs)*100 : 0;
       return `<section class="exec-v156-zone-strip ${tone}">
         <header class="exec-v156-zone-name exec-v160-zone-name exec-v161-zone-name"><i>${String(index+1).padStart(2,'0')}</i><div><strong data-i18n-skip title="${escapeWmsText(row.zone)}">${escapeWmsText(row.zone)}</strong></div></header>
-        <article class="exec-v156-stat exec-v158-stat gain"><i>${percentOfPcs(row.gainPcs).toFixed(2)}%</i><span data-i18n-skip>Gain</span><div class="exec-v158-qty"><strong>${executiveFormatNumber(row.gainPcs)}</strong><em>Pcs</em></div><small><b>${executiveFormatNumber(row.gainItems)} Item</b></small></article>
+        <article class="exec-v156-stat exec-v158-stat gain"><i>${percentOfPcs(row.gainPcs).toFixed(2)}%</i><span>Gain</span><div class="exec-v158-qty"><strong>${executiveFormatNumber(row.gainPcs)}</strong><em>Pcs</em></div><small><b>${executiveFormatNumber(row.gainItems)} Item</b></small></article>
         <article class="exec-v156-stat exec-v158-stat lost"><i>${percentOfPcs(row.lostPcs).toFixed(2)}%</i><span>Lost</span><div class="exec-v158-qty"><strong>${executiveFormatNumber(row.lostPcs)}</strong><em>Pcs</em></div><small><b>${executiveFormatNumber(row.lostItems)} Item</b></small></article>
         <article class="exec-v156-stat exec-v158-stat ok"><i>${percentOfPcs(row.okPcs).toFixed(2)}%</i><span>OK</span><div class="exec-v158-qty"><strong>${executiveFormatNumber(row.okPcs)}</strong><em>Pcs</em></div><small><b>${executiveFormatNumber(row.okItems)} Item</b></small></article>
         <article class="exec-v156-stat exec-v158-stat total"><span>TOTAL</span><div class="exec-v158-qty"><strong>${executiveFormatNumber(row.totalPcs)}</strong><em>Pcs</em></div><small class="single"><b>${executiveFormatNumber(row.totalItems)} Item</b></small></article>
@@ -42679,20 +42728,42 @@ async function loadSvDash() {
   const varianceAllMetrics = workflowQuantityMetrics(varianceWorkflowRows,asgnInfoMap);
   const varianceConfirmedMetrics = workflowQuantityMetrics(confirmedVarianceRows,asgnInfoMap);
   const variancePendingMetrics = workflowQuantityMetrics(needsFollowUp,asgnInfoMap);
-  const varianceQueueOverviewHtml = `<section class="variance-queue-overview" style="--variance-queue-progress:${varianceWorkflowPercent}%">
-    <div class="variance-queue-overview-head">
-      <div class="variance-queue-overview-copy">
-        <strong>ความคืบหน้างานยืนยันผล</strong>
-        <span>หน้านี้แสดงเฉพาะ DIFF ที่ Supervisor ยังต้องยืนยัน</span>
+  const varianceQueueOverviewHtml = `<section class="variance-queue-overview wms-overview-shell">
+    <div class="wms-overview-head">
+      <div class="wms-overview-title">
+        <div class="wms-overview-icon">${wmsIconSvg('reviewed',25)}</div>
+        <div class="wms-overview-copy">
+          <strong>ความคืบหน้างานยืนยันผล</strong>
+          <span>หน้านี้แสดงเฉพาะ DIFF ที่ Supervisor ยังต้องยืนยัน</span>
+        </div>
       </div>
-      <div class="variance-queue-overview-percent">${varianceWorkflowPercent}%</div>
+      <div class="wms-overview-total">
+        <strong id="variance-total-count">${varianceWorkflowTotal.toLocaleString(uiLocale())}</strong>
+        <span>DIFF ทั้งหมด</span>
+      </div>
     </div>
-    <div class="variance-queue-kpis">
-      <div class="variance-queue-kpi"><span>DIFF ทั้งหมด</span><strong>${varianceWorkflowTotal.toLocaleString(uiLocale())}</strong>${workflowStatusDetailsHtml(varianceAllMetrics)}</div>
-      <div class="variance-queue-kpi"><span>ยืนยันแล้ว</span><strong>${varianceWorkflowForwarded.toLocaleString(uiLocale())}</strong>${workflowStatusDetailsHtml(varianceConfirmedMetrics)}</div>
-      <div class="variance-queue-kpi is-pending"><span>เหลือรอยืนยัน</span><strong>${needsFollowUp.length.toLocaleString(uiLocale())}</strong>${workflowStatusDetailsHtml(variancePendingMetrics)}</div>
+    <div class="wms-progress-row">
+      <span>ความคืบหน้างานยืนยันผลทั้งหมด</span>
+      <strong id="variance-confirmed-percent">${varianceWorkflowPercent}%</strong>
     </div>
-    <div class="variance-queue-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${varianceWorkflowPercent}"><span></span></div>
+    <div class="wms-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${varianceWorkflowPercent}"><span style="width:${varianceWorkflowPercent}%"></span></div>
+    <div class="wms-kpi-grid variance-status-grid">
+      <div class="wms-kpi-card variance-status-card pending">
+        <div class="wms-kpi-icon">${wmsIconSvg('search',21)}</div>
+        <div class="wms-kpi-copy"><strong>${varianceWorkflowTotal.toLocaleString(uiLocale())}</strong><span>DIFF ทั้งหมด</span></div>
+        ${workflowStatusDetailsHtml(varianceAllMetrics)}
+      </div>
+      <div class="wms-kpi-card variance-status-card fixed">
+        <div class="wms-kpi-icon">${wmsIconSvg('reviewed',21)}</div>
+        <div class="wms-kpi-copy"><strong>${varianceWorkflowForwarded.toLocaleString(uiLocale())}</strong><span>ยืนยันแล้ว</span></div>
+        ${workflowStatusDetailsHtml(varianceConfirmedMetrics)}
+      </div>
+      <div class="wms-kpi-card variance-status-card unfixed">
+        <div class="wms-kpi-icon">${wmsIconSvg('pending',21)}</div>
+        <div class="wms-kpi-copy"><strong>${needsFollowUp.length.toLocaleString(uiLocale())}</strong><span>เหลือรอยืนยัน</span></div>
+        ${workflowStatusDetailsHtml(variancePendingMetrics)}
+      </div>
+    </div>
   </section>`;
   const varianceRowsHtml = needsFollowUp.length ? needsFollowUp.map((row, i) => {
     const assignment = asgnInfoMap[row.assignment_id] || {};
@@ -42907,13 +42978,13 @@ async function loadSvDash() {
           <div class="summary-metric-card no-icon-card square-card tone-mint" title="${escapeWmsText(locationMetricValue.full)}">
             <strong class="${metricValueClass(locationMetricValue.display)}" title="${escapeWmsText(locationMetricValue.full)}" aria-label="${escapeWmsText(locationMetricValue.full)}" data-i18n-skip>${locationMetricValue.display}</strong>
           </div>
-          <div class="summary-metric-title" data-i18n-skip>Location</div>
+          <div class="summary-metric-title">Location</div>
         </article>
         <article class="summary-metric-wrap sku-highlight">
           <div class="summary-metric-card no-icon-card square-card tone-lilac" title="${escapeWmsText(skuMetricValue.full)}">
             <strong class="${metricValueClass(skuMetricValue.display)}" title="${escapeWmsText(skuMetricValue.full)}" aria-label="${escapeWmsText(skuMetricValue.full)}" data-i18n-skip>${skuMetricValue.display}</strong>
           </div>
-          <div class="summary-metric-title" data-i18n-skip>Item</div>
+          <div class="summary-metric-title">Item</div>
         </article>
         <article class="summary-metric-wrap">
           <div class="summary-metric-card no-icon-card square-card tone-sand" title="${escapeWmsText(ohMetricValue.full)}">
@@ -47926,7 +47997,7 @@ async function refreshR23Preview() {
     ${visible.map(assignment => {
       const location = locationDetailById.get(assignment.location_id) || assignment.locations || {};
       const count = Number(itemCountByLocation.get(assignment.location_id) || 0);
-      const detail = [location.zone,location.row_no ? `Row ${location.row_no}` : '',location.level ? `Lv.${location.level}` : '']
+      const detail = [location.zone,location.row_no ? `Row ${location.row_no}` : '',location.level ? `Level ${location.level}` : '']
         .filter(Boolean).join(' · ');
       const assignmentId = String(assignment.id || '');
       const checked = selectedIds.has(assignmentId);
@@ -48310,7 +48381,7 @@ function renderNormalFreeLocationList() {
     const detail = [
       location.zone,location.area,
       location.row_no ? `Row ${location.row_no}` : '',
-      location.level ? `Lv.${location.level}` : '',
+      location.level ? `Level ${location.level}` : '',
     ].filter(Boolean).join(' · ');
     const status = expired
       ? { cls:'tag-amber',lbl:'งานหมดเวลา รอจ่ายใหม่' }
@@ -49139,7 +49210,7 @@ function renderAssignmentReviewList() {
     const si = tagInfo(a.status);
     const location = assignmentReviewLocation(a);
     const code = String(location.code || '').replace(/'/g, '');
-    const locationMeta = [location.zone,location.row_no ? `Row ${location.row_no}` : '',location.level ? `Lv.${location.level}` : '']
+    const locationMeta = [location.zone,location.row_no ? `Row ${location.row_no}` : '',location.level ? `Level ${location.level}` : '']
       .filter(Boolean).join(' · ');
     return `<div class="row assignment-print-row assign-list-row" data-location-sort-code="${escapeWmsText(location.code || '')}" style="cursor:default">
       <input class="assignment-print-select" type="checkbox" value="${a.location_id}" onchange="syncAssignedPrintSelection()" aria-label="เลือกพิมพ์ Location ${escapeWmsText(location.code || '')}">
@@ -53868,7 +53939,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.94' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.97' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -54129,7 +54200,7 @@ async function exportBackupZip() {
       format:BACKUP_ZIP_FORMAT,
       version:BACKUP_ZIP_VERSION,
       created_at:new Date().toISOString(),
-      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.94',
+      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.97',
       excel_file:excelFileName,
       excel_sha256:excelSha256,
       excel_manifest_hash:built.manifestHash,
@@ -55402,7 +55473,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.94" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.97" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
