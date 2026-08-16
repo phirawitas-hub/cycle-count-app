@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.97</title>
+<title>Cycle Count V1.100</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -30,6 +30,9 @@
 <!-- V1.94: แสดง Location, Item และ Pcs ภายในกล่องสถานะแต่ละกล่องของ Variance และ WMS -->
 <!-- V1.95: ใช้คำศัพท์ภาษาไทยมาตรฐาน ยอดเกิน/ยอดขาด/ตำแหน่งจัดเก็บ/สินค้า/โซน/แถว/ระดับ ทุกเมนู -->
 <!-- V1.96: คงคำศัพท์คลังสินค้า Gain/Lost/Location/Item/Zone/Row/Level เป็นภาษาอังกฤษในหน้าภาษาไทย -->
+<!-- V1.100: ปรับสีและขนาดข้อความหน่วยทั้ง 4 กล่องของกราฟความคืบหน้าตาม Zone -->
+<!-- V1.99: ระบุหน่วย Location/งานในกราฟความคืบหน้าตาม Zone และลบพื้นหลังสีฟ้าที่ติดมากับคลาส progress -->
+<!-- V1.98: เรียงกล่องความคืบหน้างานยืนยันผลใหม่เป็น เหลือรอยืนยัน → ยืนยันแล้ว → DIFF ทั้งหมด -->
 <!-- V1.97: ปรับ UX/UI ความคืบหน้างานยืนยันผลให้ใช้รูปแบบเดียวกับศูนย์ควบคุม WMS โดยคงข้อมูลเดิม -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
@@ -19620,9 +19623,10 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
   gap: 7px;
 }
 #dash-content .summary-zone-kpi-v126 {
+  position: relative;
   min-width: 0;
   min-height: 62px;
-  padding: 9px 10px;
+  padding: 9px 10px 21px;
   border-radius: 14px;
   background: rgba(237,246,249,.82);
   display: flex;
@@ -19654,6 +19658,21 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
 }
 #dash-content .summary-zone-kpi-v126.diff strong {
   color: #a83f3f !important;
+}
+/* V1.99 · Zone KPI unit sits at the lower-right and stays high contrast. */
+#dash-content .summary-zone-kpi-unit-v199 {
+  position: absolute;
+  right: 10px;
+  bottom: 7px;
+  color: var(--theme-zone-text) !important;
+  font-size: 7px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+/* The shared .progress class added a pale-blue panel behind this metric. */
+#dash-content .summary-zone-metric.progress {
+  background: transparent !important;
 }
 #dash-content .summary-zone-row-v126 .summary-zone-row-bars {
   min-width: 0 !important;
@@ -21606,7 +21625,7 @@ body.count-issue-open { overscroll-behavior:none; }
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.97';
+const APP_VERSION = '1.100';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = 'v1-97';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -23070,7 +23089,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.97':'e.g. Warehouse V1.97',
+  'เช่น Warehouse V1.100':'e.g. Warehouse V1.100',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -42496,10 +42515,10 @@ async function loadSvDash() {
         <div class="summary-zone-row-title">${z.zone}</div>
       </div>
       <div class="summary-zone-kpis-v126">
-        <div class="summary-zone-kpi-v126 plan"><span>ตามแผน</span><strong>${z.total.toLocaleString(uiLocale())}</strong></div>
-        <div class="summary-zone-kpi-v126 counted"><span>นับแล้ว</span><strong>${z.done.toLocaleString(uiLocale())}</strong></div>
-        <div class="summary-zone-kpi-v126 remaining"><span>คงเหลือ</span><strong>${Math.max(0,z.total-z.done).toLocaleString(uiLocale())}</strong></div>
-        <div class="summary-zone-kpi-v126 diff"><span>DIFF</span><strong>${z.diffItems.toLocaleString(uiLocale())}</strong></div>
+        <div class="summary-zone-kpi-v126 plan"><span>ตามแผน</span><strong>${z.total.toLocaleString(uiLocale())}</strong><small class="summary-zone-kpi-unit-v199" data-i18n-skip>Location</small></div>
+        <div class="summary-zone-kpi-v126 counted"><span>ตรวจนับแล้ว</span><strong>${z.done.toLocaleString(uiLocale())}</strong><small class="summary-zone-kpi-unit-v199" data-i18n-skip>Location</small></div>
+        <div class="summary-zone-kpi-v126 remaining"><span>คงเหลือ</span><strong>${Math.max(0,z.total-z.done).toLocaleString(uiLocale())}</strong><small class="summary-zone-kpi-unit-v199" data-i18n-skip>Location</small></div>
+        <div class="summary-zone-kpi-v126 diff"><span>DIFF</span><strong>${z.diffItems.toLocaleString(uiLocale())}</strong><small class="summary-zone-kpi-unit-v199" data-i18n-skip>งาน</small></div>
       </div>
       <div class="summary-zone-row-bars">
         <div class="summary-zone-metric progress">
@@ -42748,20 +42767,20 @@ async function loadSvDash() {
     </div>
     <div class="wms-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${varianceWorkflowPercent}"><span style="width:${varianceWorkflowPercent}%"></span></div>
     <div class="wms-kpi-grid variance-status-grid">
-      <div class="wms-kpi-card variance-status-card pending">
-        <div class="wms-kpi-icon">${wmsIconSvg('search',21)}</div>
-        <div class="wms-kpi-copy"><strong>${varianceWorkflowTotal.toLocaleString(uiLocale())}</strong><span>DIFF ทั้งหมด</span></div>
-        ${workflowStatusDetailsHtml(varianceAllMetrics)}
+      <div class="wms-kpi-card variance-status-card unfixed">
+        <div class="wms-kpi-icon">${wmsIconSvg('pending',21)}</div>
+        <div class="wms-kpi-copy"><strong>${needsFollowUp.length.toLocaleString(uiLocale())}</strong><span>เหลือรอยืนยัน</span></div>
+        ${workflowStatusDetailsHtml(variancePendingMetrics)}
       </div>
       <div class="wms-kpi-card variance-status-card fixed">
         <div class="wms-kpi-icon">${wmsIconSvg('reviewed',21)}</div>
         <div class="wms-kpi-copy"><strong>${varianceWorkflowForwarded.toLocaleString(uiLocale())}</strong><span>ยืนยันแล้ว</span></div>
         ${workflowStatusDetailsHtml(varianceConfirmedMetrics)}
       </div>
-      <div class="wms-kpi-card variance-status-card unfixed">
-        <div class="wms-kpi-icon">${wmsIconSvg('pending',21)}</div>
-        <div class="wms-kpi-copy"><strong>${needsFollowUp.length.toLocaleString(uiLocale())}</strong><span>เหลือรอยืนยัน</span></div>
-        ${workflowStatusDetailsHtml(variancePendingMetrics)}
+      <div class="wms-kpi-card variance-status-card pending">
+        <div class="wms-kpi-icon">${wmsIconSvg('search',21)}</div>
+        <div class="wms-kpi-copy"><strong>${varianceWorkflowTotal.toLocaleString(uiLocale())}</strong><span>DIFF ทั้งหมด</span></div>
+        ${workflowStatusDetailsHtml(varianceAllMetrics)}
       </div>
     </div>
   </section>`;
@@ -53939,7 +53958,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.97' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.100' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -54200,7 +54219,7 @@ async function exportBackupZip() {
       format:BACKUP_ZIP_FORMAT,
       version:BACKUP_ZIP_VERSION,
       created_at:new Date().toISOString(),
-      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.97',
+      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.100',
       excel_file:excelFileName,
       excel_sha256:excelSha256,
       excel_manifest_hash:built.manifestHash,
@@ -55473,7 +55492,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.97" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.100" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
