@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.100</title>
+<title>Cycle Count V1.103</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -30,6 +30,9 @@
 <!-- V1.94: แสดง Location, Item และ Pcs ภายในกล่องสถานะแต่ละกล่องของ Variance และ WMS -->
 <!-- V1.95: ใช้คำศัพท์ภาษาไทยมาตรฐาน ยอดเกิน/ยอดขาด/ตำแหน่งจัดเก็บ/สินค้า/โซน/แถว/ระดับ ทุกเมนู -->
 <!-- V1.96: คงคำศัพท์คลังสินค้า Gain/Lost/Location/Item/Zone/Row/Level เป็นภาษาอังกฤษในหน้าภาษาไทย -->
+<!-- V1.102: แก้ข้อความปุ่ม Multi-select ล้นกรอบด้วยแถวคำสั่งแบบ Responsive 2+1 -->
+<!-- V1.103: ให้ข้อมูลระดับ Item และสถานะ Workflow แสดงครบทุกแถว LPN ในไฟล์ Backup Excel -->
+<!-- V1.101: ตัวกรองงาน 2 ขั้น เพิ่มปุ่มตกลง และโหมดเรียงงานตาม Level สำหรับรายการกับงานถัดไปอัตโนมัติ -->
 <!-- V1.100: ปรับสีและขนาดข้อความหน่วยทั้ง 4 กล่องของกราฟความคืบหน้าตาม Zone -->
 <!-- V1.99: ระบุหน่วย Location/งานในกราฟความคืบหน้าตาม Zone และลบพื้นหลังสีฟ้าที่ติดมากับคลาส progress -->
 <!-- V1.98: เรียงกล่องความคืบหน้างานยืนยันผลใหม่เป็น เหลือรอยืนยัน → ยืนยันแล้ว → DIFF ทั้งหมด -->
@@ -13548,6 +13551,7 @@ body .tag.tag-gray{
 .multi-filter.open .multi-filter-chevron{transform:rotate(180deg)}
 .multi-filter-panel{
   position:absolute;z-index:120;left:0;right:0;top:calc(100% + 7px);min-width:230px;
+  box-sizing:border-box;
   padding:10px;border:1px solid var(--theme-border-color);border-radius:16px;
   color:var(--theme-body-text-color);background:var(--theme-card-bg);
   box-shadow:0 16px 36px rgba(36,47,50,.22);
@@ -13558,10 +13562,11 @@ body .tag.tag-gray{
 .multi-filter-option:hover{background:color-mix(in srgb,var(--theme-primary-color) 8%,var(--theme-card-bg))}
 .multi-filter-option input{width:17px;height:17px;flex:0 0 auto;accent-color:var(--theme-primary-color)}
 .multi-filter-empty{padding:14px 8px;text-align:center;color:var(--theme-muted-text-color);font-size:11px}
-.multi-filter-actions{display:flex;gap:7px;margin-top:8px;padding-top:8px;border-top:1px solid var(--theme-border-color)}
-.multi-filter-actions button{flex:1;min-height:32px;padding:6px 8px;border:0;border-radius:9px;font:700 10px 'Mitr',sans-serif;cursor:pointer}
-.multi-filter-actions button:first-child{color:var(--theme-secondary-text);background:var(--theme-secondary-bg)}
-.multi-filter-actions button:last-child{color:var(--theme-primary-text);background:var(--theme-primary-color)}
+.multi-filter-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:8px;padding-top:8px;border-top:1px solid var(--theme-border-color)}
+.multi-filter-actions button{min-width:0;min-height:34px;padding:6px 7px;border:0;border-radius:9px;font:700 9px/1.25 'Mitr',sans-serif;white-space:normal;overflow-wrap:anywhere;cursor:pointer}
+.multi-filter-action-clear{color:var(--theme-secondary-text);background:var(--theme-secondary-bg)}
+.multi-filter-action-all{color:var(--theme-primary-color);background:color-mix(in srgb,var(--theme-primary-color) 11%,var(--theme-card-bg))}
+.multi-filter-action-done{grid-column:1 / -1;color:var(--theme-primary-text);background:var(--theme-primary-color);box-shadow:0 4px 10px color-mix(in srgb,var(--theme-primary-color) 24%,transparent)}
 @media(max-width:700px){.multi-filter-panel{position:fixed;left:16px;right:16px;top:auto;bottom:16px;min-width:0;max-height:65vh}.multi-filter-options{max-height:45vh}}
 
 /* v130 — keep the WMS card level with Accuracy and place its bar chart lower. */
@@ -17709,6 +17714,100 @@ body.login-page-active .lcard {
   justify-content:flex-end;
   margin-bottom:14px;
 }
+/* V1.101 · Two-step Assigned Work filters: quick order first, facets second. */
+.task-filter-quick-row {
+  display:grid;
+  grid-template-columns:minmax(210px,.78fr) minmax(290px,1.22fr);
+  align-items:stretch;
+  gap:12px;
+}
+.task-level-sort-toggle {
+  min-height:46px;
+  padding:7px 12px;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 18%,var(--theme-border-color));
+  border-radius:14px;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:10px;
+  color:var(--theme-body-text-color);
+  background:color-mix(in srgb,var(--theme-card-bg) 92%,white);
+  box-shadow:0 5px 13px rgba(38,70,83,.10);
+  text-align:left;
+  cursor:pointer;
+}
+.task-level-sort-toggle strong {
+  display:block;
+  color:var(--theme-heading-color);
+  font-size:11px;
+  font-weight:900;
+}
+.task-level-sort-toggle small {
+  display:block;
+  margin-top:2px;
+  color:var(--theme-muted-text-color);
+  font-size:8px;
+  font-weight:700;
+  line-height:1.35;
+}
+.task-level-sort-switch {
+  position:relative;
+  width:42px;
+  height:24px;
+  flex:0 0 42px;
+  border-radius:999px;
+  background:color-mix(in srgb,var(--theme-muted-text-color) 23%,var(--theme-card-bg));
+  transition:background .18s ease;
+}
+.task-level-sort-switch::after {
+  content:'';
+  position:absolute;
+  top:3px;
+  left:3px;
+  width:18px;
+  height:18px;
+  border-radius:50%;
+  background:#fff;
+  box-shadow:0 2px 7px rgba(30,50,55,.22);
+  transition:transform .18s ease;
+}
+.task-level-sort-toggle.is-enabled {
+  border-color:var(--theme-primary-color);
+  background:color-mix(in srgb,var(--theme-primary-color) 9%,var(--theme-card-bg));
+}
+.task-level-sort-toggle.is-enabled .task-level-sort-switch { background:var(--theme-primary-color); }
+.task-level-sort-toggle.is-enabled .task-level-sort-switch::after { transform:translateX(18px); }
+.task-filter-quick-row > .location-sort-control { width:100%;min-height:46px;box-sizing:border-box; }
+.task-filter-advanced {
+  margin-top:12px;
+  border:1px solid color-mix(in srgb,var(--theme-border-color) 66%,transparent);
+  border-radius:15px;
+  overflow:visible;
+  background:color-mix(in srgb,var(--theme-card-bg) 96%,var(--theme-page-bg));
+}
+.task-filter-advanced > summary {
+  min-height:42px;
+  padding:9px 12px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  list-style:none;
+  color:var(--theme-heading-color);
+  font-size:11px;
+  font-weight:900;
+  cursor:pointer;
+}
+.task-filter-advanced > summary::-webkit-details-marker { display:none; }
+.task-filter-advanced > summary::after {
+  content:'⌄';
+  color:var(--theme-primary-color);
+  font-size:16px;
+  transition:transform .18s ease;
+}
+.task-filter-advanced[open] > summary::after { transform:rotate(180deg); }
+.task-filter-advanced[open] > summary { border-bottom:1px solid color-mix(in srgb,var(--theme-border-color) 58%,transparent); }
+.task-filter-advanced-body { padding:12px; }
 
 /* v194 — The in-app Count keypad can be used on every device. */
 .count-touch-toolbar {
@@ -17786,6 +17885,13 @@ body.tablet-ui .count-touch-toolbar .count-screen-lock-button { display:inline-f
   .task-filter-body { padding:10px; }
   .task-filter-sort-row { margin-bottom:10px; }
   .task-filter-sort-row .location-sort-control { width:100%; }
+  .task-filter-quick-row { grid-template-columns:1fr;gap:8px; }
+  .task-level-sort-toggle,.task-filter-quick-row > .location-sort-control { width:100%;min-height:48px; }
+  .task-level-sort-toggle strong { font-size:13px; }
+  .task-level-sort-toggle small { font-size:10px; }
+  .task-filter-advanced { margin-top:9px; }
+  .task-filter-advanced > summary { min-height:46px;font-size:13px; }
+  .task-filter-advanced-body { padding:9px; }
   .task-filter-collapsible .multi-filter-field > label {
     font-size:13px !important;
     line-height:1.4 !important;
@@ -18061,6 +18167,22 @@ body {
   border-radius:999px !important;
   font-size:13px !important;
   font-weight:600 !important;
+}
+
+/* V1.102 · Keep all three action labels inside the panel at every viewport. */
+#app .multi-filter-actions {
+  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+}
+#app .multi-filter-actions button {
+  min-width:0 !important;
+  padding-inline:6px !important;
+  font-size:11px !important;
+  line-height:1.25 !important;
+  white-space:normal !important;
+  overflow-wrap:anywhere;
+}
+#app .multi-filter-actions .multi-filter-action-done {
+  grid-column:1 / -1;
 }
 
 /* iOS-like actions: a solid primary pill and a simple outlined secondary. */
@@ -21625,7 +21747,7 @@ body.count-issue-open { overscroll-behavior:none; }
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.100';
+const APP_VERSION = '1.103';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = 'v1-97';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -23089,7 +23211,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.100':'e.g. Warehouse V1.100',
+  'เช่น Warehouse V1.103':'e.g. Warehouse V1.103',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -27699,8 +27821,9 @@ function multiFilterFieldHtml(id,label) {
       <div class="multi-filter-panel" id="${id}-panel" role="listbox" aria-multiselectable="true" hidden onclick="event.stopPropagation()">
         <div class="multi-filter-options" id="${id}-options"></div>
         <div class="multi-filter-actions">
-          <button type="button" onclick="clearMultiFilter('${id}')">${uiCopy('ล้างทั้งหมด','Clear')}</button>
-          <button type="button" onclick="selectAllMultiFilter('${id}')">${uiCopy('เลือกทั้งหมด','Select All')}</button>
+          <button class="multi-filter-action-clear" type="button" onclick="clearMultiFilter('${id}')">${uiCopy('ล้างทั้งหมด','Clear')}</button>
+          <button class="multi-filter-action-all" type="button" onclick="selectAllMultiFilter('${id}')">${uiCopy('เลือกทั้งหมด','Select All')}</button>
+          <button class="multi-filter-action-done" type="button" onclick="closeMultiFilter('${id}')">${uiCopy('ตกลง','Done')}</button>
         </div>
       </div>
     </div>
@@ -27770,6 +27893,16 @@ function clearMultiFilter(id) {
 function selectAllMultiFilter(id) {
   document.querySelectorAll(`#${id}-options .multi-filter-option-input`).forEach(input => { input.checked = true; });
   commitMultiFilter(id);
+}
+
+function closeMultiFilter(id) {
+  const root = Q(`${id}-multi`);
+  const panel = Q(`${id}-panel`);
+  const trigger = root?.querySelector('.multi-filter-trigger');
+  root?.classList.remove('open');
+  if (panel) panel.hidden = true;
+  trigger?.setAttribute('aria-expanded','false');
+  trigger?.focus();
 }
 
 function closeAllMultiFilters(exceptId='') {
@@ -28427,6 +28560,9 @@ function setLocationSortDirection(direction) {
   try { localStorage.setItem(LOCATION_SORT_STORAGE_KEY, locationSortDirection); } catch (_) {}
   syncLocationSortControls();
   sortLocationDomGroups();
+  // The Assigned Work page may use Level-first order instead of the shared
+  // raw Location-code order. Re-render it so A→Z / Z→A uses the active mode.
+  if (S?.page === 'c-tasks' && Q('mt-list')) renderMyTasks();
   sortCachedDashboardViews();
 }
 
@@ -29366,6 +29502,78 @@ async function doLogout() {
 const MY_TASK_FILTER_STORAGE_KEY = 'cycle_count_my_task_filters_v2';
 const MY_TASK_FILTER_FIELDS = ['_mtJob','_mtSession','_mtStatus','_mtZone','_mtRow','_mtPos','_mtLvl'];
 const MY_TASK_DATE_MODES = new Set(['today','date','all']);
+const MY_TASK_LEVEL_SORT_STORAGE_KEY = 'cycle_count_my_task_level_sort_v1';
+let myTaskLevelSortEnabled = (() => {
+  try { return localStorage.getItem(MY_TASK_LEVEL_SORT_STORAGE_KEY) === 'on'; }
+  catch (_) { return false; }
+})();
+
+function myTaskLevelSortControlHtml() {
+  const enabled = myTaskLevelSortEnabled;
+  return `<button class="task-level-sort-toggle ${enabled ? 'is-enabled' : ''}" id="task-level-sort-toggle" type="button"
+    onclick="toggleMyTaskLevelSort()" aria-pressed="${enabled}">
+    <span>
+      <strong>${uiCopy('เรียงตาม Level','Sort by Level')}</strong>
+      <small id="task-level-sort-description">${enabled
+        ? uiCopy('เปิด · จบทุกตำแหน่งใน Level เดียวกันก่อน','On · Finish Each Level Before Moving On')
+        : uiCopy('ปิด · เรียงตำแหน่งตามลำดับเดิม','Off · Use Standard Location Order')}</small>
+    </span>
+    <span class="task-level-sort-switch" aria-hidden="true"></span>
+  </button>`;
+}
+
+function syncMyTaskLevelSortControl() {
+  const button = Q('task-level-sort-toggle');
+  if (!button) return;
+  button.classList.toggle('is-enabled',myTaskLevelSortEnabled);
+  button.setAttribute('aria-pressed',String(myTaskLevelSortEnabled));
+  const description = Q('task-level-sort-description');
+  if (description) {
+    description.textContent = myTaskLevelSortEnabled
+      ? uiCopy('เปิด · จบทุกตำแหน่งใน Level เดียวกันก่อน','On · Finish Each Level Before Moving On')
+      : uiCopy('ปิด · เรียงตำแหน่งตามลำดับเดิม','Off · Use Standard Location Order');
+  }
+}
+
+function toggleMyTaskLevelSort() {
+  myTaskLevelSortEnabled = !myTaskLevelSortEnabled;
+  try { localStorage.setItem(MY_TASK_LEVEL_SORT_STORAGE_KEY,myTaskLevelSortEnabled ? 'on' : 'off'); } catch (_) {}
+  syncMyTaskLevelSortControl();
+  renderMyTasks();
+}
+
+function myTaskLocationOrderParts(value) {
+  const location = value?.locations || value?.location || value || {};
+  const code = locationCodeOf(value);
+  const parts = code.split('-');
+  return {
+    zone:String(location.zone ?? parts[0] ?? ''),
+    row:String(location.row_no ?? parts[1] ?? ''),
+    level:String(location.level ?? parts[3] ?? ''),
+    position:String(parts[2] ?? ''),
+    code,
+  };
+}
+
+function compareMyTaskLevelFirst(left,right,direction=locationSortDirection) {
+  const factor = direction === 'desc' ? -1 : 1;
+  const leftParts = myTaskLocationOrderParts(left);
+  const rightParts = myTaskLocationOrderParts(right);
+  for (const key of ['zone','row','level','position','code']) {
+    const compared = leftParts[key].localeCompare(
+      rightParts[key],
+      'en',
+      { numeric:true,sensitivity:'base' },
+    );
+    if (compared) return factor * compared;
+  }
+  return factor * String(left?.id || '').localeCompare(String(right?.id || ''),'en',{ numeric:true,sensitivity:'base' });
+}
+
+function sortMyTaskCycleRows(rows,direction=locationSortDirection,levelFirst=myTaskLevelSortEnabled) {
+  if (!levelFirst) return sortRowsByLocation(rows,assignment => assignment.locations?.code,direction);
+  return [...(rows || [])].sort((left,right) => compareMyTaskLevelFirst(left,right,direction));
+}
 
 function bangkokDateKey(value=new Date()) {
   const date = value instanceof Date ? value : new Date(value);
@@ -29665,7 +29873,7 @@ async function loadCTasks() {
           </span>
           <span class="task-filter-toggle-text">
             <strong>กรองงาน Cycle Count</strong>
-            <small>แตะเพื่อเลือก Session สถานะ Zone แถว ตำแหน่ง หรือระดับ</small>
+            <small>เลือกวิธีเรียงงาน หรือเปิดฟิลเตอร์ขั้นสูง</small>
           </span>
         </span>
         <span class="task-filter-toggle-state" aria-hidden="true">
@@ -29673,16 +29881,24 @@ async function loadCTasks() {
         </span>
       </summary>
       <div class="task-filter-body">
-        <div class="task-filter-sort-row">${locationSortControlHtml(true)}</div>
-        <div class="grid-3">
-          ${jobFilterHtml}
-          ${multiFilterFieldHtml('mt-session',uiCopy('รอบการตรวจนับ','Count Session'))}
-          ${multiFilterFieldHtml('mt-status',uiCopy('สถานะงาน','Work Status'))}
-          ${multiFilterFieldHtml('mt-zone',uiCopy('โซน','Zone'))}
-          ${multiFilterFieldHtml('mt-row',uiCopy('แถว','Row'))}
-          ${multiFilterFieldHtml('mt-pos',uiCopy('ตำแหน่ง','Position'))}
-          ${multiFilterFieldHtml('mt-lvl',uiCopy('ระดับ','Level'))}
+        <div class="task-filter-quick-row">
+          ${myTaskLevelSortControlHtml()}
+          ${locationSortControlHtml(true)}
         </div>
+        <details class="task-filter-advanced">
+          <summary>${uiCopy('ฟิลเตอร์ขั้นสูง','Advanced Filters')}</summary>
+          <div class="task-filter-advanced-body">
+            <div class="grid-3">
+              ${jobFilterHtml}
+              ${multiFilterFieldHtml('mt-session',uiCopy('รอบการตรวจนับ','Count Session'))}
+              ${multiFilterFieldHtml('mt-status',uiCopy('สถานะงาน','Work Status'))}
+              ${multiFilterFieldHtml('mt-zone',uiCopy('โซน','Zone'))}
+              ${multiFilterFieldHtml('mt-row',uiCopy('แถว','Row'))}
+              ${multiFilterFieldHtml('mt-pos',uiCopy('ตำแหน่ง','Position'))}
+              ${multiFilterFieldHtml('mt-lvl',uiCopy('ระดับ','Level'))}
+            </div>
+          </div>
+        </details>
       </div>
     </details>
     <div class="card card-flush" id="mt-list" data-location-sort-group></div>` : `
@@ -29872,14 +30088,14 @@ function myTaskNavigationUsesAnnualJobs(filters = {}) {
   return jobFilter.length > 0 || (!hasCycleInSession && hasJobsInSession);
 }
 
-function orderedCycleCountNavigationTargets(filters = {},direction = locationSortDirection) {
+function orderedCycleCountNavigationTargets(filters = {},direction = locationSortDirection,levelFirst = myTaskLevelSortEnabled) {
   if (myTaskNavigationUsesAnnualJobs(filters)) return [];
-  return sortRowsByLocation(
+  return sortMyTaskCycleRows(
     (window._myTasks || []).filter(assignment =>
       myCycleTaskMatchesNavigationFilters(assignment,filters)
     ),
-    assignment => assignment.locations?.code,
     direction,
+    levelFirst,
   ).map(assignment => ({
     kind:'cycle',
     assignmentId:String(assignment.id || ''),
@@ -29952,9 +30168,12 @@ function orderedAnnualCountNavigationTargets(filters = {},direction = locationSo
 function nextCountNavigationTarget(request = {}) {
   const filters = request.filters || myTaskNavigationFilterSnapshot();
   const direction = request.sortDirection === 'desc' ? 'desc' : 'asc';
+  const levelFirst = request.levelFirst === undefined
+    ? myTaskLevelSortEnabled
+    : request.levelFirst === true;
   const targets = myTaskNavigationUsesAnnualJobs(filters)
     ? orderedAnnualCountNavigationTargets(filters,direction)
-    : orderedCycleCountNavigationTargets(filters,direction);
+    : orderedCycleCountNavigationTargets(filters,direction,levelFirst);
   if (!targets.length) return null;
 
   const currentAssignmentId = String(request.assignmentId || '');
@@ -30020,6 +30239,7 @@ function buildNextCountNavigationRequest(aid,assignment,annualJobId='') {
     locationCode:String(window._countFoundContext?.locationCode || ''),
     filters:myTaskNavigationFilterSnapshot(filterSource),
     sortDirection:locationSortDirection,
+    levelFirst:myTaskLevelSortEnabled,
   };
 }
 
@@ -30228,7 +30448,7 @@ function renderMyTasks() {
     return;
   }
 
-  const filtered = sortRowsByLocation(asgns.filter(a => {
+  const filtered = sortMyTaskCycleRows(asgns.filter(a => {
     const parts = (a.locations?.code || '').split('-');
     if (!myTaskFilterMatches(sessionF,a.session_id)) return false;
     if (!myTaskFilterMatches(statusF,a.status)) return false;
@@ -30237,7 +30457,7 @@ function renderMyTasks() {
     if (!myTaskFilterMatches(posF,parts[2] || '')) return false;
     if (!myTaskFilterMatches(lvlF,String(a.locations?.level ?? parts[3] ?? ''))) return false;
     return true;
-  }), a => a.locations?.code);
+  }),locationSortDirection,myTaskLevelSortEnabled);
 
   if (!filtered.length) {
     list.innerHTML = `<div class="load" style="padding:40px;font-size:14px;color:var(--text-muted);text-align:center;font-weight:600">ไม่มีงานที่ตรงกับตัวกรอง</div>`;
@@ -52787,6 +53007,28 @@ function backupHasValue(value) {
   return value !== null && value !== undefined && value !== '';
 }
 
+// Data_Count is one row per LPN/Lot, but these values belong to the whole
+// Location + Item job. Repeat them on every LPN row so filtering or extracting
+// an individual LPN never loses the count issue or WMS approval history.
+const TEAM_BACKUP_ITEM_FIELDS_PER_LPN = Object.freeze([
+  'typeIssue','remark','wmsRemark','approvalResolution','reviewStatus','releasedToWms',
+  'supervisorNote','approvedBy','approvedAt','wmsStatus','wmsFixedBy','wmsFixedAt',
+  'wmsLocationStatus','wmsLocationClosedBy','wmsLocationClosedAt',
+]);
+
+function repeatTeamBackupItemFieldsForEveryLpn(rows) {
+  const groupRows = Array.isArray(rows) ? rows : [];
+  if (!groupRows.length) return groupRows;
+  const values = Object.fromEntries(TEAM_BACKUP_ITEM_FIELDS_PER_LPN.map(field => {
+    const source = groupRows.find(row => backupHasValue(row?.[field]));
+    return [field,source ? source[field] : ''];
+  }));
+  groupRows.forEach(row => {
+    TEAM_BACKUP_ITEM_FIELDS_PER_LPN.forEach(field => { row[field] = values[field]; });
+  });
+  return groupRows;
+}
+
 function backupNumber(value) {
   if (!backupHasValue(value)) return null;
   const number = Number(value);
@@ -53456,10 +53698,6 @@ function buildTeamBackupData(dataBySheet) {
       remaining = Math.max(0,remaining - allocated);
     });
   };
-  const itemLevelTextFields = [
-    'typeIssue','remark','wmsRemark','approvalResolution','reviewStatus','releasedToWms','supervisorNote','approvedBy','approvedAt',
-    'wmsStatus','wmsFixedBy','wmsFixedAt',
-  ];
   const dataCountGroupKey = row => stockKey(
     row.sessionId,
     row.locationId || `LOCATION:${importCodeKey(row.location)}`,
@@ -53473,6 +53711,7 @@ function buildTeamBackupData(dataBySheet) {
   });
   exportedItemGroups.forEach(rows => {
     const source = rows[0] || {};
+    repeatTeamBackupItemFieldsForEveryLpn(rows);
     const totals = {
       count1:source.count1,
       count2:source.count2,
@@ -53506,7 +53745,6 @@ function buildTeamBackupData(dataBySheet) {
       }
       if (index > 0) {
         row.alQty = null;
-        itemLevelTextFields.forEach(field => { row[field] = ''; });
       }
     });
   });
@@ -53624,7 +53862,8 @@ function buildTeamBackupData(dataBySheet) {
       && String(row.locationId || '') === String(locationId)
       && (!itemId || String(row.itemId || '') === String(itemId))
     );
-    return !matchingRows.some(row => String(row.wmsRemark || '').includes(text));
+    return !matchingRows.length
+      || matchingRows.some(row => !String(row.wmsRemark || '').includes(text));
   });
   if (missingWmsRemarkCoverage.length) {
     throw new Error(`หยุดสร้าง Backup: WMS Remark จับคู่ลง Data_Count ไม่ครบ ${missingWmsRemarkCoverage.length} รายการ`);
@@ -53958,7 +54197,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.100' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.103' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -54219,7 +54458,7 @@ async function exportBackupZip() {
       format:BACKUP_ZIP_FORMAT,
       version:BACKUP_ZIP_VERSION,
       created_at:new Date().toISOString(),
-      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.100',
+      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.103',
       excel_file:excelFileName,
       excel_sha256:excelSha256,
       excel_manifest_hash:built.manifestHash,
@@ -55492,7 +55731,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.100" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.103" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
