@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.112</title>
+<title>Cycle Count V1.113</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -33,6 +33,7 @@
 <!-- V1.102: แก้ข้อความปุ่ม Multi-select ล้นกรอบด้วยแถวคำสั่งแบบ Responsive 2+1 -->
 <!-- V1.103: ให้ข้อมูลระดับ Item และสถานะ Workflow แสดงครบทุกแถว LPN ในไฟล์ Backup Excel -->
 <!-- V1.104: ย้ายปุ่มเปลี่ยนคนไว้ข้างจ่ายคนเดิม และเลือกคนนับใหม่ในแถวงานหมดเวลาได้ทันที -->
+<!-- V1.113: หน้า WMS เน้นข้อมูลถูกต้องก่อนความเร็ว ปิด Dashboard/Fast cache และโหลดข้อมูลสดทุกครั้ง -->
 <!-- V1.112: แก้ Flow ยืนยัน Item ให้ส่งเข้าคิวปรับปรุงยอด WMS ทันที และรองรับรายการเดิมที่ released_to_wms=false -->
 <!-- V1.111: เพิ่มกล่องยอดยืนยันและ Variance ต่อจาก COUNT 3 ในรายการปรับยอด WMS -->
 <!-- V1.110: รายการ DIFF ที่ Supervisor ยืนยันแล้วจัดเป็นรอ WMS เสมอ ไม่ย้อนกลับไปเป็นรอ Variance -->
@@ -21921,13 +21922,13 @@ body.count-issue-open { overscroll-behavior:none; }
 }
 </style>
 </head>
-<body data-build="v1-97">
+<body data-build="v1-98">
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.112';
+const APP_VERSION = '1.113';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
-const APP_BUILD_ID = 'v1-97';
+const APP_BUILD_ID = 'v1-98';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
 
 // V1.84 performance: keep the login and ordinary work pages light.  Large
@@ -23395,7 +23396,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.112':'e.g. Warehouse V1.112',
+  'เช่น Warehouse V1.113':'e.g. Warehouse V1.113',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -26317,10 +26318,10 @@ function paintDashboardView(tab, cache = _dashboardViewCache) {
 }
 
 function paintCachedDashboardView(tab) {
-  // Warehouse Layout is an operational view of the current database state.
-  // Never paint its five-minute Dashboard cache: users explicitly prefer a
-  // complete fresh read (including every paginated Location) over speed here.
-  if (tab === 'layout') return false;
+  // Layout and WMS are operational views of the current database state.
+  // Never repaint their five-minute Dashboard cache: accuracy and a complete
+  // fresh paginated read take priority over opening speed on these pages.
+  if (['layout','wms'].includes(tab)) return false;
   const cache = _dashboardViewCacheStore.get(dashboardViewCacheKey(tab)) || _dashboardViewCache;
   if (!cache || cache.sessionId !== S._dashSid) return false;
   if (cache.userId !== (me?.id || '') || cache.role !== (prof?.role || '')) return false;
@@ -42635,21 +42636,14 @@ async function loadSvDash() {
     disconnectTabletAccuracyLayoutGuard();
     return;
   }
-  // V1.83 retains the WMS fast path: this menu does not wait for the full Dashboard data graph.
-  // It paints a device snapshot immediately (when available), then refreshes
-  // one compact RPC payload in the background.  A missing RPC falls back to
-  // the existing legacy loader below, so deployments stay backward-compatible.
+  // V1.113: WMS must always use the complete live database read below. The old
+  // Fast RPC and Local Storage snapshot could disagree with variance_approvals
+  // and alternately hide/show the same Item when users revisited the menu.
   if (tab === 'wms') {
-    const handledByFastLoader = await loadWmsFastDashboardV179({
-      sessionId:curSid,
-      sessionOptionsHtml:sessOpts,
-      isStaleLoad,
-    });
-    if (handledByFastLoader || isStaleLoad()) return;
-  } else {
-    // Prime WMS while a manager is reading another dashboard tab.  In normal
-    // use the WMS screen is therefore already usable before it is opened.
-    setTimeout(() => prefetchWmsFastPayloadV179(curSid),0);
+    invalidateWmsFastCacheV179(curSid);
+    invalidateDashboardCache('wms');
+    window._wmsRows = [];
+    window._wmsAsgnInfoMap = {};
   }
   // Load menu-specific settings only.  V1.77 fetched both Layout documents in
   // front of almost every Dashboard tab even when they were never rendered.
@@ -43294,9 +43288,13 @@ async function loadSvDash() {
       || row.created_at
       || null;
   });
-  const wmsWorkspaceRows = activeDateFilter
-    ? filterRowsByDashboardDate(sessionWmsRows,'_dashboardCountedAt')
-    : sessionWmsRows;
+  // WMS is an operational queue: when that tab is open it must show every Item
+  // in the selected Session regardless of a date range left from another tab.
+  const wmsWorkspaceRows = tab === 'wms'
+    ? sessionWmsRows
+    : activeDateFilter
+      ? filterRowsByDashboardDate(sessionWmsRows,'_dashboardCountedAt')
+      : sessionWmsRows;
   const allWmsRows = wmsWorkspaceRows;
   wmsWorkspaceRows.forEach(v => {
     const assignment = asgnInfoMap[v.assignment_id];
@@ -55070,7 +55068,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.112' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.113' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -55331,7 +55329,7 @@ async function exportBackupZip() {
       format:BACKUP_ZIP_FORMAT,
       version:BACKUP_ZIP_VERSION,
       created_at:new Date().toISOString(),
-      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.112',
+      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.113',
       excel_file:excelFileName,
       excel_sha256:excelSha256,
       excel_manifest_hash:built.manifestHash,
@@ -56604,7 +56602,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.112" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.113" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
