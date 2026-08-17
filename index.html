@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.107</title>
+<title>Cycle Count V1.109</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -33,6 +33,8 @@
 <!-- V1.102: แก้ข้อความปุ่ม Multi-select ล้นกรอบด้วยแถวคำสั่งแบบ Responsive 2+1 -->
 <!-- V1.103: ให้ข้อมูลระดับ Item และสถานะ Workflow แสดงครบทุกแถว LPN ในไฟล์ Backup Excel -->
 <!-- V1.104: ย้ายปุ่มเปลี่ยนคนไว้ข้างจ่ายคนเดิม และเลือกคนนับใหม่ในแถวงานหมดเวลาได้ทันที -->
+<!-- V1.109: แยกสถานะรอ Variance กับรอปรับ WMS และรวมสถานะหลาย Item ตามขั้นงานแรกที่ยังไม่เสร็จ -->
+<!-- V1.108: สถานะผังคิดผลสำเร็จระดับ Item รวมผลยืนยันของ Supervisor แก้ Location นับครบแต่ยังขึ้นกำลังนับ -->
 <!-- V1.107: ผังคลังรีเฟรช Assignment/Count/Variance/WMS อัตโนมัติ แยกผังแม่กับสถานะงาน และใช้สีสถานะสดชัดเจน -->
 <!-- V1.106: ผังคลังใช้ข้อมูลสดครบทุกหน้าโดยไม่แสดง Cache และแก้ Row filter ให้ยึด Location code จริง -->
 <!-- V1.105: ผังคลังรักษาตำแหน่ง Scroll และเพิ่มเลือกหลาย Location เพื่อเปลี่ยนประเภทพร้อมกัน -->
@@ -19206,22 +19208,26 @@ body{
   --warehouse-status-imported:#0284c7;
   --warehouse-status-counting:#f59e0b;
   --warehouse-status-variance:#8b5cf6;
+  --warehouse-status-wms-pending:#ef4444;
   --warehouse-status-completed:#16a34a;
 }
 body :is(.warehouse-location-cell,.warehouse-matrix-cell).status-not_imported{background:var(--warehouse-status-not-imported)!important;border-color:var(--warehouse-status-not-imported)!important}
 body :is(.warehouse-location-cell,.warehouse-matrix-cell).status-imported{background:var(--warehouse-status-imported)!important;border-color:var(--warehouse-status-imported)!important}
 body :is(.warehouse-location-cell,.warehouse-matrix-cell).status-counting{background:var(--warehouse-status-counting)!important;border-color:var(--warehouse-status-counting)!important}
 body :is(.warehouse-location-cell,.warehouse-matrix-cell).status-variance{background:var(--warehouse-status-variance)!important;border-color:var(--warehouse-status-variance)!important}
+body :is(.warehouse-location-cell,.warehouse-matrix-cell).status-wms_pending{background:var(--warehouse-status-wms-pending)!important;border-color:var(--warehouse-status-wms-pending)!important}
 body :is(.warehouse-location-cell,.warehouse-matrix-cell).status-completed{background:var(--warehouse-status-completed)!important;border-color:var(--warehouse-status-completed)!important}
 body .warehouse-layout-legend-dot.not_imported{background:var(--warehouse-status-not-imported)!important}
 body .warehouse-layout-legend-dot.imported{background:var(--warehouse-status-imported)!important}
 body .warehouse-layout-legend-dot.counting{background:var(--warehouse-status-counting)!important}
 body .warehouse-layout-legend-dot.variance{background:var(--warehouse-status-variance)!important}
+body .warehouse-layout-legend-dot.wms_pending{background:var(--warehouse-status-wms-pending)!important}
 body .warehouse-layout-legend-dot.completed{background:var(--warehouse-status-completed)!important}
 body .warehouse-layout-kpi.missing strong{color:var(--warehouse-status-not-imported)!important}
 body .warehouse-layout-kpi.imported strong{color:var(--warehouse-status-imported)!important}
 body .warehouse-layout-kpi.counting strong{color:#b45309!important}
 body .warehouse-layout-kpi.variance strong{color:var(--warehouse-status-variance)!important}
+body .warehouse-layout-kpi.wms-pending strong{color:var(--warehouse-status-wms-pending)!important}
 body .warehouse-layout-kpi.completed strong{color:var(--warehouse-status-completed)!important}
 .warehouse-layout-live-badge{display:inline-flex;align-items:center;gap:6px;margin-top:7px;margin-left:6px;padding:5px 9px;border:1px solid #86efac;border-radius:999px;background:#dcfce7;color:#166534;font-size:10px;font-weight:900;white-space:nowrap}
 .warehouse-layout-live-badge i{width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.16)}
@@ -19233,7 +19239,7 @@ body .warehouse-layout-kpi.completed strong{color:var(--warehouse-status-complet
 .warehouse-layout-metric-section{display:grid;gap:8px;padding:11px;border:1px solid rgba(0,120,128,.13);border-radius:19px;background:rgba(255,255,255,.72)}
 .warehouse-layout-metric-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#183f43;font-size:11px;font-weight:900}
 .warehouse-layout-metric-heading small{color:#687f81;font-size:9px;font-weight:800}
-.warehouse-layout-kpis{grid-template-columns:repeat(5,minmax(115px,1fr))}
+.warehouse-layout-kpis{grid-template-columns:repeat(6,minmax(108px,1fr))}
 .warehouse-layout-metric-section.master .warehouse-layout-kpis{grid-template-columns:repeat(4,minmax(115px,1fr))}
 .warehouse-matrix-rack{grid-template-columns:196px auto}
 .warehouse-matrix-rack-name{min-width:196px;padding:12px 9px}
@@ -19244,7 +19250,8 @@ body .warehouse-layout-kpi.completed strong{color:var(--warehouse-status-complet
 .warehouse-matrix-rack-stats span.live-imported{background:#0284c7;border-color:#38bdf8}
 .warehouse-matrix-rack-stats span.live-counting{background:#f59e0b;border-color:#fbbf24;color:#2f2100;text-shadow:none}
 .warehouse-matrix-rack-stats span.live-variance{background:#8b5cf6;border-color:#a78bfa}
-.warehouse-matrix-rack-stats span.live-completed{grid-column:1/-1;background:#16a34a;border-color:#4ade80}
+.warehouse-matrix-rack-stats span.live-wms-pending{background:#ef4444;border-color:#f87171}
+.warehouse-matrix-rack-stats span.live-completed{background:#16a34a;border-color:#4ade80}
 @media(max-width:900px){.warehouse-layout-metric-section.master .warehouse-layout-kpis,.warehouse-layout-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.warehouse-matrix-rack{grid-template-columns:174px auto}.warehouse-matrix-rack-name{min-width:174px}}
 @media(max-width:560px){.warehouse-layout-live-badge{margin-left:0}.warehouse-layout-metric-section.master .warehouse-layout-kpis,.warehouse-layout-kpis{grid-template-columns:1fr 1fr}.warehouse-matrix-rack{grid-template-columns:158px auto}.warehouse-matrix-rack-name{min-width:158px}}
 
@@ -21913,7 +21920,7 @@ body.count-issue-open { overscroll-behavior:none; }
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.107';
+const APP_VERSION = '1.109';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = 'v1-97';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -23383,7 +23390,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.107':'e.g. Warehouse V1.107',
+  'เช่น Warehouse V1.109':'e.g. Warehouse V1.109',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -29102,6 +29109,7 @@ function deriveAssignmentWorkflowStatus(snapshotRows, itemRounds, rules, storedS
 
   let highestRound = 0;
   let started = false;
+  const itemStatusByItem = {};
   const itemStatuses = snapshots.map(snapshot => {
     const rounds = roundsByItem[snapshot.item_id] || {};
     [1,2,3].forEach(round => {
@@ -29110,13 +29118,15 @@ function deriveAssignmentWorkflowStatus(snapshotRows, itemRounds, rules, storedS
         highestRound = Math.max(highestRound,round);
       }
     });
-    return computeItemStatus(
+    const itemStatus = computeItemStatus(
       snapshot.onhand_qty,
       rounds[1],
       rounds[2],
       rounds[3],
       rules,
     );
+    itemStatusByItem[String(snapshot.item_id)] = itemStatus;
+    return itemStatus;
   });
   const hasDiff = itemStatuses.some(status => status === 'Diff');
   // An untouched Item is still part of the current Count round.  Previously
@@ -29147,6 +29157,7 @@ function deriveAssignmentWorkflowStatus(snapshotRows, itemRounds, rules, storedS
   return {
     effectiveStatus,
     itemStatuses,
+    itemStatusByItem,
     hasDiff,
     hasPending,
     started,
@@ -38075,7 +38086,7 @@ async function fetchWarehouseLayoutLiveSessionData(sessionId,sessionName='') {
       snapshotsByLocation[assignment.location_id] || [],
       countsByAssignment[assignment.id] || {},
       rules,
-      assignment.status,
+      assignment.status === 'approved' ? 'pending' : assignment.status,
     );
     return { ...assignment,_storedStatus:assignment.status,_workflow:workflow,status:workflow.effectiveStatus };
   });
@@ -39153,6 +39164,7 @@ function warehouseLayoutStatusInfo(status) {
     imported:{label:'Import แล้ว',className:'imported'},
     counting:{label:'จ่ายงาน / กำลังนับ',className:'counting'},
     variance:{label:'รอตรวจ Variance',className:'variance'},
+    wms_pending:{label:'รอปรับ WMS',className:'wms_pending'},
     completed:{label:'เสร็จแล้ว',className:'completed'},
   };
   return map[status] || map.imported;
@@ -39162,10 +39174,51 @@ function warehouseLayoutStatusForLocation(imported,assignment,approvals=[]) {
   if (!imported) return 'not_imported';
   if (!assignment) return 'imported';
   const status = String(assignment.status || '');
-  const varianceApprovals = approvals.filter(item => Number(item.variance) !== 0);
-  const hasOpenVariance = varianceApprovals.some(item => !item.wms_fixed);
+  const confirmedApprovals = approvals.filter(item => item.review_status === 'confirmed' || item.approved_at);
+  const varianceApprovals = confirmedApprovals.filter(item => Number(item.variance) !== 0);
+  const hasWmsPending = varianceApprovals.some(item => item.released_to_wms !== false && !item.wms_fixed);
+  const hasApprovedVarianceNotReleased = varianceApprovals.some(item => item.released_to_wms === false && !item.wms_fixed);
   const allVarianceFixed = varianceApprovals.length && varianceApprovals.every(item => item.wms_fixed);
-  if (hasOpenVariance) return 'variance';
+
+  // A Location is complete when every Item has reached a final business
+  // result. A confirmed zero-variance approval is final even when the raw
+  // first count did not equal OH (the supervisor may confirm/correct it).
+  // Previously round1_done was always painted as "counting", which made a
+  // completed Location such as B-CP-001-A stay orange indefinitely.
+  const workflowStatuses = assignment._workflow?.itemStatusByItem || {};
+  const workflowItemIds = Object.keys(workflowStatuses);
+  if (workflowItemIds.length) {
+    const approvalByItem = new Map();
+    confirmedApprovals.forEach(approval => {
+      const itemId = String(approval.item_id || '');
+      if (itemId) approvalByItem.set(itemId,approval);
+    });
+    let hasPendingItem = false;
+    let hasUnconfirmedDiff = hasApprovedVarianceNotReleased;
+    let hasItemWaitingWms = hasWmsPending;
+    workflowItemIds.forEach(itemId => {
+      const approval = approvalByItem.get(itemId);
+      if (approval) {
+        if (Number(approval.variance) !== 0 && !approval.wms_fixed) {
+          if (approval.released_to_wms !== false) hasItemWaitingWms = true;
+          else hasUnconfirmedDiff = true;
+        }
+        return;
+      }
+      const itemStatus = workflowStatuses[itemId];
+      if (itemStatus === 'Diff') hasUnconfirmedDiff = true;
+      else if (itemStatus !== 'OK') hasPendingItem = true;
+    });
+    // Use the earliest unfinished stage across every Item in the Location:
+    // counting -> Variance -> WMS -> completed.
+    if (hasPendingItem) return 'counting';
+    if (hasUnconfirmedDiff) return 'variance';
+    if (hasItemWaitingWms) return 'wms_pending';
+    return 'completed';
+  }
+
+  if (hasApprovedVarianceNotReleased) return 'variance';
+  if (hasWmsPending) return 'wms_pending';
   if (allVarianceFixed || ['completed','approved'].includes(status)) return 'completed';
   if (status === 'round3_done') return 'variance';
   if (['round1_done','round2_done'].includes(status)) return 'counting';
@@ -39226,7 +39279,7 @@ function buildWarehouseLayoutRuntime(config=_warehouseLayoutConfig,sessionData=w
   });
 
   const detailsByCode = new Map();
-  const statusCounts = {not_imported:0,imported:0,counting:0,variance:0,completed:0};
+  const statusCounts = {not_imported:0,imported:0,counting:0,variance:0,wms_pending:0,completed:0};
   layoutByCode.forEach((location,code) => {
     const imported = importedByCode.get(code) || null;
     const assignment = assignmentsByCode.get(code) || null;
@@ -39344,7 +39397,7 @@ function warehouseLayoutRackHtml(rack,zone,runtime,statusFilter,search) {
       title="${escapeWmsText(generated.code)} · ${escapeWmsText(statusInfo.label)}"></button>`;
   }).join('')).join('');
   const summary = warehouseLayoutRackSummary(rack,runtime);
-  return `<section class="warehouse-layout-rack" style="${warehouseLayoutElementStyle(rack,zone)}" aria-label="Rack ${escapeWmsText(display.rack)}" title="${escapeWmsText(display.rack)} · ทั้งหมด ${summary.total} · ใช้งาน ${summary.usable} · ปิดใช้ ${summary.disabled} · เสา ${summary.pillar} · DIFF ${summary.diff}">
+  return `<section class="warehouse-layout-rack" style="${warehouseLayoutElementStyle(rack,zone)}" aria-label="Rack ${escapeWmsText(display.rack)}" title="${escapeWmsText(display.rack)} · ทั้งหมด ${summary.total} · ใช้งาน ${summary.usable} · ปิดใช้ ${summary.disabled} · เสา ${summary.pillar} · รอ Variance ${summary.diff} · รอ WMS ${summary.live.wms_pending}">
     <div class="warehouse-layout-rack-name">${escapeWmsText(display.rack)}</div>
     <div class="warehouse-layout-bays" style="grid-template-columns:repeat(${rack.bayCount},minmax(0,1fr))">
       ${bays.map(bay => `<span class="${skipped.has(bay)?'skip':''}">${escapeWmsText(String(bay).padStart(rack.bayPad,'0'))}</span>`).join('')}
@@ -39367,7 +39420,7 @@ function warehouseLayoutRackSummary(rack,runtime) {
     return result;
   },{pillar:0,aisle:0,disabled:0});
   const rackLocations = runtime.generatedLocations.filter(location => location.rackId === rack.id);
-  const live = {not_imported:0,imported:0,counting:0,variance:0,completed:0};
+  const live = {not_imported:0,imported:0,counting:0,variance:0,wms_pending:0,completed:0};
   rackLocations.forEach(location => {
     const status = runtime.detailsByCode.get(location.code)?.status || 'not_imported';
     live[status] = (live[status] || 0)+1;
@@ -39422,7 +39475,7 @@ function warehouseLayoutMatrixRackHtml(rack,zone,runtime,statusFilter,search) {
       <span class="warehouse-matrix-stat-label">สถานะงานปัจจุบัน</span>
       <span class="live-not-imported">ยังไม่ Import ${summary.live.not_imported.toLocaleString(uiLocale())}</span><span class="live-imported">รอจ่าย ${summary.live.imported.toLocaleString(uiLocale())}</span>
       <span class="live-counting">กำลังนับ ${summary.live.counting.toLocaleString(uiLocale())}</span><span class="live-variance">DIFF ${summary.live.variance.toLocaleString(uiLocale())}</span>
-      <span class="live-completed">เสร็จแล้ว ${summary.live.completed.toLocaleString(uiLocale())}</span>
+      <span class="live-wms-pending">รอ WMS ${summary.live.wms_pending.toLocaleString(uiLocale())}</span><span class="live-completed">เสร็จแล้ว ${summary.live.completed.toLocaleString(uiLocale())}</span>
     </div></div>
     <table class="warehouse-matrix-table"><thead><tr><th class="warehouse-matrix-level">LV</th>${bays.map(bay => `<th>${escapeWmsText(String(bay).padStart(rack.bayPad,'0'))}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>
   </section>`;
@@ -39447,6 +39500,7 @@ function warehouseLayoutLegendHtml() {
     <span class="warehouse-layout-legend-item"><i class="warehouse-layout-legend-dot imported"></i>Import แล้ว</span>
     <span class="warehouse-layout-legend-item"><i class="warehouse-layout-legend-dot counting"></i>จ่ายงาน / กำลังนับ</span>
     <span class="warehouse-layout-legend-item"><i class="warehouse-layout-legend-dot variance"></i>รอตรวจ Variance</span>
+    <span class="warehouse-layout-legend-item"><i class="warehouse-layout-legend-dot wms_pending"></i>รอปรับ WMS</span>
     <span class="warehouse-layout-legend-item"><i class="warehouse-layout-legend-dot completed"></i>เสร็จแล้ว</span>
     <span class="warehouse-layout-legend-item"><i class="warehouse-layout-legend-dot unmatched"></i>Import มาแต่ไม่พบใน Layout</span>
     <span class="warehouse-layout-legend-item"><i class="warehouse-layout-legend-dot aisle"></i>ทางเดิน</span>
@@ -39484,7 +39538,7 @@ function warehouseLayoutViewHtml(runtime) {
     : zones[0]?.id || '';
   S._layoutZone = currentZoneId;
   const zone = zones.find(item => item.id === currentZoneId);
-  const statusFilter = ['all','not_imported','imported','counting','variance','completed'].includes(S._layoutStatus)
+  const statusFilter = ['all','not_imported','imported','counting','variance','wms_pending','completed'].includes(S._layoutStatus)
     ? S._layoutStatus
     : 'all';
   const search = warehouseLocationKey(S._layoutSearch || '');
@@ -39540,6 +39594,7 @@ function warehouseLayoutViewHtml(runtime) {
         ${warehouseLayoutKpiHtml('Import แล้ว · รอจ่าย',statusCounts.imported.toLocaleString(uiLocale()),'imported','imported',statusFilter)}
         ${warehouseLayoutKpiHtml('จ่ายงาน / กำลังนับ',statusCounts.counting.toLocaleString(uiLocale()),'counting','counting',statusFilter)}
         ${warehouseLayoutKpiHtml('รอตรวจ Variance',statusCounts.variance.toLocaleString(uiLocale()),'variance','variance',statusFilter)}
+        ${warehouseLayoutKpiHtml('รอปรับ WMS',statusCounts.wms_pending.toLocaleString(uiLocale()),'wms-pending','wms_pending',statusFilter)}
         ${warehouseLayoutKpiHtml('เสร็จแล้ว',statusCounts.completed.toLocaleString(uiLocale()),'completed','completed',statusFilter)}
       </div>
     </section>
@@ -39557,6 +39612,7 @@ function warehouseLayoutViewHtml(runtime) {
               <option value="imported" ${statusFilter==='imported'?'selected':''}>Import แล้ว</option>
               <option value="counting" ${statusFilter==='counting'?'selected':''}>จ่ายงาน / กำลังนับ</option>
               <option value="variance" ${statusFilter==='variance'?'selected':''}>รอตรวจ Variance</option>
+              <option value="wms_pending" ${statusFilter==='wms_pending'?'selected':''}>รอปรับ WMS</option>
               <option value="completed" ${statusFilter==='completed'?'selected':''}>เสร็จแล้ว</option>
             </select></label>
           </div>
@@ -39613,7 +39669,7 @@ function setWarehouseLayoutZone(zoneId) {
 }
 
 function setWarehouseLayoutStatusFilter(status) {
-  S._layoutStatus = ['not_imported','imported','counting','variance','completed'].includes(status) ? status : 'all';
+  S._layoutStatus = ['not_imported','imported','counting','variance','wms_pending','completed'].includes(status) ? status : 'all';
   renderWarehouseLayoutTab();
 }
 
@@ -42954,9 +43010,11 @@ async function loadSvDash() {
       snapshotsByLocation[assignment.location_id] || [],
       rawCountByAssignment[assignment.id] || {},
       rules,
-      assignment._storedStatus || assignment.status,
+      (assignment._storedStatus || assignment.status) === 'approved'
+        ? 'pending'
+        : (assignment._storedStatus || assignment.status),
     );
-    return { ...assignment, status:layoutWorkflow.effectiveStatus };
+    return { ...assignment, status:layoutWorkflow.effectiveStatus,_workflow:layoutWorkflow };
   });
   if (tab === 'layout') {
     window._warehouseLayoutSessionData = {
@@ -54997,7 +55055,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.107' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.109' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -55258,7 +55316,7 @@ async function exportBackupZip() {
       format:BACKUP_ZIP_FORMAT,
       version:BACKUP_ZIP_VERSION,
       created_at:new Date().toISOString(),
-      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.107',
+      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.109',
       excel_file:excelFileName,
       excel_sha256:excelSha256,
       excel_manifest_hash:built.manifestHash,
@@ -56531,7 +56589,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.107" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.109" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
