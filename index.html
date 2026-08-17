@@ -38035,7 +38035,10 @@ function normalizeWarehouseLayoutLiveApproval(value={}) {
   return {
     ...value,
     review_status:reviewStatus,
-    released_to_wms:releasedToWms,
+    // Item confirmation is the hand-off to WMS. Older V1.111 rows were saved
+    // as confirmed + released_to_wms=false, which made Layout/Tracker say WMS
+    // pending while the WMS workspace silently hid the same Item.
+    released_to_wms:reviewStatus === 'confirmed' ? true : releasedToWms,
     wms_fixed:wmsStoredBooleanTrue(value.wms_fixed),
   };
 }
@@ -42926,10 +42929,14 @@ async function loadSvDash() {
       ? true
       : rawReleased === true || rawReleased === 1
         || ['true','t','1','yes','y'].includes(String(rawReleased).trim().toLowerCase());
+    const reviewStatus = row.review_status || (row.approved_at ? 'confirmed' : 'draft');
     return {
       ...row,
-      review_status:row.review_status || (row.approved_at ? 'confirmed' : 'draft'),
-      released_to_wms:releasedFlag,
+      review_status:reviewStatus,
+      // A confirmed Item has completed Variance review and therefore belongs
+      // in the WMS queue. This also repairs V1.111 rows already stored with
+      // released_to_wms=false without asking the user to confirm them again.
+      released_to_wms:reviewStatus === 'confirmed' ? true : releasedFlag,
       wms_fixed:fixedFlag,
       _legacyWmsFixedWithoutAudit:Boolean(fixedFlag && !row.wms_fixed_at && !row.wms_fixed_by),
       wms_fixed_at:row.wms_fixed_at ?? null,
@@ -45027,7 +45034,6 @@ async function closeWmsLocation(assignmentId,button) {
       .select('id,variance,review_status,released_to_wms,wms_fixed,wms_fixed_at,wms_fixed_by')
       .eq('assignment_id',assignmentId)
       .eq('review_status','confirmed')
-      .eq('released_to_wms',true)
       .neq('variance',0);
     if (serverError) throw serverError;
     if (!serverRows?.length) throw new Error('ไม่พบ Item ที่ถูกส่งเข้าขั้นตอน WMS');
@@ -46033,7 +46039,9 @@ function varianceReviewPayloadFromDom(aid,itemId,status) {
     variance,
     resolution:variance === 0 ? 'ok' : variance > 0 ? 'found' : 'lost',
     review_status:confirmed ? 'confirmed' : 'draft',
-    released_to_wms:false,
+    // Confirming an Item is the exact workflow hand-off to WMS. Draft rows
+    // remain outside the queue; confirmed rows must appear there immediately.
+    released_to_wms:confirmed,
     draft_saved_by:me.id,
     draft_saved_at:now,
     updated_at:now,
@@ -54280,7 +54288,9 @@ function buildTeamBackupData(dataBySheet) {
     const approval = approvalByWork.get(workKey) || null;
     const approvalReviewState = varianceReviewState(approval);
     const approvalConfirmed = approvalReviewState === 'confirmed';
-    const approvalReleased = approvalConfirmed && approval?.released_to_wms !== false;
+    // Confirmation is the WMS hand-off. Treat legacy confirmed rows saved by
+    // V1.111 with released_to_wms=false as released in exports as well.
+    const approvalReleased = approvalConfirmed;
     const detailRows = detailsByStock.get(stockKey(sessionId,locationId,itemId)) || [];
     const c1 = countRound(workCounts,1);
     const c2 = countRound(workCounts,2);
