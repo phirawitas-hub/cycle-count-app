@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.106</title>
+<title>Cycle Count V1.107</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -33,6 +33,7 @@
 <!-- V1.102: แก้ข้อความปุ่ม Multi-select ล้นกรอบด้วยแถวคำสั่งแบบ Responsive 2+1 -->
 <!-- V1.103: ให้ข้อมูลระดับ Item และสถานะ Workflow แสดงครบทุกแถว LPN ในไฟล์ Backup Excel -->
 <!-- V1.104: ย้ายปุ่มเปลี่ยนคนไว้ข้างจ่ายคนเดิม และเลือกคนนับใหม่ในแถวงานหมดเวลาได้ทันที -->
+<!-- V1.107: ผังคลังรีเฟรช Assignment/Count/Variance/WMS อัตโนมัติ แยกผังแม่กับสถานะงาน และใช้สีสถานะสดชัดเจน -->
 <!-- V1.106: ผังคลังใช้ข้อมูลสดครบทุกหน้าโดยไม่แสดง Cache และแก้ Row filter ให้ยึด Location code จริง -->
 <!-- V1.105: ผังคลังรักษาตำแหน่ง Scroll และเพิ่มเลือกหลาย Location เพื่อเปลี่ยนประเภทพร้อมกัน -->
 <!-- V1.101: ตัวกรองงาน 2 ขั้น เพิ่มปุ่มตกลง และโหมดเรียงงานตาม Level สำหรับรายการกับงานถัดไปอัตโนมัติ -->
@@ -19199,6 +19200,54 @@ body[data-build="v1-42"] .warehouse-layout-legend-dot.disabled{background:var(--
 body[data-build="v1-42"] :is(.warehouse-location-cell,.warehouse-matrix-cell){box-shadow:inset 0 0 0 1px rgba(255,255,255,.24)}
 body[data-build="v1-42"] .warehouse-layout-legend-dot{box-shadow:inset 0 0 0 1px rgba(255,255,255,.28),0 0 0 1px rgba(20,31,35,.16)}
 
+/* V1.107 · live warehouse status, clearly separated from master-layout capacity */
+body{
+  --warehouse-status-not-imported:#64748b;
+  --warehouse-status-imported:#0284c7;
+  --warehouse-status-counting:#f59e0b;
+  --warehouse-status-variance:#8b5cf6;
+  --warehouse-status-completed:#16a34a;
+}
+body :is(.warehouse-location-cell,.warehouse-matrix-cell).status-not_imported{background:var(--warehouse-status-not-imported)!important;border-color:var(--warehouse-status-not-imported)!important}
+body :is(.warehouse-location-cell,.warehouse-matrix-cell).status-imported{background:var(--warehouse-status-imported)!important;border-color:var(--warehouse-status-imported)!important}
+body :is(.warehouse-location-cell,.warehouse-matrix-cell).status-counting{background:var(--warehouse-status-counting)!important;border-color:var(--warehouse-status-counting)!important}
+body :is(.warehouse-location-cell,.warehouse-matrix-cell).status-variance{background:var(--warehouse-status-variance)!important;border-color:var(--warehouse-status-variance)!important}
+body :is(.warehouse-location-cell,.warehouse-matrix-cell).status-completed{background:var(--warehouse-status-completed)!important;border-color:var(--warehouse-status-completed)!important}
+body .warehouse-layout-legend-dot.not_imported{background:var(--warehouse-status-not-imported)!important}
+body .warehouse-layout-legend-dot.imported{background:var(--warehouse-status-imported)!important}
+body .warehouse-layout-legend-dot.counting{background:var(--warehouse-status-counting)!important}
+body .warehouse-layout-legend-dot.variance{background:var(--warehouse-status-variance)!important}
+body .warehouse-layout-legend-dot.completed{background:var(--warehouse-status-completed)!important}
+body .warehouse-layout-kpi.missing strong{color:var(--warehouse-status-not-imported)!important}
+body .warehouse-layout-kpi.imported strong{color:var(--warehouse-status-imported)!important}
+body .warehouse-layout-kpi.counting strong{color:#b45309!important}
+body .warehouse-layout-kpi.variance strong{color:var(--warehouse-status-variance)!important}
+body .warehouse-layout-kpi.completed strong{color:var(--warehouse-status-completed)!important}
+.warehouse-layout-live-badge{display:inline-flex;align-items:center;gap:6px;margin-top:7px;margin-left:6px;padding:5px 9px;border:1px solid #86efac;border-radius:999px;background:#dcfce7;color:#166534;font-size:10px;font-weight:900;white-space:nowrap}
+.warehouse-layout-live-badge i{width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.16)}
+.warehouse-layout-live-badge.is-loading{border-color:#7dd3fc;background:#e0f2fe;color:#075985}
+.warehouse-layout-live-badge.is-loading i{background:#0ea5e9;animation:warehouseLivePulse 1s ease-in-out infinite}
+.warehouse-layout-live-badge.is-error{border-color:#fca5a5;background:#fee2e2;color:#991b1b}
+.warehouse-layout-live-badge.is-error i{background:#ef4444}
+@keyframes warehouseLivePulse{50%{opacity:.35;transform:scale(.78)}}
+.warehouse-layout-metric-section{display:grid;gap:8px;padding:11px;border:1px solid rgba(0,120,128,.13);border-radius:19px;background:rgba(255,255,255,.72)}
+.warehouse-layout-metric-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#183f43;font-size:11px;font-weight:900}
+.warehouse-layout-metric-heading small{color:#687f81;font-size:9px;font-weight:800}
+.warehouse-layout-kpis{grid-template-columns:repeat(5,minmax(115px,1fr))}
+.warehouse-layout-metric-section.master .warehouse-layout-kpis{grid-template-columns:repeat(4,minmax(115px,1fr))}
+.warehouse-matrix-rack{grid-template-columns:196px auto}
+.warehouse-matrix-rack-name{min-width:196px;padding:12px 9px}
+.warehouse-matrix-rack-stats{gap:4px;margin-top:8px}
+.warehouse-matrix-rack-stats .warehouse-matrix-stat-label{grid-column:1/-1;min-height:auto;padding:2px 0;border:0;background:transparent;color:#fff;font-size:9px;letter-spacing:.04em;text-shadow:0 1px 2px rgba(0,0,0,.22)}
+.warehouse-matrix-rack-stats span{min-height:24px;font-size:9px}
+.warehouse-matrix-rack-stats span.live-not-imported{background:#64748b;border-color:#94a3b8}
+.warehouse-matrix-rack-stats span.live-imported{background:#0284c7;border-color:#38bdf8}
+.warehouse-matrix-rack-stats span.live-counting{background:#f59e0b;border-color:#fbbf24;color:#2f2100;text-shadow:none}
+.warehouse-matrix-rack-stats span.live-variance{background:#8b5cf6;border-color:#a78bfa}
+.warehouse-matrix-rack-stats span.live-completed{grid-column:1/-1;background:#16a34a;border-color:#4ade80}
+@media(max-width:900px){.warehouse-layout-metric-section.master .warehouse-layout-kpis,.warehouse-layout-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.warehouse-matrix-rack{grid-template-columns:174px auto}.warehouse-matrix-rack-name{min-width:174px}}
+@media(max-width:560px){.warehouse-layout-live-badge{margin-left:0}.warehouse-layout-metric-section.master .warehouse-layout-kpis,.warehouse-layout-kpis{grid-template-columns:1fr 1fr}.warehouse-matrix-rack{grid-template-columns:158px auto}.warehouse-matrix-rack-name{min-width:158px}}
+
 /* V1.18 · Session selector uses one clean outer frame. */
 #app .dashboard-session-filter .dashboard-filter-copy{
   position:static !important;
@@ -21864,7 +21913,7 @@ body.count-issue-open { overscroll-behavior:none; }
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.106';
+const APP_VERSION = '1.107';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = 'v1-97';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -23334,7 +23383,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.106':'e.g. Warehouse V1.106',
+  'เช่น Warehouse V1.107':'e.g. Warehouse V1.107',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -25013,6 +25062,15 @@ let _warehouseLayoutExcelPreview = null;
 let _warehouseLayoutExcelBusy = false;
 let _warehouseLayoutRealtimeChannel = null;
 let _warehouseLayoutRealtimeTimer = null;
+let _warehouseLayoutLiveChannel = null;
+let _warehouseLayoutLivePollTimer = null;
+let _warehouseLayoutLiveRefreshTimer = null;
+let _warehouseLayoutLiveRefreshInFlight = null;
+let _warehouseLayoutLiveRefreshQueued = false;
+let _warehouseLayoutLiveRequestSerial = 0;
+let _warehouseLayoutLiveError = '';
+let _warehouseLayoutLiveLoading = false;
+const WAREHOUSE_LAYOUT_LIVE_POLL_MS = 15000;
 let _planLocationConfig = null;
 let _planLocationLoaded = false;
 const NAV_DETAIL_PAGES = new Set(['c-count','c-found','sv-detail','sv-found','ad-txlog','ad-new']);
@@ -26232,7 +26290,13 @@ function paintDashboardView(tab, cache = _dashboardViewCache) {
     refreshWorkTrackerFilterOptions();
     renderWorkTrackerList();
   }
-  if (tab === 'layout') renderWarehouseLayoutTab();
+  if (tab === 'layout') {
+    renderWarehouseLayoutTab();
+    const liveData = window._warehouseLayoutSessionData || {};
+    startWarehouseLayoutLiveSync(liveData.sessionId || S._dashSid,liveData.sessionName || '');
+  } else {
+    stopWarehouseLayoutLiveSync();
+  }
   if (tab === 'executive') {
     window._executiveDataset = cache.executiveData || window._executiveDataset || null;
     renderExecutiveDashboard();
@@ -26606,6 +26670,7 @@ function isInvalidAuthError(error) {
 
 async function clearLocalAuthSession() {
   stopWarehouseLayoutRealtimeSync();
+  stopWarehouseLayoutLiveSync();
   stopLoginSessionGuard(true);
   invalidatePageViewCache();
   invalidateDashboardCache();
@@ -27506,6 +27571,7 @@ function render() {
   S = { ...S, ...normalizedRoute.extra, page:normalizedRoute.page };
   syncNavigationStateGlobals();
   const { page } = S;
+  if (page !== 'sv-dash' || (S?._dashTab || _dashTab) !== 'layout') stopWarehouseLayoutLiveSync();
   if (page !== 'c-count') teardownCountTouchControls();
   else removeCountNumericKeypad();
   const renderRequestId = ++_renderRequestSerial;
@@ -27885,6 +27951,7 @@ function openDashboardMenu(tab) {
     return;
   }
   const alreadyOnDashboard = S?.page === 'sv-dash';
+  if (tab !== 'layout') stopWarehouseLayoutLiveSync();
   _navStack = [];
   _dashTab = tab;
   window._openNavGroup = ['variance','wms'].includes(tab) ? 'my-work' : 'dashboard';
@@ -37922,6 +37989,282 @@ function startWarehouseLayoutRealtimeSync() {
   }
 }
 
+function warehouseLayoutLiveViewActive(sessionId='') {
+  const activeSessionId = String(S?._dashSid || window._warehouseLayoutSessionData?.sessionId || '');
+  return Boolean(
+    sb && me?.id &&
+    S?.page === 'sv-dash' &&
+    (S?._dashTab || _dashTab) === 'layout' &&
+    Q('warehouse-layout-root') &&
+    (!sessionId || String(sessionId) === activeSessionId) &&
+    !_warehouseLayoutDraftDirty
+  );
+}
+
+function warehouseLayoutLiveDataSignature(data={}) {
+  return JSON.stringify({
+    sessionId:String(data.sessionId || ''),
+    snapshots:(data.snapshots || []).map(row => [row.id,row.location_id,row.item_id,Number(row.onhand_qty) || 0]),
+    assignments:(data.assignments || []).map(row => [row.id,row.location_id,row.assigned_to,row.status,row.assigned_at,row.wms_closed_at,row.wms_closed_by]),
+    counts:(data.counts || []).map(row => [row.id,row.assignment_id,row.item_id,row.round,row.count_qty,row.counted_at,row.counted_by,row.actual_counter_name]),
+    approvals:(data.approvals || []).map(row => [row.id,row.assignment_id,row.item_id,row.variance,row.review_status,row.released_to_wms,row.wms_fixed,row.wms_fixed_at,row.wms_fixed_by]),
+  });
+}
+
+function normalizeWarehouseLayoutLiveApproval(value={}) {
+  const reviewStatus = value.review_status || (value.approved_at ? 'confirmed' : 'draft');
+  const rawReleased = value.released_to_wms;
+  const releasedToWms = rawReleased === undefined || rawReleased === null
+    ? true
+    : rawReleased === true || rawReleased === 1 || ['true','t','1','yes','y'].includes(String(rawReleased).trim().toLowerCase());
+  return {
+    ...value,
+    review_status:reviewStatus,
+    released_to_wms:releasedToWms,
+    wms_fixed:wmsStoredBooleanTrue(value.wms_fixed),
+  };
+}
+
+async function fetchWarehouseLayoutLiveSessionData(sessionId,sessionName='') {
+  const [assignmentResult,snapshotResult,rules] = await Promise.all([
+    fetchPagedSupabaseRows(
+      'assignments',
+      'id,status,assigned_to,location_id,assigned_at,created_at,counter_r2_id,counter_r3_id,wms_closed_at,wms_closed_by,locations(code,zone,row_no,level),profiles!assigned_to(name)',
+      query => query.eq('session_id',sessionId).order('id'),
+    ),
+    fetchPagedSupabaseRows(
+      'stock_snapshot',
+      'id,location_id,item_id,onhand_qty,al_qty,locations(code,zone,row_no,level),items(code,description,uom,category)',
+      query => query.eq('session_id',sessionId).order('id'),
+    ),
+    getSessionRules(sessionId),
+  ]);
+  if (assignmentResult.error || snapshotResult.error) throw assignmentResult.error || snapshotResult.error;
+
+  const assignments = assignmentResult.data || [];
+  const assignmentIds = assignments.map(row => row.id).filter(Boolean);
+  const [countResult,approvalResult] = await Promise.all([
+    fetchSupabaseRowsByValues(
+      'count_records',
+      'id,assignment_id,item_id,round,count_qty,counted_by,counted_at,actual_counter_name,type_issue,remark,photo_url',
+      'assignment_id',
+      assignmentIds,
+      query => query.order('id'),
+    ),
+    fetchSupabaseRowsByValues(
+      'variance_approvals','*','assignment_id',assignmentIds,query => query.order('id'),
+    ),
+  ]);
+  if (countResult.error || approvalResult.error) throw countResult.error || approvalResult.error;
+
+  const snapshots = snapshotResult.data || [];
+  const counts = countResult.data || [];
+  const snapshotsByLocation = {};
+  snapshots.forEach(snapshot => {
+    snapshotsByLocation[snapshot.location_id] = snapshotsByLocation[snapshot.location_id] || [];
+    snapshotsByLocation[snapshot.location_id].push(snapshot);
+  });
+  const countsByAssignment = {};
+  counts.forEach(record => {
+    countsByAssignment[record.assignment_id] = countsByAssignment[record.assignment_id] || {};
+    countsByAssignment[record.assignment_id][record.item_id] = countsByAssignment[record.assignment_id][record.item_id] || {};
+    countsByAssignment[record.assignment_id][record.item_id][record.round] = Number(record.count_qty);
+  });
+  const normalizedAssignments = assignments.map(assignment => {
+    const workflow = deriveAssignmentWorkflowStatus(
+      snapshotsByLocation[assignment.location_id] || [],
+      countsByAssignment[assignment.id] || {},
+      rules,
+      assignment.status,
+    );
+    return { ...assignment,_storedStatus:assignment.status,_workflow:workflow,status:workflow.effectiveStatus };
+  });
+  const approvals = (approvalResult.data || [])
+    .map(normalizeWarehouseLayoutLiveApproval)
+    .filter(row => row.review_status === 'confirmed');
+  return {
+    sessionId:String(sessionId),
+    sessionName:String(sessionName || ''),
+    snapshots,
+    assignments:normalizedAssignments,
+    counts,
+    approvals,
+    loadedAt:new Date().toISOString(),
+  };
+}
+
+function captureWarehouseLayoutViewScrollState() {
+  const main = document.querySelector('.main-wrapper');
+  const matrix = document.querySelector('.warehouse-matrix-wrap');
+  return {
+    mainTop:main?.scrollTop || 0,
+    mainLeft:main?.scrollLeft || 0,
+    matrixTop:matrix?.scrollTop || 0,
+    matrixLeft:matrix?.scrollLeft || 0,
+    windowX:window.scrollX || 0,
+    windowY:window.scrollY || 0,
+  };
+}
+
+function restoreWarehouseLayoutViewScrollState(state) {
+  if (!state) return;
+  const apply = () => {
+    const main = document.querySelector('.main-wrapper');
+    const matrix = document.querySelector('.warehouse-matrix-wrap');
+    if (main) { main.scrollTop = state.mainTop;main.scrollLeft = state.mainLeft; }
+    if (matrix) { matrix.scrollTop = state.matrixTop;matrix.scrollLeft = state.matrixLeft; }
+    window.scrollTo(state.windowX,state.windowY);
+  };
+  apply();
+  requestAnimationFrame(apply);
+}
+
+function renderWarehouseLayoutTabPreservingScroll() {
+  const state = captureWarehouseLayoutViewScrollState();
+  renderWarehouseLayoutTab();
+  restoreWarehouseLayoutViewScrollState(state);
+}
+
+function warehouseLayoutLiveStatusHtml(runtime=window._warehouseLayoutRuntime || {}) {
+  const loadedAt = runtime.loadedAt ? new Date(runtime.loadedAt) : null;
+  const validTime = loadedAt && !Number.isNaN(loadedAt.getTime());
+  const timeText = validTime ? loadedAt.toLocaleTimeString(uiLocale(),{hour:'2-digit',minute:'2-digit',second:'2-digit'}) : 'รอข้อมูล';
+  const className = _warehouseLayoutLiveError ? ' is-error' : (_warehouseLayoutLiveLoading ? ' is-loading' : '');
+  const label = _warehouseLayoutLiveError
+    ? 'เชื่อมต่อไม่สำเร็จ · กำลังลองใหม่'
+    : _warehouseLayoutLiveLoading
+      ? 'กำลังตรวจข้อมูลล่าสุด'
+      : `ข้อมูลสด · ${timeText}`;
+  return `<span class="warehouse-layout-live-badge${className}" id="warehouse-layout-live-badge"><i></i>${escapeWmsText(label)}</span>`;
+}
+
+function updateWarehouseLayoutLiveStatus() {
+  const badge = Q('warehouse-layout-live-badge');
+  if (!badge) return;
+  const holder = document.createElement('div');
+  holder.innerHTML = warehouseLayoutLiveStatusHtml(window._warehouseLayoutRuntime || {});
+  badge.replaceWith(holder.firstElementChild);
+}
+
+async function refreshWarehouseLayoutLiveData({ reason='poll',force=false }={}) {
+  const sessionId = String(S?._dashSid || window._warehouseLayoutSessionData?.sessionId || '');
+  if (!sessionId || !warehouseLayoutLiveViewActive(sessionId)) return false;
+  if (_warehouseLayoutLiveRefreshInFlight) {
+    _warehouseLayoutLiveRefreshQueued = true;
+    return _warehouseLayoutLiveRefreshInFlight;
+  }
+  const requestSerial = ++_warehouseLayoutLiveRequestSerial;
+  const sessionName = window._warehouseLayoutSessionData?.sessionName || '';
+  _warehouseLayoutLiveLoading = true;
+  updateWarehouseLayoutLiveStatus();
+  const task = (async () => {
+    try {
+      const freshData = await fetchWarehouseLayoutLiveSessionData(sessionId,sessionName);
+      if (requestSerial !== _warehouseLayoutLiveRequestSerial || !warehouseLayoutLiveViewActive(sessionId)) return false;
+      const changed = force || warehouseLayoutLiveDataSignature(freshData) !== warehouseLayoutLiveDataSignature(window._warehouseLayoutSessionData || {});
+      window._warehouseLayoutSessionData = freshData;
+      _warehouseLayoutLiveError = '';
+      refreshWarehouseLayoutRuntime();
+      if (changed) renderWarehouseLayoutTabPreservingScroll();
+      else updateWarehouseLayoutLiveStatus();
+      return changed;
+    } catch (error) {
+      if (requestSerial === _warehouseLayoutLiveRequestSerial && warehouseLayoutLiveViewActive(sessionId)) {
+        _warehouseLayoutLiveError = String(error?.message || error || 'โหลดข้อมูลไม่สำเร็จ');
+        console.warn(`Warehouse Layout live refresh (${reason}) failed:`,error);
+        updateWarehouseLayoutLiveStatus();
+      }
+      return false;
+    } finally {
+      if (requestSerial === _warehouseLayoutLiveRequestSerial) _warehouseLayoutLiveLoading = false;
+      _warehouseLayoutLiveRefreshInFlight = null;
+      updateWarehouseLayoutLiveStatus();
+      if (_warehouseLayoutLiveRefreshQueued) {
+        _warehouseLayoutLiveRefreshQueued = false;
+        scheduleWarehouseLayoutLiveRefresh('queued');
+      }
+    }
+  })();
+  _warehouseLayoutLiveRefreshInFlight = task;
+  return task;
+}
+
+function scheduleWarehouseLayoutLiveRefresh(reason='realtime') {
+  clearTimeout(_warehouseLayoutLiveRefreshTimer);
+  _warehouseLayoutLiveRefreshTimer = setTimeout(() => {
+    _warehouseLayoutLiveRefreshTimer = null;
+    refreshWarehouseLayoutLiveData({ reason });
+  },450);
+}
+
+function stopWarehouseLayoutLiveSync() {
+  clearInterval(_warehouseLayoutLivePollTimer);
+  clearTimeout(_warehouseLayoutLiveRefreshTimer);
+  _warehouseLayoutLivePollTimer = null;
+  _warehouseLayoutLiveRefreshTimer = null;
+  _warehouseLayoutLiveRefreshQueued = false;
+  _warehouseLayoutLiveLoading = false;
+  _warehouseLayoutLiveRequestSerial++;
+  const channel = _warehouseLayoutLiveChannel;
+  _warehouseLayoutLiveChannel = null;
+  if (channel && sb) {
+    try { sb.removeChannel(channel); } catch (_) {}
+  }
+}
+
+function startWarehouseLayoutLiveSync(sessionId,sessionName='') {
+  stopWarehouseLayoutLiveSync();
+  if (!sb || !me?.id || !sessionId || !warehouseLayoutLiveViewActive(sessionId)) return;
+  _warehouseLayoutLiveError = '';
+  if (!window._warehouseLayoutLiveVisibilityBound) {
+    window._warehouseLayoutLiveVisibilityBound = true;
+    document.addEventListener('visibilitychange',() => {
+      if (document.visibilityState === 'visible' && warehouseLayoutLiveViewActive()) {
+        scheduleWarehouseLayoutLiveRefresh('visible');
+      }
+    });
+    window.addEventListener('focus',() => {
+      if (warehouseLayoutLiveViewActive()) scheduleWarehouseLayoutLiveRefresh('focus');
+    });
+  }
+  const refreshFromChildTable = payload => {
+    const assignmentId = payload?.new?.assignment_id || payload?.old?.assignment_id;
+    const assignmentIds = new Set((window._warehouseLayoutSessionData?.assignments || []).map(row => String(row.id)));
+    if (!assignmentId || assignmentIds.has(String(assignmentId))) scheduleWarehouseLayoutLiveRefresh('realtime');
+  };
+  try {
+    _warehouseLayoutLiveChannel = sb
+      .channel(`warehouse-layout-live-${sessionId}-${Date.now()}`)
+      .on('postgres_changes',{event:'*',schema:'public',table:'assignments',filter:`session_id=eq.${sessionId}`},() => scheduleWarehouseLayoutLiveRefresh('assignment'))
+      .on('postgres_changes',{event:'*',schema:'public',table:'stock_snapshot',filter:`session_id=eq.${sessionId}`},() => scheduleWarehouseLayoutLiveRefresh('snapshot'))
+      .on('postgres_changes',{event:'*',schema:'public',table:'count_records'},refreshFromChildTable)
+      .on('postgres_changes',{event:'*',schema:'public',table:'variance_approvals'},refreshFromChildTable)
+      .subscribe(status => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          _warehouseLayoutLiveError = 'Realtime ไม่พร้อม · ใช้การตรวจซ้ำอัตโนมัติ';
+          updateWarehouseLayoutLiveStatus();
+        } else if (status === 'SUBSCRIBED') {
+          _warehouseLayoutLiveError = '';
+          updateWarehouseLayoutLiveStatus();
+        }
+      });
+  } catch (error) {
+    _warehouseLayoutLiveError = String(error?.message || error || 'Realtime ไม่พร้อม');
+    updateWarehouseLayoutLiveStatus();
+  }
+  _warehouseLayoutLivePollTimer = setInterval(() => {
+    if (document.visibilityState === 'visible' && warehouseLayoutLiveViewActive(sessionId)) {
+      refreshWarehouseLayoutLiveData({ reason:'poll' });
+    }
+  },WAREHOUSE_LAYOUT_LIVE_POLL_MS);
+  window._warehouseLayoutSessionData = {
+    ...(window._warehouseLayoutSessionData || {}),
+    sessionId:String(sessionId),
+    sessionName:String(sessionName || window._warehouseLayoutSessionData?.sessionName || ''),
+  };
+  updateWarehouseLayoutLiveStatus();
+}
+
 function planLocationUid() {
   return `plan-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
 }
@@ -38927,6 +39270,7 @@ function buildWarehouseLayoutRuntime(config=_warehouseLayoutConfig,sessionData=w
     statusCounts,
     sessionId:sessionData.sessionId || '',
     sessionName:sessionData.sessionName || '',
+    loadedAt:sessionData.loadedAt || '',
   };
 }
 
@@ -39023,14 +39367,19 @@ function warehouseLayoutRackSummary(rack,runtime) {
     return result;
   },{pillar:0,aisle:0,disabled:0});
   const rackLocations = runtime.generatedLocations.filter(location => location.rackId === rack.id);
-  const diff = rackLocations.filter(location => runtime.detailsByCode.get(location.code)?.status === 'variance').length;
+  const live = {not_imported:0,imported:0,counting:0,variance:0,completed:0};
+  rackLocations.forEach(location => {
+    const status = runtime.detailsByCode.get(location.code)?.status || 'not_imported';
+    live[status] = (live[status] || 0)+1;
+  });
   return {
     total:activeBays.length*rack.levels.length,
     usable:rackLocations.length,
     disabled:counts.disabled || 0,
     pillar:counts.pillar || 0,
     aisle:counts.aisle || 0,
-    diff,
+    diff:live.variance,
+    live,
   };
 }
 
@@ -39066,7 +39415,15 @@ function warehouseLayoutMatrixRackHtml(rack,zone,runtime,statusFilter,search) {
   </tr>`).join('');
   const summary = warehouseLayoutRackSummary(rack,runtime);
   return `<section class="warehouse-matrix-rack">
-    <div class="warehouse-matrix-rack-name"><strong>${escapeWmsText(display.rack)}</strong><small>${display.noLevel ? 'ไม่มี LEVEL' : `ROW ${escapeWmsText(display.row)}`}</small><div class="warehouse-matrix-rack-stats"><span>ทั้งหมด ${summary.total.toLocaleString(uiLocale())}</span><span>ใช้งาน ${summary.usable.toLocaleString(uiLocale())}</span><span>ปิดใช้ ${summary.disabled.toLocaleString(uiLocale())}</span><span>เสา ${summary.pillar.toLocaleString(uiLocale())}</span><span class="diff">DIFF ${summary.diff.toLocaleString(uiLocale())}</span></div></div>
+    <div class="warehouse-matrix-rack-name"><strong>${escapeWmsText(display.rack)}</strong><small>${display.noLevel ? 'ไม่มี LEVEL' : `ROW ${escapeWmsText(display.row)}`}</small><div class="warehouse-matrix-rack-stats">
+      <span class="warehouse-matrix-stat-label">ผังแม่</span>
+      <span>ช่อง ${summary.total.toLocaleString(uiLocale())}</span><span>เปิดใช้ ${summary.usable.toLocaleString(uiLocale())}</span>
+      <span>ปิดใช้ ${summary.disabled.toLocaleString(uiLocale())}</span><span>เสา ${summary.pillar.toLocaleString(uiLocale())}</span>
+      <span class="warehouse-matrix-stat-label">สถานะงานปัจจุบัน</span>
+      <span class="live-not-imported">ยังไม่ Import ${summary.live.not_imported.toLocaleString(uiLocale())}</span><span class="live-imported">รอจ่าย ${summary.live.imported.toLocaleString(uiLocale())}</span>
+      <span class="live-counting">กำลังนับ ${summary.live.counting.toLocaleString(uiLocale())}</span><span class="live-variance">DIFF ${summary.live.variance.toLocaleString(uiLocale())}</span>
+      <span class="live-completed">เสร็จแล้ว ${summary.live.completed.toLocaleString(uiLocale())}</span>
+    </div></div>
     <table class="warehouse-matrix-table"><thead><tr><th class="warehouse-matrix-level">LV</th>${bays.map(bay => `<th>${escapeWmsText(String(bay).padStart(rack.bayPad,'0'))}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>
   </section>`;
 }
@@ -39140,8 +39497,9 @@ function warehouseLayoutViewHtml(runtime) {
   const hero = `<div class="warehouse-layout-hero">
     <div class="warehouse-layout-title">
       <div class="warehouse-layout-title-icon">${navIconSvg('warehouse',28)}</div>
-      <div><h2>Layout คลังสินค้า</h2><p>ผังแม่ใช้ร่วมกันทุก Session และเทียบกับ Location ที่ Import WMS อัตโนมัติ</p>
+      <div><h2>Layout คลังสินค้า</h2><p>ผังแม่ใช้ร่วมกันทุก Session · สถานะงานโหลดจากฐานข้อมูลของ Session ที่เลือกและอัปเดตอัตโนมัติ</p>
         ${runtime.config.isMaster ? `<span class="warehouse-layout-master-badge">✓ ผังแม่ รุ่น ${Number(runtime.config.masterRevision || 1).toLocaleString(uiLocale())}</span>` : ''}
+        ${warehouseLayoutLiveStatusHtml(runtime)}
       </div>
     </div>
     <div class="warehouse-layout-actions">
@@ -39166,16 +39524,25 @@ function warehouseLayoutViewHtml(runtime) {
   const planPercentText = planMetrics.countPercent.toLocaleString(uiLocale(),{minimumFractionDigits:1,maximumFractionDigits:1});
   return `<div class="warehouse-layout-shell">
     ${hero}
-    <div class="warehouse-layout-kpis">
-      ${warehouseLayoutKpiHtml('Location ใน Layout',runtime.totalLayout.toLocaleString(uiLocale()),'','all',statusFilter)}
-      ${warehouseLayoutKpiHtml('Plan Location · '+zone.name,planMetrics.plan ? planMetrics.plan.toLocaleString(uiLocale()) : 'ยังไม่ตั้ง','plan','none',statusFilter)}
-      ${warehouseLayoutKpiHtml('Import ตรง Layout',runtime.matched.toLocaleString(uiLocale()),'matched','none',statusFilter)}
-      ${warehouseLayoutKpiHtml('ความครบถ้วน',completenessText,'completeness','none',statusFilter,'%')}
-      ${warehouseLayoutKpiHtml('ยังไม่ Import',statusCounts.not_imported.toLocaleString(uiLocale()),'missing','not_imported',statusFilter)}
-      ${warehouseLayoutKpiHtml('กำลังนับ',statusCounts.counting.toLocaleString(uiLocale()),'counting','counting',statusFilter)}
-      ${warehouseLayoutKpiHtml('Variance',statusCounts.variance.toLocaleString(uiLocale()),'variance','variance',statusFilter)}
-      ${warehouseLayoutKpiHtml('เสร็จแล้ว',statusCounts.completed.toLocaleString(uiLocale()),'completed','completed',statusFilter)}
-    </div>
+    <section class="warehouse-layout-metric-section master">
+      <div class="warehouse-layout-metric-heading"><span>ข้อมูลผังแม่</span><small>จำนวนช่องตามโครงสร้าง Layout</small></div>
+      <div class="warehouse-layout-kpis">
+        ${warehouseLayoutKpiHtml('Location ใน Layout',runtime.totalLayout.toLocaleString(uiLocale()),'','all',statusFilter)}
+        ${warehouseLayoutKpiHtml('Plan Location · '+zone.name,planMetrics.plan ? planMetrics.plan.toLocaleString(uiLocale()) : 'ยังไม่ตั้ง','plan','none',statusFilter)}
+        ${warehouseLayoutKpiHtml('Import ตรง Layout',runtime.matched.toLocaleString(uiLocale()),'matched','none',statusFilter)}
+        ${warehouseLayoutKpiHtml('ความครบถ้วน',completenessText,'completeness','none',statusFilter,'%')}
+      </div>
+    </section>
+    <section class="warehouse-layout-metric-section live">
+      <div class="warehouse-layout-metric-heading"><span>สถานะงานปัจจุบัน</span><small>${escapeWmsText(runtime.sessionName || 'Session ที่เลือก')} · อัปเดตจากฐานข้อมูล</small></div>
+      <div class="warehouse-layout-kpis">
+        ${warehouseLayoutKpiHtml('ยังไม่ Import',statusCounts.not_imported.toLocaleString(uiLocale()),'missing','not_imported',statusFilter)}
+        ${warehouseLayoutKpiHtml('Import แล้ว · รอจ่าย',statusCounts.imported.toLocaleString(uiLocale()),'imported','imported',statusFilter)}
+        ${warehouseLayoutKpiHtml('จ่ายงาน / กำลังนับ',statusCounts.counting.toLocaleString(uiLocale()),'counting','counting',statusFilter)}
+        ${warehouseLayoutKpiHtml('รอตรวจ Variance',statusCounts.variance.toLocaleString(uiLocale()),'variance','variance',statusFilter)}
+        ${warehouseLayoutKpiHtml('เสร็จแล้ว',statusCounts.completed.toLocaleString(uiLocale()),'completed','completed',statusFilter)}
+      </div>
+    </section>
     <div class="warehouse-layout-workspace">
       <section class="warehouse-layout-map-card">
         <div class="warehouse-layout-map-head">
@@ -42599,6 +42966,7 @@ async function loadSvDash() {
       assignments:warehouseLayoutAssignments,
       counts:rawCounts,
       approvals:trackerApprovalRows,
+      loadedAt:new Date().toISOString(),
     };
   }
   refreshWarehouseLayoutRuntime();
@@ -54629,7 +54997,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.106' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.107' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -54890,7 +55258,7 @@ async function exportBackupZip() {
       format:BACKUP_ZIP_FORMAT,
       version:BACKUP_ZIP_VERSION,
       created_at:new Date().toISOString(),
-      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.106',
+      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.107',
       excel_file:excelFileName,
       excel_sha256:excelSha256,
       excel_manifest_hash:built.manifestHash,
@@ -56163,7 +56531,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.106" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.107" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
