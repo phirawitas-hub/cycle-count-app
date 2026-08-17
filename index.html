@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.103</title>
+<title>Cycle Count V1.104</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -32,6 +32,7 @@
 <!-- V1.96: คงคำศัพท์คลังสินค้า Gain/Lost/Location/Item/Zone/Row/Level เป็นภาษาอังกฤษในหน้าภาษาไทย -->
 <!-- V1.102: แก้ข้อความปุ่ม Multi-select ล้นกรอบด้วยแถวคำสั่งแบบ Responsive 2+1 -->
 <!-- V1.103: ให้ข้อมูลระดับ Item และสถานะ Workflow แสดงครบทุกแถว LPN ในไฟล์ Backup Excel -->
+<!-- V1.104: ย้ายปุ่มเปลี่ยนคนไว้ข้างจ่ายคนเดิม และเลือกคนนับใหม่ในแถวงานหมดเวลาได้ทันที -->
 <!-- V1.101: ตัวกรองงาน 2 ขั้น เพิ่มปุ่มตกลง และโหมดเรียงงานตาม Level สำหรับรายการกับงานถัดไปอัตโนมัติ -->
 <!-- V1.100: ปรับสีและขนาดข้อความหน่วยทั้ง 4 กล่องของกราฟความคืบหน้าตาม Zone -->
 <!-- V1.99: ระบุหน่วย Location/งานในกราฟความคืบหน้าตาม Zone และลบพื้นหลังสีฟ้าที่ติดมากับคลาส progress -->
@@ -18495,14 +18496,60 @@ body {
   border-radius:16px;
   background:color-mix(in srgb,#f59e0b 7%,var(--theme-card-bg));
 }
-.expired-session-group strong { display:block;color:#1d1d1f;font-size:15px; }
+.expired-session-group-info { min-width:0; }
+.expired-session-group strong { display:block;color:#1d1d1f;font-size:15px;overflow-wrap:anywhere; }
 .expired-session-group span { display:block;margin-top:2px;color:#5f6368;font-size:12px; }
-.expired-session-actions {
+.expired-session-group-buttons {
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:8px;
+  flex-wrap:nowrap;
+}
+.expired-session-group-buttons .btn {
+  width:auto;
+  min-width:92px;
+  min-height:38px;
+  padding:8px 13px;
+  white-space:nowrap;
+}
+.expired-session-user-picker {
+  grid-column:1 / -1;
   display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-columns:minmax(0,1fr) auto auto;
+  align-items:end;
+  gap:8px;
+  padding-top:11px;
+  border-top:1px solid color-mix(in srgb,#d97706 18%,transparent);
+}
+.expired-session-user-picker[hidden] { display:none !important; }
+.expired-session-user-field { display:grid;gap:5px;min-width:0; }
+.expired-session-user-field span {
+  margin:0;
+  color:#1d1d1f;
+  font-size:12px;
+  font-weight:700;
+}
+.expired-session-user-field select {
+  width:100%;
+  min-width:0;
+  min-height:40px;
+  padding:8px 34px 8px 11px;
+  border:1px solid color-mix(in srgb,#d97706 35%,#cbd5e1);
+  border-radius:11px;
+  color:#111827;
+  background:#fff;
+  font:600 14px/1.3 inherit;
+}
+.expired-session-user-picker .btn { min-height:40px;padding:8px 13px;white-space:nowrap; }
+.expired-session-picker-close { min-width:40px !important;width:40px !important;padding:0 !important;font-size:19px; }
+.expired-session-actions {
+  display:flex;
+  justify-content:flex-end;
   gap:10px;
   margin-top:20px;
 }
+.expired-session-actions .btn { min-width:128px; }
 body.expired-session-modal-open { overflow:hidden; }
 
 /* ══════════════════════════════════════════════════════════
@@ -18647,12 +18694,21 @@ body.expired-session-modal-open { overflow:hidden; }
   #app .assign-bento-shell .assign-workflow-nav { grid-template-columns:1fr !important; }
   #app .assign-bento-shell .assign-bento-nav-heading,
   #app .assign-bento-shell .round1-mode-switch { grid-column:1; }
-  #app .assign-bento-shell .assign-bento-primary-actions,
-  .expired-session-actions { grid-template-columns:1fr; }
+  #app .assign-bento-shell .assign-bento-primary-actions { grid-template-columns:1fr; }
   .expired-session-dialog { padding:22px 16px 18px;border-radius:22px; }
   .expired-session-copy h2 { padding-right:34px;font-size:21px; }
+  .expired-session-group { grid-template-columns:minmax(92px,1fr) auto;gap:10px; }
+  .expired-session-group-buttons { gap:6px; }
+  .expired-session-group-buttons .btn { min-width:0;padding:8px 10px;font-size:12px; }
+  .expired-session-user-picker { grid-template-columns:minmax(0,1fr) auto auto; }
+  .expired-session-user-picker .btn { padding:8px 10px;font-size:12px; }
+}
+@media (max-width:420px) {
   .expired-session-group { grid-template-columns:1fr; }
-  .expired-session-group .btn { width:100%; }
+  .expired-session-group-buttons { justify-content:stretch; }
+  .expired-session-group-buttons .btn { flex:1 1 0; }
+  .expired-session-user-picker { grid-template-columns:minmax(0,1fr) auto; }
+  .expired-session-user-field { grid-column:1 / -1; }
 }
 @media (max-width:820px) {
   #app .assign-workspace-heading { grid-template-columns:1fr !important; }
@@ -21747,7 +21803,7 @@ body.count-issue-open { overscroll-behavior:none; }
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.103';
+const APP_VERSION = '1.104';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = 'v1-97';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -23211,7 +23267,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.103':'e.g. Warehouse V1.103',
+  'เช่น Warehouse V1.104':'e.g. Warehouse V1.104',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -47005,7 +47061,6 @@ async function renderManageAssign(container) {
           </div>
           <div class="expired-session-groups" id="expired-session-groups"></div>
           <div class="expired-session-actions">
-            <button class="btn btn-blue" id="expired-change-user-button" type="button" onclick="chooseExpiredAssignmentsForNewUser()">เปลี่ยนคน</button>
             <button class="btn btn-ghost" type="button" onclick="closeExpiredAssignmentPrompt()">ปิด</button>
           </div>
         </div>
@@ -49196,21 +49251,41 @@ function renderExpiredAssignmentPromptContent(options={}) {
   const modal = Q('expired-session-modal');
   const groupsNode = Q('expired-session-groups');
   const summaryNode = Q('expired-session-modal-summary');
-  const changeUserButton = Q('expired-change-user-button');
   if (!modal || !groupsNode) return false;
   const groups = expiredAssignmentGroups();
   if (assignments.length) {
     if (summaryNode) summaryNode.textContent = `เหลือ ${assignments.length.toLocaleString(uiLocale())} Location จาก ${groups.length.toLocaleString(uiLocale())} ผู้รับเดิม`;
-    groupsNode.innerHTML = groups.map(group => `<div class="expired-session-group">
-      <div><strong>${escapeWmsText(group.userName)}</strong><span>${group.assignments.length.toLocaleString(uiLocale())} Location</span></div>
-      <button class="btn btn-amber btn-sm" type="button" ${group.userId ? '' : 'disabled'}
-        onclick="reassignExpiredGroupToPrevious('${escapeWmsText(group.userId)}',this)">จ่ายคนเดิม</button>
-    </div>`).join('');
+    groupsNode.innerHTML = groups.map((group,index) => {
+      const availableUsers = (window._assignmentProfiles || [])
+        .filter(user => String(user.id || '') !== String(group.userId || ''));
+      const userOptions = availableUsers.length
+        ? `<option value="">— เลือกคนนับใหม่ —</option>${availableUsers.map(user =>
+            `<option value="${escapeWmsText(user.id)}">${escapeWmsText(user.name)}</option>`).join('')}`
+        : '<option value="">ไม่มีคนนับอื่นให้เลือก</option>';
+      return `<div class="expired-session-group" data-expired-owner-id="${escapeWmsText(group.userId)}">
+      <div class="expired-session-group-info"><strong>${escapeWmsText(group.userName)}</strong><span>${group.assignments.length.toLocaleString(uiLocale())} Location</span></div>
+      <div class="expired-session-group-buttons">
+        <button class="btn btn-amber btn-sm" type="button" ${group.userId ? '' : 'disabled'}
+          onclick="reassignExpiredGroupToPrevious(this.closest('.expired-session-group')?.dataset.expiredOwnerId || '',this)">จ่ายคนเดิม</button>
+        <button class="btn btn-ghost btn-sm" type="button" ${availableUsers.length ? '' : 'disabled'}
+          aria-expanded="false" aria-controls="expired-user-picker-${index}"
+          onclick="toggleExpiredGroupUserPicker(this)">เปลี่ยนคน</button>
+      </div>
+      <div class="expired-session-user-picker" id="expired-user-picker-${index}" hidden>
+        <label class="expired-session-user-field">
+          <span>เลือกคนนับใหม่</span>
+          <select>${userOptions}</select>
+        </label>
+        <button class="btn btn-blue btn-sm" type="button" onclick="confirmExpiredGroupNewUser(this)">ยืนยัน</button>
+        <button class="btn btn-ghost btn-sm expired-session-picker-close" type="button"
+          onclick="closeExpiredGroupUserPicker(this)" aria-label="ยกเลิกเปลี่ยนคน">×</button>
+      </div>
+    </div>`;
+    }).join('');
   } else {
     if (summaryNode) summaryNode.textContent = 'จัดการงานหมดเวลาครบแล้ว กดปิดเมื่อพร้อม';
     groupsNode.innerHTML = `<div class="expired-session-empty">✓ ไม่มีงานหมดเวลาที่รอจ่ายใหม่แล้ว</div>`;
   }
-  if (changeUserButton) changeUserButton.disabled = assignments.length === 0;
   if (options.focus === true) {
     (modal.querySelector('.expired-session-group button:not(:disabled)')
       || modal.querySelector('button:not(:disabled)'))?.focus({ preventScroll:true });
@@ -49229,12 +49304,61 @@ function showExpiredAssignmentPrompt(sessionId) {
   renderExpiredAssignmentPromptContent({ focus:true });
 }
 
-function chooseExpiredAssignmentsForNewUser() {
-  closeExpiredAssignmentPrompt();
-  _expiredSelectedAssignmentIds = new Set((window._expiredAssignments || []).map(row => row.id).filter(Boolean));
-  focusExpiredAssignmentWorkspace();
-  renderNormalFreeLocationList();
-  requestAnimationFrame(() => Q('normal-free-user')?.focus({ preventScroll:true }));
+function toggleExpiredGroupUserPicker(triggerButton) {
+  const groupNode = triggerButton?.closest('.expired-session-group');
+  const picker = groupNode?.querySelector('.expired-session-user-picker');
+  if (!picker) return;
+  const willOpen = picker.hidden;
+  Q('expired-session-groups')?.querySelectorAll('.expired-session-user-picker').forEach(node => {
+    node.hidden = true;
+    node.closest('.expired-session-group')?.querySelector('[aria-controls]')?.setAttribute('aria-expanded','false');
+  });
+  picker.hidden = !willOpen;
+  triggerButton.setAttribute('aria-expanded',String(willOpen));
+  if (willOpen) requestAnimationFrame(() => picker.querySelector('select')?.focus({ preventScroll:true }));
+}
+
+function closeExpiredGroupUserPicker(control) {
+  const groupNode = control?.closest('.expired-session-group');
+  const picker = groupNode?.querySelector('.expired-session-user-picker');
+  const trigger = groupNode?.querySelector('[aria-controls]');
+  if (picker) picker.hidden = true;
+  if (trigger) {
+    trigger.setAttribute('aria-expanded','false');
+    trigger.focus({ preventScroll:true });
+  }
+}
+
+async function confirmExpiredGroupNewUser(triggerButton) {
+  const groupNode = triggerButton?.closest('.expired-session-group');
+  const userSelect = groupNode?.querySelector('.expired-session-user-picker select');
+  const userId = userSelect?.value || '';
+  const previousUserId = groupNode?.dataset.expiredOwnerId || '';
+  if (!userId) {
+    userSelect?.focus({ preventScroll:true });
+    return;
+  }
+  const assignmentIds = (window._expiredAssignments || [])
+    .filter(row => String(row.expired_from || '') === String(previousUserId))
+    .map(row => row.id)
+    .filter(Boolean);
+  if (!assignmentIds.length) {
+    renderExpiredAssignmentPromptContent({ focus:true });
+    return;
+  }
+  const controls = [...(groupNode?.querySelectorAll('button,select') || [])];
+  const controlStates = controls.map(control => [control,control.disabled]);
+  controls.forEach(control => { control.disabled = true; });
+  const originalText = triggerButton.textContent;
+  triggerButton.textContent = 'กำลังจ่าย...';
+  try {
+    await reassignExpiredAssignments(userId,assignmentIds);
+  } finally {
+    if (triggerButton?.isConnected) {
+      controlStates.forEach(([control,wasDisabled]) => { control.disabled = wasDisabled; });
+      triggerButton.textContent = originalText;
+    }
+  }
 }
 
 async function reassignExpiredGroupToPrevious(userId,triggerButton=null) {
@@ -54197,7 +54321,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.103' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.104' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -54458,7 +54582,7 @@ async function exportBackupZip() {
       format:BACKUP_ZIP_FORMAT,
       version:BACKUP_ZIP_VERSION,
       created_at:new Date().toISOString(),
-      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.103',
+      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.104',
       excel_file:excelFileName,
       excel_sha256:excelSha256,
       excel_manifest_hash:built.manifestHash,
@@ -55731,7 +55855,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.103" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.104" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
