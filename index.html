@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.104</title>
+<title>Cycle Count V1.105</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -33,6 +33,7 @@
 <!-- V1.102: แก้ข้อความปุ่ม Multi-select ล้นกรอบด้วยแถวคำสั่งแบบ Responsive 2+1 -->
 <!-- V1.103: ให้ข้อมูลระดับ Item และสถานะ Workflow แสดงครบทุกแถว LPN ในไฟล์ Backup Excel -->
 <!-- V1.104: ย้ายปุ่มเปลี่ยนคนไว้ข้างจ่ายคนเดิม และเลือกคนนับใหม่ในแถวงานหมดเวลาได้ทันที -->
+<!-- V1.105: ผังคลังรักษาตำแหน่ง Scroll และเพิ่มเลือกหลาย Location เพื่อเปลี่ยนประเภทพร้อมกัน -->
 <!-- V1.101: ตัวกรองงาน 2 ขั้น เพิ่มปุ่มตกลง และโหมดเรียงงานตาม Level สำหรับรายการกับงานถัดไปอัตโนมัติ -->
 <!-- V1.100: ปรับสีและขนาดข้อความหน่วยทั้ง 4 กล่องของกราฟความคืบหน้าตาม Zone -->
 <!-- V1.99: ระบุหน่วย Location/งานในกราฟความคืบหน้าตาม Zone และลบพื้นหลังสีฟ้าที่ติดมากับคลาส progress -->
@@ -11758,6 +11759,62 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
 .warehouse-editor-rack-cell.cell-disabled.is-red{background:#d74337}
 .warehouse-editor-rack-cell.cell-skip{background:repeating-linear-gradient(135deg,#e1e7e6 0 5px,#aab8b8 5px 10px);color:#4e6264}
 .warehouse-editor-rack-cell span{pointer-events:none;text-shadow:0 1px 1px rgba(255,255,255,.35)}
+.warehouse-editor-rack-cell.is-multi-selected{
+  z-index:7;
+  outline:2px solid #fff;
+  box-shadow:0 0 0 4px #00a4ad,inset 0 0 0 2px rgba(255,255,255,.55);
+  filter:saturate(1.12) brightness(1.04);
+  transform:scale(1.08);
+}
+.warehouse-editor-rack-cell.is-multi-selected::after{
+  content:"✓";
+  position:absolute;
+  top:1px;
+  right:1px;
+  width:12px;
+  height:12px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  background:#006d77;
+  color:#fff;
+  font:900 8px/1 'Sarabun',sans-serif;
+  box-shadow:0 1px 3px rgba(0,0,0,.28);
+}
+.warehouse-editor-multi-toggle.is-active{
+  border-color:#008b91 !important;
+  color:#006d77 !important;
+  background:#e4f5f2 !important;
+  box-shadow:inset 0 0 0 1px #008b91;
+}
+.warehouse-editor-multi-actions{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+  margin:0 1px 9px;
+  padding:9px 10px;
+  border:1px solid rgba(0,139,145,.28);
+  border-radius:13px;
+  background:#edf8f6;
+}
+.warehouse-editor-multi-actions[hidden]{display:none !important}
+.warehouse-editor-multi-summary{display:flex;align-items:center;gap:8px;color:#365f62;font-size:10px;font-weight:800}
+.warehouse-editor-multi-summary strong{
+  min-width:30px;
+  height:30px;
+  display:grid;
+  place-items:center;
+  padding:0 7px;
+  border-radius:9px;
+  background:#006d77;
+  color:#fff;
+  font-size:14px;
+}
+.warehouse-editor-multi-buttons{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap}
+.warehouse-editor-multi-buttons .btn{min-height:35px;padding:7px 10px;font-size:10px;white-space:nowrap}
+.warehouse-editor-multi-buttons .btn:disabled{opacity:.45;cursor:not-allowed}
 .warehouse-cell-type-help{grid-column:1/-1;padding:11px 12px;border:1px solid rgba(0,120,128,.12);border-radius:13px;background:#edf8f6;color:#496c6f;font-size:10px;font-weight:700;line-height:1.55}
 .warehouse-cell-type-legend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:7px}
 .warehouse-cell-type-legend span{display:flex;align-items:center;gap:7px;padding:7px 8px;border-radius:9px;background:#f7fbfa;color:#4a6668;font-size:9px;font-weight:700}
@@ -11853,6 +11910,9 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
   .warehouse-editor-tools h3{grid-column:1/-1}.warehouse-editor-zone-add{margin:0}
   .warehouse-editor-canvas-shell{margin-bottom:10px}
   .warehouse-editor-properties{position:static}
+  .warehouse-editor-multi-actions{align-items:stretch;flex-direction:column}
+  .warehouse-editor-multi-buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%}
+  .warehouse-editor-multi-buttons .btn{width:100%}
   .warehouse-property-form{grid-template-columns:1fr}
   .warehouse-editor-validation{grid-template-columns:1fr}
   .warehouse-match-columns,.warehouse-layout-detail-grid{grid-template-columns:1fr}
@@ -21803,7 +21863,7 @@ body.count-issue-open { overscroll-behavior:none; }
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.104';
+const APP_VERSION = '1.105';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = 'v1-97';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -22706,6 +22766,12 @@ const UI_EN_EXACT = Object.freeze({
   'ปิด':'Close',
   'เปิด':'Open',
   'เปิดใช้งาน':'Activate',
+  'เลือกหลาย Location':'Select Multiple Locations',
+  'Location ที่เลือก':'Selected Locations',
+  'ล้างที่เลือก':'Clear Selection',
+  'ออกจากโหมด':'Exit Mode',
+  'กดช่องเพื่อแก้ทีละ Location หรือเปิด “เลือกหลาย Location” เพื่อเปลี่ยนพร้อมกัน':'Click a cell to edit one Location, or use “Select Multiple Locations” to update several cells at once.',
+  'กดช่องเพื่อแก้ทีละ Location หรือใช้ “เลือกหลาย Location” เพื่อเปลี่ยนหลายช่องพร้อมกัน':'Click a cell to edit one Location, or use “Select Multiple Locations” to update several cells at once.',
   'เปิดทั้งหมด':'Expand all',
   'ซ่อนทั้งหมด':'Collapse all',
   'แสดงพรีวิว':'Show preview',
@@ -23267,7 +23333,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.104':'e.g. Warehouse V1.104',
+  'เช่น Warehouse V1.105':'e.g. Warehouse V1.105',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -24938,6 +25004,8 @@ let _warehouseLayoutLoaded = false;
 let _warehouseLayoutDraft = null;
 let _warehouseLayoutDraftDirty = false;
 let _warehouseLayoutSelectedElementId = '';
+let _warehouseLayoutCellMultiSelectMode = false;
+let _warehouseLayoutSelectedCells = new Map();
 let _warehouseLayoutDragState = null;
 let _warehouseLayoutSearchTimer = null;
 let _warehouseLayoutExcelPreview = null;
@@ -39375,6 +39443,182 @@ function warehouseEditorToolHtml(type,label,symbol) {
   </button>`;
 }
 
+function warehouseLayoutCellSelectionKey(rackId,level,bay) {
+  return `${String(rackId || '')}\u001f${String(level || '').toUpperCase()}\u001f${Number(bay)}`;
+}
+
+function resetWarehouseLayoutCellSelection(disableMode=false) {
+  _warehouseLayoutSelectedCells.clear();
+  if (disableMode) _warehouseLayoutCellMultiSelectMode = false;
+}
+
+function pruneWarehouseLayoutCellSelection(zone=currentWarehouseLayoutDraftZone()) {
+  if (!zone) {
+    resetWarehouseLayoutCellSelection();
+    return;
+  }
+  const racks = new Map((zone.elements || [])
+    .filter(element => element.type === 'rack')
+    .map(rack => [String(rack.id),rack]));
+  [..._warehouseLayoutSelectedCells.entries()].forEach(([key,cell]) => {
+    const rack = racks.get(String(cell.rackId || ''));
+    const bay = Number(cell.bay);
+    const valid = rack
+      && rack.levels.includes(String(cell.level || '').toUpperCase())
+      && Number.isInteger(bay)
+      && bay >= rack.bayStart
+      && bay < rack.bayStart+rack.bayCount;
+    if (!valid) _warehouseLayoutSelectedCells.delete(key);
+  });
+}
+
+function captureWarehouseLayoutEditorScrollState() {
+  const main = document.querySelector('.main-wrapper');
+  const canvas = document.querySelector('.warehouse-editor-canvas-scroll');
+  const properties = document.querySelector('.warehouse-editor-properties');
+  return {
+    mainTop:main?.scrollTop || 0,
+    mainLeft:main?.scrollLeft || 0,
+    canvasTop:canvas?.scrollTop || 0,
+    canvasLeft:canvas?.scrollLeft || 0,
+    propertiesTop:properties?.scrollTop || 0,
+    windowX:window.scrollX || 0,
+    windowY:window.scrollY || 0,
+  };
+}
+
+function restoreWarehouseLayoutEditorScrollState(state) {
+  if (!state) return;
+  const apply = () => {
+    const main = document.querySelector('.main-wrapper');
+    const canvas = document.querySelector('.warehouse-editor-canvas-scroll');
+    const properties = document.querySelector('.warehouse-editor-properties');
+    if (main) { main.scrollTop = state.mainTop;main.scrollLeft = state.mainLeft; }
+    if (canvas) { canvas.scrollTop = state.canvasTop;canvas.scrollLeft = state.canvasLeft; }
+    if (properties) properties.scrollTop = state.propertiesTop;
+    window.scrollTo(state.windowX,state.windowY);
+  };
+  apply();
+  requestAnimationFrame(apply);
+}
+
+function renderWarehouseLayoutEditorPreservingScroll(state=captureWarehouseLayoutEditorScrollState()) {
+  renderWarehouseLayoutEditor();
+  restoreWarehouseLayoutEditorScrollState(state);
+}
+
+function warehouseLayoutMultiSelectBarHtml() {
+  const count = _warehouseLayoutSelectedCells.size;
+  const disabled = count ? '' : 'disabled';
+  const option = (type,cssClass,symbol) => {
+    const info = warehouseLayoutCellTypeInfo(type);
+    return `<button class="btn btn-sm ${cssClass}" type="button" data-cell-type="${type}" ${disabled}
+      onclick="applyWarehouseLayoutCellTypeToSelection(this)">${escapeWmsText(symbol)} ${escapeWmsText(info.label)}</button>`;
+  };
+  return `<div class="warehouse-editor-multi-actions" id="warehouse-editor-multi-actions" ${_warehouseLayoutCellMultiSelectMode ? '' : 'hidden'}>
+    <div class="warehouse-editor-multi-summary"><strong id="warehouse-editor-multi-count">${count.toLocaleString(uiLocale())}</strong><span>Location ที่เลือก</span></div>
+    <div class="warehouse-editor-multi-buttons">
+      ${option('location','btn-green','✓')}
+      ${option('pillar','btn-blue','▮')}
+      ${option('aisle','btn-ghost','═')}
+      ${option('disabled','btn-red','×')}
+      <button class="btn btn-ghost btn-sm" type="button" ${disabled} onclick="clearWarehouseLayoutCellSelection()">ล้างที่เลือก</button>
+      <button class="btn btn-ghost btn-sm" type="button" onclick="toggleWarehouseLayoutCellMultiSelectMode(false)">ออกจากโหมด</button>
+    </div>
+  </div>`;
+}
+
+function updateWarehouseLayoutMultiSelectUi() {
+  const count = _warehouseLayoutSelectedCells.size;
+  const toggle = Q('warehouse-editor-multi-toggle');
+  const actions = Q('warehouse-editor-multi-actions');
+  const counter = Q('warehouse-editor-multi-count');
+  if (toggle) {
+    toggle.classList.toggle('is-active',_warehouseLayoutCellMultiSelectMode);
+    toggle.setAttribute('aria-pressed',String(_warehouseLayoutCellMultiSelectMode));
+    toggle.textContent = _warehouseLayoutCellMultiSelectMode ? `เลือกหลาย Location · ${count.toLocaleString(uiLocale())}` : 'เลือกหลาย Location';
+  }
+  if (actions) actions.hidden = !_warehouseLayoutCellMultiSelectMode;
+  if (counter) counter.textContent = count.toLocaleString(uiLocale());
+  actions?.querySelectorAll('[data-cell-type],button[onclick="clearWarehouseLayoutCellSelection()"]')
+    .forEach(button => { button.disabled = count === 0; });
+  document.querySelectorAll('.warehouse-editor-rack-cell').forEach(button => {
+    const key = warehouseLayoutCellSelectionKey(button.dataset.rackId,button.dataset.level,button.dataset.bay);
+    button.classList.toggle('is-multi-selected',_warehouseLayoutSelectedCells.has(key));
+    button.setAttribute('aria-pressed',String(_warehouseLayoutSelectedCells.has(key)));
+  });
+}
+
+function toggleWarehouseLayoutCellMultiSelectMode(force) {
+  _warehouseLayoutCellMultiSelectMode = typeof force === 'boolean'
+    ? force
+    : !_warehouseLayoutCellMultiSelectMode;
+  if (!_warehouseLayoutCellMultiSelectMode) resetWarehouseLayoutCellSelection();
+  closeWarehouseLayoutCellTypeMenu();
+  updateWarehouseLayoutMultiSelectUi();
+}
+
+function clearWarehouseLayoutCellSelection() {
+  resetWarehouseLayoutCellSelection();
+  updateWarehouseLayoutMultiSelectUi();
+}
+
+function handleWarehouseLayoutEditorCellClick(event,button) {
+  event?.preventDefault();
+  event?.stopPropagation();
+  if (!_warehouseLayoutCellMultiSelectMode && !event?.ctrlKey && !event?.metaKey && !event?.shiftKey) {
+    openWarehouseLayoutCellTypeMenu(event,button);
+    return;
+  }
+  _warehouseLayoutCellMultiSelectMode = true;
+  const rackId = warehouseLayoutString(button?.dataset?.rackId,'',100);
+  const level = warehouseLayoutString(button?.dataset?.level,'',12).toUpperCase();
+  const bay = Number.parseInt(button?.dataset?.bay,10);
+  if (!rackId || !level || !Number.isInteger(bay)) return;
+  const key = warehouseLayoutCellSelectionKey(rackId,level,bay);
+  if (_warehouseLayoutSelectedCells.has(key)) _warehouseLayoutSelectedCells.delete(key);
+  else _warehouseLayoutSelectedCells.set(key,{rackId,level,bay});
+  _warehouseLayoutSelectedElementId = rackId;
+  updateWarehouseLayoutMultiSelectUi();
+}
+
+function applyWarehouseLayoutCellTypeToSelection(button) {
+  const type = warehouseLayoutString(button?.dataset?.cellType,'location',20).toLowerCase();
+  if (!['location','pillar','aisle','disabled'].includes(type)) return;
+  const zone = currentWarehouseLayoutDraftZone();
+  pruneWarehouseLayoutCellSelection(zone);
+  const targets = [..._warehouseLayoutSelectedCells.values()];
+  if (!zone || !targets.length) return;
+  const info = warehouseLayoutCellTypeInfo(type);
+  if (type === 'disabled' && !confirm(`ปิดใช้งาน ${targets.length.toLocaleString(uiLocale())} Location ที่เลือกหรือไม่?`)) return;
+  const scrollState = captureWarehouseLayoutEditorScrollState();
+  const byRack = new Map();
+  targets.forEach(cell => {
+    if (!byRack.has(cell.rackId)) byRack.set(cell.rackId,[]);
+    byRack.get(cell.rackId).push(cell);
+  });
+  let changed = 0;
+  byRack.forEach((cells,rackId) => {
+    const rack = zone.elements.find(element => element.id === rackId && element.type === 'rack');
+    if (!rack) return;
+    cells.forEach(cell => materializeWarehouseSkippedBay(rack,cell.bay));
+    const current = new Map((rack.excludedCells || []).map(cell => [warehouseExcludedCellKey(cell.level,cell.bay),cell]));
+    cells.forEach(cell => {
+      const key = warehouseExcludedCellKey(cell.level,cell.bay);
+      if (type === 'location') current.delete(key);
+      else current.set(key,{bay:cell.bay,level:cell.level,cellType:type,note:info.note});
+      changed++;
+    });
+    rack.excludedCells = normalizeWarehouseExcludedCells([...current.values()],rack.levels,rack.bayStart,rack.bayCount);
+  });
+  if (!changed) return;
+  _warehouseLayoutSelectedElementId = targets.at(-1)?.rackId || _warehouseLayoutSelectedElementId;
+  _warehouseLayoutDraftDirty = true;
+  resetWarehouseLayoutCellSelection();
+  renderWarehouseLayoutEditorPreservingScroll(scrollState);
+  showWarehouseLayoutToast(`เปลี่ยน ${changed.toLocaleString(uiLocale())} Location เป็น “${info.label}” แล้ว`);
+}
+
 function warehouseEditorRackGridHtml(rack) {
   const excluded = new Map((rack.excludedCells || []).map(cell => [warehouseExcludedCellKey(cell.level,cell.bay),cell]));
   const skipped = new Set(rack.skipBays || []);
@@ -39390,13 +39634,15 @@ function warehouseEditorRackGridHtml(rack) {
     const bayText = String(bay).padStart(rack.bayPad,'0');
     const levelText = warehouseLayoutLevelLabel(level);
     const coordinateText = level === WAREHOUSE_NO_LEVEL ? bayText : `${bayText}-${levelText}`;
-    return `<button class="warehouse-editor-rack-cell ${className}${red}" type="button"
+    const selectedKey = warehouseLayoutCellSelectionKey(rack.id,level,bay);
+    const multiSelected = _warehouseLayoutSelectedCells.has(selectedKey) ? ' is-multi-selected' : '';
+    return `<button class="warehouse-editor-rack-cell ${className}${red}${multiSelected}" type="button"
       data-rack-id="${escapeWmsText(rack.id)}" data-level="${escapeWmsText(level)}" data-bay="${bay}"
       data-coordinate="${escapeWmsText(coordinateText)}"
       data-current-type="${escapeWmsText(type)}" onpointerdown="event.stopPropagation()"
-      onclick="openWarehouseLayoutCellTypeMenu(event,this)"
+      onclick="handleWarehouseLayoutEditorCellClick(event,this)"
       title="${escapeWmsText(rack.rackCode)} · ${escapeWmsText(coordinateText)} · ${escapeWmsText(info.label)}"
-      aria-label="${escapeWmsText(coordinateText)} ${escapeWmsText(info.label)}"><span>${escapeWmsText(info.short)}</span></button>`;
+      aria-label="${escapeWmsText(coordinateText)} ${escapeWmsText(info.label)}" aria-pressed="${_warehouseLayoutSelectedCells.has(selectedKey)}"><span>${escapeWmsText(info.short)}</span></button>`;
   }));
   return `<div class="warehouse-editor-rack-frame">
     <div class="warehouse-editor-rack-corner">LV</div>
@@ -39471,9 +39717,7 @@ function setWarehouseLayoutCellTypeFromButton(button) {
   const type = warehouseLayoutString(button?.dataset?.cellType,'location',20).toLowerCase();
   const rack = zone?.elements?.find(item => item.id === rackId && item.type === 'rack');
   if (!rack || !level || !Number.isInteger(bay) || !['location','pillar','aisle','disabled'].includes(type)) return;
-  const scroller = Q('.warehouse-editor-canvas-scroll');
-  const scrollLeft = scroller?.scrollLeft || 0;
-  const scrollTop = scroller?.scrollTop || 0;
+  const scrollState = captureWarehouseLayoutEditorScrollState();
   materializeWarehouseSkippedBay(rack,bay);
   const key = warehouseExcludedCellKey(level,bay);
   const current = new Map((rack.excludedCells || []).map(cell => [warehouseExcludedCellKey(cell.level,cell.bay),cell]));
@@ -39483,9 +39727,7 @@ function setWarehouseLayoutCellTypeFromButton(button) {
   _warehouseLayoutSelectedElementId = rack.id;
   _warehouseLayoutDraftDirty = true;
   closeWarehouseLayoutCellTypeMenu();
-  renderWarehouseLayoutEditor();
-  const nextScroller = Q('.warehouse-editor-canvas-scroll');
-  if (nextScroller) { nextScroller.scrollLeft = scrollLeft; nextScroller.scrollTop = scrollTop; }
+  renderWarehouseLayoutEditorPreservingScroll(scrollState);
 }
 
 function warehouseEditorElementHtml(element,zone) {
@@ -39553,7 +39795,7 @@ function warehouseLayoutElementPropertiesHtml(element) {
       <div class="warehouse-property-help">ตัวอย่าง: G, F, E, D, C, B, A</div>
     </div>`}
     <div class="warehouse-cell-type-help">
-      <b>แก้ประเภทได้จากช่องโดยตรง</b><br>กดช่องในชั้นวาง แล้วเลือก Location, เสา, ทางเดิน หรือปิดใช้งาน
+      <b>แก้ประเภทได้จากช่องโดยตรง</b><br>กดช่องเพื่อแก้ทีละ Location หรือใช้ “เลือกหลาย Location” เพื่อเปลี่ยนหลายช่องพร้อมกัน
       <div class="warehouse-cell-type-legend">
         <span class="location"><i></i>Location ใช้งาน</span>
         <span class="pillar"><i></i>เสา ${cellTypeCounts.pillar.toLocaleString(uiLocale())}</span>
@@ -39605,6 +39847,7 @@ function warehouseLayoutEditorHtml() {
     : zones[0]?.id || '';
   S._layoutEditorZone = currentZoneId;
   const zone = zones.find(item => item.id === currentZoneId) || null;
+  pruneWarehouseLayoutCellSelection(zone);
   const selected = zone?.elements.find(element => element.id === _warehouseLayoutSelectedElementId) || null;
   if (!selected) _warehouseLayoutSelectedElementId = '';
   const runtime = buildWarehouseLayoutRuntime(draft,window._warehouseLayoutSessionData || {});
@@ -39628,7 +39871,7 @@ function warehouseLayoutEditorHtml() {
         <h3>เครื่องมือ</h3>
         <button class="warehouse-tool-button" type="button" onclick="Q('warehouse-layout-excel-input')?.click()"><span class="warehouse-tool-icon">XLSX</span><span>นำเข้าตาราง</span></button>
         ${warehouseEditorToolHtml('rack','ชั้นวาง','▦')}
-        <div class="warehouse-cell-type-help"><b>แก้ช่อง</b><br>กดช่องบน Rack เพื่อเลือกประเภท</div>
+        <div class="warehouse-cell-type-help"><b>แก้ช่อง</b><br>กดช่องเพื่อแก้ทีละ Location หรือเปิด “เลือกหลาย Location” เพื่อเปลี่ยนพร้อมกัน</div>
         <button class="warehouse-tool-button warehouse-editor-zone-add" type="button" onclick="addWarehouseLayoutZone()"><span class="warehouse-tool-icon">＋</span><span>เพิ่ม Zone</span></button>
       </aside>
       <section class="warehouse-editor-canvas-shell">
@@ -39641,12 +39884,16 @@ function warehouseLayoutEditorHtml() {
           </div>
           <div class="warehouse-editor-canvas-toolbar-group">
             <span style="font-size:9px;color:var(--text-muted);font-weight:800">ลาก Rack เพื่อจัดตำแหน่ง · กดช่องเพื่อกำหนดประเภท</span>
+            <button class="btn btn-ghost btn-sm warehouse-editor-multi-toggle${_warehouseLayoutCellMultiSelectMode ? ' is-active' : ''}"
+              id="warehouse-editor-multi-toggle" type="button" aria-pressed="${_warehouseLayoutCellMultiSelectMode}"
+              onclick="toggleWarehouseLayoutCellMultiSelectMode()">${_warehouseLayoutCellMultiSelectMode ? `เลือกหลาย Location · ${_warehouseLayoutSelectedCells.size.toLocaleString(uiLocale())}` : 'เลือกหลาย Location'}</button>
             <select onchange="setWarehouseLayoutEditorZoom(this.value)" aria-label="ขนาดพื้นที่แก้ไข">
               ${editorZoomOptions.map(value => `<option value="${value}" ${value===editorZoom?'selected':''}>${Math.round(value*100)}%</option>`).join('')}
             </select>
             <button class="btn btn-ghost btn-sm" type="button" onclick="showWarehouseLayoutMatchReport(true)">ตรวจสอบ</button>
           </div>
         </div>
+        ${warehouseLayoutMultiSelectBarHtml()}
         <div class="warehouse-editor-canvas-scroll">
           ${zone ? `<div class="warehouse-editor-canvas" id="warehouse-editor-canvas" style="width:${Math.max(760,Math.round(zone.canvasWidth*editorZoom))}px;height:${Math.max(480,Math.round(zone.canvasHeight*editorZoom))}px">
             ${zone.elements.map(element => warehouseEditorElementHtml(element,zone)).join('')}
@@ -39681,6 +39928,7 @@ function startWarehouseLayoutFromSession() {
     return;
   }
   _warehouseLayoutDraft = generated;
+  resetWarehouseLayoutCellSelection(true);
   _warehouseLayoutDraftDirty = true;
   _warehouseLayoutSelectedElementId = generated.zones[0]?.elements.find(element => element.type === 'rack')?.id || '';
   S._layoutEditorZone = generated.zones[0]?.id || '';
@@ -39711,6 +39959,7 @@ function openWarehouseLayoutEditor(blank=false) {
     });
   }
   const repaired = repairWarehouseLegacyRackIdentities(source,window._warehouseLayoutSessionData || {});
+  resetWarehouseLayoutCellSelection(true);
   _warehouseLayoutDraft = repaired.config;
   _warehouseLayoutDraftDirty = repaired.changed > 0;
   S._layoutEditorZone = _warehouseLayoutDraft.zones[0]?.id || '';
@@ -39724,6 +39973,7 @@ function cancelWarehouseLayoutEditor() {
   _warehouseLayoutDraft = null;
   _warehouseLayoutDraftDirty = false;
   _warehouseLayoutSelectedElementId = '';
+  resetWarehouseLayoutCellSelection(true);
   renderWarehouseLayoutTab();
 }
 
@@ -39820,6 +40070,7 @@ async function saveWarehouseLayoutConfig(masterConfirmed=false) {
     _warehouseLayoutDraft = null;
     _warehouseLayoutDraftDirty = false;
     _warehouseLayoutSelectedElementId = '';
+    resetWarehouseLayoutCellSelection(true);
     try { localStorage.removeItem(WAREHOUSE_LAYOUT_DRAFT_STORAGE_KEY); } catch (_) {}
     refreshWarehouseLayoutRuntime();
     S._layoutZone = verifiedConfig.zones[0]?.id || '';
@@ -39856,6 +40107,7 @@ function currentWarehouseLayoutDraftZone() {
 function setWarehouseLayoutEditorZone(zoneId) {
   S._layoutEditorZone = String(zoneId || '');
   _warehouseLayoutSelectedElementId = '';
+  resetWarehouseLayoutCellSelection();
   renderWarehouseLayoutEditor();
 }
 
@@ -39877,6 +40129,7 @@ function addWarehouseLayoutZone() {
   _warehouseLayoutDraft.zones.push(zone);
   S._layoutEditorZone = zone.id;
   _warehouseLayoutSelectedElementId = '';
+  resetWarehouseLayoutCellSelection();
   _warehouseLayoutDraftDirty = true;
   renderWarehouseLayoutEditor();
 }
@@ -39887,6 +40140,7 @@ function deleteWarehouseLayoutZone() {
   _warehouseLayoutDraft.zones = _warehouseLayoutDraft.zones.filter(item => item.id !== zone.id);
   S._layoutEditorZone = _warehouseLayoutDraft.zones[0]?.id || '';
   _warehouseLayoutSelectedElementId = '';
+  resetWarehouseLayoutCellSelection();
   _warehouseLayoutDraftDirty = true;
   renderWarehouseLayoutEditor();
 }
@@ -54321,7 +54575,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.104' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.105' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -54582,7 +54836,7 @@ async function exportBackupZip() {
       format:BACKUP_ZIP_FORMAT,
       version:BACKUP_ZIP_VERSION,
       created_at:new Date().toISOString(),
-      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.104',
+      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.105',
       excel_file:excelFileName,
       excel_sha256:excelSha256,
       excel_manifest_hash:built.manifestHash,
@@ -55855,7 +56109,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.104" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.105" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
