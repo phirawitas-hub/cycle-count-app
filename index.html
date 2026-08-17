@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.105</title>
+<title>Cycle Count V1.106</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -33,6 +33,7 @@
 <!-- V1.102: แก้ข้อความปุ่ม Multi-select ล้นกรอบด้วยแถวคำสั่งแบบ Responsive 2+1 -->
 <!-- V1.103: ให้ข้อมูลระดับ Item และสถานะ Workflow แสดงครบทุกแถว LPN ในไฟล์ Backup Excel -->
 <!-- V1.104: ย้ายปุ่มเปลี่ยนคนไว้ข้างจ่ายคนเดิม และเลือกคนนับใหม่ในแถวงานหมดเวลาได้ทันที -->
+<!-- V1.106: ผังคลังใช้ข้อมูลสดครบทุกหน้าโดยไม่แสดง Cache และแก้ Row filter ให้ยึด Location code จริง -->
 <!-- V1.105: ผังคลังรักษาตำแหน่ง Scroll และเพิ่มเลือกหลาย Location เพื่อเปลี่ยนประเภทพร้อมกัน -->
 <!-- V1.101: ตัวกรองงาน 2 ขั้น เพิ่มปุ่มตกลง และโหมดเรียงงานตาม Level สำหรับรายการกับงานถัดไปอัตโนมัติ -->
 <!-- V1.100: ปรับสีและขนาดข้อความหน่วยทั้ง 4 กล่องของกราฟความคืบหน้าตาม Zone -->
@@ -21863,7 +21864,7 @@ body.count-issue-open { overscroll-behavior:none; }
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.105';
+const APP_VERSION = '1.106';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = 'v1-97';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -23333,7 +23334,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.105':'e.g. Warehouse V1.105',
+  'เช่น Warehouse V1.106':'e.g. Warehouse V1.106',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -26240,6 +26241,10 @@ function paintDashboardView(tab, cache = _dashboardViewCache) {
 }
 
 function paintCachedDashboardView(tab) {
+  // Warehouse Layout is an operational view of the current database state.
+  // Never paint its five-minute Dashboard cache: users explicitly prefer a
+  // complete fresh read (including every paginated Location) over speed here.
+  if (tab === 'layout') return false;
   const cache = _dashboardViewCacheStore.get(dashboardViewCacheKey(tab)) || _dashboardViewCache;
   if (!cache || cache.sessionId !== S._dashSid) return false;
   if (cache.userId !== (me?.id || '') || cache.role !== (prof?.role || '')) return false;
@@ -26405,14 +26410,19 @@ function renderPageLoadError(error) {
 }
 
 async function runPageLoaderWithTimeout(loader,pageRequestScope) {
+  const activeDashboardTab = S?._dashTab || _dashTab || 'summary';
+  const pageLoadTimeoutMs = S?.page === 'sv-dash' && activeDashboardTab === 'layout'
+    ? 120000
+    : PAGE_LOAD_TIMEOUT_MS;
   let timeoutId;
   const timeout = new Promise((_,reject) => {
     timeoutId = setTimeout(() => {
       pageRequestScope?.abort();
-      const error = new Error('หน้าใช้เวลาโหลดเกิน 22 วินาที กรุณาลองใหม่');
+      const seconds = Math.round(pageLoadTimeoutMs / 1000);
+      const error = new Error(`หน้าใช้เวลาโหลดเกิน ${seconds} วินาที กรุณาลองใหม่`);
       error.code = 'PAGE_LOAD_TIMEOUT';
       reject(error);
-    },PAGE_LOAD_TIMEOUT_MS);
+    },pageLoadTimeoutMs);
   });
   try {
     const result = await Promise.race([Promise.resolve().then(loader),timeout]);
@@ -37633,6 +37643,25 @@ function warehouseLocationCodeParts(value) {
   };
 }
 
+// Filter metadata must follow the visible Location code. Some historical
+// Location rows have an empty or obsolete row_no/level even though the code is
+// complete (for example B-CP-011-B). In that case CP and B must still appear
+// in the Row/Level filters.
+function warehouseLocationFilterMeta(location={}) {
+  const parsed = warehouseLocationCodeParts(location.code || location.location_code || '');
+  const row = warehouseLayoutString(parsed.row || location.row_no,'',40).toUpperCase();
+  const level = warehouseLayoutString(
+    parsed.hasLevel ? parsed.level : (location.level || ''),
+    '',
+    12,
+  ).toUpperCase();
+  return {
+    zone:warehouseLayoutString(location.zone,'',60),
+    row,
+    level,
+  };
+}
+
 function warehouseLayoutLevelLabel(level) {
   return level === WAREHOUSE_NO_LEVEL ? '—' : String(level || '—');
 }
@@ -37788,7 +37817,7 @@ function persistLocalWarehouseLayout(config,key=WAREHOUSE_LAYOUT_STORAGE_KEY) {
   }
 }
 
-async function loadWarehouseLayoutConfig(force=false) {
+async function loadWarehouseLayoutConfig(force=false,strict=false) {
   if (_warehouseLayoutLoaded && !force) return _warehouseLayoutConfig;
   const localConfig = readLocalWarehouseLayout();
   _warehouseLayoutConfig = localConfig || normalizeWarehouseLayoutConfig({ zones:[] });
@@ -37805,8 +37834,11 @@ async function loadWarehouseLayoutConfig(force=false) {
            Device clocks and stale localStorage must never override it. */
         _warehouseLayoutConfig = remoteConfig;
         persistLocalWarehouseLayout(_warehouseLayoutConfig);
+      } else if (strict) {
+        throw new Error('ไม่พบผังแม่ส่วนกลางในฐานข้อมูล');
       }
     } catch (error) {
+      if (strict) throw new Error(`โหลดผังแม่ล่าสุดจากฐานข้อมูลไม่สำเร็จ: ${error.message || error}`);
       console.warn('โหลด Warehouse Layout จากส่วนกลางไม่สำเร็จ ใช้ข้อมูลสำรองในอุปกรณ์นี้แทน:',error);
     }
   }
@@ -37932,7 +37964,7 @@ function persistLocalPlanLocation(config) {
   } catch (_) { return false; }
 }
 
-async function loadPlanLocationConfig(force=false) {
+async function loadPlanLocationConfig(force=false,strict=false) {
   if (_planLocationLoaded && !force) return _planLocationConfig;
   const localConfig = readLocalPlanLocation();
   _planLocationConfig = localConfig || normalizePlanLocationConfig({zones:[]});
@@ -37945,8 +37977,11 @@ async function loadPlanLocationConfig(force=false) {
         const remoteConfig = normalizePlanLocationConfig(data.value);
         _planLocationConfig = remoteConfig;
         persistLocalPlanLocation(_planLocationConfig);
+      } else if (strict) {
+        throw new Error('ไม่พบ Plan Location ส่วนกลางในฐานข้อมูล');
       }
     } catch (error) {
+      if (strict) throw new Error(`โหลด Plan Location ล่าสุดจากฐานข้อมูลไม่สำเร็จ: ${error.message || error}`);
       console.warn('โหลด Plan Location จากส่วนกลางไม่สำเร็จ ใช้ข้อมูลสำรองในอุปกรณ์นี้แทน:',error);
     }
   }
@@ -41970,9 +42005,10 @@ function buildWmsFastWorkspaceHtmlV179(rows,asgnInfoMap,options={}) {
   const users = {};
   rows.forEach(item => {
     const location = asgnInfoMap[item.assignment_id]?.locations || {};
-    if (location.zone) zones.add(location.zone);
-    if (location.row_no) rowNumbers.add(location.row_no);
-    if (location.level) levels.add(location.level);
+    const locationMeta = warehouseLocationFilterMeta(location);
+    if (locationMeta.zone) zones.add(locationMeta.zone);
+    if (locationMeta.row) rowNumbers.add(locationMeta.row);
+    if (locationMeta.level) levels.add(locationMeta.level);
     if (item.approved_by) users[item.approved_by] = item.profiles?.name || '?';
   });
   const total = rows.length;
@@ -42116,6 +42152,14 @@ async function loadSvDash() {
   const tab = S._dashTab || _dashTab || 'summary';
   _dashTab = tab;
 
+  // A previous Layout runtime must not be repainted while the fresh database
+  // request is running. The loading page remains visible until every query and
+  // every result page for this Session has completed.
+  if (tab === 'layout') {
+    window._warehouseLayoutSessionData = null;
+    window._warehouseLayoutRuntime = null;
+  }
+
   let sessionsQuery = sb.from('count_sessions')
     .select('id,name,status,created_at')
     .order('created_at',{ascending:false});
@@ -42179,7 +42223,10 @@ async function loadSvDash() {
   // Load menu-specific settings only.  V1.77 fetched both Layout documents in
   // front of almost every Dashboard tab even when they were never rendered.
   if (tab === 'layout') {
-    await Promise.all([loadWarehouseLayoutConfig(true),loadPlanLocationConfig(true)]);
+    await Promise.all([
+      loadWarehouseLayoutConfig(true,true),
+      loadPlanLocationConfig(true,true),
+    ]);
     if (isStaleLoad()) return;
   } else if (tab === 'summary') {
     await loadPlanLocationConfig(false);
@@ -42246,31 +42293,34 @@ async function loadSvDash() {
       'id,assignment_id,item_id,round,count_qty,counted_by,counted_at,actual_counter_name,type_issue,remark,photo_url',
       'assignment_id',
       allAsgnIds,
+      query => tab === 'layout' ? query.order('id') : query,
     ),
     fetchPagedSupabaseRows(
       'stock_snapshot',
       'id,location_id,item_id,onhand_qty,al_qty,locations(code,zone,row_no,level),items(code,description,uom,category)',
-      query => query.eq('session_id', curSid),
+      query => query.eq('session_id', curSid).order('id'),
     ),
     ['tracker','layout'].includes(tab)
       ? fetchPagedSupabaseRows(
           'stock_snapshot_detail',
           'location_id,item_id,license_plate,lot,inventory_status,qty,uom',
-          query => query.eq('session_id',curSid),
+          query => query.eq('session_id',curSid)
+            .order('location_id').order('item_id').order('license_plate').order('lot'),
         )
       : Promise.resolve({ data:[],error:null }),
     ['tracker','layout'].includes(tab)
       ? fetchPagedSupabaseRows(
           'annual_count_jobs',
           'id,job_code,assigned_to,status,profiles!assigned_to(name)',
-          query => query.eq('session_id',curSid).order('job_no'),
+          query => query.eq('session_id',curSid).order('job_no').order('id'),
         )
       : Promise.resolve({ data:[],error:null }),
     ['tracker','layout'].includes(tab)
       ? fetchPagedSupabaseRows(
           'annual_count_job_items',
           'job_id,location_id,item_id,sort_order',
-          query => query.eq('session_id',curSid).order('sort_order'),
+          query => query.eq('session_id',curSid)
+            .order('sort_order').order('job_id').order('location_id').order('item_id'),
         )
       : Promise.resolve({ data:[],error:null }),
     getSessionRules(curSid),
@@ -42288,6 +42338,7 @@ async function loadSvDash() {
       '*',
       'assignment_id',
       allAsgnIds,
+      query => tab === 'layout' ? query.order('id') : query,
     ),
   ]);
   if (isStaleLoad()) return;
@@ -43317,6 +43368,7 @@ async function loadSvDash() {
   const varianceRowsHtml = needsFollowUp.length ? needsFollowUp.map((row, i) => {
     const assignment = asgnInfoMap[row.assignment_id] || {};
     const l = assignment.locations;
+    const locationFilterMeta = warehouseLocationFilterMeta(l || {});
     const item = row.items || {};
     const latestCount = row._count3 ?? row._count2 ?? row._count1 ?? row.final_qty;
     const varianceValue = row.variance === null || row.variance === undefined
@@ -43337,9 +43389,9 @@ async function loadSvDash() {
       data-variance-filter-row data-variance-index="${i}"
       data-variance-assignment-id="${escapeWmsText(row.assignment_id || '')}"
       data-variance-item-id="${escapeWmsText(row.item_id || '')}"
-      data-variance-zone="${escapeWmsText(l?.zone ?? '')}"
-      data-variance-row="${escapeWmsText(l?.row_no ?? '')}"
-      data-variance-level="${escapeWmsText(l?.level ?? '')}"
+      data-variance-zone="${escapeWmsText(locationFilterMeta.zone)}"
+      data-variance-row="${escapeWmsText(locationFilterMeta.row)}"
+      data-variance-level="${escapeWmsText(locationFilterMeta.level)}"
       data-variance-counters="${escapeWmsText(counterValues)}"
       data-variance-location-search="${escapeWmsText(l?.code || '')}"
       data-variance-item-search="${escapeWmsText(varianceItemSearchText)}"
@@ -43351,7 +43403,7 @@ async function loadSvDash() {
           <div class="mono" style="font-size:16px;font-weight:800;color:var(--text-main)">${l?.code||'?'}</div>
           <div class="mono" style="font-size:14px;color:var(--text-main);margin-top:5px;font-weight:800"><span data-i18n-skip>${escapeWmsText(item.code || '?')}</span></div>
           <div style="font-size:12px;color:var(--text-muted);margin-top:2px;font-weight:600"><span data-i18n-skip>${escapeWmsText(item.description || '')}</span></div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:5px;font-weight:600">👤 ผู้ตรวจนับ: <span data-i18n-skip>${escapeWmsText(counterNames.join(', ') || translateUiText('ไม่ระบุผู้ตรวจนับ'))}</span> · <span data-i18n-skip>${[l?.zone,l?.row_no,l?.level].filter(Boolean).join(' · ')}</span></div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:5px;font-weight:600">👤 ผู้ตรวจนับ: <span data-i18n-skip>${escapeWmsText(counterNames.join(', ') || translateUiText('ไม่ระบุผู้ตรวจนับ'))}</span> · <span data-i18n-skip>${[locationFilterMeta.zone,locationFilterMeta.row,locationFilterMeta.level].filter(Boolean).join(' · ')}</span></div>
         </div>
         <div class="variance-list-row-side">
           <div class="variance-list-row-metrics">
@@ -43707,10 +43759,11 @@ async function loadSvDash() {
   const wmsZones = new Set(), wmsRowsNo = new Set(), wmsLevels = new Set();
   const wmsUsersMap = {};
   wmsWorkspaceRows.forEach(v => {
-    const loc = asgnInfoMap[v.assignment_id]?.locations;
-    if (loc?.zone) wmsZones.add(loc.zone);
-    if (loc?.row_no) wmsRowsNo.add(loc.row_no);
-    if (loc?.level) wmsLevels.add(loc.level);
+    const loc = asgnInfoMap[v.assignment_id]?.locations || {};
+    const locationMeta = warehouseLocationFilterMeta(loc);
+    if (locationMeta.zone) wmsZones.add(locationMeta.zone);
+    if (locationMeta.row) wmsRowsNo.add(locationMeta.row);
+    if (locationMeta.level) wmsLevels.add(locationMeta.level);
     if (v.approved_by) wmsUsersMap[v.approved_by] = v.profiles?.name || '?';
     else if (v._isPending) wmsUsersMap['_pending'] = '(รอคอนเฟิร์ม)';
   });
@@ -44946,10 +44999,11 @@ function renderWmsList() {
 
   const filtered = sortRowsByLocation(wmsRows.filter(v => {
     if (!wmsRowMatchesStatus(v,filterStatus)) return false;
-    const loc = asgnInfoMap[v.assignment_id]?.locations;
-    if (filterZone && loc?.zone !== filterZone) return false;
-    if (filterRow && String(loc?.row_no ?? '') !== String(filterRow)) return false;
-    if (filterLevel && String(loc?.level ?? '') !== String(filterLevel)) return false;
+    const loc = asgnInfoMap[v.assignment_id]?.locations || {};
+    const locationMeta = warehouseLocationFilterMeta(loc);
+    if (filterZone && locationMeta.zone !== filterZone) return false;
+    if (filterRow && locationMeta.row !== String(filterRow)) return false;
+    if (filterLevel && locationMeta.level !== String(filterLevel)) return false;
     if (filterUser === '_pending' && !v._isPending) return false;
     if (filterUser && filterUser !== '_pending' && v.approved_by !== filterUser) return false;
     if (searchLoc) {
@@ -54575,7 +54629,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.105' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.106' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -54836,7 +54890,7 @@ async function exportBackupZip() {
       format:BACKUP_ZIP_FORMAT,
       version:BACKUP_ZIP_VERSION,
       created_at:new Date().toISOString(),
-      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.105',
+      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.106',
       excel_file:excelFileName,
       excel_sha256:excelSha256,
       excel_manifest_hash:built.manifestHash,
@@ -56109,7 +56163,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.105" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.106" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
