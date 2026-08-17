@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.110</title>
+<title>Cycle Count V1.111</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -33,6 +33,7 @@
 <!-- V1.102: แก้ข้อความปุ่ม Multi-select ล้นกรอบด้วยแถวคำสั่งแบบ Responsive 2+1 -->
 <!-- V1.103: ให้ข้อมูลระดับ Item และสถานะ Workflow แสดงครบทุกแถว LPN ในไฟล์ Backup Excel -->
 <!-- V1.104: ย้ายปุ่มเปลี่ยนคนไว้ข้างจ่ายคนเดิม และเลือกคนนับใหม่ในแถวงานหมดเวลาได้ทันที -->
+<!-- V1.111: เพิ่มกล่องยอดยืนยันและ Variance ต่อจาก COUNT 3 ในรายการปรับยอด WMS -->
 <!-- V1.110: รายการ DIFF ที่ Supervisor ยืนยันแล้วจัดเป็นรอ WMS เสมอ ไม่ย้อนกลับไปเป็นรอ Variance -->
 <!-- V1.109: แยกสถานะรอ Variance กับรอปรับ WMS และรวมสถานะหลาย Item ตามขั้นงานแรกที่ยังไม่เสร็จ -->
 <!-- V1.108: สถานะผังคิดผลสำเร็จระดับ Item รวมผลยืนยันของ Supervisor แก้ Location นับครบแต่ยังขึ้นกำลังนับ -->
@@ -10662,7 +10663,7 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
   font-weight:900;
 }
 .wms-row {
-  grid-template-columns:minmax(230px,1.35fr) minmax(280px,.9fr) minmax(230px,auto) !important;
+  grid-template-columns:minmax(230px,1.15fr) minmax(410px,1.25fr) minmax(230px,auto) !important;
   gap:16px !important;
   margin:10px 0;
   padding:16px !important;
@@ -10688,7 +10689,7 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
 }
 .wms-count-strip {
   display:grid;
-  grid-template-columns:repeat(4,minmax(52px,1fr));
+  grid-template-columns:repeat(6,minmax(52px,1fr));
   gap:7px;
 }
 .wms-count-cell {
@@ -10707,6 +10708,7 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
   font-size:8px;
   font-weight:900;
   letter-spacing:.04em;
+  white-space:nowrap;
 }
 .wms-count-cell strong {
   margin-top:3px;
@@ -10718,7 +10720,7 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
 .wms-row-side {
   min-width:0 !important;
   display:grid;
-  grid-template-columns:auto minmax(0,1fr);
+  grid-template-columns:minmax(0,1fr);
   align-items:center;
   gap:12px;
 }
@@ -11030,7 +11032,7 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
   .wms-filter-grid { grid-template-columns:repeat(3,minmax(140px,1fr)); }
   .wms-filter-field.search { grid-column:span 2; }
   .wms-row {
-    grid-template-columns:minmax(220px,1fr) minmax(260px,1fr) !important;
+    grid-template-columns:minmax(220px,1fr) minmax(410px,1.3fr) !important;
   }
   .wms-row-side { grid-column:1 / -1; }
 }
@@ -11046,6 +11048,7 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
   .wms-filter-field.search { grid-column:1 / -1; }
   .wms-row { grid-template-columns:1fr !important; }
   .wms-row-side { grid-column:auto; }
+  .wms-count-strip { grid-template-columns:repeat(3,minmax(0,1fr)); }
 }
 @media (max-width:480px) {
   .wms-filter-grid { grid-template-columns:1fr; }
@@ -21921,7 +21924,7 @@ body.count-issue-open { overscroll-behavior:none; }
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.110';
+const APP_VERSION = '1.111';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = 'v1-97';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -23391,7 +23394,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.110':'e.g. Warehouse V1.110',
+  'เช่น Warehouse V1.111':'e.g. Warehouse V1.111',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -45586,8 +45589,10 @@ function renderWmsList() {
         </div>
       </div>`;
 
-    const countCell = (label, value, extraClass='') => `<div class="wms-count-cell ${extraClass}">
-      <span>${label}</span><strong>${value === undefined || value === null ? '—' : Number(value).toLocaleString(uiLocale())}</strong>
+    const countCell = (label, value, extraClass='', signed=false) => `<div class="wms-count-cell ${extraClass}">
+      <span>${label}</span><strong>${value === undefined || value === null
+        ? '—'
+        : `${signed && Number(value) > 0 ? '+' : ''}${Number(value).toLocaleString(uiLocale())}`}</strong>
     </div>`;
 
     return `<div class="wms-row ${isFixed?'is-checked':''} ${isPending?'is-pending':''}" data-location-sort-code="${escapeWmsText(loc?.code || '')}">
@@ -45609,17 +45614,15 @@ function renderWmsList() {
           }
         </div>
       </div>
-      <div class="wms-count-strip" aria-label="ยอด OH และยอดนับแต่ละรอบ">
+      <div class="wms-count-strip" aria-label="ยอด OH ยอดนับแต่ละรอบ ยอดยืนยัน และ Variance">
         ${countCell('OH', v._oh, 'oh')}
         ${countCell('COUNT 1', v._count1)}
         ${countCell('COUNT 2', v._count2)}
         ${countCell('COUNT 3', v._count3)}
+        ${countCell('ยอดยืนยัน', isPending ? null : v.final_qty)}
+        ${countCell('Variance', v._persistedReviewFallback ? null : varAmt, '', true)}
       </div>
       <div class="wms-row-side">
-        <div class="wms-variance-value">
-          <strong style="color:${v._persistedReviewFallback?'var(--accent-red)':varAmt>0?'var(--accent-green)':varAmt<0?'var(--accent-red)':'var(--primary-blue)'}">${v._persistedReviewFallback?'—':`${varAmt>0?'+':''}${Number(varAmt).toLocaleString(uiLocale())}`}</strong>
-          <span>${v._persistedReviewFallback?'สถานะเดิมยังรอตรวจ · เปิดเพื่อตรวจข้อมูล':`Variance · ยืนยัน ${Number(v.final_qty ?? 0).toLocaleString(uiLocale())}`}</span>
-        </div>
         <div class="wms-actions">${returnReviewButton}${wmsButton}${noteButton}</div>
         ${noteInline}
       </div>
@@ -55056,7 +55059,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.110' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.111' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -55317,7 +55320,7 @@ async function exportBackupZip() {
       format:BACKUP_ZIP_FORMAT,
       version:BACKUP_ZIP_VERSION,
       created_at:new Date().toISOString(),
-      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.110',
+      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.111',
       excel_file:excelFileName,
       excel_sha256:excelSha256,
       excel_manifest_hash:built.manifestHash,
@@ -56590,7 +56593,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.110" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.111" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
