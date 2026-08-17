@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.109</title>
+<title>Cycle Count V1.110</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -33,6 +33,7 @@
 <!-- V1.102: แก้ข้อความปุ่ม Multi-select ล้นกรอบด้วยแถวคำสั่งแบบ Responsive 2+1 -->
 <!-- V1.103: ให้ข้อมูลระดับ Item และสถานะ Workflow แสดงครบทุกแถว LPN ในไฟล์ Backup Excel -->
 <!-- V1.104: ย้ายปุ่มเปลี่ยนคนไว้ข้างจ่ายคนเดิม และเลือกคนนับใหม่ในแถวงานหมดเวลาได้ทันที -->
+<!-- V1.110: รายการ DIFF ที่ Supervisor ยืนยันแล้วจัดเป็นรอ WMS เสมอ ไม่ย้อนกลับไปเป็นรอ Variance -->
 <!-- V1.109: แยกสถานะรอ Variance กับรอปรับ WMS และรวมสถานะหลาย Item ตามขั้นงานแรกที่ยังไม่เสร็จ -->
 <!-- V1.108: สถานะผังคิดผลสำเร็จระดับ Item รวมผลยืนยันของ Supervisor แก้ Location นับครบแต่ยังขึ้นกำลังนับ -->
 <!-- V1.107: ผังคลังรีเฟรช Assignment/Count/Variance/WMS อัตโนมัติ แยกผังแม่กับสถานะงาน และใช้สีสถานะสดชัดเจน -->
@@ -21920,7 +21921,7 @@ body.count-issue-open { overscroll-behavior:none; }
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.109';
+const APP_VERSION = '1.110';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = 'v1-97';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -23390,7 +23391,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.109':'e.g. Warehouse V1.109',
+  'เช่น Warehouse V1.110':'e.g. Warehouse V1.110',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -39176,8 +39177,10 @@ function warehouseLayoutStatusForLocation(imported,assignment,approvals=[]) {
   const status = String(assignment.status || '');
   const confirmedApprovals = approvals.filter(item => item.review_status === 'confirmed' || item.approved_at);
   const varianceApprovals = confirmedApprovals.filter(item => Number(item.variance) !== 0);
-  const hasWmsPending = varianceApprovals.some(item => item.released_to_wms !== false && !item.wms_fixed);
-  const hasApprovedVarianceNotReleased = varianceApprovals.some(item => item.released_to_wms === false && !item.wms_fixed);
+  // Once Supervisor has confirmed a non-zero DIFF, it has left the Variance
+  // queue. Whether released_to_wms is true or false only changes the WMS
+  // sub-stage; both states belong to "รอปรับ WMS", never "รอ Variance".
+  const hasWmsPending = varianceApprovals.some(item => !item.wms_fixed);
   const allVarianceFixed = varianceApprovals.length && varianceApprovals.every(item => item.wms_fixed);
 
   // A Location is complete when every Item has reached a final business
@@ -39194,14 +39197,13 @@ function warehouseLayoutStatusForLocation(imported,assignment,approvals=[]) {
       if (itemId) approvalByItem.set(itemId,approval);
     });
     let hasPendingItem = false;
-    let hasUnconfirmedDiff = hasApprovedVarianceNotReleased;
+    let hasUnconfirmedDiff = false;
     let hasItemWaitingWms = hasWmsPending;
     workflowItemIds.forEach(itemId => {
       const approval = approvalByItem.get(itemId);
       if (approval) {
         if (Number(approval.variance) !== 0 && !approval.wms_fixed) {
-          if (approval.released_to_wms !== false) hasItemWaitingWms = true;
-          else hasUnconfirmedDiff = true;
+          hasItemWaitingWms = true;
         }
         return;
       }
@@ -39217,7 +39219,6 @@ function warehouseLayoutStatusForLocation(imported,assignment,approvals=[]) {
     return 'completed';
   }
 
-  if (hasApprovedVarianceNotReleased) return 'variance';
   if (hasWmsPending) return 'wms_pending';
   if (allVarianceFixed || ['completed','approved'].includes(status)) return 'completed';
   if (status === 'round3_done') return 'variance';
@@ -55055,7 +55056,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.109' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.110' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -55316,7 +55317,7 @@ async function exportBackupZip() {
       format:BACKUP_ZIP_FORMAT,
       version:BACKUP_ZIP_VERSION,
       created_at:new Date().toISOString(),
-      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.109',
+      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.110',
       excel_file:excelFileName,
       excel_sha256:excelSha256,
       excel_manifest_hash:built.manifestHash,
@@ -56589,7 +56590,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.109" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.110" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
