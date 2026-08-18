@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.113</title>
+<title>Cycle Count V1.114</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -34,6 +34,7 @@
 <!-- V1.103: ให้ข้อมูลระดับ Item และสถานะ Workflow แสดงครบทุกแถว LPN ในไฟล์ Backup Excel -->
 <!-- V1.104: ย้ายปุ่มเปลี่ยนคนไว้ข้างจ่ายคนเดิม และเลือกคนนับใหม่ในแถวงานหมดเวลาได้ทันที -->
 <!-- V1.113: หน้า WMS เน้นข้อมูลถูกต้องก่อนความเร็ว ปิด Dashboard/Fast cache และโหลดข้อมูลสดทุกครั้ง -->
+<!-- V1.114: แก้ Dashboard บน iPad แนวตั้ง ไม่ให้ค่า Zoom/ความสูงชดเชยดันกริดลงด้านล่าง -->
 <!-- V1.112: แก้ Flow ยืนยัน Item ให้ส่งเข้าคิวปรับปรุงยอด WMS ทันที และรองรับรายการเดิมที่ released_to_wms=false -->
 <!-- V1.111: เพิ่มกล่องยอดยืนยันและ Variance ต่อจาก COUNT 3 ในรายการปรับยอด WMS -->
 <!-- V1.110: รายการ DIFF ที่ Supervisor ยืนยันแล้วจัดเป็นรอ WMS เสมอ ไม่ย้อนกลับไปเป็นรอ Variance -->
@@ -17785,6 +17786,36 @@ body.login-page-active .lcard {
   justify-content:flex-end;
   margin-bottom:14px;
 }
+
+/* ══════════════════════════════════════════════════════════
+   V1.114 — iPad portrait dashboard starts at the top.
+   The landscape layout intentionally fills one screen. On a tall portrait
+   viewport that same fractional-height grid magnified any restored Safari
+   zoom compensation and could leave a large blank band above the cards.
+   Keep the three-column composition, but size its rows from their content and
+   let the page scroll naturally in portrait only.
+   ══════════════════════════════════════════════════════════ */
+@media (min-width:769px) and (max-width:1100px) and (orientation:portrait) {
+  body.tablet-ui .main-wrapper.summary-view {
+    overflow-y:auto !important;
+  }
+  body.tablet-ui .main-wrapper.summary-view .page-content {
+    height:auto !important;
+    min-height:100% !important;
+    overflow-y:auto !important;
+  }
+  body.tablet-ui .summary-dashboard-content {
+    height:auto !important;
+    min-height:0 !important;
+    overflow-y:visible !important;
+  }
+  body.tablet-ui #dash-content .summary-dashboard-grid {
+    height:auto !important;
+    min-height:0 !important;
+    grid-template-rows:124px 206px 64px 196px !important;
+    align-content:start !important;
+  }
+}
 /* V1.101 · Two-step Assigned Work filters: quick order first, facets second. */
 .task-filter-quick-row {
   display:grid;
@@ -21922,13 +21953,13 @@ body.count-issue-open { overscroll-behavior:none; }
 }
 </style>
 </head>
-<body data-build="v1-98">
+<body data-build="v1-99">
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.113';
+const APP_VERSION = '1.114';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
-const APP_BUILD_ID = 'v1-98';
+const APP_BUILD_ID = 'v1-99';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
 
 // V1.84 performance: keep the login and ordinary work pages light.  Large
@@ -22100,9 +22131,17 @@ function syncTabletUiClass() {
 }
 
 function tabletZoomContextKey() {
-  if (S?.page === 'sv-dash' && (S._dashTab || window._dashTab || 'summary') === 'summary') return 'dashboard';
+  if (S?.page === 'sv-dash' && (S._dashTab || window._dashTab || 'summary') === 'summary') {
+    const viewportWidth = window.visualViewport?.width || window.innerWidth || 0;
+    const viewportHeight = window.visualViewport?.height || window.innerHeight || 0;
+    return viewportHeight > viewportWidth ? 'dashboard-portrait' : 'dashboard-landscape';
+  }
   if (S?.page === 'c-count') return 'count';
   return 'general';
+}
+
+function isTabletPortraitDashboard() {
+  return tabletZoomContextKey() === 'dashboard-portrait';
 }
 
 function loadTabletZoomSettings() {
@@ -22160,7 +22199,7 @@ function setTabletAccuracyVariable(card,key,value) {
 function syncTabletAccuracyLayoutGuard() {
   const tabletEnabled = document.body.classList.contains('tablet-ui') || syncTabletUiClass();
   const card = tabletEnabled ? document.querySelector('#dash-content .summary-accuracy-card') : null;
-  if (!card || tabletZoomContextKey() !== 'dashboard') {
+  if (!card || !tabletZoomContextKey().startsWith('dashboard-')) {
     disconnectTabletAccuracyLayoutGuard();
     return false;
   }
@@ -22217,7 +22256,14 @@ function applyTabletZoom(rawZoom,options = {}) {
     page.style.setProperty('transform',`scale(${zoom})`);
   }
   page.style.setProperty('width',compensatedSize,'important');
-  page.style.setProperty('height',compensatedSize,'important');
+  if (isTabletPortraitDashboard()) {
+    // Portrait uses content-sized rows. Reapplying 100 / zoom as a height made
+    // Safari enlarge the already-tall page and intermittently push the grid
+    // below the fold after revisiting the dashboard.
+    page.style.removeProperty('height');
+  } else {
+    page.style.setProperty('height',compensatedSize,'important');
+  }
   const label = Q('tabletZoomLabel');
   if (label) label.textContent = `${Math.round(zoom * 100)}%`;
   if (options.persist !== false) {
@@ -23396,7 +23442,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.113':'e.g. Warehouse V1.113',
+  'เช่น Warehouse V1.114':'e.g. Warehouse V1.114',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -55068,7 +55114,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.113' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.114' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -55329,7 +55375,7 @@ async function exportBackupZip() {
       format:BACKUP_ZIP_FORMAT,
       version:BACKUP_ZIP_VERSION,
       created_at:new Date().toISOString(),
-      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.113',
+      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.114',
       excel_file:excelFileName,
       excel_sha256:excelSha256,
       excel_manifest_hash:built.manifestHash,
@@ -56602,7 +56648,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.113" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.114" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
