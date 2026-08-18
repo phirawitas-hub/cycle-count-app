@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.114</title>
+<title>Cycle Count V1.115</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -35,6 +35,7 @@
 <!-- V1.104: ย้ายปุ่มเปลี่ยนคนไว้ข้างจ่ายคนเดิม และเลือกคนนับใหม่ในแถวงานหมดเวลาได้ทันที -->
 <!-- V1.113: หน้า WMS เน้นข้อมูลถูกต้องก่อนความเร็ว ปิด Dashboard/Fast cache และโหลดข้อมูลสดทุกครั้ง -->
 <!-- V1.114: แก้ Dashboard บน iPad แนวตั้ง ไม่ให้ค่า Zoom/ความสูงชดเชยดันกริดลงด้านล่าง -->
+<!-- V1.115: จัด Dashboard iPad แนวตั้งให้เริ่มชิดด้านบนเต็มสัดส่วน และคืนปุ่มเปิด Sidebar -->
 <!-- V1.112: แก้ Flow ยืนยัน Item ให้ส่งเข้าคิวปรับปรุงยอด WMS ทันที และรองรับรายการเดิมที่ released_to_wms=false -->
 <!-- V1.111: เพิ่มกล่องยอดยืนยันและ Variance ต่อจาก COUNT 3 ในรายการปรับยอด WMS -->
 <!-- V1.110: รายการ DIFF ที่ Supervisor ยืนยันแล้วจัดเป็นรอ WMS เสมอ ไม่ย้อนกลับไปเป็นรอ Variance -->
@@ -21951,15 +21952,119 @@ body.count-issue-open { overscroll-behavior:none; }
   #app .variance-queue-kpi,
   #app .wms-kpi-card { min-height:0; }
 }
+
+/* ══════════════════════════════════════════════════════════
+   V1.115 — Deterministic iPad portrait dashboard shell.
+   The tablet rule used to hide the complete Topbar while the <= 900px rule
+   moved the Sidebar off canvas. That left no reachable menu trigger. It also
+   kept a full-height dashboard canvas, so a restored Safari zoom height could
+   place the fixed Grid rows at the bottom of the screen. Keep this override at
+   the end of the stylesheet so it is the final authority for portrait iPad.
+   ══════════════════════════════════════════════════════════ */
+@media (max-width:900px) and (orientation:portrait) {
+  body.tablet-ui .main-wrapper.summary-view {
+    overflow-x:hidden !important;
+    overflow-y:auto !important;
+  }
+  body.tablet-ui .main-wrapper.summary-view .topbar {
+    width:100% !important;
+    height:56px !important;
+    min-height:56px !important;
+    flex:0 0 56px !important;
+    display:flex !important;
+    align-items:center !important;
+    padding:0 12px !important;
+  }
+  body.tablet-ui .main-wrapper.summary-view .topbar-left {
+    width:100% !important;
+    min-width:0 !important;
+    padding:0 !important;
+  }
+  body.tablet-ui .main-wrapper.summary-view .mobile-sidebar-trigger {
+    width:42px !important;
+    height:42px !important;
+    min-width:42px !important;
+    display:grid !important;
+    place-items:center !important;
+    position:relative !important;
+    z-index:4 !important;
+    border-radius:13px !important;
+    background:color-mix(in srgb,var(--theme-primary-color) 9%,transparent) !important;
+  }
+  body.tablet-ui .main-wrapper.summary-view .page-content {
+    width:100% !important;
+    height:auto !important;
+    min-height:calc(100dvh - 72px) !important;
+    margin:0 !important;
+    padding:8px 12px 18px !important;
+    display:block !important;
+    overflow:visible !important;
+  }
+  body.tablet-ui .summary-page-header {
+    width:100% !important;
+    height:48px !important;
+    min-height:48px !important;
+    margin:0 0 10px !important;
+    padding:0 !important;
+    position:relative !important;
+    inset:auto !important;
+    transform:none !important;
+  }
+  body.tablet-ui .summary-dashboard-content {
+    width:100% !important;
+    height:auto !important;
+    min-height:0 !important;
+    margin:0 !important;
+    padding:0 0 8px !important;
+    display:block !important;
+    position:relative !important;
+    inset:auto !important;
+    transform:none !important;
+    overflow-x:hidden !important;
+    overflow-y:visible !important;
+  }
+  body.tablet-ui #dash-content .summary-dashboard-grid {
+    width:100% !important;
+    height:auto !important;
+    min-width:0 !important;
+    min-height:0 !important;
+    margin:0 !important;
+    padding:0 !important;
+    position:relative !important;
+    inset:auto !important;
+    transform:none !important;
+    display:grid !important;
+    grid-template-columns:minmax(210px,.78fr) minmax(140px,.52fr) minmax(320px,1.3fr) !important;
+    grid-template-rows:
+      clamp(112px,11dvh,132px)
+      clamp(206px,25dvh,285px)
+      clamp(54px,7dvh,76px)
+      clamp(180px,22dvh,240px) !important;
+    grid-template-areas:
+      "accuracy progress metrics"
+      "accuracy progress hourly"
+      "zones zones hourly"
+      "zones zones status" !important;
+    column-gap:16px !important;
+    row-gap:14px !important;
+    align-content:start !important;
+    align-items:stretch !important;
+    justify-content:stretch !important;
+    overflow:visible !important;
+  }
+  body.tablet-ui #dash-content .summary-dashboard-grid > * {
+    align-self:stretch !important;
+  }
+}
 </style>
 </head>
-<body data-build="v1-99">
+<body data-build="v1-100">
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.114';
+const APP_VERSION = '1.115';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
-const APP_BUILD_ID = 'v1-99';
+const APP_BUILD_ID = 'v1-100';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
 
 // V1.84 performance: keep the login and ordinary work pages light.  Large
@@ -22130,11 +22235,24 @@ function syncTabletUiClass() {
   return enabled;
 }
 
+function isTabletPortraitViewport() {
+  const viewportWidth = window.visualViewport?.width || window.innerWidth || 0;
+  const viewportHeight = window.visualViewport?.height || window.innerHeight || 0;
+  return viewportHeight > viewportWidth;
+}
+
+function hasRenderedSummaryDashboard() {
+  return Boolean(document.querySelector('.main-wrapper.summary-view #dash-content .summary-dashboard-grid'));
+}
+
 function tabletZoomContextKey() {
-  if (S?.page === 'sv-dash' && (S._dashTab || window._dashTab || 'summary') === 'summary') {
-    const viewportWidth = window.visualViewport?.width || window.innerWidth || 0;
-    const viewportHeight = window.visualViewport?.height || window.innerHeight || 0;
-    return viewportHeight > viewportWidth ? 'dashboard-portrait' : 'dashboard-landscape';
+  // Read both app state and the rendered DOM. Dashboard data is painted after
+  // an async request; relying on state alone allowed an older scheduled zoom
+  // pass to restore the general-page height after the Summary Grid appeared.
+  const summaryDashboardActive = hasRenderedSummaryDashboard()
+    || (S?.page === 'sv-dash' && (S._dashTab || window._dashTab || 'summary') === 'summary');
+  if (summaryDashboardActive) {
+    return isTabletPortraitViewport() ? 'dashboard-portrait' : 'dashboard-landscape';
   }
   if (S?.page === 'c-count') return 'count';
   return 'general';
@@ -22142,6 +22260,31 @@ function tabletZoomContextKey() {
 
 function isTabletPortraitDashboard() {
   return tabletZoomContextKey() === 'dashboard-portrait';
+}
+
+function normalizeTabletPortraitDashboardLayout(options = {}) {
+  if (!isTabletPortraitDashboard()) return false;
+  const page = Q('cnt');
+  if (!page) return false;
+
+  // Remove stale inline dimensions left by a previous page/rotation. CSS owns
+  // the portrait height so the dashboard always begins directly below filters.
+  page.style.removeProperty('height');
+  page.style.removeProperty('min-height');
+  const dashboard = page.querySelector('#dash-content.summary-dashboard-content');
+  const grid = dashboard?.querySelector('.summary-dashboard-grid');
+  dashboard?.style.removeProperty('height');
+  dashboard?.style.removeProperty('min-height');
+  grid?.style.removeProperty('height');
+  grid?.style.removeProperty('min-height');
+
+  if (options.scrollToTop) {
+    const main = page.closest('.main-wrapper');
+    if (main) main.scrollTop = 0;
+    page.scrollTop = 0;
+    if (dashboard) dashboard.scrollTop = 0;
+  }
+  return true;
 }
 
 function loadTabletZoomSettings() {
@@ -22260,7 +22403,7 @@ function applyTabletZoom(rawZoom,options = {}) {
     // Portrait uses content-sized rows. Reapplying 100 / zoom as a height made
     // Safari enlarge the already-tall page and intermittently push the grid
     // below the fold after revisiting the dashboard.
-    page.style.removeProperty('height');
+    normalizeTabletPortraitDashboardLayout();
   } else {
     page.style.setProperty('height',compensatedSize,'important');
   }
@@ -23442,7 +23585,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.114':'e.g. Warehouse V1.114',
+  'เช่น Warehouse V1.115':'e.g. Warehouse V1.115',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -26325,8 +26468,15 @@ function paintDashboardView(tab, cache = _dashboardViewCache) {
   container.innerHTML = `${dashboardSessionControlHtml(tab, cache.sessionOptionsHtml)}
     <div class="${contentClass}" id="dash-content">${cache.views[tab]}</div>`;
   updateDashboardNavigationUi(tab);
-  scheduleTabletViewportLayout(tab === 'summary');
-  if (tab === 'summary') scheduleTabletAccuracyLayoutGuard();
+  // Apply the portrait cleanup after the async HTML paint as well as on the
+  // next frame. This closes the Safari race between cached render, live render
+  // and a previously queued viewport/zoom update.
+  if (tab === 'summary') normalizeTabletPortraitDashboardLayout({ scrollToTop:true });
+  scheduleTabletViewportLayout(false);
+  if (tab === 'summary') {
+    requestAnimationFrame(() => normalizeTabletPortraitDashboardLayout({ scrollToTop:true }));
+    scheduleTabletAccuracyLayoutGuard();
+  }
   else disconnectTabletAccuracyLayoutGuard();
   if (tab === 'wms') {
     if (Q('wms-zone')) Q('wms-zone').value = S._wmsZone || '';
@@ -55114,7 +55264,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.114' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.115' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -55375,7 +55525,7 @@ async function exportBackupZip() {
       format:BACKUP_ZIP_FORMAT,
       version:BACKUP_ZIP_VERSION,
       created_at:new Date().toISOString(),
-      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.114',
+      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.115',
       excel_file:excelFileName,
       excel_sha256:excelSha256,
       excel_manifest_hash:built.manifestHash,
@@ -56648,7 +56798,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.114" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.115" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
