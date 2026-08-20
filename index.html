@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.122</title>
+<title>Cycle Count V1.123</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -38,7 +38,7 @@
 <!-- V1.115: จัด Dashboard iPad แนวตั้งให้เริ่มชิดด้านบนเต็มสัดส่วน และคืนปุ่มเปิด Sidebar -->
 <!-- V1.116: ทุกปุ่มบันทึก Count ตรวจ DIFF ทันที และเปิด Count รอบถัดไปของ Item เดิมโดยไม่รอครบ Location -->
 <!-- V1.120: Import WMS แบบ authoritative ภายในขอบเขต ลบ LPN/Lot ที่หายและตั้ง OH/AL ของ Snapshot ที่หายเป็น 0 โดยคงประวัติ Count -->
-<!-- V1.122: บันทึก Count ผ่าน RPC ที่ตรวจผู้รับงาน/Role ฝั่งฐานข้อมูล แก้ upsert ชนแถวเดิมและ RLS USING expression -->
+<!-- V1.123: ย่อ Sticky Scanner/Search บน Handheld, Mobile และ iPad ให้เห็นรายการนับ พร้อมปุ่มกางค้นหา -->
 <!-- V1.112: แก้ Flow ยืนยัน Item ให้ส่งเข้าคิวปรับปรุงยอด WMS ทันที และรองรับรายการเดิมที่ released_to_wms=false -->
 <!-- V1.111: เพิ่มกล่องยอดยืนยันและ Variance ต่อจาก COUNT 3 ในรายการปรับยอด WMS -->
 <!-- V1.110: รายการ DIFF ที่ Supervisor ยืนยันแล้วจัดเป็นรอ WMS เสมอ ไม่ย้อนกลับไปเป็นรอ Variance -->
@@ -22356,15 +22356,140 @@ body.count-page-active #app .count-sticky-stack .count-entry-progress {
     max-height:min(28dvh,220px);
   }
 }
+
+/* V1.123 · Compact sticky scanner for rugged Handheld, phones and iPad.
+   The physical scanner continues to be handled by the global scan buffer;
+   only the large manual-search controls are folded. Desktop keeps the full
+   panel. Touch devices can expand it with one explicit button. */
+.count-item-collapse-button { display:none; }
+
+@media (max-width:760px), (max-width:1400px) and (any-pointer:coarse) {
+  body.count-page-active #app .count-handheld-page .count-sticky-stack {
+    gap:3px !important;
+    margin:4px -2px 8px !important;
+    padding:3px 2px 4px !important;
+    border-radius:14px !important;
+    box-shadow:0 5px 14px rgba(12,63,66,.11) !important;
+  }
+
+  body.count-page-active #app .count-sticky-stack .count-item-lookup {
+    padding:6px 7px !important;
+    border-radius:13px !important;
+  }
+  body.count-page-active #app .count-item-lookup-head {
+    align-items:center !important;
+    gap:6px !important;
+    min-height:38px;
+  }
+  body.count-page-active #app .count-item-lookup .handheld-laser-icon {
+    width:32px !important;
+    height:32px !important;
+    flex:0 0 32px !important;
+    border-radius:9px !important;
+  }
+  body.count-page-active #app .count-item-lookup-copy {
+    min-width:0 !important;
+  }
+  body.count-page-active #app .count-item-lookup-copy strong {
+    overflow:hidden;
+    font-size:10.5px !important;
+    line-height:1.2 !important;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  body.count-page-active #app .count-item-lookup-copy span {
+    display:none !important;
+  }
+  body.count-page-active #app .count-item-camera-button {
+    width:38px !important;
+    min-width:38px !important;
+    height:38px !important;
+    min-height:38px !important;
+    padding:6px !important;
+    border-radius:10px !important;
+  }
+  body.count-page-active #app .count-item-camera-button span {
+    display:none !important;
+  }
+  body.count-page-active #app .count-item-camera-button svg {
+    width:20px !important;
+    height:20px !important;
+  }
+  body.count-page-active #app .count-item-collapse-button {
+    display:inline-flex !important;
+    align-items:center;
+    justify-content:center;
+    flex:0 0 38px;
+    flex-direction:column;
+    width:38px;
+    min-width:38px;
+    height:38px;
+    padding:2px;
+    border:1px solid color-mix(in srgb,var(--theme-primary-color) 28%,var(--theme-border-color));
+    border-radius:10px;
+    background:var(--theme-card-bg);
+    color:var(--theme-primary-color);
+    font:inherit;
+    font-size:7px;
+    font-weight:900;
+    line-height:1;
+    cursor:pointer;
+  }
+  body.count-page-active #app .count-item-collapse-chevron {
+    display:block;
+    margin-bottom:2px;
+    font-size:15px;
+    line-height:.65;
+    transition:transform .18s ease;
+  }
+  body.count-page-active #app .count-item-lookup:not(.is-mobile-collapsed) .count-item-collapse-chevron {
+    transform:rotate(180deg);
+  }
+  body.count-page-active #app .count-item-lookup.is-mobile-collapsed :is(
+    .count-item-search-row,
+    .count-item-search-results,
+    .count-item-laser-row
+  ) {
+    display:none !important;
+  }
+  body.count-page-active #app .count-item-lookup:not(.is-mobile-collapsed) .count-item-search-row {
+    margin-top:7px !important;
+  }
+  body.count-page-active #app .count-item-lookup:not(.is-mobile-collapsed) .count-item-laser-row {
+    margin-top:7px !important;
+    padding-top:7px !important;
+  }
+
+  body.count-page-active #app .count-sticky-stack .count-entry-progress {
+    gap:3px !important;
+    padding:3px !important;
+    border-radius:11px !important;
+    box-shadow:0 4px 11px rgba(12,63,66,.10) !important;
+  }
+  body.count-page-active #app .count-entry-progress-item {
+    min-height:31px !important;
+    padding:3px 1px !important;
+    border-radius:8px !important;
+  }
+  body.count-page-active #app .count-entry-progress-item strong {
+    font-size:12px !important;
+    line-height:1 !important;
+  }
+  body.count-page-active #app .count-entry-progress-item span {
+    margin-top:2px !important;
+    font-size:clamp(6px,1.35vw,7.5px) !important;
+    line-height:1.05 !important;
+  }
+}
 </style>
 </head>
-<body data-build="v1-121">
+<body data-build="v1-123">
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.122';
+const APP_VERSION = '1.123';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
-const APP_BUILD_ID = 'v1-121';
+const APP_BUILD_ID = 'v1-123';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
 
 // V1.84 performance: keep the login and ordinary work pages light.  Large
@@ -23885,7 +24010,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.122':'e.g. Warehouse V1.122',
+  'เช่น Warehouse V1.123':'e.g. Warehouse V1.123',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -31431,13 +31556,19 @@ function hardwareLaserCaptureHtml(id,context,instruction) {
   const shouldAutofocus = context === 'task-location';
   const buildLabel = shouldAutofocus ? ' · v205' : '';
   if (context === 'count-verify') {
-    return `<section class="count-item-lookup" data-i18n-skip aria-label="สแกนหรือค้นหาสินค้า">
+    return `<section class="count-item-lookup is-mobile-collapsed" data-i18n-skip aria-label="สแกนหรือค้นหาสินค้า">
       <div class="count-item-lookup-head">
         <span class="handheld-laser-icon">${barcodeScanIconSvg()}</span>
         <span class="count-item-lookup-copy">
           <strong>${escapeWmsText(uiCopy('สแกนหรือค้นหา SKU / LPN','Scan or Search SKU / LPN'))}</strong>
           <span>${escapeWmsText(uiCopy('พิมพ์บางส่วนได้ เช่น 5104 เพื่อค้นหา RMPW2605104','Enter a partial code, such as 5104, to find RMPW2605104'))}</span>
         </span>
+        <button type="button" class="count-item-collapse-button" aria-expanded="false"
+          aria-label="${escapeWmsText(uiCopy('กางช่องค้นหา SKU / LPN','Expand SKU / LPN search'))}"
+          onclick="toggleCountScanPanel(event)">
+          <span class="count-item-collapse-chevron" aria-hidden="true">⌄</span>
+          <span class="count-item-collapse-label">${escapeWmsText(uiCopy('ค้นหา','Search'))}</span>
+        </button>
         <button type="button" class="count-item-camera-button" onclick="openCountBarcodeScanner()"
           title="${escapeWmsText(uiCopy('เปิดกล้องสแกน Barcode','Open Camera Barcode Scanner'))}">
           ${barcodeScanIconSvg()}<span>${escapeWmsText(uiCopy('สแกน','Scan'))}</span>
@@ -32009,6 +32140,7 @@ function handleCountHardwareScan(value,target=null) {
     setTimeout(() => focusHardwareScanTarget('count_hardware_scan'),80);
     return false;
   }
+  if (compactCountScannerViewportV123()) setCountScanPanelExpanded(false);
   document.querySelectorAll('.citem-wrap.handheld-scan-match').forEach(card => card.classList.remove('handheld-scan-match'));
   match.classList.add('handheld-scan-match');
   setTimeout(() => match.classList.remove('handheld-scan-match'),1800);
@@ -32790,6 +32922,58 @@ function countItemSearchMatches(rawQuery='') {
       || left.itemCode.localeCompare(right.itemCode,'th',{ numeric:true }));
 }
 
+function compactCountScannerViewportV123() {
+  return Boolean(window.matchMedia?.(
+    '(max-width:760px), (max-width:1400px) and (any-pointer:coarse)'
+  ).matches);
+}
+
+function setCountScanPanelExpanded(expanded,{ focusSearch=false }={}) {
+  const panel = document.querySelector('.count-handheld-page .count-item-lookup');
+  if (!panel) return false;
+  const shouldExpand = Boolean(expanded);
+  panel.classList.toggle('is-mobile-collapsed',!shouldExpand);
+  const button = panel.querySelector('.count-item-collapse-button');
+  const label = panel.querySelector('.count-item-collapse-label');
+  if (button) {
+    button.setAttribute('aria-expanded',String(shouldExpand));
+    button.setAttribute(
+      'aria-label',
+      shouldExpand
+        ? uiCopy('ย่อช่องค้นหา SKU / LPN','Collapse SKU / LPN search')
+        : uiCopy('กางช่องค้นหา SKU / LPN','Expand SKU / LPN search'),
+    );
+  }
+  if (label) label.textContent = shouldExpand ? uiCopy('ย่อ','Close') : uiCopy('ค้นหา','Search');
+
+  if (!shouldExpand) {
+    const active = document.activeElement;
+    if (active && panel.contains(active) && active !== button) active.blur?.();
+    if (isNarrowHandheldTerminal() && !handheldSoftKeyboardEnabled()) requestHideHandheldSoftKeyboard();
+    return true;
+  }
+
+  if (focusSearch) {
+    setTimeout(() => {
+      const input = Q('count_item_search');
+      if (!input || panel.classList.contains('is-mobile-collapsed')) return;
+      try { input.focus({ preventScroll:true }); } catch (_) { input.focus(); }
+      input.select?.();
+      if (isNarrowHandheldTerminal() && !handheldSoftKeyboardEnabled()) requestHideHandheldSoftKeyboard();
+    },40);
+  }
+  return true;
+}
+
+function toggleCountScanPanel(event) {
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+  const panel = document.querySelector('.count-handheld-page .count-item-lookup');
+  if (!panel) return false;
+  const expand = panel.classList.contains('is-mobile-collapsed');
+  return setCountScanPanelExpanded(expand,{ focusSearch:expand && compactCountScannerViewportV123() });
+}
+
 function renderCountItemSearchResults(matches=[],query='') {
   const panel = Q('count_item_search_results');
   if (!panel) return;
@@ -32835,6 +33019,7 @@ function chooseCountItemSearchResult(itemId='') {
   const input = Q('count_item_search');
   if (input) input.value = '';
   renderCountItemSearchResults([],'');
+  setCountScanPanelExpanded(false);
   return handleCountHardwareScan(routeValue,null);
 }
 
@@ -56498,7 +56683,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.122' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.123' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -56759,7 +56944,7 @@ async function exportBackupZip() {
       format:BACKUP_ZIP_FORMAT,
       version:BACKUP_ZIP_VERSION,
       created_at:new Date().toISOString(),
-      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.122',
+      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.123',
       excel_file:excelFileName,
       excel_sha256:excelSha256,
       excel_manifest_hash:built.manifestHash,
@@ -58032,7 +58217,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.122" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.123" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
