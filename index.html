@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.116</title>
+<title>Cycle Count V1.117</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -37,6 +37,7 @@
 <!-- V1.114: แก้ Dashboard บน iPad แนวตั้ง ไม่ให้ค่า Zoom/ความสูงชดเชยดันกริดลงด้านล่าง -->
 <!-- V1.115: จัด Dashboard iPad แนวตั้งให้เริ่มชิดด้านบนเต็มสัดส่วน และคืนปุ่มเปิด Sidebar -->
 <!-- V1.116: ทุกปุ่มบันทึก Count ตรวจ DIFF ทันที และเปิด Count รอบถัดไปของ Item เดิมโดยไม่รอครบ Location -->
+<!-- V1.117: เปิดช่องนับทุก Item ตามรอบของตัวเองพร้อมกัน ไม่บังคับนับตามลำดับ Item และบันทึกรวมแยกรอบต่อ Item -->
 <!-- V1.112: แก้ Flow ยืนยัน Item ให้ส่งเข้าคิวปรับปรุงยอด WMS ทันที และรองรับรายการเดิมที่ released_to_wms=false -->
 <!-- V1.111: เพิ่มกล่องยอดยืนยันและ Variance ต่อจาก COUNT 3 ในรายการปรับยอด WMS -->
 <!-- V1.110: รายการ DIFF ที่ Supervisor ยืนยันแล้วจัดเป็นรอ WMS เสมอ ไม่ย้อนกลับไปเป็นรอ Variance -->
@@ -22083,13 +22084,13 @@ body.count-issue-open { overscroll-behavior:none; }
 }
 </style>
 </head>
-<body data-build="v1-101">
+<body data-build="v1-102">
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.116';
+const APP_VERSION = '1.117';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
-const APP_BUILD_ID = 'v1-101';
+const APP_BUILD_ID = 'v1-102';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
 
 // V1.84 performance: keep the login and ordinary work pages light.  Large
@@ -23610,7 +23611,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.116':'e.g. Warehouse V1.116',
+  'เช่น Warehouse V1.117':'e.g. Warehouse V1.117',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -29237,8 +29238,8 @@ function determineImmediateCountRound(snapshotRows,itemRounds,rules,preferredIte
     : null;
   if (preferredRound) return preferredRound;
 
-  // Finish an Item whose recount has already started before opening a new
-  // Count 1 Item. This is the expected scan/keyboard workflow on every device.
+  // Prefer an Item whose recount has started only for initial focus/header.
+  // V1.117 still renders every other Item's own next round as editable.
   const startedPending = snapshots.find(snapshot => {
     const rounds = roundsByItem[snapshot.item_id] || {};
     const nextRound = determineItemNextRequiredRound(snapshot,rounds,rules);
@@ -33517,16 +33518,17 @@ function refreshCountEntrySummary() {
   const inputs = [...document.querySelectorAll('.count-handheld-page .cqty[data-item-id]')];
   if (!inputs.length && !window._countEntryResolvedCount) return;
   let saved = 0;
-  let match = Number(window._countEntryResolvedCount || 0);
-  let diff = 0;
+  let match = Number(window._countEntryResolvedMatchCount || 0);
+  let diff = Number(window._countEntryTerminalDiffCount || 0);
   inputs.forEach(input => {
     const state = Q(`count_result_${input.dataset.itemId}`)?.dataset.countResultState;
     const isSaved = input.dataset.countSaved === 'true';
+    const itemRound = Number(input.dataset.countRound || 1);
     if (isSaved) {
       saved += 1;
       if (state === 'match') match += 1;
     }
-    if (Number(window._countEntryRound || 1) > 1) {
+    if (itemRound > 1) {
       if (!isSaved || state === 'diff' || state === 'warning') diff += 1;
     } else if (isSaved && (state === 'diff' || state === 'warning')) {
       diff += 1;
@@ -33871,7 +33873,9 @@ async function loadCCount() {
     prev = scopedCountRows.filter(record => Number(record.round) === round);
     allPhotoRecs = scopedCountRows.filter(record => record.photo_url);
   }
-  const prevMap = Object.fromEntries(prev?.map(r => [r.item_id, r]) || []);
+  const countRecordByItemRound = new Map(
+    scopedCountRows.map(record => [`${record.item_id}|${Number(record.round)}`,record]),
+  );
 
   // Evidence belongs to the Location + Item, not to one physical-count round.
   // Carry the latest non-empty value forward so R2/R3 never asks the counter
@@ -33912,8 +33916,9 @@ async function loadCCount() {
     snaps.map(snapshot => [String(snapshot.item_id),Number(snapshot.onhand_qty) || 0]),
   );
 
-  // รอบ 2/3 เปิดเฉพาะ Item ที่ต้องนับรอบนั้นจริง Item อื่นอาจยังรอ
-  // Count 1 หรือจบแล้ว และจะแสดงเป็นข้อมูลอ้างอิงโดยไม่สร้างช่องผิดรอบ
+  // แต่ละ Item มีรอบถัดไปของตัวเองและต้องเปิดช่องพร้อมกันทั้งหมด เพราะหน้างาน
+  // อาจหยิบ/สแกนสินค้าไม่เรียงกัน เช่น Item แรกอยู่ R2 แต่อีก Item ยังอยู่ R1
+  // จะปิดช่องเฉพาะ Item ที่จบ Workflow แล้ว (OK หรือ Diff หลังรอบสุดท้าย) เท่านั้น
   const countEntryRows = snaps.map((snapshot,index) => {
     const itemId = snapshot.item_id;
     const counted = roundsByItem[itemId] || {};
@@ -33925,7 +33930,7 @@ async function loadCCount() {
       rules,
     );
     const itemNextRound = determineItemNextRequiredRound(snapshot,counted,rules);
-    const activeForRound = itemNextRound === round;
+    const activeForRound = itemNextRound !== null;
     const resolvedBeforeRound = !activeForRound;
     const countedRoundNumbers = [1,2,3].filter(number => counted[number] !== undefined);
     const latestRound = countedRoundNumbers.length ? Math.max(...countedRoundNumbers) : 0;
@@ -33965,6 +33970,10 @@ async function loadCCount() {
   });
   window._countEntryResolvedCount = countEntryRows.filter(row => row.resolvedBeforeRound).length;
   window._countEntryActiveCount = countEntryRows.length - window._countEntryResolvedCount;
+  window._countEntryResolvedMatchCount = countEntryRows
+    .filter(row => row.resolvedBeforeRound && row.itemStatus === 'OK').length;
+  window._countEntryTerminalDiffCount = countEntryRows
+    .filter(row => row.resolvedBeforeRound && row.itemStatus === 'Diff').length;
 
   let items = '';
   for (const countEntryRow of countEntryRows) {
@@ -33973,7 +33982,8 @@ async function loadCCount() {
     const it   = s.items;
     const emptyLocation = isEmptyLocationItem(it?.code);
     if (emptyLocation) window._emptyCountItemIds.add(String(it.id));
-    const pr   = prevMap[it.id];
+    const itemInputRound = Number(countEntryRow.itemNextRound || countEntryRow.resolvedRound || round || 1);
+    const pr   = countRecordByItemRound.get(`${it.id}|${itemInputRound}`) || null;
     const v    = pr?.count_qty;
     const dets = detailByItem[it.id] || [];
 
@@ -34143,17 +34153,17 @@ async function loadCCount() {
           : `<button class="item-toggle ${hasExtra?'has':''}" id="tg_${it.id}" onclick="toggleExtra(event,'${it.id}')" title="หมายเหตุ/รูป">📝</button>`}
         <div class="count-value-stack">
           ${resolvedBeforeRound
-            ? `<span class="count-qty-label">COUNT R${countEntryRow.itemNextRound || countEntryRow.resolvedRound}</span>
+            ? `<span class="count-qty-label">COUNT R${countEntryRow.resolvedRound}</span>
                <div class="count-resolved-qty" aria-label="สถานะการนับ Item">
-                 <small>${countEntryRow.itemNextRound ? 'รอรอบที่ต้องนับ' : countEntryRow.itemStatus === 'Diff' ? 'ยอดนับสุดท้าย' : showOH ? 'ยอดที่ผ่านแล้ว' : 'บันทึกผ่านแล้ว'}</small>
-                 <strong>${countEntryRow.itemNextRound ? '—' : showOH ? escapeWmsText(countEntryRow.resolvedQty ?? '—') : countEntryRow.itemStatus === 'Diff' ? 'DIFF' : '✓'}</strong>
+                 <small>${countEntryRow.itemStatus === 'Diff' ? 'ยอดนับสุดท้าย' : showOH ? 'ยอดที่ผ่านแล้ว' : 'บันทึกผ่านแล้ว'}</small>
+                 <strong>${showOH ? escapeWmsText(countEntryRow.resolvedQty ?? '—') : countEntryRow.itemStatus === 'Diff' ? 'DIFF' : '✓'}</strong>
                </div>
                <div class="count-item-result is-${countEntryRow.inactiveState}" data-count-result-state="${countEntryRow.inactiveState}">${countEntryRow.inactiveText}</div>`
-            : `<span class="count-qty-label">COUNT R${round}</span>
+            : `<span class="count-qty-label">COUNT R${itemInputRound}</span>
                <input type="text" class="cqty ${v !== undefined ? 'ok' : ''}"
                  id="q_${it.id}" inputmode="decimal" enterkeyhint="next"
                  data-item-id="${it.id}"
-                 data-count-round="${round}"
+                 data-count-round="${itemInputRound}"
                  data-count-saved="${v !== undefined ? 'true' : 'false'}"
                  data-count-saved-value="${v !== undefined ? escapeWmsText(String(v)) : ''}"
                  ${initialCountFocusAttr}
@@ -34235,6 +34245,15 @@ async function loadCCount() {
   }
 
   const activeCountRows = countEntryRows.filter(row => !row.resolvedBeforeRound);
+  const activeRoundNumbers = [...new Set(
+    activeCountRows.map(row => Number(row.itemNextRound)).filter(Boolean),
+  )].sort((left,right) => left - right);
+  const activeRoundLabel = activeRoundNumbers.length > 1
+    ? `รอบ ${activeRoundNumbers.join(' / ')}`
+    : `รอบที่ ${activeRoundNumbers[0] || round}`;
+  const recountPendingCount = activeCountRows
+    .filter(row => Number(row.itemNextRound) > 1).length;
+  const initialDiffCount = recountPendingCount + Number(window._countEntryTerminalDiffCount || 0);
   const ids = activeCountRows.map(row => row.snapshot.item_id).join(',');
   if (!ids) {
     await showCountResultPopup({ kind:'success',title:'นับครบแล้ว',message:'ทุกรายการผ่านแล้ว' });
@@ -34245,7 +34264,7 @@ async function loadCCount() {
   cnt().innerHTML = `<div class="count-handheld-page" data-hw-location-code="${escapeWmsText(l.code || '')}">
     <div class="card count-header-card">
       <div class="count-context-tags" style="display:flex;gap:10px;flex-wrap:wrap">
-        <span class="tag tag-blue">รอบที่ ${round}</span>
+        <span class="tag tag-blue">${activeRoundLabel}</span>
         <span class="tag tag-gray">${asgn.count_sessions.name}</span>
         ${annualMode ? `<span class="tag tag-green">${escapeWmsText(annualJob.job_code)}</span>` : ''}
         <span class="tag ${showOH?'tag-green':'tag-gray'}">${showOH?'OH + AL':'🔒 Blind Count'}</span>
@@ -34256,8 +34275,8 @@ async function loadCCount() {
         'count-verify',
         uiCopy('ยิง Location, LPN หรือ Item เพื่อค้นหาและเลือกช่องนับ','Scan a Location, LPN or Item to find the count line'),
       )}
-      ${round > 1 ? `<div class="alert alert-amber count-round-warning" style="margin-top:16px">
-        🔄 ยอดไม่ตรงจากรอบที่ ${round-1} — กรุณานับใหม่อย่างระมัดระวัง
+      ${recountPendingCount > 0 ? `<div class="alert alert-amber count-round-warning" style="margin-top:16px">
+        🔄 มี ${recountPendingCount} Item ที่ต้องนับซ้ำ — แต่ละ Item แสดง COUNT รอบของตัวเอง และเลือกนับลำดับใดก่อนก็ได้
       </div>` : ''}
       <div class="fg count-counter-field" style="margin-top:20px;margin-bottom:0">
         <label>${uiCopy('ผู้ตรวจนับ (ทีมตรวจนับ)','Physical Counter (Count Team)')}</label>
@@ -34285,18 +34304,16 @@ async function loadCCount() {
         <div id="counterSelectedChips" class="counter-selected-chips"></div>
       </div>
     </div>
-      <div class="sec count-items-summary">${round > 1
-        ? `🔄 ต้องนับใหม่ ${activeCountRows.length} รายการ · ผ่านแล้ว ${window._countEntryResolvedCount} รายการ — รายการที่ต้องนับใหม่อยู่ด้านบน`
-        : `📦 ${snaps.length} รายการ — กรอกจำนวนที่นับได้จริง (Location ว่างให้กรอก 0)`}</div>
+      <div class="sec count-items-summary">📦 รอนับ ${activeCountRows.length} รายการ · นับซ้ำ ${recountPendingCount} รายการ · ผ่านแล้ว ${window._countEntryResolvedMatchCount} รายการ — เลือก Item ลำดับใดก็ได้ ระบบบันทึกตาม COUNT R ของแต่ละ Item</div>
       <div class="count-entry-progress" aria-label="สรุปผลการนับรายการสินค้า">
         <div class="count-entry-progress-item">
           <strong id="countProgressSaved">0/${activeCountRows.length}</strong><span>บันทึกแล้ว</span>
         </div>
         <div class="count-entry-progress-item is-match">
-          <strong id="countProgressMatch">${window._countEntryResolvedCount}</strong><span>ตรง / ผ่าน</span>
+          <strong id="countProgressMatch">${window._countEntryResolvedMatchCount}</strong><span>ตรง / ผ่าน</span>
         </div>
         <div class="count-entry-progress-item is-diff">
-          <strong id="countProgressDiff">${round > 1 ? activeCountRows.length : 0}</strong><span>DIFF / ต้องนับใหม่</span>
+          <strong id="countProgressDiff">${initialDiffCount}</strong><span>DIFF / ต้องนับใหม่</span>
         </div>
         <div class="count-entry-progress-item is-remaining">
           <strong id="countProgressRemaining">${activeCountRows.length}</strong><span>คงเหลือ</span>
@@ -34321,7 +34338,7 @@ async function loadCCount() {
   </div>`;
 
   const activeCounterNameSet = new Set((window._counterNames || []).map(counter => counter.name));
-  const savedCounterNames = actualCounterNamesFromRecords(prev)
+  const savedCounterNames = actualCounterNamesFromRecords(scopedCountRows)
     .filter(name => activeCounterNameSet.has(name));
   const preferredCounterNames = savedCounterNames.length
     ? savedCounterNames
@@ -35541,6 +35558,10 @@ async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
   document.activeElement?.blur?.();
   const pauseAndContinue = options?.pauseAndContinue === true;
   const ids = idsStr.split(',').map(value => String(value || '').trim()).filter(Boolean);
+  const pageRounds = [...new Set(ids.map(iid => Number(Q('q_'+iid)?.dataset.countRound || round || 1)))]
+    .filter(Boolean)
+    .sort((left,right) => left - right);
+  const pageRoundLabel = pageRounds.length > 1 ? pageRounds.join('/') : String(pageRounds[0] || round || 1);
   const al  = Q('ca'), btn = Q('cb');
   const defaultButtonText = btn?.dataset?.defaultLabel || 'ยืนยันยอด';
   const restoreButton = () => {
@@ -35598,7 +35619,7 @@ async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
       null,
       'count_paused',
       `สถานะ ${asgn.status || 'pending'}`,
-      `พักงาน รอบ ${round} · บันทึกแล้ว ${savedCount}/${ids.length} Item · เหลือ ${remainingCount}`,
+      `พักงาน รอบ ${pageRoundLabel} · บันทึกแล้ว ${savedCount}/${ids.length} Item · เหลือ ${remainingCount}`,
       aid,
     );
     window._photoMap = {};
@@ -35612,7 +35633,9 @@ async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
   const recs = [];
   const foundPayloads = [];
   for (const iid of filledIds) {
-    const v = Q('q_'+iid)?.value;
+    const input = Q('q_'+iid);
+    const v = input?.value;
+    const itemRound = Number(input?.dataset.countRound || round || 1);
     const numericQty = Number(v);
     if (!Number.isFinite(numericQty) || numericQty < 0) {
       al.innerHTML = '<div class="alert alert-red">QTY ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป</div>';
@@ -35675,7 +35698,7 @@ async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
       }
     }
     recs.push({
-      assignment_id: aid, item_id: iid, round,
+      assignment_id: aid, item_id: iid, round:itemRound,
       count_qty: isEmptyRow ? 0 : numericQty, counted_by: me.id,
       actual_counter_name: actualCounterName,
       type_issue:typeIssue, remark, photo_url: photoUrl,
@@ -35683,22 +35706,21 @@ async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
   }
 
   const previousResult = await sb.from('count_records')
-    .select('item_id,count_qty,actual_counter_name,type_issue,remark,photo_url')
+    .select('item_id,round,count_qty,actual_counter_name,type_issue,remark,photo_url')
     .eq('assignment_id',aid)
-    .eq('round',round)
     .in('item_id',filledIds);
   if (previousResult.error) {
     al.innerHTML = errBox(previousResult.error.message);
     return;
   }
   const previousCountMap = new Map(
-    (previousResult.data || []).map(record => [String(record.item_id),record])
+    (previousResult.data || []).map(record => [`${record.item_id}|${Number(record.round)}`,record])
   );
 
   btn.disabled = true;
   btn.textContent = pauseAndContinue
     ? 'กำลังพักงาน...'
-    : (roundIsComplete ? 'กำลังปิดรอบ...' : 'กำลังบันทึกความคืบหน้า...');
+    : (roundIsComplete ? 'กำลังบันทึกและตรวจผล...' : 'กำลังบันทึกความคืบหน้า...');
 
   const { error } = await sb.from('count_records')
     .upsert(recs, { onConflict:'assignment_id,item_id,round' });
@@ -35735,7 +35757,7 @@ async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
   }
 
   const countAuditRows = recs.flatMap(record => {
-    const previous = previousCountMap.get(String(record.item_id));
+    const previous = previousCountMap.get(`${record.item_id}|${Number(record.round)}`);
     const changed = !previous ||
       Number(previous.count_qty) !== Number(record.count_qty) ||
       String(previous.actual_counter_name || '') !== String(record.actual_counter_name || '') ||
@@ -35748,8 +35770,8 @@ async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
       asgn.location_id,
       record.item_id,
       previous ? 'count_edit' : 'count_recorded',
-      previous ? countAuditValue(previous,round) : null,
-      countAuditValue(record,round),
+      previous ? countAuditValue(previous,record.round) : null,
+      countAuditValue(record,record.round),
       aid,
     )];
   });
@@ -55593,7 +55615,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.116' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.117' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -55854,7 +55876,7 @@ async function exportBackupZip() {
       format:BACKUP_ZIP_FORMAT,
       version:BACKUP_ZIP_VERSION,
       created_at:new Date().toISOString(),
-      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.116',
+      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.117',
       excel_file:excelFileName,
       excel_sha256:excelSha256,
       excel_manifest_hash:built.manifestHash,
@@ -57127,7 +57149,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.116" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.117" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
