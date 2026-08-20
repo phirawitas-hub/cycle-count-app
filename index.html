@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.121</title>
+<title>Cycle Count V1.122</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -38,7 +38,7 @@
 <!-- V1.115: จัด Dashboard iPad แนวตั้งให้เริ่มชิดด้านบนเต็มสัดส่วน และคืนปุ่มเปิด Sidebar -->
 <!-- V1.116: ทุกปุ่มบันทึก Count ตรวจ DIFF ทันที และเปิด Count รอบถัดไปของ Item เดิมโดยไม่รอครบ Location -->
 <!-- V1.120: Import WMS แบบ authoritative ภายในขอบเขต ลบ LPN/Lot ที่หายและตั้ง OH/AL ของ Snapshot ที่หายเป็น 0 โดยคงประวัติ Count -->
-<!-- V1.121: ผังคลังใช้การปิด WMS ระดับ Location เป็นสถานะสุดท้าย ตรวจ approval ซ้ำ และเพิ่มรายละเอียดขั้นตอน/Item/ยอด/ผู้ตรวจนับ -->
+<!-- V1.122: บันทึก Count ผ่าน RPC ที่ตรวจผู้รับงาน/Role ฝั่งฐานข้อมูล แก้ upsert ชนแถวเดิมและ RLS USING expression -->
 <!-- V1.112: แก้ Flow ยืนยัน Item ให้ส่งเข้าคิวปรับปรุงยอด WMS ทันที และรองรับรายการเดิมที่ released_to_wms=false -->
 <!-- V1.111: เพิ่มกล่องยอดยืนยันและ Variance ต่อจาก COUNT 3 ในรายการปรับยอด WMS -->
 <!-- V1.110: รายการ DIFF ที่ Supervisor ยืนยันแล้วจัดเป็นรอ WMS เสมอ ไม่ย้อนกลับไปเป็นรอ Variance -->
@@ -22362,7 +22362,7 @@ body.count-page-active #app .count-sticky-stack .count-entry-progress {
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.121';
+const APP_VERSION = '1.122';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = 'v1-121';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -23885,7 +23885,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.121':'e.g. Warehouse V1.121',
+  'เช่น Warehouse V1.122':'e.g. Warehouse V1.122',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -33976,6 +33976,54 @@ function handleCountQtyInput(input) {
   refreshCountEntrySummary();
 }
 
+function isCountRecordRlsErrorV122(error) {
+  const text = `${error?.code || ''} ${error?.message || error || ''}`;
+  return /42501|row-level security|permission denied/i.test(text);
+}
+
+function isMissingCountSaveRpcV122(error) {
+  const text = `${error?.code || ''} ${error?.message || error || ''}`;
+  return /PGRST202|save_count_records_v122|schema cache|could not find the function/i.test(text);
+}
+
+/*
+  A direct UPSERT needs both INSERT and UPDATE RLS to pass. If the same
+  assignment/item/round already exists under an earlier login, Postgres takes
+  the UPDATE branch and rejects it at USING even though this user is the current
+  assignee. The v1.122 RPC performs the same UPSERT in one transaction after
+  validating auth.uid(), assignment ownership, workflow state and Item scope on
+  the server. Keep the legacy path only for installations that have not applied
+  the companion SQL yet and whose original RLS already permits the write.
+*/
+async function saveCountRecordsV122(records) {
+  const cleanRecords = (records || []).map(record => ({
+    assignment_id:record.assignment_id,
+    item_id:record.item_id,
+    round:Number(record.round),
+    count_qty:Number(record.count_qty),
+    actual_counter_name:record.actual_counter_name || null,
+    type_issue:record.type_issue || null,
+    remark:record.remark || null,
+    photo_url:record.photo_url || null,
+  }));
+  if (!cleanRecords.length) return { data:[],error:null };
+
+  const rpcResult = await sb.rpc('save_count_records_v122',{ p_records:cleanRecords });
+  if (!rpcResult.error) return rpcResult;
+  if (!isMissingCountSaveRpcV122(rpcResult.error)) return rpcResult;
+
+  const legacyResult = await sb.from('count_records')
+    .upsert(records,{ onConflict:'assignment_id,item_id,round' })
+    .select('assignment_id,item_id,round,count_qty');
+  if (legacyResult.error && isCountRecordRlsErrorV122(legacyResult.error)) {
+    return {
+      data:null,
+      error:new Error('ฐานข้อมูลยังไม่ได้ติดตั้ง SQL แก้บันทึก Count V1.122 กรุณาให้ Admin รันไฟล์ Cycle_Count_V1.122_RLS_Hotfix.sql แล้วลองอีกครั้ง'),
+    };
+  }
+  return legacyResult;
+}
+
 async function saveCountItemFromKeypad(input) {
   if (!input?.dataset?.itemId) return false;
   const itemId = input.dataset.itemId;
@@ -34041,11 +34089,9 @@ async function saveCountItemFromKeypad(input) {
     return false;
   }
 
-  const savedResult = await sb.from('count_records')
-    .upsert(record,{ onConflict:'assignment_id,item_id,round' })
-    .select('assignment_id,item_id,round,count_qty')
-    .maybeSingle();
-  if (savedResult.error || !savedResult.data) {
+  const savedResult = await saveCountRecordsV122([record]);
+  const savedRow = Array.isArray(savedResult.data) ? savedResult.data[0] : savedResult.data;
+  if (savedResult.error || !savedRow) {
     setCountEntryItemResult(itemId,'warning','บันทึกไม่สำเร็จ');
     if (alertBox) alertBox.innerHTML = errBox(savedResult.error?.message || 'ระบบไม่สามารถยืนยันข้อมูลที่บันทึกได้');
     return false;
@@ -36144,8 +36190,7 @@ async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
     ? 'กำลังพักงาน...'
     : (roundIsComplete ? 'กำลังบันทึกและตรวจผล...' : 'กำลังบันทึกความคืบหน้า...');
 
-  const { error } = await sb.from('count_records')
-    .upsert(recs, { onConflict:'assignment_id,item_id,round' });
+  const { error } = await saveCountRecordsV122(recs);
 
   if (error) {
     filledIds.forEach(iid => setCountEntryItemResult(iid,'warning','บันทึกไม่สำเร็จ'));
@@ -37064,7 +37109,7 @@ async function saveAdminFormCountAssignment() {
   if (saveButton) { saveButton.disabled = true; saveButton.textContent = '⏳ กำลังบันทึก...'; }
   try {
     const previousMap = new Map(activeRows.map(row => [String(row.itemId),row.activeRecord || null]));
-    const { error:upsertError } = await sb.from('count_records').upsert(records,{ onConflict:'assignment_id,item_id,round' });
+    const { error:upsertError } = await saveCountRecordsV122(records);
     if (upsertError) throw upsertError;
     const auditRows = records.flatMap(record => {
       const previous = previousMap.get(String(record.item_id));
@@ -56453,7 +56498,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.121' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.122' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -56714,7 +56759,7 @@ async function exportBackupZip() {
       format:BACKUP_ZIP_FORMAT,
       version:BACKUP_ZIP_VERSION,
       created_at:new Date().toISOString(),
-      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.121',
+      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.122',
       excel_file:excelFileName,
       excel_sha256:excelSha256,
       excel_manifest_hash:built.manifestHash,
@@ -57987,7 +58032,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.121" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.122" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
