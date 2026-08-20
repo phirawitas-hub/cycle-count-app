@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.115</title>
+<title>Cycle Count V1.116</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -36,6 +36,7 @@
 <!-- V1.113: หน้า WMS เน้นข้อมูลถูกต้องก่อนความเร็ว ปิด Dashboard/Fast cache และโหลดข้อมูลสดทุกครั้ง -->
 <!-- V1.114: แก้ Dashboard บน iPad แนวตั้ง ไม่ให้ค่า Zoom/ความสูงชดเชยดันกริดลงด้านล่าง -->
 <!-- V1.115: จัด Dashboard iPad แนวตั้งให้เริ่มชิดด้านบนเต็มสัดส่วน และคืนปุ่มเปิด Sidebar -->
+<!-- V1.116: ทุกปุ่มบันทึก Count ตรวจ DIFF ทันที และเปิด Count รอบถัดไปของ Item เดิมโดยไม่รอครบ Location -->
 <!-- V1.112: แก้ Flow ยืนยัน Item ให้ส่งเข้าคิวปรับปรุงยอด WMS ทันที และรองรับรายการเดิมที่ released_to_wms=false -->
 <!-- V1.111: เพิ่มกล่องยอดยืนยันและ Variance ต่อจาก COUNT 3 ในรายการปรับยอด WMS -->
 <!-- V1.110: รายการ DIFF ที่ Supervisor ยืนยันแล้วจัดเป็นรอ WMS เสมอ ไม่ย้อนกลับไปเป็นรอ Variance -->
@@ -545,6 +546,30 @@ select { appearance: none; background-image: url('data:image/svg+xml;charset=US-
   font-size:20px;
   font-weight:900;
 }
+.citem-wrap.is-count-resolved.is-count-inactive-pending {
+  border-color:#d9e0e2;
+  background:#f7f9f9;
+  box-shadow:0 8px 20px rgba(63,78,83,.06);
+}
+.is-count-inactive-pending .count-resolved-qty,
+.is-count-inactive-pending .count-resolved-note {
+  border-color:#d9e0e2;
+  color:#66737b;
+  background:#eef2f3;
+}
+.is-count-inactive-pending .count-resolved-check { background:#7a888e; }
+.citem-wrap.is-count-resolved.is-count-inactive-diff {
+  border-color:#efa39c;
+  background:#fff4f2;
+  box-shadow:0 8px 20px rgba(161,46,46,.07);
+}
+.is-count-inactive-diff .count-resolved-qty,
+.is-count-inactive-diff .count-resolved-note {
+  border-color:#efa39c;
+  color:#a12e2e;
+  background:#ffe9e6;
+}
+.is-count-inactive-diff .count-resolved-check { background:#c84d45; }
 .count-entry-progress {
   display:grid;
   grid-template-columns:repeat(4,minmax(0,1fr));
@@ -22058,13 +22083,13 @@ body.count-issue-open { overscroll-behavior:none; }
 }
 </style>
 </head>
-<body data-build="v1-100">
+<body data-build="v1-101">
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.115';
+const APP_VERSION = '1.116';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
-const APP_BUILD_ID = 'v1-100';
+const APP_BUILD_ID = 'v1-101';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
 
 // V1.84 performance: keep the login and ordinary work pages light.  Large
@@ -23585,7 +23610,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.115':'e.g. Warehouse V1.115',
+  'เช่น Warehouse V1.116':'e.g. Warehouse V1.116',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -29176,6 +29201,68 @@ function computeItemStatus(oh, r1, r2, r3, rules) {
   return 'Diff';
 }
 
+// V1.116: Count follows each Item to its next required round immediately.
+// A Location may therefore contain untouched Count 1 Items while one DIFF
+// Item is already being recounted in Count 2/3. The stored rows remain the
+// source of truth; this function only determines the next missing input.
+function determineItemNextRequiredRound(snapshot,itemRounds,rules) {
+  if (!snapshot) return null;
+  const rounds = itemRounds || {};
+  const maxRounds = Math.max(1,Math.min(3,Number(rules?.maxRounds) || 3));
+  const has = value => value !== null && value !== undefined && value !== '';
+
+  for (let round = 1; round <= maxRounds; round += 1) {
+    if (!has(rounds[round])) return round;
+    const status = computeItemStatus(
+      snapshot.onhand_qty,
+      rounds[1],
+      round >= 2 ? rounds[2] : undefined,
+      round >= 3 ? rounds[3] : undefined,
+      rules,
+    );
+    if (status === 'OK' || status === 'Diff') return null;
+  }
+  return null;
+}
+
+function determineImmediateCountRound(snapshotRows,itemRounds,rules,preferredItemId='') {
+  const snapshots = snapshotRows || [];
+  const roundsByItem = itemRounds || {};
+  const preferredKey = String(preferredItemId || '');
+  const preferred = preferredKey
+    ? snapshots.find(snapshot => String(snapshot.item_id) === preferredKey)
+    : null;
+  const preferredRound = preferred
+    ? determineItemNextRequiredRound(preferred,roundsByItem[preferred.item_id] || {},rules)
+    : null;
+  if (preferredRound) return preferredRound;
+
+  // Finish an Item whose recount has already started before opening a new
+  // Count 1 Item. This is the expected scan/keyboard workflow on every device.
+  const startedPending = snapshots.find(snapshot => {
+    const rounds = roundsByItem[snapshot.item_id] || {};
+    const nextRound = determineItemNextRequiredRound(snapshot,rounds,rules);
+    return nextRound && nextRound > 1;
+  });
+  if (startedPending) {
+    return determineItemNextRequiredRound(
+      startedPending,
+      roundsByItem[startedPending.item_id] || {},
+      rules,
+    );
+  }
+
+  for (const snapshot of snapshots) {
+    const nextRound = determineItemNextRequiredRound(
+      snapshot,
+      roundsByItem[snapshot.item_id] || {},
+      rules,
+    );
+    if (nextRound) return nextRound;
+  }
+  return null;
+}
+
 function wmsStoredBooleanTrue(value) {
   return value === true || value === 1
     || ['true','t','1','yes','y'].includes(String(value ?? '').trim().toLowerCase());
@@ -31618,11 +31705,33 @@ function handleCountHardwareScan(value,target=null) {
   const itemId = match.dataset.hwItemId || '';
   if (match.classList.contains('is-count-resolved')) {
     match.scrollIntoView({ block:'center',behavior:'smooth' });
+    const nextRound = Number(match.dataset.countNextRound || 0);
+    if (nextRound) {
+      handheldScanFeedback(
+        'warning',
+        `${uiCopy('เปิดรอบที่ต้องนับ','Opening Required Round')} ${nextRound}`,
+        value,
+        uiCopy('กำลังเปิด Item นี้ในรอบที่ถูกต้อง','Opening this Item in its required round'),
+      );
+      setTimeout(() => {
+        go('c-count',immediateCountRouteExtra(
+          window._countFoundContext?.assignmentId,
+          window._countEntryAnnualJobId || '',
+          itemId,
+        ),{ replace:true });
+      },220);
+      return true;
+    }
+    const terminalDiff = match.dataset.countItemStatus === 'Diff';
     handheldScanFeedback(
-      'success',
-      uiCopy('ITEM นี้ผ่านแล้ว','This Item Already Passed'),
+      terminalDiff ? 'warning' : 'success',
+      terminalDiff
+        ? uiCopy('ITEM นี้นับครบรอบแล้ว','This Item Finished All Rounds')
+        : uiCopy('ITEM นี้ผ่านแล้ว','This Item Already Passed'),
       value,
-      uiCopy('ไม่ต้องนับซ้ำ กรุณาสแกน ITEM ที่ต้องนับใหม่','No recount needed; scan an Item awaiting recount'),
+      terminalDiff
+        ? uiCopy('ยอดยังไม่ตรงและรอหัวหน้างานตรวจสอบ','The variance is awaiting supervisor review')
+        : uiCopy('ไม่ต้องนับซ้ำ กรุณาสแกน ITEM ที่ต้องนับใหม่','No recount needed; scan an Item awaiting recount'),
     );
     setTimeout(() => focusHardwareScanTarget('count_hardware_scan'),220);
     return true;
@@ -33470,13 +33579,15 @@ async function saveCountItemFromKeypad(input) {
   if (isEmptyFoundRow) {
     setCountEntryItemResult(itemId,'warning','พบสินค้า · รอส่ง');
     input.dataset.countSaved = 'false';
+    input.dataset.countDeferredFound = 'true';
     refreshCountEntrySummary();
     return true;
   }
+  delete input.dataset.countDeferredFound;
 
   setCountEntryItemResult(itemId,'saving','กำลังบันทึก...');
   const assignmentId = window._countFoundContext?.assignmentId;
-  const round = Number(window._countEntryRound || 1);
+  const round = Number(input.dataset.countRound || window._countEntryRound || 1);
   const actualCounterName = selectedNames.join(', ');
   const remark = getSelectedCountRemarks(itemId).join('\n') || null;
   const photoUrl = (window._photoMap && window._photoMap[itemId]) || null;
@@ -33511,11 +33622,13 @@ async function saveCountItemFromKeypad(input) {
     return false;
   }
 
-  const { error } = await sb.from('count_records')
-    .upsert(record,{ onConflict:'assignment_id,item_id,round' });
-  if (error) {
+  const savedResult = await sb.from('count_records')
+    .upsert(record,{ onConflict:'assignment_id,item_id,round' })
+    .select('assignment_id,item_id,round,count_qty')
+    .maybeSingle();
+  if (savedResult.error || !savedResult.data) {
     setCountEntryItemResult(itemId,'warning','บันทึกไม่สำเร็จ');
-    if (alertBox) alertBox.innerHTML = errBox(error.message);
+    if (alertBox) alertBox.innerHTML = errBox(savedResult.error?.message || 'ระบบไม่สามารถยืนยันข้อมูลที่บันทึกได้');
     return false;
   }
 
@@ -33558,6 +33671,9 @@ async function saveCountItemFromKeypad(input) {
 
   input.dataset.countSaved = 'true';
   input.dataset.countSavedValue = String(input.value);
+  window._countEntryRoundsByItem = window._countEntryRoundsByItem || {};
+  window._countEntryRoundsByItem[itemId] = window._countEntryRoundsByItem[itemId] || {};
+  window._countEntryRoundsByItem[itemId][round] = qty;
   const result = countEntryResultState(itemId,input.value);
   setCountEntryItemResult(itemId,result.state,result.text);
   if (alertBox) alertBox.innerHTML = '';
@@ -33701,7 +33817,7 @@ async function loadCCount() {
 
   if (!annualMode) {
     const workflow = deriveAssignmentWorkflowStatus(snaps,roundsByItem,rules,asgn.status);
-    round = determineNextRequiredCountRound(snaps,roundsByItem,rules);
+    round = determineImmediateCountRound(snaps,roundsByItem,rules,S.countItemId);
     if (!round) {
       const completed = workflow.itemStatuses.length > 0
         && workflow.itemStatuses.every(status => status === 'OK' || status === 'Diff');
@@ -33743,7 +33859,7 @@ async function loadCCount() {
       go('c-tasks');
       return;
     }
-    round = determineNextRequiredCountRound(snaps,roundsByItem,rules);
+    round = determineImmediateCountRound(snaps,roundsByItem,rules,S.countItemId);
     if (!round) {
       await showCountResultPopup({ kind:'info',title:'นับครบแล้ว',message:'Location นี้' });
       go('c-tasks');
@@ -33789,38 +33905,62 @@ async function loadCCount() {
   };
   window._countEntryRound = round;
   window._countEntryShowOH = showOH;
+  window._countEntryAnnualJobId = annualMode ? jid : '';
+  window._countEntryRules = rules;
+  window._countEntryRoundsByItem = roundsByItem;
   window._countEntryOhMap = Object.fromEntries(
     snaps.map(snapshot => [String(snapshot.item_id),Number(snapshot.onhand_qty) || 0]),
   );
 
-  // รอบ 2/3 นับเฉพาะ Item ที่ยังไม่ผ่านจากรอบก่อน และย้ายขึ้นไว้ด้านบน
-  // Item ที่ผ่านแล้วคงแสดงข้อมูลเพื่ออ้างอิง แต่ไม่สร้างช่อง COUNT ซ้ำ
+  // รอบ 2/3 เปิดเฉพาะ Item ที่ต้องนับรอบนั้นจริง Item อื่นอาจยังรอ
+  // Count 1 หรือจบแล้ว และจะแสดงเป็นข้อมูลอ้างอิงโดยไม่สร้างช่องผิดรอบ
   const countEntryRows = snaps.map((snapshot,index) => {
     const itemId = snapshot.item_id;
     const counted = roundsByItem[itemId] || {};
-    const prior = {};
-    for (let priorRound = 1; priorRound < round; priorRound += 1) {
-      if (counted[priorRound] !== undefined) prior[priorRound] = counted[priorRound];
+    const itemStatus = computeItemStatus(
+      snapshot.onhand_qty,
+      counted[1],
+      counted[2],
+      counted[3],
+      rules,
+    );
+    const itemNextRound = determineItemNextRequiredRound(snapshot,counted,rules);
+    const activeForRound = itemNextRound === round;
+    const resolvedBeforeRound = !activeForRound;
+    const countedRoundNumbers = [1,2,3].filter(number => counted[number] !== undefined);
+    const latestRound = countedRoundNumbers.length ? Math.max(...countedRoundNumbers) : 0;
+    const matchedRound = countedRoundNumbers.find(number => Number(counted[number]) === Number(snapshot.onhand_qty))
+      || latestRound
+      || itemNextRound
+      || 1;
+    let inactiveState = 'pending';
+    let inactiveText = itemNextRound ? `รอ COUNT R${itemNextRound}` : 'รอนับ';
+    if (itemStatus === 'OK') {
+      inactiveState = 'match';
+      inactiveText = '✓ ผ่านแล้ว';
+    } else if (itemStatus === 'Diff') {
+      inactiveState = 'diff';
+      inactiveText = 'DIFF · รอตรวจสอบ';
     }
-    const priorStatus = round > 1
-      ? computeItemStatus(snapshot.onhand_qty,prior[1],prior[2],prior[3],rules)
-      : '';
-    const resolvedBeforeRound = round > 1 && priorStatus === 'OK';
-    const priorRoundNumbers = Object.keys(prior).map(Number).sort((a,b) => b-a);
-    const matchedRound = priorRoundNumbers.find(number => Number(prior[number]) === Number(snapshot.onhand_qty))
-      || priorRoundNumbers[0]
-      || Math.max(1,round - 1);
     return {
       snapshot,
       index,
       resolvedBeforeRound,
+      activeForRound,
+      itemStatus,
+      itemNextRound,
+      inactiveState,
+      inactiveText,
       resolvedRound:matchedRound,
-      resolvedQty:prior[matchedRound],
+      resolvedQty:counted[matchedRound],
     };
   }).sort((left,right) => {
     if (left.resolvedBeforeRound !== right.resolvedBeforeRound) {
       return left.resolvedBeforeRound ? 1 : -1;
     }
+    const leftPreferred = String(left.snapshot.item_id) === String(S.countItemId || '');
+    const rightPreferred = String(right.snapshot.item_id) === String(S.countItemId || '');
+    if (leftPreferred !== rightPreferred) return leftPreferred ? -1 : 1;
     return left.index - right.index;
   });
   window._countEntryResolvedCount = countEntryRows.filter(row => row.resolvedBeforeRound).length;
@@ -33928,10 +34068,12 @@ async function loadCCount() {
     const initialCountFocusAttr = firstCountItem && !resolvedBeforeRound
       ? 'autofocus data-count-initial-focus="true"'
       : '';
-    items += `<div class="citem-wrap ${resolvedBeforeRound ? 'is-count-resolved' : ''}"
+    items += `<div class="citem-wrap ${resolvedBeforeRound ? `is-count-resolved is-count-inactive-${countEntryRow.inactiveState}` : ''}"
       data-hw-item-id="${escapeWmsText(String(it.id))}"
       data-hw-item-code="${escapeWmsText(it?.code || '')}"
-      data-hw-lp-codes="${escapeWmsText(hardwareLpCodes)}">
+      data-hw-lp-codes="${escapeWmsText(hardwareLpCodes)}"
+      data-count-item-status="${countEntryRow.itemStatus || ''}"
+      data-count-next-round="${countEntryRow.itemNextRound || ''}">
       ${firstCountItem ? `<div class="count-location-item-banner">
         <span class="count-location-item-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z"></path><circle cx="12" cy="10" r="2.2"></circle></svg>
@@ -33997,20 +34139,21 @@ async function loadCCount() {
           ${detHtml}
         </div>
         ${resolvedBeforeRound
-          ? '<span class="count-resolved-check" aria-label="ผ่านแล้ว">✓</span>'
+          ? `<span class="count-resolved-check" aria-label="${countEntryRow.inactiveText}">${countEntryRow.itemStatus === 'OK' ? '✓' : countEntryRow.itemStatus === 'Diff' ? '!' : '…'}</span>`
           : `<button class="item-toggle ${hasExtra?'has':''}" id="tg_${it.id}" onclick="toggleExtra(event,'${it.id}')" title="หมายเหตุ/รูป">📝</button>`}
         <div class="count-value-stack">
           ${resolvedBeforeRound
-            ? `<span class="count-qty-label">COUNT R${countEntryRow.resolvedRound}</span>
-               <div class="count-resolved-qty" aria-label="ยอดที่ผ่านแล้ว">
-                 <small>${showOH ? 'ยอดที่ผ่านแล้ว' : 'บันทึกผ่านแล้ว'}</small>
-                 <strong>${showOH ? escapeWmsText(countEntryRow.resolvedQty ?? '—') : '✓'}</strong>
+            ? `<span class="count-qty-label">COUNT R${countEntryRow.itemNextRound || countEntryRow.resolvedRound}</span>
+               <div class="count-resolved-qty" aria-label="สถานะการนับ Item">
+                 <small>${countEntryRow.itemNextRound ? 'รอรอบที่ต้องนับ' : countEntryRow.itemStatus === 'Diff' ? 'ยอดนับสุดท้าย' : showOH ? 'ยอดที่ผ่านแล้ว' : 'บันทึกผ่านแล้ว'}</small>
+                 <strong>${countEntryRow.itemNextRound ? '—' : showOH ? escapeWmsText(countEntryRow.resolvedQty ?? '—') : countEntryRow.itemStatus === 'Diff' ? 'DIFF' : '✓'}</strong>
                </div>
-               <div class="count-item-result is-match" data-count-result-state="match">✓ ผ่านแล้ว</div>`
+               <div class="count-item-result is-${countEntryRow.inactiveState}" data-count-result-state="${countEntryRow.inactiveState}">${countEntryRow.inactiveText}</div>`
             : `<span class="count-qty-label">COUNT R${round}</span>
                <input type="text" class="cqty ${v !== undefined ? 'ok' : ''}"
                  id="q_${it.id}" inputmode="decimal" enterkeyhint="next"
                  data-item-id="${it.id}"
+                 data-count-round="${round}"
                  data-count-saved="${v !== undefined ? 'true' : 'false'}"
                  data-count-saved-value="${v !== undefined ? escapeWmsText(String(v)) : ''}"
                  ${initialCountFocusAttr}
@@ -34025,7 +34168,7 @@ async function loadCCount() {
         </div>
       </div>
       ${detailMobileHtml}
-      ${resolvedBeforeRound ? `<div class="count-resolved-note">✓ ITEM นี้ตรงจากรอบก่อนแล้ว · แสดงเพื่ออ้างอิงเท่านั้น ไม่ต้องนับซ้ำ</div>` : ''}
+      ${resolvedBeforeRound ? `<div class="count-resolved-note">${countEntryRow.inactiveText} · แสดงเพื่ออ้างอิงและป้องกันการบันทึกผิดรอบ</div>` : ''}
       <div class="item-extra count-issue-backdrop" id="extra_${it.id}" ${resolvedBeforeRound ? 'style="display:none"' : ''}
         role="dialog" aria-modal="true" aria-labelledby="count_issue_title_${it.id}">
         <section class="count-issue-modal" onclick="event.stopPropagation()">
@@ -34458,6 +34601,166 @@ function focusCountInputForEntry(input) {
   return true;
 }
 
+function immediateCountRouteExtra(aid,annualJobId='',preferredItemId='') {
+  return annualJobId
+    ? { aid,jid:annualJobId,jitemid:S.jitemid,countItemId:preferredItemId }
+    : { aid,countItemId:preferredItemId };
+}
+
+async function resolveCountWorkflowAfterSave({
+  aid,
+  candidateItemIds=[],
+  annualJobId='',
+  source='save-button',
+}={}) {
+  const alertBox = Q('ca');
+  const candidateKeys = [...new Set((candidateItemIds || []).map(String).filter(Boolean))];
+  const assignmentResult = await sb.from('assignments')
+    .select('id,location_id,session_id,status')
+    .eq('id',aid)
+    .single();
+  const assignment = assignmentResult.data;
+  if (assignmentResult.error || !assignment) {
+    if (alertBox) alertBox.innerHTML = errBox(assignmentResult.error?.message || 'ไม่พบ Assignment หลังบันทึก Count');
+    return { handled:true,error:assignmentResult.error || new Error('Assignment not found') };
+  }
+
+  const [snapshotResult,countResult,rules] = await Promise.all([
+    sb.from('stock_snapshot')
+      .select('item_id,onhand_qty')
+      .eq('session_id',assignment.session_id)
+      .eq('location_id',assignment.location_id),
+    sb.from('count_records')
+      .select('item_id,round,count_qty')
+      .eq('assignment_id',aid)
+      .order('round'),
+    getSessionRules(assignment.session_id),
+  ]);
+  if (snapshotResult.error || countResult.error) {
+    const error = snapshotResult.error || countResult.error;
+    if (alertBox) alertBox.innerHTML = errBox(`บันทึก Count แล้ว แต่ตรวจสอบ DIFF ไม่สำเร็จ: ${error.message}`);
+    return { handled:true,error };
+  }
+
+  const snapshots = snapshotResult.data || [];
+  const roundsByItem = {};
+  (countResult.data || []).forEach(record => {
+    const key = String(record.item_id || '');
+    roundsByItem[key] = roundsByItem[key] || {};
+    roundsByItem[key][Number(record.round)] = Number(record.count_qty);
+  });
+  const workflow = deriveAssignmentWorkflowStatus(snapshots,roundsByItem,rules,assignment.status);
+  const snapshotByItem = Object.fromEntries(snapshots.map(snapshot => [String(snapshot.item_id),snapshot]));
+  const itemDecision = itemId => {
+    const key = String(itemId || '');
+    const snapshot = snapshotByItem[key];
+    const rounds = roundsByItem[key] || {};
+    return {
+      itemId:key,
+      snapshot,
+      rounds,
+      status:snapshot ? computeItemStatus(snapshot.onhand_qty,rounds[1],rounds[2],rounds[3],rules) : '',
+      nextRound:snapshot ? determineItemNextRequiredRound(snapshot,rounds,rules) : null,
+    };
+  };
+  const candidateDecisions = candidateKeys.map(itemDecision).filter(decision => decision.snapshot);
+  const immediateRecount = candidateDecisions.find(decision => decision.nextRound && decision.nextRound > 1);
+  const allTerminal = workflow.itemStatuses.length > 0
+    && workflow.itemStatuses.every(status => status === 'OK' || status === 'Diff');
+  const desiredStatus = workflow.effectiveStatus || 'in_progress';
+
+  if (assignment.status !== desiredStatus) {
+    const previousStatus = assignment.status;
+    const statusResult = await sb.from('assignments')
+      .update({ status:desiredStatus })
+      .eq('id',aid)
+      .select('id,status');
+    if (statusResult.error || !statusResult.data?.length) {
+      if (alertBox) alertBox.innerHTML = errBox(statusResult.error?.message || 'บันทึก Count แล้ว แต่ปรับสถานะงานไม่สำเร็จ');
+      return { handled:true,error:statusResult.error || new Error('Assignment status was not updated') };
+    }
+    assignment.status = desiredStatus;
+    if (window._countFoundContext) window._countFoundContext.assignmentStatus = desiredStatus;
+    await logAudit(
+      assignment.session_id,
+      assignment.location_id,
+      null,
+      'count_workflow_update',
+      `สถานะ ${previousStatus || 'pending'}`,
+      `สถานะ ${desiredStatus} · ตรวจ DIFF หลังบันทึกทันที`,
+      aid,
+    );
+  }
+
+  if (annualJobId) {
+    try {
+      await refreshAnnualJobsForLocation(assignment.session_id,assignment.location_id,annualJobId);
+    } catch (error) {
+      if (alertBox) alertBox.innerHTML = errBox(`บันทึก Count แล้ว แต่สรุปสถานะ JOB ไม่สำเร็จ: ${error.message || error}`);
+      return { handled:true,error };
+    }
+  }
+
+  if (immediateRecount) {
+    const latestRound = Math.max(...Object.keys(immediateRecount.rounds).map(Number));
+    const latestQty = immediateRecount.rounds[latestRound];
+    const variance = Number(latestQty) - Number(immediateRecount.snapshot.onhand_qty);
+    const varianceMessage = window._countEntryShowOH && Number.isFinite(variance)
+      ? `DIFF ${countEntryVarianceText(variance)} · เปิด Count ${immediateRecount.nextRound} ของ Item เดิม`
+      : `ยอดไม่ตรง · เปิด Count ${immediateRecount.nextRound} ของ Item เดิม`;
+    await showCountResultPopup({
+      kind:'warning',
+      title:'พบยอด DIFF',
+      message:varianceMessage,
+      duration:1750,
+    });
+    go('c-count',immediateCountRouteExtra(aid,annualJobId,immediateRecount.itemId),{ replace:true });
+    return { handled:true,navigated:true,nextRound:immediateRecount.nextRound,itemId:immediateRecount.itemId };
+  }
+
+  if (allTerminal) {
+    window._photoMap = {};
+    if (workflow.hasDiff) {
+      await showCountResultPopup({ kind:'danger',title:'ยอดยังไม่ตรง',message:'นับครบแล้ว · ส่งให้หัวหน้างานตรวจสอบ' });
+    } else {
+      await showCountResultPopup({ kind:'success',title:'บันทึกสำเร็จ',message:'ยอดตรงครบทุก Item' });
+    }
+    if (await openNextCountFromCachedTasks(aid,assignment,desiredStatus,annualJobId)) {
+      return { handled:true,navigated:true,completed:true };
+    }
+    returnToMyTasksAndOpenNextCount(aid,assignment,annualJobId);
+    return { handled:true,navigated:true,completed:true };
+  }
+
+  const startedNext = snapshots
+    .map(snapshot => itemDecision(snapshot.item_id))
+    .find(decision => decision.nextRound && decision.nextRound > 1);
+  const anyNext = startedNext || snapshots
+    .map(snapshot => itemDecision(snapshot.item_id))
+    .find(decision => decision.nextRound);
+  const terminalDiff = candidateDecisions.find(decision => decision.status === 'Diff');
+  if (terminalDiff) {
+    await showCountResultPopup({
+      kind:'danger',
+      title:'ยอดยังไม่ตรง',
+      message:'Item นี้นับครบรอบแล้ว · ทำ Item ถัดไป',
+      duration:1550,
+    });
+  } else if (source === 'handheld-ok') {
+    handheldScanFeedback(
+      'success',
+      uiCopy('บันทึกและตรวจสอบแล้ว','Saved and Checked'),
+      '',
+      uiCopy('พร้อมนับ Item ถัดไป','Ready for the next Item'),
+    );
+  }
+  if (anyNext) {
+    go('c-count',immediateCountRouteExtra(aid,annualJobId,anyNext.itemId),{ replace:true });
+    return { handled:true,navigated:true,itemId:anyNext.itemId,nextRound:anyNext.nextRound };
+  }
+  return { handled:false };
+}
+
 async function confirmAndAdvanceCountInput(input,{ source='screen-keypad' }={}) {
   if (!input?.classList?.contains('cqty') || input.disabled) return false;
   if (input.dataset.countConfirmPending === 'true') return false;
@@ -34491,6 +34794,16 @@ async function confirmAndAdvanceCountInput(input,{ source='screen-keypad' }={}) 
       }
       navigator.vibrate?.([45,35,45]);
       return false;
+    }
+
+    if (input.dataset.countDeferredFound !== 'true') {
+      const workflowResult = await resolveCountWorkflowAfterSave({
+        aid:window._countFoundContext?.assignmentId,
+        candidateItemIds:[input.dataset.itemId],
+        annualJobId:window._countEntryAnnualJobId || '',
+        source,
+      });
+      if (workflowResult.handled) return !workflowResult.error;
     }
 
     input.dispatchEvent(new Event('change',{ bubbles:true }));
@@ -35441,6 +35754,22 @@ async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
     )];
   });
   await writeAuditRows(countAuditRows);
+
+  // Every explicit save button shares the same post-save DIFF decision. This
+  // includes the bottom confirmation button on desktop/tablet/mobile. Empty
+  // Location discoveries keep their dedicated Found Work transaction below.
+  if (!pauseAndContinue && !foundPayloads.length) {
+    const workflowResult = await resolveCountWorkflowAfterSave({
+      aid,
+      candidateItemIds:recs.map(record => record.item_id),
+      annualJobId,
+      source:'page-save-button',
+    });
+    if (workflowResult.handled) {
+      if (workflowResult.error) restoreButton();
+      return;
+    }
+  }
 
   if (!roundIsComplete || pauseAndContinue) {
     // A partial confirmation is a durable checkpoint, not the end of a Count
@@ -55264,7 +55593,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.115' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.116' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -55525,7 +55854,7 @@ async function exportBackupZip() {
       format:BACKUP_ZIP_FORMAT,
       version:BACKUP_ZIP_VERSION,
       created_at:new Date().toISOString(),
-      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.115',
+      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.116',
       excel_file:excelFileName,
       excel_sha256:excelSha256,
       excel_manifest_hash:built.manifestHash,
@@ -56798,7 +57127,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.115" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.116" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
