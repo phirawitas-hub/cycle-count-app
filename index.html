@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.117</title>
+<title>Cycle Count V1.121</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -37,7 +37,8 @@
 <!-- V1.114: แก้ Dashboard บน iPad แนวตั้ง ไม่ให้ค่า Zoom/ความสูงชดเชยดันกริดลงด้านล่าง -->
 <!-- V1.115: จัด Dashboard iPad แนวตั้งให้เริ่มชิดด้านบนเต็มสัดส่วน และคืนปุ่มเปิด Sidebar -->
 <!-- V1.116: ทุกปุ่มบันทึก Count ตรวจ DIFF ทันที และเปิด Count รอบถัดไปของ Item เดิมโดยไม่รอครบ Location -->
-<!-- V1.117: เปิดช่องนับทุก Item ตามรอบของตัวเองพร้อมกัน ไม่บังคับนับตามลำดับ Item และบันทึกรวมแยกรอบต่อ Item -->
+<!-- V1.120: Import WMS แบบ authoritative ภายในขอบเขต ลบ LPN/Lot ที่หายและตั้ง OH/AL ของ Snapshot ที่หายเป็น 0 โดยคงประวัติ Count -->
+<!-- V1.121: ผังคลังใช้การปิด WMS ระดับ Location เป็นสถานะสุดท้าย ตรวจ approval ซ้ำ และเพิ่มรายละเอียดขั้นตอน/Item/ยอด/ผู้ตรวจนับ -->
 <!-- V1.112: แก้ Flow ยืนยัน Item ให้ส่งเข้าคิวปรับปรุงยอด WMS ทันที และรองรับรายการเดิมที่ released_to_wms=false -->
 <!-- V1.111: เพิ่มกล่องยอดยืนยันและ Variance ต่อจาก COUNT 3 ในรายการปรับยอด WMS -->
 <!-- V1.110: รายการ DIFF ที่ Supervisor ยืนยันแล้วจัดเป็นรอ WMS เสมอ ไม่ย้อนกลับไปเป็นรอ Variance -->
@@ -11716,6 +11717,7 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
 .warehouse-validation-card.error{background:#fff0ed;border-color:#f0c1b9;color:#c84739}
 .warehouse-layout-dialog-backdrop{position:fixed;inset:0;z-index:5000;background:rgba(19,48,52,.48);backdrop-filter:blur(4px);display:grid;place-items:center;padding:18px}
 .warehouse-layout-dialog{width:min(680px,96vw);max-height:86vh;overflow:auto;border-radius:23px;background:#fff;box-shadow:0 24px 70px rgba(9,39,43,.28)}
+.warehouse-layout-dialog.is-wide{width:min(1120px,96vw)}
 .warehouse-layout-dialog-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:17px 19px;border-bottom:1px solid rgba(0,120,128,.1)}
 .warehouse-layout-dialog-head strong{color:var(--text-main);font-size:18px}
 .warehouse-layout-dialog-close{appearance:none;width:36px;height:36px;border:0;border-radius:12px;background:#edf6f5;color:#315e61;font-size:21px;cursor:pointer}
@@ -11725,6 +11727,37 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
 .warehouse-layout-detail-card{padding:11px 12px;border-radius:13px;background:#f4f9f8}
 .warehouse-layout-detail-card span{display:block;color:var(--text-muted);font-size:9px;font-weight:800}
 .warehouse-layout-detail-card strong{display:block;margin-top:4px;color:var(--text-main);font-size:12px}
+.warehouse-location-detail-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.warehouse-location-detail-status{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}
+.warehouse-location-current-stage{margin-top:14px;padding:14px 15px;border:1px solid rgba(0,120,128,.15);border-radius:16px;background:linear-gradient(145deg,#eef9f7,#fff)}
+.warehouse-location-current-stage span{display:block;color:var(--text-muted);font-size:9px;font-weight:900;letter-spacing:.06em}
+.warehouse-location-current-stage strong{display:block;margin-top:4px;color:var(--text-main);font-size:15px}
+.warehouse-location-current-stage p{margin:5px 0 0;color:var(--text-muted);font-size:11px;line-height:1.55}
+.warehouse-location-summary{display:grid;grid-template-columns:repeat(5,minmax(92px,1fr));gap:8px;margin-top:14px}
+.warehouse-location-summary-card{padding:11px;border:1px solid rgba(0,120,128,.1);border-radius:14px;background:#f7fbfa;text-align:center}
+.warehouse-location-summary-card span{display:block;color:var(--text-muted);font-size:9px;font-weight:800}
+.warehouse-location-summary-card strong{display:block;margin-top:4px;color:var(--text-main);font:800 20px/1.1 'Fredoka','Mitr',sans-serif}
+.warehouse-location-summary-card.match strong{color:#16875f}.warehouse-location-summary-card.diff strong{color:#ca4439}.warehouse-location-summary-card.pending strong{color:#b06c00}
+.warehouse-location-stage-flow{display:grid;grid-template-columns:repeat(5,minmax(115px,1fr));gap:7px;margin-top:14px}
+.warehouse-location-stage-step{position:relative;padding:10px 11px;border:1px solid rgba(0,120,128,.12);border-radius:13px;background:#f5f8f8;color:#789092;font-size:10px;font-weight:800}
+.warehouse-location-stage-step::before{content:'○';display:inline-block;margin-right:6px}.warehouse-location-stage-step.done{border-color:#9fd8c5;background:#eaf8f2;color:#177456}.warehouse-location-stage-step.done::before{content:'✓'}
+.warehouse-location-stage-step.current{border-color:#e9b65d;background:#fff5de;color:#915b00;box-shadow:0 0 0 2px rgba(233,182,93,.14)}.warehouse-location-stage-step.current::before{content:'●'}
+.warehouse-location-items-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid rgba(0,120,128,.1);flex-wrap:wrap}
+.warehouse-location-items-actions p{margin:0;color:var(--text-muted);font-size:10px}
+.warehouse-location-items-toggle{appearance:none;border:1px solid #168a8d;border-radius:12px;background:#fff;color:#08767b;padding:10px 14px;font:800 11px/1 'Sarabun',sans-serif;cursor:pointer}
+.warehouse-location-items-toggle:hover{background:#eaf7f5}.warehouse-location-items-toggle[aria-expanded="true"]{background:#087f83;color:#fff}
+.warehouse-location-items-panel{margin-top:10px}.warehouse-location-items-panel[hidden]{display:none!important}
+.warehouse-location-items-table-shell{overflow:auto;max-height:48vh;border:1px solid rgba(0,120,128,.12);border-radius:15px;background:#fff;scrollbar-gutter:stable}
+.warehouse-location-items-table{width:100%;min-width:980px;border-collapse:separate;border-spacing:0;font-size:10px}
+.warehouse-location-items-table th{position:sticky;top:0;z-index:2;padding:10px 9px;background:#e8f4f2;color:#335c5f;text-align:left;font-size:9px;white-space:nowrap}
+.warehouse-location-items-table td{padding:10px 9px;border-top:1px solid rgba(0,120,128,.08);color:var(--text-main);vertical-align:top}
+.warehouse-location-items-table tr:first-child td{border-top:0}.warehouse-location-items-table tbody tr:hover td{background:#f7fcfb}
+.warehouse-location-item-code{display:block;font-weight:900;color:#126f74}.warehouse-location-item-desc{display:block;margin-top:3px;color:var(--text-muted);font-size:9px;max-width:240px}
+.warehouse-location-qty{font:800 12px/1.2 'Fredoka','Mitr',sans-serif;white-space:nowrap}.warehouse-location-qty.is-diff{color:#c53f36}.warehouse-location-qty.is-match{color:#177d59}
+.warehouse-location-item-stage{display:inline-flex;padding:5px 7px;border-radius:999px;background:#edf4f3;color:#526d70;font-size:9px;font-weight:900;white-space:nowrap}
+.warehouse-location-item-stage.completed{background:#e5f7ee;color:#157451}.warehouse-location-item-stage.pending{background:#fff1d4;color:#8b5900}.warehouse-location-item-stage.variance{background:#f0eaff;color:#6845b2}.warehouse-location-item-stage.wms_pending{background:#ffe5e1;color:#b7352c}
+.warehouse-location-counter-list{display:grid;gap:3px;min-width:155px}.warehouse-location-counter-list span{color:var(--text-muted);font-size:9px}.warehouse-location-counter-list strong{color:var(--text-main);font-size:10px}
+.warehouse-location-empty-items{padding:24px;text-align:center;color:var(--text-muted);font-size:11px}
 .warehouse-match-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
 .warehouse-match-column{border:1px solid rgba(0,120,128,.12);border-radius:15px;overflow:hidden}
 .warehouse-match-column h4{margin:0;padding:11px 13px;background:#edf7f6;color:var(--text-main);font-size:12px}
@@ -19318,6 +19351,7 @@ body .warehouse-layout-kpi.completed strong{color:var(--warehouse-status-complet
 .warehouse-matrix-rack-stats span.live-completed{background:#16a34a;border-color:#4ade80}
 @media(max-width:900px){.warehouse-layout-metric-section.master .warehouse-layout-kpis,.warehouse-layout-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.warehouse-matrix-rack{grid-template-columns:174px auto}.warehouse-matrix-rack-name{min-width:174px}}
 @media(max-width:560px){.warehouse-layout-live-badge{margin-left:0}.warehouse-layout-metric-section.master .warehouse-layout-kpis,.warehouse-layout-kpis{grid-template-columns:1fr 1fr}.warehouse-matrix-rack{grid-template-columns:158px auto}.warehouse-matrix-rack-name{min-width:158px}}
+@media(max-width:760px){.warehouse-location-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.warehouse-location-stage-flow{grid-template-columns:1fr 1fr}.warehouse-location-stage-step:last-child{grid-column:1/-1}}
 
 /* V1.18 · Session selector uses one clean outer frame. */
 #app .dashboard-session-filter .dashboard-filter-copy{
@@ -20747,7 +20781,7 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
 .wms-import-inline-summary {
   margin-top: 9px;
   display: grid;
-  grid-template-columns: repeat(3,minmax(0,1fr));
+  grid-template-columns: repeat(auto-fit,minmax(140px,1fr));
   gap: 7px;
 }
 .wms-import-inline-summary span {
@@ -22082,15 +22116,255 @@ body.count-issue-open { overscroll-behavior:none; }
     align-self:stretch !important;
   }
 }
+
+/* ══════════════════════════════════════════════════════════
+   V1.118 — Count-team overlay + universal Item search/scan
+   ══════════════════════════════════════════════════════════ */
+body.counter-picker-open.count-page-active #app .count-header-card {
+  position:relative !important;
+  z-index:1450 !important;
+  overflow:visible !important;
+}
+body.counter-picker-open.count-page-active #app .counter-picker-menu {
+  z-index:1500 !important;
+}
+
+.count-item-lookup {
+  min-width:0;
+  margin-top:14px;
+  padding:12px;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 30%,var(--theme-border-color));
+  border-radius:18px;
+  background:color-mix(in srgb,var(--theme-card-bg) 90%,var(--theme-primary-color) 10%);
+}
+.count-item-lookup-head {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+}
+.count-item-lookup-copy {
+  flex:1 1 auto;
+  min-width:0;
+}
+.count-item-lookup-copy strong {
+  display:block;
+  color:var(--theme-heading-color);
+  font-size:13px;
+  font-weight:900;
+  line-height:1.25;
+}
+.count-item-lookup-copy span {
+  display:block;
+  margin-top:3px;
+  color:var(--theme-muted-text-color);
+  font-size:10px;
+  font-weight:650;
+  line-height:1.4;
+}
+.count-item-camera-button {
+  flex:0 0 auto;
+  min-height:42px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  padding:8px 13px;
+  border:0;
+  border-radius:13px;
+  background:var(--theme-primary-color);
+  color:var(--theme-primary-text);
+  font:800 12px/1.2 'Mitr','Sarabun',sans-serif;
+  cursor:pointer;
+}
+.count-item-camera-button svg {
+  width:19px;
+  height:19px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:2;
+}
+.count-item-search-row {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:8px;
+  margin-top:11px;
+}
+.count-item-search-row input {
+  width:100%;
+  min-width:0;
+  min-height:46px;
+  margin:0 !important;
+  font-family:ui-monospace,'Mitr',sans-serif !important;
+  font-weight:750 !important;
+  text-transform:uppercase;
+}
+.count-item-search-button {
+  min-width:84px;
+  min-height:46px;
+  padding:9px 14px;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 45%,var(--theme-border-color));
+  border-radius:13px;
+  background:var(--theme-surface-color);
+  color:var(--theme-primary-color);
+  font:850 12px/1.2 'Mitr','Sarabun',sans-serif;
+  cursor:pointer;
+}
+.count-item-search-results {
+  margin-top:8px;
+  padding:8px;
+  border:1px solid var(--theme-border-color);
+  border-radius:14px;
+  background:var(--theme-card-bg);
+  box-shadow:0 12px 26px rgba(20,65,68,.12);
+}
+.count-item-search-results[hidden] { display:none !important; }
+.count-item-search-results-head {
+  padding:3px 5px 7px;
+  color:var(--theme-muted-text-color);
+  font-size:10px;
+  font-weight:800;
+}
+.count-item-search-result {
+  width:100%;
+  min-height:44px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:8px 10px;
+  border:0;
+  border-radius:11px;
+  background:transparent;
+  color:var(--theme-body-text-color);
+  cursor:pointer;
+  text-align:left;
+}
+.count-item-search-result:hover,
+.count-item-search-result:focus-visible {
+  background:color-mix(in srgb,var(--theme-primary-color) 10%,var(--theme-card-bg));
+  outline:none;
+}
+.count-item-search-result strong {
+  display:block;
+  color:var(--theme-heading-color);
+  font-family:ui-monospace,'Mitr',sans-serif;
+  font-size:12px;
+  overflow-wrap:anywhere;
+}
+.count-item-search-result span {
+  min-width:0;
+  flex:1 1 auto;
+  overflow:hidden;
+  color:var(--theme-muted-text-color);
+  font-size:10px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.count-item-search-result b {
+  flex:0 0 auto;
+  color:var(--theme-primary-color);
+  font-size:11px;
+}
+.count-item-laser-row {
+  min-width:0;
+  display:grid;
+  grid-template-columns:auto minmax(180px,1fr);
+  align-items:center;
+  gap:8px;
+  margin-top:9px;
+  padding-top:9px;
+  border-top:1px dashed color-mix(in srgb,var(--theme-primary-color) 28%,var(--theme-border-color));
+}
+.count-item-laser-row label {
+  color:var(--theme-muted-text-color);
+  font-size:9px;
+  font-weight:800;
+  white-space:nowrap;
+}
+.count-item-laser-row .handheld-laser-input {
+  width:100%;
+  min-height:40px;
+}
+
+@media (max-width:760px) {
+  .count-item-lookup { margin-top:9px;padding:9px;border-radius:15px; }
+  .count-item-lookup-head { align-items:flex-start;gap:8px; }
+  .count-item-lookup .handheld-laser-icon { width:34px;height:34px;flex-basis:34px; }
+  .count-item-lookup-copy strong { font-size:11px; }
+  .count-item-lookup-copy span { font-size:9px; }
+  .count-item-camera-button { min-width:42px;min-height:40px;padding:7px 9px;font-size:0; }
+  .count-item-camera-button svg { width:21px;height:21px; }
+  .count-item-search-row { margin-top:8px;gap:6px; }
+  .count-item-search-row input { min-height:44px;font-size:12px !important; }
+  .count-item-search-button { min-width:67px;min-height:44px;padding:7px 9px;font-size:11px; }
+  .count-item-laser-row { grid-template-columns:1fr;gap:5px; }
+  .count-item-laser-row label { white-space:normal; }
+  .count-item-laser-row .handheld-laser-input { display:block !important;grid-column:auto;width:100%; }
+}
+
+/* V1.119 — The scanner/search panel and KPI strip travel as one sticky stack.
+   Keeping one sticky parent prevents the two variable-height panels from
+   colliding when search suggestions open or the viewport changes. */
+body.count-page-active #app .count-handheld-page .count-sticky-stack {
+  position:sticky !important;
+  z-index:88 !important;
+  top:calc(var(--count-sticky-header-height, var(--topbar-height, 70px)) + 6px) !important;
+  min-width:0;
+  display:grid;
+  gap:6px;
+  margin:8px 2px 14px;
+  padding:4px 0 6px;
+  overflow:visible;
+  border-radius:20px;
+  background:var(--theme-page-bg);
+  background:color-mix(in srgb,var(--theme-page-bg) 96%,transparent);
+  box-shadow:0 8px 22px rgba(12,63,66,.10);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  isolation:isolate;
+  transform:translateZ(0);
+}
+body.count-page-active #app .count-sticky-stack .count-item-lookup {
+  position:relative;
+  z-index:2;
+  margin:0 !important;
+}
+body.count-page-active #app .count-sticky-stack .count-item-search-results {
+  max-height:min(34dvh,300px);
+  overflow-y:auto;
+  overscroll-behavior:contain;
+}
+body.count-page-active #app .count-sticky-stack .count-entry-progress {
+  position:relative !important;
+  z-index:1 !important;
+  top:auto !important;
+  margin:0 !important;
+  transform:none !important;
+  scroll-margin-top:0 !important;
+}
+
+@media (max-width:760px) {
+  body.count-page-active #app .count-handheld-page .count-sticky-stack {
+    top:calc(var(--count-sticky-header-height, 52px) + 4px) !important;
+    gap:4px;
+    margin:6px -2px 9px;
+    padding:3px 2px 5px;
+    border-radius:16px;
+  }
+  body.count-page-active #app .count-sticky-stack .count-item-search-results {
+    max-height:min(28dvh,220px);
+  }
+}
 </style>
 </head>
-<body data-build="v1-102">
+<body data-build="v1-121">
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.117';
+const APP_VERSION = '1.121';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
-const APP_BUILD_ID = 'v1-102';
+const APP_BUILD_ID = 'v1-121';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
 
 // V1.84 performance: keep the login and ordinary work pages light.  Large
@@ -23611,7 +23885,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.117':'e.g. Warehouse V1.117',
+  'เช่น Warehouse V1.121':'e.g. Warehouse V1.121',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -27252,6 +27526,7 @@ function syncNavigationStateGlobals() {
 }
 
 function go(page, extra = {}, navOptions = {}) {
+  document.body.classList.remove('counter-picker-open');
   const currentPage = S?.page || '';
   if (currentPage === 'ad-branding' && page !== 'ad-branding' && S._brandingSavedSnapshot) {
     S._activeThemeSetId = S._brandingSavedSnapshot.activeThemeSetId || '';
@@ -28638,6 +28913,7 @@ function wmsImportChangePanelHtml(kind,title,description,facts=[]) {
 
 function wmsImportSnapshotDetailHtml(change={}) {
   const isNew = change.type === 'new';
+  const isRemoved = change.type === 'removed';
   const ohText = isNew
     ? `OH ใหม่ <b>${escapeWmsText(change.newOH ?? '—')}</b>`
     : `OH <span class="is-change">${escapeWmsText(change.oldOH ?? '—')} → ${escapeWmsText(change.newOH ?? '—')}</span>`;
@@ -28648,13 +28924,14 @@ function wmsImportSnapshotDetailHtml(change={}) {
     : 'AL ไม่เปลี่ยน';
   return `<div class="wms-import-detail-row" data-i18n-skip>
     <strong>${escapeWmsText(change.location || '—')}<br>${escapeWmsText(change.item || '—')}</strong>
-    <span>${isNew ? 'เพิ่ม Snapshot ใหม่' : 'อัปเดต OH / AL'}</span>
+    <span>${isNew ? 'เพิ่ม Snapshot ใหม่' : isRemoved ? 'ไม่อยู่ในไฟล์ใหม่ · ตั้งยอดเป็น 0' : 'อัปเดต OH / AL'}</span>
     <span>${ohText}<br>${alText}</span>
   </div>`;
 }
 
 function wmsImportLpnDetailHtml(change={}) {
   const isNew = change.type === 'new';
+  const isRemoved = change.type === 'removed';
   const qtyText = isNew
     ? `QTY ใหม่ <b>${escapeWmsText(change.newQty ?? '—')}</b>`
     : `QTY <span class="is-change">${escapeWmsText(change.oldQty ?? '—')} → ${escapeWmsText(change.newQty ?? '—')}</span>`;
@@ -28667,7 +28944,7 @@ function wmsImportLpnDetailHtml(change={}) {
   return `<div class="wms-import-detail-row" data-i18n-skip>
     <strong>${escapeWmsText(change.location || '—')}<br>${escapeWmsText(change.item || '—')}</strong>
     <span>${metadata}</span>
-    <span>${isNew ? 'เพิ่ม LPN/Lot ใหม่' : 'อัปเดต LPN/Lot'}<br>${qtyText}${change.metaChanged ? '<br><span class="is-change">Status / UOM เปลี่ยน</span>' : ''}</span>
+    <span>${isNew ? 'เพิ่ม LPN/Lot ใหม่' : isRemoved ? 'ไม่อยู่ในไฟล์ใหม่ · นำออกจาก Snapshot' : 'อัปเดต LPN/Lot'}<br>${qtyText}${change.metaChanged ? '<br><span class="is-change">Status / UOM เปลี่ยน</span>' : ''}</span>
   </div>`;
 }
 
@@ -29239,7 +29516,7 @@ function determineImmediateCountRound(snapshotRows,itemRounds,rules,preferredIte
   if (preferredRound) return preferredRound;
 
   // Prefer an Item whose recount has started only for initial focus/header.
-  // V1.117 still renders every other Item's own next round as editable.
+  // V1.120 still renders every other Item's own next round as editable.
   const startedPending = snapshots.find(snapshot => {
     const rounds = roundsByItem[snapshot.item_id] || {};
     const nextRound = determineItemNextRequiredRound(snapshot,rounds,rules);
@@ -31153,6 +31430,38 @@ function hardwareLaserCaptureHtml(id,context,instruction) {
   const captureInputMode = isNarrowHandheldTerminal() ? 'text' : 'none';
   const shouldAutofocus = context === 'task-location';
   const buildLabel = shouldAutofocus ? ' · v205' : '';
+  if (context === 'count-verify') {
+    return `<section class="count-item-lookup" data-i18n-skip aria-label="สแกนหรือค้นหาสินค้า">
+      <div class="count-item-lookup-head">
+        <span class="handheld-laser-icon">${barcodeScanIconSvg()}</span>
+        <span class="count-item-lookup-copy">
+          <strong>${escapeWmsText(uiCopy('สแกนหรือค้นหา SKU / LPN','Scan or Search SKU / LPN'))}</strong>
+          <span>${escapeWmsText(uiCopy('พิมพ์บางส่วนได้ เช่น 5104 เพื่อค้นหา RMPW2605104','Enter a partial code, such as 5104, to find RMPW2605104'))}</span>
+        </span>
+        <button type="button" class="count-item-camera-button" onclick="openCountBarcodeScanner()"
+          title="${escapeWmsText(uiCopy('เปิดกล้องสแกน Barcode','Open Camera Barcode Scanner'))}">
+          ${barcodeScanIconSvg()}<span>${escapeWmsText(uiCopy('สแกน','Scan'))}</span>
+        </button>
+      </div>
+      <div class="count-item-search-row">
+        <input type="search" id="count_item_search" autocomplete="off" autocapitalize="characters" spellcheck="false"
+          enterkeyhint="search" placeholder="${escapeWmsText(uiCopy('ค้นหา SKU / LPN บางส่วน เช่น 5104','Search partial SKU / LPN, e.g. 5104'))}"
+          oninput="scheduleCountItemSearch()"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();submitCountItemSearch();}">
+        <button type="button" class="count-item-search-button" onclick="submitCountItemSearch()">${escapeWmsText(uiCopy('ค้นหา','Search'))}</button>
+      </div>
+      <div class="count-item-search-results" id="count_item_search_results" hidden></div>
+      <div class="count-item-laser-row">
+        <label for="${escapeWmsText(id)}">${escapeWmsText(uiCopy('เลเซอร์ Handheld / USB Scanner','Handheld Laser / USB Scanner'))}</label>
+        <input class="handheld-laser-input" id="${escapeWmsText(id)}"
+          data-hw-scan-capture="true" data-hw-scan-context="${escapeWmsText(context)}"
+          inputmode="${captureInputMode}" enterkeyhint="go" autocomplete="off" autocapitalize="characters" spellcheck="false"
+          aria-label="${escapeWmsText(uiCopy('ช่องรับ Barcode จากเลเซอร์หรือ USB Scanner','Laser or USB Scanner Barcode Input'))}"
+          placeholder="${escapeWmsText(uiCopy('คลิกช่องนี้แล้วกดปุ่มยิง Barcode','Click here, then press the scanner trigger'))}"
+          onfocus="this.select()">
+      </div>
+    </section>`;
+  }
   return `<div class="handheld-laser-bar" data-i18n-skip
     ${shouldAutofocus ? 'onpointerdown="focusTaskLocationCapture({force:true,reconnect:true})"' : ''}>
     <span class="handheld-laser-icon">${barcodeScanIconSvg()}</span>
@@ -32444,6 +32753,114 @@ function scanIntoField(targetId, label='ข้อมูล') {
 
 function openScanner() {
   openBarcodeScanner({ title:'สแกน Location', onDetected:onTaskLocationScanned });
+}
+
+function openCountBarcodeScanner() {
+  openBarcodeScanner({
+    title:uiCopy('สแกน SKU / LPN / Location','Scan SKU / LPN / Location'),
+    onDetected:value => routeHardwareLaserScan(value,null),
+  });
+}
+
+let _countItemSearchTimer = null;
+
+function countItemSearchMatches(rawQuery='') {
+  const query = hardwareScanCompareKey(rawQuery);
+  if (query.length < 2) return [];
+  return [...document.querySelectorAll('.count-handheld-page .citem-wrap[data-hw-item-id]')]
+    .map(wrapper => {
+      const itemCode = normalizeHardwareScanValue(wrapper.dataset.hwItemCode || '');
+      const itemKey = hardwareScanCompareKey(itemCode);
+      const lpCodes = String(wrapper.dataset.hwLpCodes || '').split('|').filter(Boolean);
+      const lpKeys = lpCodes.map(hardwareScanCompareKey);
+      const description = normalizeHardwareScanValue(wrapper.dataset.hwItemDescription || '');
+      const descriptionKey = hardwareScanCompareKey(description);
+      let rank = 99;
+      if (itemKey === query) rank = 0;
+      else if (lpKeys.includes(query)) rank = 1;
+      else if (itemKey.startsWith(query)) rank = 2;
+      else if (lpKeys.some(key => key.startsWith(query))) rank = 3;
+      else if (itemKey.includes(query)) rank = 4;
+      else if (lpKeys.some(key => key.includes(query))) rank = 5;
+      else if (descriptionKey.includes(query)) rank = 6;
+      return { wrapper,itemCode,description,rank };
+    })
+    .filter(result => result.rank < 99)
+    .sort((left,right) => left.rank - right.rank
+      || left.itemCode.localeCompare(right.itemCode,'th',{ numeric:true }));
+}
+
+function renderCountItemSearchResults(matches=[],query='') {
+  const panel = Q('count_item_search_results');
+  if (!panel) return;
+  if (!query || !matches.length) {
+    panel.hidden = true;
+    panel.innerHTML = '';
+    return;
+  }
+  const visibleMatches = matches.slice(0,8);
+  panel.innerHTML = `<div class="count-item-search-results-head">
+      ${escapeWmsText(uiCopy(`พบ ${matches.length} รายการ · แตะ SKU ที่ต้องการ`,`Found ${matches.length} items · Select an SKU`))}
+    </div>${visibleMatches.map(result => `<button type="button" class="count-item-search-result"
+      data-item-id="${escapeWmsText(result.wrapper.dataset.hwItemId || '')}"
+      onclick="chooseCountItemSearchResult(this.dataset.itemId)">
+      <strong data-i18n-skip>${escapeWmsText(result.itemCode || '—')}</strong>
+      <span data-i18n-skip>${escapeWmsText(result.description || uiCopy('ไม่มีรายละเอียด','No description'))}</span>
+      <b>${escapeWmsText(uiCopy('เลือก','Select'))}</b>
+    </button>`).join('')}`;
+  panel.hidden = false;
+}
+
+function scheduleCountItemSearch() {
+  clearTimeout(_countItemSearchTimer);
+  const input = Q('count_item_search');
+  const query = normalizeHardwareScanValue(input?.value || '');
+  if (query.length < 2) {
+    renderCountItemSearchResults([],query);
+    return;
+  }
+  _countItemSearchTimer = setTimeout(() => {
+    renderCountItemSearchResults(countItemSearchMatches(query),query);
+  },140);
+}
+
+function chooseCountItemSearchResult(itemId='') {
+  const wrapper = [...document.querySelectorAll('.count-handheld-page .citem-wrap[data-hw-item-id]')]
+    .find(card => String(card.dataset.hwItemId || '') === String(itemId));
+  if (!wrapper) return false;
+  const routeValue = normalizeHardwareScanValue(wrapper.dataset.hwItemCode || '')
+    || String(wrapper.dataset.hwLpCodes || '').split('|').find(Boolean)
+    || '';
+  if (!routeValue) return false;
+  const input = Q('count_item_search');
+  if (input) input.value = '';
+  renderCountItemSearchResults([],'');
+  return handleCountHardwareScan(routeValue,null);
+}
+
+function submitCountItemSearch() {
+  clearTimeout(_countItemSearchTimer);
+  const input = Q('count_item_search');
+  const query = normalizeHardwareScanValue(input?.value || '');
+  if (hardwareScanCompareKey(query).length < 2) {
+    handheldScanFeedback('warning',uiCopy('กรอกรหัสอย่างน้อย 2 ตัว','Enter at Least 2 Characters'),query,uiCopy('ค้นหาได้จาก SKU, LPN หรือรายละเอียดสินค้า','Search by SKU, LPN or item description'));
+    input?.focus();
+    return false;
+  }
+  const matches = countItemSearchMatches(query);
+  if (!matches.length) {
+    renderCountItemSearchResults([],query);
+    handheldScanFeedback('error',uiCopy('ไม่พบ SKU / LPN ใน Location นี้','SKU / LPN Not Found in This Location'),query,uiCopy('ตรวจสอบรหัสแล้วลองอีกครั้ง','Check the code and try again'));
+    input?.focus();
+    input?.select?.();
+    return false;
+  }
+  if (matches.length === 1) {
+    return chooseCountItemSearchResult(matches[0].wrapper.dataset.hwItemId || '');
+  }
+  renderCountItemSearchResults(matches,query);
+  handheldScanFeedback('warning',uiCopy(`พบ ${matches.length} รายการ`,`Found ${matches.length} Items`),query,uiCopy('เลือก SKU ที่ต้องการจากรายการด้านล่าง','Select the required SKU from the list below'));
+  return true;
 }
 
 function hardwareScanCandidateKeys(value='') {
@@ -34081,6 +34498,7 @@ async function loadCCount() {
     items += `<div class="citem-wrap ${resolvedBeforeRound ? `is-count-resolved is-count-inactive-${countEntryRow.inactiveState}` : ''}"
       data-hw-item-id="${escapeWmsText(String(it.id))}"
       data-hw-item-code="${escapeWmsText(it?.code || '')}"
+      data-hw-item-description="${escapeWmsText(it?.description || '')}"
       data-hw-lp-codes="${escapeWmsText(hardwareLpCodes)}"
       data-count-item-status="${countEntryRow.itemStatus || ''}"
       data-count-next-round="${countEntryRow.itemNextRound || ''}">
@@ -34270,11 +34688,6 @@ async function loadCCount() {
         <span class="tag ${showOH?'tag-green':'tag-gray'}">${showOH?'OH + AL':'🔒 Blind Count'}</span>
       </div>
       ${countTouchToolbarHtml()}
-      ${hardwareLaserCaptureHtml(
-        'count_hardware_scan',
-        'count-verify',
-        uiCopy('ยิง Location, LPN หรือ Item เพื่อค้นหาและเลือกช่องนับ','Scan a Location, LPN or Item to find the count line'),
-      )}
       ${recountPendingCount > 0 ? `<div class="alert alert-amber count-round-warning" style="margin-top:16px">
         🔄 มี ${recountPendingCount} Item ที่ต้องนับซ้ำ — แต่ละ Item แสดง COUNT รอบของตัวเอง และเลือกนับลำดับใดก่อนก็ได้
       </div>` : ''}
@@ -34305,18 +34718,25 @@ async function loadCCount() {
       </div>
     </div>
       <div class="sec count-items-summary">📦 รอนับ ${activeCountRows.length} รายการ · นับซ้ำ ${recountPendingCount} รายการ · ผ่านแล้ว ${window._countEntryResolvedMatchCount} รายการ — เลือก Item ลำดับใดก็ได้ ระบบบันทึกตาม COUNT R ของแต่ละ Item</div>
-      <div class="count-entry-progress" aria-label="สรุปผลการนับรายการสินค้า">
-        <div class="count-entry-progress-item">
-          <strong id="countProgressSaved">0/${activeCountRows.length}</strong><span>บันทึกแล้ว</span>
-        </div>
-        <div class="count-entry-progress-item is-match">
-          <strong id="countProgressMatch">${window._countEntryResolvedMatchCount}</strong><span>ตรง / ผ่าน</span>
-        </div>
-        <div class="count-entry-progress-item is-diff">
-          <strong id="countProgressDiff">${initialDiffCount}</strong><span>DIFF / ต้องนับใหม่</span>
-        </div>
-        <div class="count-entry-progress-item is-remaining">
-          <strong id="countProgressRemaining">${activeCountRows.length}</strong><span>คงเหลือ</span>
+      <div class="count-sticky-stack" aria-label="เครื่องมือค้นหาและสรุปผลการนับ">
+        ${hardwareLaserCaptureHtml(
+          'count_hardware_scan',
+          'count-verify',
+          uiCopy('ยิง Location, LPN หรือ Item เพื่อค้นหาและเลือกช่องนับ','Scan a Location, LPN or Item to find the count line'),
+        )}
+        <div class="count-entry-progress" aria-label="สรุปผลการนับรายการสินค้า">
+          <div class="count-entry-progress-item">
+            <strong id="countProgressSaved">0/${activeCountRows.length}</strong><span>บันทึกแล้ว</span>
+          </div>
+          <div class="count-entry-progress-item is-match">
+            <strong id="countProgressMatch">${window._countEntryResolvedMatchCount}</strong><span>ตรง / ผ่าน</span>
+          </div>
+          <div class="count-entry-progress-item is-diff">
+            <strong id="countProgressDiff">${initialDiffCount}</strong><span>DIFF / ต้องนับใหม่</span>
+          </div>
+          <div class="count-entry-progress-item is-remaining">
+            <strong id="countProgressRemaining">${activeCountRows.length}</strong><span>คงเหลือ</span>
+          </div>
         </div>
       </div>
     <div class="card card-flush count-items-card">${items}</div>
@@ -35078,6 +35498,7 @@ function toggleCounterDropdown(event) {
   const willOpen = menu.hidden;
   menu.hidden = !willOpen;
   trigger.setAttribute('aria-expanded', String(willOpen));
+  document.body.classList.toggle('counter-picker-open',willOpen);
 }
 
 function closeCounterDropdown() {
@@ -35085,6 +35506,7 @@ function closeCounterDropdown() {
   const trigger = Q('counterPickerTrigger');
   if (menu) menu.hidden = true;
   if (trigger) trigger.setAttribute('aria-expanded', 'false');
+  document.body.classList.remove('counter-picker-open');
 }
 
 document.addEventListener('click', event => {
@@ -38656,6 +39078,7 @@ async function fetchWarehouseLayoutLiveSessionData(sessionId,sessionName='') {
     assignments:normalizedAssignments,
     counts,
     approvals,
+    rules,
     loadedAt:new Date().toISOString(),
   };
 }
@@ -39720,23 +40143,67 @@ function warehouseLayoutStatusInfo(status) {
     imported:{label:'Import แล้ว',className:'imported'},
     counting:{label:'จ่ายงาน / กำลังนับ',className:'counting'},
     variance:{label:'รอตรวจ Variance',className:'variance'},
-    wms_pending:{label:'รอปรับ WMS',className:'wms_pending'},
+    wms_pending:{label:'รอปรับ / ปิด WMS',className:'wms_pending'},
     completed:{label:'เสร็จแล้ว',className:'completed'},
   };
   return map[status] || map.imported;
 }
 
+function warehouseLayoutApprovalTimestamp(approval={}) {
+  return Math.max(
+    Date.parse(approval.updated_at || '') || 0,
+    Date.parse(approval.wms_fixed_at || '') || 0,
+    Date.parse(approval.approved_at || '') || 0,
+    Date.parse(approval.created_at || '') || 0,
+  );
+}
+
+function warehouseLayoutEffectiveApprovals(approvals=[]) {
+  const byItem = new Map();
+  const withoutItem = [];
+  (approvals || []).forEach((approval,index) => {
+    if (!(approval?.review_status === 'confirmed' || approval?.approved_at)) return;
+    const itemId = String(approval.item_id || '');
+    if (!itemId) {
+      withoutItem.push(approval);
+      return;
+    }
+    const current = byItem.get(itemId);
+    const nextTime = warehouseLayoutApprovalTimestamp(approval);
+    const currentTime = warehouseLayoutApprovalTimestamp(current || {});
+    const nextId = Number(approval.id);
+    const currentId = Number(current?.id);
+    const shouldReplace = !current
+      || nextTime > currentTime
+      || (nextTime === currentTime && Number.isFinite(nextId) && (!Number.isFinite(currentId) || nextId >= currentId))
+      || (nextTime === currentTime && !Number.isFinite(nextId) && index >= Number(current?._warehouseApprovalIndex || -1));
+    if (shouldReplace) byItem.set(itemId,{ ...approval,_warehouseApprovalIndex:index });
+  });
+  return [...byItem.values(),...withoutItem].map(approval => {
+    const { _warehouseApprovalIndex,...clean } = approval;
+    return clean;
+  });
+}
+
 function warehouseLayoutStatusForLocation(imported,assignment,approvals=[]) {
   if (!imported) return 'not_imported';
   if (!assignment) return 'imported';
+  // Closing WMS is an explicit, guarded Location-level action. It is the final
+  // business result and must win over stale/duplicate Item approvals.
+  if (assignment.wms_closed_at) return 'completed';
   const status = String(assignment.status || '');
-  const confirmedApprovals = approvals.filter(item => item.review_status === 'confirmed' || item.approved_at);
+  // A few historical Sessions contain more than one confirmed approval for the
+  // same Item. Only the latest row is authoritative; otherwise one old
+  // wms_fixed=false row can paint a completed Location red forever.
+  const confirmedApprovals = warehouseLayoutEffectiveApprovals(approvals);
   const varianceApprovals = confirmedApprovals.filter(item => Number(item.variance) !== 0);
   // Once Supervisor has confirmed a non-zero DIFF, it has left the Variance
   // queue. Whether released_to_wms is true or false only changes the WMS
   // sub-stage; both states belong to "รอปรับ WMS", never "รอ Variance".
-  const hasWmsPending = varianceApprovals.some(item => !item.wms_fixed);
-  const allVarianceFixed = varianceApprovals.length && varianceApprovals.every(item => item.wms_fixed);
+  const hasUnfixedWmsItem = varianceApprovals.some(item => !item.wms_fixed);
+  // A DIFF Location stays in the WMS stage until the guarded "ปิด Location"
+  // action writes wms_closed_at. Item checkboxes alone are not the final close.
+  const hasWmsPending = Boolean(varianceApprovals.length);
 
   // A Location is complete when every Item has reached a final business
   // result. A confirmed zero-variance approval is final even when the raw
@@ -39774,8 +40241,8 @@ function warehouseLayoutStatusForLocation(imported,assignment,approvals=[]) {
     return 'completed';
   }
 
-  if (hasWmsPending) return 'wms_pending';
-  if (allVarianceFixed || ['completed','approved'].includes(status)) return 'completed';
+  if (hasWmsPending || hasUnfixedWmsItem) return 'wms_pending';
+  if (['completed','approved'].includes(status)) return 'completed';
   if (status === 'round3_done') return 'variance';
   if (['round1_done','round2_done'].includes(status)) return 'counting';
   if (assignment.assigned_to || ['pending','in_progress'].includes(status)) return 'counting';
@@ -40056,7 +40523,7 @@ function warehouseLayoutLegendHtml() {
     <span class="warehouse-layout-legend-item"><i class="warehouse-layout-legend-dot imported"></i>Import แล้ว</span>
     <span class="warehouse-layout-legend-item"><i class="warehouse-layout-legend-dot counting"></i>จ่ายงาน / กำลังนับ</span>
     <span class="warehouse-layout-legend-item"><i class="warehouse-layout-legend-dot variance"></i>รอตรวจ Variance</span>
-    <span class="warehouse-layout-legend-item"><i class="warehouse-layout-legend-dot wms_pending"></i>รอปรับ WMS</span>
+    <span class="warehouse-layout-legend-item"><i class="warehouse-layout-legend-dot wms_pending"></i>รอปรับ / ปิด WMS</span>
     <span class="warehouse-layout-legend-item"><i class="warehouse-layout-legend-dot completed"></i>เสร็จแล้ว</span>
     <span class="warehouse-layout-legend-item"><i class="warehouse-layout-legend-dot unmatched"></i>Import มาแต่ไม่พบใน Layout</span>
     <span class="warehouse-layout-legend-item"><i class="warehouse-layout-legend-dot aisle"></i>ทางเดิน</span>
@@ -40150,7 +40617,7 @@ function warehouseLayoutViewHtml(runtime) {
         ${warehouseLayoutKpiHtml('Import แล้ว · รอจ่าย',statusCounts.imported.toLocaleString(uiLocale()),'imported','imported',statusFilter)}
         ${warehouseLayoutKpiHtml('จ่ายงาน / กำลังนับ',statusCounts.counting.toLocaleString(uiLocale()),'counting','counting',statusFilter)}
         ${warehouseLayoutKpiHtml('รอตรวจ Variance',statusCounts.variance.toLocaleString(uiLocale()),'variance','variance',statusFilter)}
-        ${warehouseLayoutKpiHtml('รอปรับ WMS',statusCounts.wms_pending.toLocaleString(uiLocale()),'wms-pending','wms_pending',statusFilter)}
+        ${warehouseLayoutKpiHtml('รอปรับ / ปิด WMS',statusCounts.wms_pending.toLocaleString(uiLocale()),'wms-pending','wms_pending',statusFilter)}
         ${warehouseLayoutKpiHtml('เสร็จแล้ว',statusCounts.completed.toLocaleString(uiLocale()),'completed','completed',statusFilter)}
       </div>
     </section>
@@ -40168,7 +40635,7 @@ function warehouseLayoutViewHtml(runtime) {
               <option value="imported" ${statusFilter==='imported'?'selected':''}>Import แล้ว</option>
               <option value="counting" ${statusFilter==='counting'?'selected':''}>จ่ายงาน / กำลังนับ</option>
               <option value="variance" ${statusFilter==='variance'?'selected':''}>รอตรวจ Variance</option>
-              <option value="wms_pending" ${statusFilter==='wms_pending'?'selected':''}>รอปรับ WMS</option>
+              <option value="wms_pending" ${statusFilter==='wms_pending'?'selected':''}>รอปรับ / ปิด WMS</option>
               <option value="completed" ${statusFilter==='completed'?'selected':''}>เสร็จแล้ว</option>
             </select></label>
           </div>
@@ -40257,17 +40724,190 @@ function closeWarehouseLayoutDialog() {
   if (rerenderEditor && _warehouseLayoutDraft) renderWarehouseLayoutEditor();
 }
 
-function openWarehouseLayoutDialog(title,bodyHtml) {
+function openWarehouseLayoutDialog(title,bodyHtml,options={}) {
   closeWarehouseLayoutDialog();
   const backdrop = document.createElement('div');
   backdrop.id = 'warehouse-layout-dialog-backdrop';
   backdrop.className = 'warehouse-layout-dialog-backdrop';
   backdrop.onclick = event => { if (event.target === backdrop) closeWarehouseLayoutDialog(); };
-  backdrop.innerHTML = `<section class="warehouse-layout-dialog" role="dialog" aria-modal="true" aria-label="${escapeWmsText(title)}">
+  const dialogClass = options?.wide ? 'warehouse-layout-dialog is-wide' : 'warehouse-layout-dialog';
+  backdrop.innerHTML = `<section class="${dialogClass}" role="dialog" aria-modal="true" aria-label="${escapeWmsText(title)}">
     <div class="warehouse-layout-dialog-head"><strong>${escapeWmsText(title)}</strong><button class="warehouse-layout-dialog-close" type="button" onclick="closeWarehouseLayoutDialog()">×</button></div>
     <div class="warehouse-layout-dialog-body">${bodyHtml}</div>
   </section>`;
   document.body.appendChild(backdrop);
+}
+
+function warehouseLayoutNullableNumber(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function warehouseLayoutQuantityText(value) {
+  const number = warehouseLayoutNullableNumber(value);
+  return number === null ? '—' : number.toLocaleString(uiLocale(),{ maximumFractionDigits:3 });
+}
+
+function warehouseLayoutLocationItemRows(detail) {
+  const sessionData = window._warehouseLayoutSessionData || {};
+  const assignment = detail.assignment || null;
+  const locationId = String(detail.imported?.id || assignment?.location_id || '');
+  const snapshots = (sessionData.snapshots || []).filter(snapshot => {
+    if (locationId && String(snapshot.location_id || '') === locationId) return true;
+    return warehouseLocationKey(snapshot.locations?.code || '') === warehouseLocationKey(detail.code);
+  });
+  const assignmentCounts = assignment
+    ? (sessionData.counts || []).filter(record => String(record.assignment_id || '') === String(assignment.id || ''))
+    : [];
+  const approvals = assignment
+    ? warehouseLayoutEffectiveApprovals((sessionData.approvals || []).filter(approval => String(approval.assignment_id || '') === String(assignment.id || '')))
+    : [];
+  const approvalByItem = new Map(approvals.map(approval => [String(approval.item_id || ''),approval]));
+  const rules = sessionData.rules || {};
+
+  return snapshots.map(snapshot => {
+    const itemId = String(snapshot.item_id || '');
+    const roundMap = new Map();
+    assignmentCounts
+      .filter(record => String(record.item_id || '') === itemId)
+      .forEach(record => {
+        const round = Number(record.round);
+        if (![1,2,3].includes(round)) return;
+        const previous = roundMap.get(round);
+        const previousTime = Date.parse(previous?.counted_at || '') || 0;
+        const nextTime = Date.parse(record.counted_at || '') || 0;
+        const previousId = Number(previous?.id) || 0;
+        const nextId = Number(record.id) || 0;
+        if (!previous || nextTime > previousTime || (nextTime === previousTime && nextId >= previousId)) roundMap.set(round,record);
+      });
+    const rounds = [1,2,3].map(round => roundMap.get(round) || null);
+    const latestRound = rounds[2] ? 3 : rounds[1] ? 2 : rounds[0] ? 1 : 0;
+    const latestRecord = latestRound ? rounds[latestRound - 1] : null;
+    const approval = approvalByItem.get(itemId) || null;
+    const oh = Number(snapshot.onhand_qty || 0);
+    const al = Number(snapshot.al_qty || 0);
+    const r1 = rounds[0] ? Number(rounds[0].count_qty) : undefined;
+    const r2 = rounds[1] ? Number(rounds[1].count_qty) : undefined;
+    const r3 = rounds[2] ? Number(rounds[2].count_qty) : undefined;
+    const itemStatus = computeItemStatus(oh,r1,r2,r3,rules);
+    const latestQty = latestRecord ? Number(latestRecord.count_qty || 0) : null;
+    const supervisorQty = warehouseLayoutNullableNumber(approval?.final_qty);
+    const storedVariance = warehouseLayoutNullableNumber(approval?.variance);
+    const finalQty = supervisorQty ?? latestQty;
+    const finalVariance = approval
+      ? (storedVariance ?? (finalQty === null ? null : finalQty - oh))
+      : (finalQty === null ? null : finalQty - oh);
+    let stageKey = 'counting';
+    let stageLabel = assignment ? 'รอตรวจนับ' : 'ยังไม่จ่ายงาน';
+    if (latestRound && itemStatus === 'PENDING') stageLabel = 'รอนับรอบถัดไป';
+    if (latestRound && itemStatus === 'Diff') { stageKey = 'variance';stageLabel = 'รอหัวหน้ายืนยัน Variance'; }
+    if (latestRound && itemStatus === 'OK') { stageKey = 'completed';stageLabel = 'ยอดนับตรง'; }
+    if (approval) {
+      const variance = Number(finalVariance || 0);
+      if (variance === 0) { stageKey = 'completed';stageLabel = 'หัวหน้ายืนยันยอดตรง'; }
+      else if (assignment?.wms_closed_at) { stageKey = 'completed';stageLabel = 'ปิดงาน WMS แล้ว'; }
+      else if (approval.wms_fixed) { stageKey = 'wms_pending';stageLabel = 'ตรวจ Item แล้ว · รอปิด Location'; }
+      else { stageKey = 'wms_pending';stageLabel = 'รอตรวจสอบ WMS'; }
+    }
+    if (assignment?.wms_closed_at && latestRound) {
+      stageKey = 'completed';
+      stageLabel = Number(finalVariance || 0) === 0 ? 'ปิดงานแล้ว · ยอดตรง' : 'ปิดงาน WMS แล้ว';
+    }
+    const counterEntries = rounds.map((record,index) => {
+      if (!record) return null;
+      const name = workTrackerUniqueNames(record.actual_counter_name)
+        || record._countedByName
+        || 'ไม่ระบุผู้ตรวจนับ';
+      return { round:index + 1,name,time:record.counted_at || '' };
+    }).filter(Boolean);
+    return {
+      itemId,
+      itemCode:snapshot.items?.code || itemId || '—',
+      description:snapshot.items?.description || '',
+      uom:snapshot.items?.uom || '',
+      oh,al,rounds,latestRound,latestQty,approval,finalQty,finalVariance,
+      stageKey,stageLabel,counterEntries,
+    };
+  }).sort((a,b) => String(a.itemCode).localeCompare(String(b.itemCode),undefined,{ numeric:true }));
+}
+
+function warehouseLayoutLocationStageReason(detail,itemRows=[]) {
+  const total = itemRows.length;
+  const pendingCount = itemRows.filter(row => row.stageKey === 'counting').length;
+  const varianceCount = itemRows.filter(row => row.stageKey === 'variance').length;
+  const wmsCount = itemRows.filter(row => row.stageKey === 'wms_pending').length;
+  if (detail.status === 'not_imported') return 'Location นี้อยู่ในผังแม่ แต่ยังไม่พบข้อมูลใน WMS ของ Session ที่เลือก';
+  if (detail.status === 'imported') return `พบ ${total.toLocaleString(uiLocale())} Item ใน WMS แล้ว แต่ยังไม่ได้จ่ายงานตรวจนับ`;
+  if (detail.assignment?.wms_closed_at) return `ปิดงาน WMS ทั้ง Location แล้วเมื่อ ${workTrackerDate(detail.assignment.wms_closed_at)} สถานะนี้เป็นผลสุดท้ายของ Location`;
+  if (detail.status === 'counting') return `ยังมี ${pendingCount.toLocaleString(uiLocale())} Item ที่ต้องนับหรือนับรอบถัดไป`;
+  if (detail.status === 'variance') return `ยังมี ${varianceCount.toLocaleString(uiLocale())} Item ที่รอ Supervisor ตรวจและยืนยันผลต่าง`;
+  if (detail.status === 'wms_pending') {
+    const checkedWaitingClose = itemRows.filter(row => row.approval?.wms_fixed).length;
+    return wmsCount && checkedWaitingClose === wmsCount
+      ? `ตรวจ WMS ครบ ${checkedWaitingClose.toLocaleString(uiLocale())} Item แล้ว · รอกดปิดงาน WMS Location`
+      : `ยังมี ${wmsCount.toLocaleString(uiLocale())} Item อยู่ในขั้นตอนตรวจสอบ WMS`;
+  }
+  return total ? `Item ทั้งหมด ${total.toLocaleString(uiLocale())} รายการผ่านขั้นตอนที่เกี่ยวข้องครบแล้ว` : 'Location นี้เสร็จสิ้นแล้ว';
+}
+
+function warehouseLayoutLocationStageFlowHtml(detail,itemRows=[]) {
+  const imported = Boolean(detail.imported);
+  const assigned = Boolean(detail.assignment);
+  const allCounted = Boolean(itemRows.length) && itemRows.every(row => row.latestRound > 0);
+  const hasVariance = itemRows.some(row => Number(row.finalVariance || 0) !== 0);
+  const waitingVariance = itemRows.some(row => row.stageKey === 'variance');
+  const wmsRows = itemRows.filter(row => row.approval && Number(row.finalVariance || 0) !== 0);
+  const closed = Boolean(detail.assignment?.wms_closed_at);
+  const allWmsChecked = Boolean(wmsRows.length) && wmsRows.every(row => row.approval?.wms_fixed);
+  const step = (label,state,note='') => `<div class="warehouse-location-stage-step ${state}">${escapeWmsText(label)}${note ? `<small style="display:block;margin:4px 0 0 18px;font-size:8px;opacity:.78">${escapeWmsText(note)}</small>` : ''}</div>`;
+  const importState = imported ? 'done' : 'current';
+  const assignState = assigned ? 'done' : (imported ? 'current' : '');
+  const countState = allCounted ? 'done' : (assigned ? 'current' : '');
+  const varianceState = waitingVariance ? 'current' : (hasVariance ? 'done' : 'skipped');
+  const wmsState = closed ? 'done' : (wmsRows.length ? 'current' : 'skipped');
+  return `<div class="warehouse-location-stage-flow">
+    ${step('1. Import WMS',importState)}
+    ${step('2. จ่ายงาน',assignState)}
+    ${step('3. ตรวจนับ',countState)}
+    ${step('4. ยืนยัน Variance',varianceState,hasVariance ? '' : 'ไม่ต้องใช้')}
+    ${step('5. ตรวจ/ปิด WMS',wmsState,closed ? 'ปิดแล้ว' : (allWmsChecked ? 'ตรวจครบ · รอปิด' : (wmsRows.length ? 'กำลังดำเนินการ' : 'ไม่ต้องใช้')))}
+  </div>`;
+}
+
+function warehouseLayoutLocationItemsHtml(itemRows=[]) {
+  if (!itemRows.length) return '<div class="warehouse-location-empty-items">ยังไม่มี Item ใน Location นี้</div>';
+  return `<div class="warehouse-location-items-table-shell"><table class="warehouse-location-items-table">
+    <thead><tr><th>Item</th><th>OH / AL</th><th>Count 1</th><th>Count 2</th><th>Count 3</th><th>ยอดสุดท้าย / ผลต่าง</th><th>ผลการนับ</th><th>ผู้ตรวจนับ</th><th>ขั้นตอนปัจจุบัน</th></tr></thead>
+    <tbody>${itemRows.map(row => {
+      const variance = warehouseLayoutNullableNumber(row.finalVariance);
+      const resultText = variance === null ? 'ยังไม่มีผล' : variance === 0 ? 'ตรง' : `ต่าง ${variance > 0 ? '+' : ''}${warehouseLayoutQuantityText(variance)}`;
+      const resultClass = variance === null ? '' : variance === 0 ? 'is-match' : 'is-diff';
+      const counters = row.counterEntries.length
+        ? row.counterEntries.map(entry => `<span><strong>รอบ ${entry.round}: ${escapeWmsText(entry.name)}</strong>${entry.time ? ` · ${escapeWmsText(workTrackerDate(entry.time))}` : ''}</span>`).join('')
+        : '<span>ยังไม่มีผู้ตรวจนับ</span>';
+      return `<tr>
+        <td><span class="warehouse-location-item-code">${escapeWmsText(row.itemCode)}</span><span class="warehouse-location-item-desc">${escapeWmsText(row.description || '—')}</span></td>
+        <td><span class="warehouse-location-qty">${warehouseLayoutQuantityText(row.oh)} / ${warehouseLayoutQuantityText(row.al)}</span><span class="warehouse-location-item-desc">${escapeWmsText(row.uom || '')}</span></td>
+        <td><span class="warehouse-location-qty">${warehouseLayoutQuantityText(row.rounds[0]?.count_qty)}</span></td>
+        <td><span class="warehouse-location-qty">${warehouseLayoutQuantityText(row.rounds[1]?.count_qty)}</span></td>
+        <td><span class="warehouse-location-qty">${warehouseLayoutQuantityText(row.rounds[2]?.count_qty)}</span></td>
+        <td><span class="warehouse-location-qty ${resultClass}">${warehouseLayoutQuantityText(row.finalQty)} / ${variance === null ? '—' : `${variance > 0 ? '+' : ''}${warehouseLayoutQuantityText(variance)}`}</span></td>
+        <td><span class="warehouse-location-qty ${resultClass}">${escapeWmsText(resultText)}</span></td>
+        <td><div class="warehouse-location-counter-list">${counters}</div></td>
+        <td><span class="warehouse-location-item-stage ${escapeWmsText(row.stageKey)}">${escapeWmsText(row.stageLabel)}</span></td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+
+function toggleWarehouseLocationItems(button) {
+  const panel = Q('warehouse-location-items-panel');
+  if (!panel || !button) return;
+  const willOpen = panel.hidden;
+  panel.hidden = !willOpen;
+  button.setAttribute('aria-expanded',String(willOpen));
+  button.textContent = willOpen ? 'ซ่อนรายการ Item' : button.dataset.closedLabel || 'ดูรายการ Item';
 }
 
 function showWarehouseLocationDetail(code) {
@@ -40276,13 +40916,37 @@ function showWarehouseLocationDetail(code) {
   const detail = runtime.detailsByCode.get(normalizedCode);
   if (!detail) return;
   const statusInfo = warehouseLayoutStatusInfo(detail.status);
-  const assignmentUser = detail.assignment?.profiles?.name || detail.counters.join(', ') || 'ยังไม่จ่ายงาน';
+  const itemRows = warehouseLayoutLocationItemRows(detail);
+  const allCounterNames = [...new Set(itemRows.flatMap(row => row.counterEntries.map(entry => entry.name)).filter(Boolean))];
+  const assignmentUser = detail.assignment?.profiles?.name || allCounterNames.join(', ') || detail.counters.join(', ') || 'ยังไม่จ่ายงาน';
   const latestRound = detail.latestRound ? `รอบ ${detail.latestRound}` : 'ยังไม่มีการนับ';
   const jobs = detail.jobs.length ? detail.jobs.join(', ') : '—';
   const importedText = detail.imported ? 'พบใน Import WMS' : 'ยังไม่พบใน Import WMS';
+  const countedCount = itemRows.filter(row => row.latestRound > 0).length;
+  const matchedCount = itemRows.filter(row => warehouseLayoutNullableNumber(row.finalVariance) === 0).length;
+  const diffCount = itemRows.filter(row => {
+    const variance = warehouseLayoutNullableNumber(row.finalVariance);
+    return variance !== null && variance !== 0;
+  }).length;
+  const pendingCount = itemRows.filter(row => !['completed'].includes(row.stageKey)).length;
+  const stageReason = warehouseLayoutLocationStageReason(detail,itemRows);
+  const closeText = detail.assignment?.wms_closed_at
+    ? `ปิดแล้ว · ${workTrackerDate(detail.assignment.wms_closed_at)}`
+    : (detail.status === 'wms_pending' ? 'ยังไม่ปิด Location' : '—');
+  const itemButtonLabel = `ดูรายการ Item (${itemRows.length.toLocaleString(uiLocale())})`;
   openWarehouseLayoutDialog('รายละเอียด Location',`
-    <div class="warehouse-layout-detail-code">${escapeWmsText(detail.code)}</div>
-    <div style="margin-top:7px"><span class="work-tracker-status ${escapeWmsText(detail.status)}">${escapeWmsText(statusInfo.label)}</span></div>
+    <div class="warehouse-location-detail-hero"><div><div class="warehouse-layout-detail-code">${escapeWmsText(detail.code)}</div>
+    <div class="warehouse-location-detail-status"><span class="work-tracker-status ${escapeWmsText(detail.status)}">${escapeWmsText(statusInfo.label)}</span>${detail.assignment?.wms_closed_at ? '<span class="work-tracker-status completed">✓ ปิด Location แล้ว</span>' : ''}</div></div>
+    <div style="color:var(--text-muted);font-size:9px;font-weight:700">ข้อมูลล่าสุด ${escapeWmsText(runtime.loadedAt ? workTrackerDate(runtime.loadedAt) : '—')}</div></div>
+    <div class="warehouse-location-current-stage"><span>ขั้นตอนปัจจุบัน</span><strong>${escapeWmsText(statusInfo.label)}</strong><p>${escapeWmsText(stageReason)}</p></div>
+    ${warehouseLayoutLocationStageFlowHtml(detail,itemRows)}
+    <div class="warehouse-location-summary">
+      <div class="warehouse-location-summary-card"><span>Item ทั้งหมด</span><strong>${itemRows.length.toLocaleString(uiLocale())}</strong></div>
+      <div class="warehouse-location-summary-card"><span>นับแล้ว</span><strong>${countedCount.toLocaleString(uiLocale())}</strong></div>
+      <div class="warehouse-location-summary-card match"><span>ยอดตรง</span><strong>${matchedCount.toLocaleString(uiLocale())}</strong></div>
+      <div class="warehouse-location-summary-card diff"><span>ยอดต่าง</span><strong>${diffCount.toLocaleString(uiLocale())}</strong></div>
+      <div class="warehouse-location-summary-card pending"><span>ยังไม่จบขั้นตอน</span><strong>${pendingCount.toLocaleString(uiLocale())}</strong></div>
+    </div>
     <div class="warehouse-layout-detail-grid">
       <div class="warehouse-layout-detail-card"><span>การจับคู่ WMS</span><strong>${escapeWmsText(importedText)}</strong></div>
       <div class="warehouse-layout-detail-card"><span>Zone / Rack</span><strong>${escapeWmsText(detail.zone)} · ${escapeWmsText(detail.rackCode)}</strong></div>
@@ -40290,9 +40954,12 @@ function showWarehouseLocationDetail(code) {
       <div class="warehouse-layout-detail-card"><span>JOB</span><strong>${escapeWmsText(jobs)}</strong></div>
       <div class="warehouse-layout-detail-card"><span>รอบล่าสุด</span><strong>${escapeWmsText(latestRound)}</strong></div>
       <div class="warehouse-layout-detail-card"><span>ผู้รับผิดชอบ / ผู้ตรวจนับ</span><strong>${escapeWmsText(assignmentUser)}</strong></div>
+      <div class="warehouse-layout-detail-card"><span>สถานะปิดงาน WMS</span><strong>${escapeWmsText(closeText)}</strong></div>
+      <div class="warehouse-layout-detail-card"><span>ผู้ตรวจนับทั้งหมด</span><strong>${escapeWmsText(allCounterNames.join(', ') || '—')}</strong></div>
     </div>
-    <div class="alert alert-blue" style="margin-top:14px">Layout แสดงเฉพาะสถานะงานและไม่แสดงยอด OH/QTY จึงใช้ได้กับ Blind Count โดยไม่เปิดเผยยอด</div>
-  `);
+    <div class="warehouse-location-items-actions"><p>แยกรายละเอียด Item เพื่อดูยอดนับ ผลต่าง ผู้ตรวจนับ และขั้นตอนของแต่ละรายการ</p><button class="warehouse-location-items-toggle" type="button" aria-expanded="false" data-closed-label="${escapeWmsText(itemButtonLabel)}" onclick="toggleWarehouseLocationItems(this)">${escapeWmsText(itemButtonLabel)}</button></div>
+    <div class="warehouse-location-items-panel" id="warehouse-location-items-panel" hidden>${warehouseLayoutLocationItemsHtml(itemRows)}</div>
+  `,{ wide:true });
 }
 
 function warehouseLayoutMatchListHtml(rows,emptyText) {
@@ -43577,6 +44244,7 @@ async function loadSvDash() {
       assignments:warehouseLayoutAssignments,
       counts:rawCounts,
       approvals:trackerApprovalRows,
+      rules,
       loadedAt:new Date().toISOString(),
     };
   }
@@ -52793,6 +53461,7 @@ function renderXlsxImportPreview(analysis) {
     `แถว ${row.rowNumber}: ${row.reasons.join(', ')}`
   );
   const hasBlockingProblem = analysis.errors.length || analysis.rejected.length;
+  const locationFilterValue = normalizeImportText(Q('ilocfilter')?.value || '');
   return `
     <div class="alert ${hasBlockingProblem ? 'alert-red' : 'alert-green'}" style="font-size:13px;line-height:1.6">
       <strong>${hasBlockingProblem ? '❌ ไฟล์ยังไม่พร้อม Import' : '✅ ตรวจข้อมูลก่อน Import ผ่าน'}</strong>
@@ -52809,6 +53478,12 @@ function renderXlsxImportPreview(analysis) {
     <div style="font-size:11px;color:var(--text-muted);line-height:1.55;overflow-wrap:anywhere">
       หัวคอลัมน์ที่จับคู่: ${escapeWmsText(mappedColumns || 'ไม่พบ')}
       <br>ช่อง Description / UOM ที่ว่าง จะ Match จาก Item Master ตอน Import
+    </div>
+    <div class="alert alert-amber" style="font-size:11px;margin-top:10px;line-height:1.6">
+      ไฟล์นี้จะเป็นข้อมูล WMS ล่าสุดของ${locationFilterValue
+        ? ` Location Filter <strong>${escapeWmsText(locationFilterValue)}</strong>`
+        : ' Session ที่เลือกทั้งหมด'} · Location + Item + LPN/Lot เดิมที่ไม่อยู่ในไฟล์จะถูกนำออก
+      และ Snapshot ที่หายทั้ง Item จะถูกตั้ง OH/AL เป็น 0 โดยไม่ลบประวัติ Count
     </div>
     ${analysis.errors.length ? `<div class="alert alert-red" style="font-size:12px;margin-top:10px">${analysis.errors.map(escapeWmsText).join('<br>')}</div>` : ''}
     ${analysis.metrics.emptyLocationRows ? `<div class="alert alert-blue" style="font-size:12px;margin-top:10px;line-height:1.6">
@@ -52922,6 +53597,96 @@ async function fetchImportedScopeRows(table,columns,sessionId,locationIds) {
   return output;
 }
 
+async function fetchWmsImportAuthoritativeLocationScope(sessionId,incomingLocationIds,locationFilter='') {
+  const [snapshotResult,detailResult] = await Promise.all([
+    fetchPagedSupabaseRows(
+      'stock_snapshot',
+      'id,location_id,locations(code)',
+      query => query.eq('session_id',sessionId).order('id'),
+    ),
+    fetchPagedSupabaseRows(
+      'stock_snapshot_detail',
+      'id,location_id,locations(code)',
+      query => query.eq('session_id',sessionId).order('id'),
+    ),
+  ]);
+  if (snapshotResult.error || detailResult.error) throw (snapshotResult.error || detailResult.error);
+  const filterRegex = importLocationFilterRegex(locationFilter);
+  const locationIds = new Set((incomingLocationIds || []).filter(Boolean));
+  const locationCodeById = new Map();
+  [...(snapshotResult.data || []),...(detailResult.data || [])].forEach(row => {
+    const locationId = row.location_id;
+    const locationCode = normalizeImportText(row.locations?.code || '');
+    if (!locationId) return;
+    if (locationCode) locationCodeById.set(locationId,locationCode);
+    // No filter means the uploaded file is authoritative for the whole Session.
+    // With a filter, only matching existing Locations plus incoming Locations
+    // are allowed to lose stale WMS rows.
+    if (!filterRegex || (locationCode && filterRegex.test(locationCode))) {
+      locationIds.add(locationId);
+    }
+  });
+  return { locationIds:[...locationIds],locationCodeById };
+}
+
+function wmsImportConsolidateDetailMap(rows=[]) {
+  const map = new Map();
+  (rows || []).forEach(row => {
+    const key = wmsImportDetailMatchKey(row);
+    if (!map.has(key)) {
+      map.set(key,{
+        session_id:row.session_id,
+        location_id:row.location_id,
+        item_id:row.item_id,
+        license_plate:row.license_plate || null,
+        lot:row.lot || null,
+        inventory_status:row.inventory_status || null,
+        qty:0,
+        uom:row.uom || null,
+      });
+    }
+    const current = map.get(key);
+    current.qty += Number(row.qty) || 0;
+    if (!current.inventory_status && row.inventory_status) current.inventory_status = row.inventory_status;
+    if (!current.uom && row.uom) current.uom = row.uom;
+  });
+  return map;
+}
+
+function wmsImportBuildAuthoritativeSnapshots(sessionId,incomingSnapshots,existingSnapshots,safeLocationIds) {
+  const safeIds = safeLocationIds instanceof Set ? safeLocationIds : new Set(safeLocationIds || []);
+  const expectedMap = new Map();
+  (incomingSnapshots || []).forEach(row => {
+    if (!safeIds.has(row.location_id)) return;
+    expectedMap.set(`${row.location_id}|${row.item_id}`,{
+      session_id:sessionId,
+      location_id:row.location_id,
+      item_id:row.item_id,
+      onhand_qty:Number(row.onhand_qty) || 0,
+      al_qty:row.al_qty === null || row.al_qty === undefined || row.al_qty === ''
+        ? null
+        : Number(row.al_qty) || 0,
+    });
+  });
+  const missingKeys = new Set();
+  (existingSnapshots || []).forEach(row => {
+    if (!safeIds.has(row.location_id)) return;
+    const key = `${row.location_id}|${row.item_id}`;
+    if (expectedMap.has(key)) return;
+    // Keep the Snapshot row so Count history, Annual items and reports retain
+    // their references, but make the latest WMS state explicitly zero.
+    expectedMap.set(key,{
+      session_id:sessionId,
+      location_id:row.location_id,
+      item_id:row.item_id,
+      onhand_qty:0,
+      al_qty:0,
+    });
+    missingKeys.add(key);
+  });
+  return { rows:[...expectedMap.values()],missingKeys };
+}
+
 function wmsImportDetailMatchKey(row={}) {
   return [
     row.location_id || '',
@@ -52961,6 +53726,8 @@ function wmsImportDetailChangePreview(changes,limit=6) {
     const identity = `${change.location} · ${change.item} · LPN ${change.lpn || '—'} · Lot ${change.lot || '—'}`;
     return change.type === 'new'
       ? `${identity}: เพิ่มใหม่ QTY ${change.newQty}`
+      : change.type === 'removed'
+        ? `${identity}: ไม่อยู่ในไฟล์ใหม่ · นำออก (QTY ${change.oldQty} → 0)`
       : `${identity}: QTY ${change.oldQty} → ${change.newQty}${change.metaChanged ? ' · Status/UOM เปลี่ยน' : ''}`;
   });
   if ((changes || []).length > visible.length) lines.push(`… และอีก ${(changes.length-visible.length).toLocaleString(uiLocale())} รายการ`);
@@ -53103,13 +53870,20 @@ async function doImportXlsx() {
     const snapList = Array.from(snapMap.values());
     const importedDetailsList = Array.from(importedDetailMap.values());
     const importedLocationIds = [...new Set(snapList.map(row => row.location_id).filter(Boolean))];
+    const locationFilterValue = Q('ilocfilter')?.value || '';
+    const authoritativeScope = await fetchWmsImportAuthoritativeLocationScope(
+      sid,
+      importedLocationIds,
+      locationFilterValue,
+    );
+    const importScopeLocationIds = authoritativeScope.locationIds;
     const BATCH = 200;
     al.innerHTML = `<div class="alert alert-blue">⏳ กำลังตรวจข้อมูลเดิมและสถานะการนับ...</div>`;
     const [existingSnapshots,existingDetails,existingAssignments,existingAnnualItems] = await Promise.all([
-      fetchImportedScopeRows('stock_snapshot',['id','location_id','item_id','onhand_qty','al_qty'],sid,importedLocationIds),
-      fetchImportedScopeRows('stock_snapshot_detail',['id','location_id','item_id','license_plate','lot','inventory_status','qty','uom'],sid,importedLocationIds),
-      fetchImportedScopeRows('assignments',['id','location_id','status'],sid,importedLocationIds),
-      fetchImportedScopeRows('annual_count_job_items',['job_id','location_id'],sid,importedLocationIds),
+      fetchImportedScopeRows('stock_snapshot',['id','location_id','item_id','onhand_qty','al_qty','items(code)'],sid,importScopeLocationIds),
+      fetchImportedScopeRows('stock_snapshot_detail',['id','location_id','item_id','license_plate','lot','inventory_status','qty','uom'],sid,importScopeLocationIds),
+      fetchImportedScopeRows('assignments',['id','location_id','status'],sid,importScopeLocationIds),
+      fetchImportedScopeRows('annual_count_job_items',['job_id','location_id'],sid,importScopeLocationIds),
     ]);
     const assignmentIds = existingAssignments.map(row => row.id).filter(Boolean);
     const annualJobIds = [...new Set(existingAnnualItems.map(row => row.job_id).filter(Boolean))];
@@ -53139,18 +53913,18 @@ async function doImportXlsx() {
       })
       .map(item => item.location_id)
       .filter(Boolean));
-    const confirmedProtectedLocationIds = new Set(importedLocationIds.filter(locationId =>
+    const confirmedProtectedLocationIds = new Set(importScopeLocationIds.filter(locationId =>
       wmsImportLocationIsProtected(assignmentByLocation.get(locationId),confirmedAssignmentIds)
     ));
-    const annualProtectedLocationIds = new Set(importedLocationIds.filter(locationId =>
+    const annualProtectedLocationIds = new Set(importScopeLocationIds.filter(locationId =>
       startedAnnualLocationIds.has(locationId)
     ));
     const protectedLocationIds = new Set([
       ...confirmedProtectedLocationIds,
       ...annualProtectedLocationIds,
     ]);
-    const safeLocationIds = new Set(importedLocationIds.filter(locationId => !protectedLocationIds.has(locationId)));
-    const countedOrDiffLocationIds = new Set(importedLocationIds.filter(locationId => {
+    const safeLocationIds = new Set(importScopeLocationIds.filter(locationId => !protectedLocationIds.has(locationId)));
+    const countedOrDiffLocationIds = new Set(importScopeLocationIds.filter(locationId => {
       if (!safeLocationIds.has(locationId)) return false;
       const assignment = assignmentByLocation.get(locationId);
       return Boolean(assignment && (
@@ -53158,7 +53932,14 @@ async function doImportXlsx() {
         || ['in_progress','round1_done','round2_done','round3_done','completed'].includes(assignment.status)
       ));
     }));
-    const safeSnapList = snapList.filter(row => safeLocationIds.has(row.location_id));
+    const authoritativeSnapshots = wmsImportBuildAuthoritativeSnapshots(
+      sid,
+      snapList,
+      existingSnapshots,
+      safeLocationIds,
+    );
+    const safeSnapList = authoritativeSnapshots.rows;
+    const removedSnapshotKeys = authoritativeSnapshots.missingKeys;
     const safeImportedDetails = importedDetailsList.filter(row => safeLocationIds.has(row.location_id));
     const confirmedProtectedImportRows = parsedRows.filter(row =>
       confirmedProtectedLocationIds.has(locIdMap.get(importCodeKey(row.locCode)))
@@ -53168,17 +53949,24 @@ async function doImportXlsx() {
     ).length;
 
     const existingSnapshotMap = new Map(existingSnapshots.map(row => [`${row.location_id}|${row.item_id}`,row]));
-    const locationCodeById = new Map((dbLocs || []).map(row => [row.id,row.code || row.id]));
-    const itemCodeById = new Map((dbItems || []).map(row => [row.id,row.code || row.id]));
+    const locationCodeById = new Map(authoritativeScope.locationCodeById || []);
+    (dbLocs || []).forEach(row => locationCodeById.set(row.id,row.code || row.id));
+    const itemCodeById = new Map(existingSnapshots.map(row => [
+      row.item_id,
+      row.items?.code || row.item_id,
+    ]));
+    (dbItems || []).forEach(row => itemCodeById.set(row.id,row.code || row.id));
     const displayQty = value => value === null || value === undefined || value === ''
       ? '—'
       : Number(value).toLocaleString(uiLocale(),{maximumFractionDigits:2});
     let newSnapshotCount = 0;
     let updatedSnapshotCount = 0;
+    let removedSnapshotCount = 0;
     let unchangedSnapshotCount = 0;
     const snapshotChanges = [];
     safeSnapList.forEach(expected => {
-      const current = existingSnapshotMap.get(`${expected.location_id}|${expected.item_id}`);
+      const snapshotKey = `${expected.location_id}|${expected.item_id}`;
+      const current = existingSnapshotMap.get(snapshotKey);
       if (!current) {
         newSnapshotCount++;
         snapshotChanges.push({
@@ -53190,6 +53978,20 @@ async function doImportXlsx() {
           oldAL:'—',
           newAL:displayQty(expected.al_qty),
           alChanged:expected.al_qty !== null && expected.al_qty !== undefined && expected.al_qty !== '',
+        });
+        return;
+      }
+      if (removedSnapshotKeys.has(snapshotKey)) {
+        removedSnapshotCount++;
+        snapshotChanges.push({
+          type:'removed',
+          location:locationCodeById.get(expected.location_id) || expected.location_id,
+          item:itemCodeById.get(expected.item_id) || expected.item_id,
+          oldOH:displayQty(current.onhand_qty),
+          newOH:displayQty(0),
+          oldAL:displayQty(current.al_qty),
+          newAL:displayQty(0),
+          alChanged:!wmsImportQtyEqual(current.al_qty,0),
         });
         return;
       }
@@ -53212,33 +54014,21 @@ async function doImportXlsx() {
       }
     });
 
+    const existingDetailMap = wmsImportConsolidateDetailMap(
+      existingDetails.filter(row => safeLocationIds.has(row.location_id))
+    );
+    // The replacement map starts from the new file, not the old database.
+    // This is the key difference from the former Merge behavior: an old
+    // Location + Item + LPN + Lot that is absent now will not be reinserted.
     const mergedDetailMap = new Map();
-    existingDetails.filter(row => safeLocationIds.has(row.location_id)).forEach(row => {
-      const key = wmsImportDetailMatchKey(row);
-      if (!mergedDetailMap.has(key)) {
-        mergedDetailMap.set(key,{
-          session_id:sid,
-          location_id:row.location_id,
-          item_id:row.item_id,
-          license_plate:row.license_plate || null,
-          lot:row.lot || null,
-          inventory_status:row.inventory_status || null,
-          qty:0,
-          uom:row.uom || null,
-        });
-      }
-      const merged = mergedDetailMap.get(key);
-      merged.qty += Number(row.qty) || 0;
-      if (!merged.inventory_status && row.inventory_status) merged.inventory_status = row.inventory_status;
-      if (!merged.uom && row.uom) merged.uom = row.uom;
-    });
     let newDetailCount = 0;
     let updatedDetailCount = 0;
+    let removedDetailCount = 0;
     let unchangedDetailCount = 0;
     const detailChanges = [];
     safeImportedDetails.forEach(incoming => {
       const key = wmsImportDetailMatchKey(incoming);
-      const current = mergedDetailMap.get(key);
+      const current = existingDetailMap.get(key);
       if (!current) {
         newDetailCount++;
         detailChanges.push({
@@ -53277,7 +54067,9 @@ async function doImportXlsx() {
       }
       else unchangedDetailCount++;
       mergedDetailMap.set(key,{
-        ...current,
+        session_id:sid,
+        location_id:incoming.location_id,
+        item_id:incoming.item_id,
         license_plate:incoming.license_plate || current.license_plate || null,
         lot:incoming.lot || current.lot || null,
         inventory_status:nextStatus,
@@ -53285,7 +54077,40 @@ async function doImportXlsx() {
         uom:nextUom,
       });
     });
+    existingDetailMap.forEach((current,key) => {
+      if (mergedDetailMap.has(key)) return;
+      removedDetailCount++;
+      detailChanges.push({
+        type:'removed',
+        location:locationCodeById.get(current.location_id) || current.location_id,
+        item:itemCodeById.get(current.item_id) || current.item_id,
+        lpn:current.license_plate || '',
+        lot:current.lot || '',
+        oldQty:displayQty(current.qty),
+        newQty:displayQty(0),
+        metaChanged:false,
+        inventoryStatus:current.inventory_status || '',
+        uom:current.uom || '',
+      });
+    });
     const mergedDetailsList = Array.from(mergedDetailMap.values());
+
+    if (removedSnapshotCount || removedDetailCount) {
+      const scopeLabel = locationFilterValue
+        ? `Location Filter “${locationFilterValue}”`
+        : 'Session นี้ทั้งหมด';
+      const proceed = confirm(
+        `พบข้อมูลเดิมที่ไม่อยู่ในไฟล์ใหม่\n\n`
+        + `Snapshot ที่จะตั้ง OH/AL = 0: ${removedSnapshotCount.toLocaleString(uiLocale())} รายการ\n`
+        + `LPN/Lot ที่จะนำออก: ${removedDetailCount.toLocaleString(uiLocale())} รายการ\n`
+        + `ขอบเขต: ${scopeLabel}\n\n`
+        + `ระบบจะคงผล Count, รูปถ่าย, Remark และประวัติเดิมไว้ ดำเนินการต่อหรือไม่?`
+      );
+      if (!proceed) {
+        al.innerHTML = '<div class="alert alert-amber">ยกเลิก Import แล้ว · ยังไม่มีการแก้ไข Stock Snapshot หรือ LPN/Lot</div>';
+        return;
+      }
+    }
 
     if (safeSnapList.length) {
       al.innerHTML = `<div class="alert alert-blue">⏳ กำลังเพิ่ม/อัปเดต Stock Snapshot (${safeSnapList.length.toLocaleString()} รายการ)...</div>`;
@@ -53315,7 +54140,7 @@ async function doImportXlsx() {
       }
     }
     if (mergedDetailsList.length) {
-      al.innerHTML = `<div class="alert alert-blue">⏳ กำลังบันทึกรายละเอียด LPN/Lot แบบ Merge (${mergedDetailsList.length.toLocaleString()} แถว)...</div>`;
+      al.innerHTML = `<div class="alert alert-blue">⏳ กำลังบันทึกรายละเอียด LPN/Lot ตามไฟล์ล่าสุด (${mergedDetailsList.length.toLocaleString()} แถว)...</div>`;
       for (let start = 0; start < mergedDetailsList.length; start += BATCH) {
         const rows = mergedDetailsList.slice(start,start + BATCH);
         if (prof?.role === 'supervisor') {
@@ -53349,22 +54174,27 @@ async function doImportXlsx() {
       !savedDetailMap.has(wmsImportDetailMatchKey(expected))
       || !wmsImportQtyEqual(savedDetailMap.get(wmsImportDetailMatchKey(expected)),expected.qty)
     );
-    if (detailMismatch) throw new Error('ตรวจยอดหลัง Import ไม่ผ่าน: รายละเอียด Location + LPN + Item + Lot ไม่ตรงกับข้อมูลที่บันทึก');
+    const expectedDetailKeys = new Set(mergedDetailsList.map(wmsImportDetailMatchKey));
+    const unexpectedSavedDetailKey = [...savedDetailMap.keys()].find(key => !expectedDetailKeys.has(key));
+    if (detailMismatch || unexpectedSavedDetailKey) {
+      throw new Error('ตรวจยอดหลัง Import ไม่ผ่าน: รายละเอียด Location + LPN + Item + Lot ไม่ตรงกับไฟล์ล่าสุด');
+    }
 
     const metrics = analysis.metrics;
     const importedRowsForLayoutCheck = parsedRows.map(row => ({locCode:row.locCode}));
     al.innerHTML = `<div class="alert alert-green" style="line-height:1.55;padding:16px">
       <strong style="display:block;font-size:16px">✅ Import / Update WMS สำเร็จ</strong>
-      <div style="margin-top:5px;font-size:12px;font-weight:700">ระบบบันทึกแบบ Merge และตรวจยอดหลัง Import เรียบร้อยแล้ว</div>
+      <div style="margin-top:5px;font-size:12px;font-weight:700">ระบบอัปเดตตามไฟล์ล่าสุด นำข้อมูลที่หายออก และตรวจยอดหลัง Import เรียบร้อยแล้ว</div>
       <div class="wms-import-inline-summary">
         <span>${metrics.rows.toLocaleString(uiLocale())} แถวจากไฟล์</span>
         <span>${metrics.locations.toLocaleString(uiLocale())} Location</span>
         <span>SUM OH ${Number(metrics.sumOH).toLocaleString(uiLocale(),{maximumFractionDigits:2})}</span>
+        <span>ออกจากไฟล์ ${Number(removedSnapshotCount+removedDetailCount).toLocaleString(uiLocale())} รายการ</span>
       </div>
     </div>`;
     showWmsImportResult({
       title:'Import / Update WMS สำเร็จ',
-      message:'Import แบบ Merge เสร็จสมบูรณ์ และตรวจเทียบข้อมูลที่บันทึกแล้ว',
+      message:'อัปเดต WMS ตามไฟล์ล่าสุดเสร็จสมบูรณ์ · ข้อมูลที่หายถูกปรับทุกส่วนที่เกี่ยวข้องโดยคงประวัติ Count',
       facts:[
         {group:'overview',label:'แถวที่อ่านจากไฟล์',value:metrics.rows.toLocaleString(uiLocale())},
         {group:'overview',label:'Location ในไฟล์',value:metrics.locations.toLocaleString(uiLocale())},
@@ -53373,6 +54203,8 @@ async function doImportXlsx() {
         {group:'new',label:'LPN/Lot ใหม่',value:newDetailCount.toLocaleString(uiLocale()),rawValue:newDetailCount},
         {group:'updated',label:'OH/AL อัปเดต',value:updatedSnapshotCount.toLocaleString(uiLocale()),rawValue:updatedSnapshotCount},
         {group:'updated',label:'LPN/Lot อัปเดต',value:updatedDetailCount.toLocaleString(uiLocale()),rawValue:updatedDetailCount},
+        {group:'updated',label:'Snapshot หาย → OH/AL 0',value:removedSnapshotCount.toLocaleString(uiLocale()),rawValue:removedSnapshotCount},
+        {group:'updated',label:'LPN/Lot ออกจากไฟล์',value:removedDetailCount.toLocaleString(uiLocale()),rawValue:removedDetailCount},
         {label:'ไม่เปลี่ยน',value:(unchangedSnapshotCount+unchangedDetailCount).toLocaleString(uiLocale())},
         {label:'งานนับ/DIFF ที่อัปเดต',value:`${countedOrDiffLocationIds.size.toLocaleString(uiLocale())} Location`},
         {label:'ล็อกหลังคอนเฟิร์ม',value:`${confirmedProtectedLocationIds.size.toLocaleString(uiLocale())} Location · ${confirmedProtectedImportRows.toLocaleString(uiLocale())} แถว`},
@@ -53384,6 +54216,12 @@ async function doImportXlsx() {
     });
     _deleteSessionLocationCache.delete(sid);
     invalidateAssignmentWorkspaceCache(sid);
+    invalidateWmsFastCacheV179(sid);
+    invalidateDashboardCache();
+    invalidatePageViewCache();
+    if (String(window._warehouseLayoutSessionData?.sessionId || '') === String(sid)) {
+      window._warehouseLayoutSessionData = null;
+    }
     _xlsxRawRows = null;
     _xlsxParsed = null;
     _xlsxImportAnalysis = null;
@@ -55615,7 +56453,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.117' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.121' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -55876,7 +56714,7 @@ async function exportBackupZip() {
       format:BACKUP_ZIP_FORMAT,
       version:BACKUP_ZIP_VERSION,
       created_at:new Date().toISOString(),
-      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.117',
+      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.121',
       excel_file:excelFileName,
       excel_sha256:excelSha256,
       excel_manifest_hash:built.manifestHash,
@@ -57149,7 +57987,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.117" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.121" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
