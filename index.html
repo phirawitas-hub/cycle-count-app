@@ -3,10 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V1.140: keep the application palette identical on browsers that force
+     websites into dark mode (Samsung Internet, Chrome/Android and iPadOS). -->
+<meta name="color-scheme" content="only light">
+<meta name="supported-color-schemes" content="light">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.127</title>
+<title>Cycle Count V1.140</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -22518,9 +22522,13 @@ body.count-page-active #app .count-handheld-page .citem-wrap {
   );
 }
 
-/* V1.139 · Loading Cat — follows the supplied reference with the requested
+/* V1.140 · Loading Cat — follows the supplied reference with the requested
    white canvas, orange elastic cat and centered Loading label. Progress runs
-   internally for accessibility, but no percentage or progress bar is shown. */
+   internally for accessibility, but no percentage or progress bar is shown.
+   The loader is light-only so mobile browser auto-darkening cannot recolour it. */
+:root{
+  color-scheme:only light;
+}
 .page-loading-overlay{
   position:absolute!important;
   z-index:190!important;
@@ -22531,6 +22539,11 @@ body.count-page-active #app .count-handheld-page .citem-wrap {
   padding:0!important;
   overflow:hidden!important;
   background:#fff!important;
+  color:#000!important;
+  color-scheme:only light!important;
+  forced-color-adjust:none!important;
+  -webkit-print-color-adjust:exact!important;
+  print-color-adjust:exact!important;
   backdrop-filter:none!important;
   -webkit-backdrop-filter:none!important;
   opacity:1;
@@ -22548,6 +22561,8 @@ body.count-page-active #app .count-handheld-page .citem-wrap {
   border:0!important;
   border-radius:0!important;
   background:transparent!important;
+  color-scheme:only light!important;
+  forced-color-adjust:none!important;
   box-shadow:none!important;
   text-align:center!important;
 }
@@ -22564,6 +22579,8 @@ body.count-page-active #app .count-handheld-page .citem-wrap {
   overflow:visible!important;
   border-radius:0!important;
   background:transparent!important;
+  color-scheme:only light!important;
+  forced-color-adjust:none!important;
   box-shadow:none!important;
 }
 .vespa-loader-stage::before,
@@ -22575,6 +22592,19 @@ body.count-page-active #app .count-handheld-page .citem-wrap {
   width:100%;
   height:100%;
   overflow:visible;
+  color-scheme:only light!important;
+  forced-color-adjust:none!important;
+  -webkit-print-color-adjust:exact!important;
+  print-color-adjust:exact!important;
+  filter:none!important;
+  mix-blend-mode:normal!important;
+}
+.cat-loader-art *{
+  color-scheme:only light!important;
+  forced-color-adjust:none!important;
+  -webkit-print-color-adjust:exact!important;
+  print-color-adjust:exact!important;
+  mix-blend-mode:normal!important;
 }
 .cat-loader-orbit{
   transform-origin:110px 110px;
@@ -22607,7 +22637,12 @@ body.count-page-active #app .count-handheld-page .citem-wrap {
   inset:0;
   display:grid;
   place-items:center;
-  color:#000;
+  color:#000!important;
+  -webkit-text-fill-color:#000!important;
+  color-scheme:only light!important;
+  forced-color-adjust:none!important;
+  -webkit-print-color-adjust:exact!important;
+  print-color-adjust:exact!important;
   font-family:Arial,'Sarabun',sans-serif;
   font-size:1.9rem;
   font-weight:400;
@@ -22639,18 +22674,32 @@ body.count-page-active #app .count-handheld-page .citem-wrap {
   .vespa-loader-card{width:min(320px,84vw)!important;padding:0!important;border-radius:0!important}
   .vespa-loader-stage{height:auto!important}
 }
+@media(prefers-color-scheme:dark){
+  .page-loading-overlay{background:#fff!important;color:#000!important}
+  .vespa-loader-card,.vespa-loader-stage{background:transparent!important}
+  .cat-loader-word{color:#000!important;-webkit-text-fill-color:#000!important}
+  .cat-loader-body-shadow{fill:#d98220!important}
+  .cat-loader-body,.cat-loader-face,.cat-loader-ear,.cat-loader-paw{fill:#f3a33b!important}
+  .cat-loader-body-highlight{stroke:rgba(255,220,157,.88)!important}
+  .cat-loader-ear-inner{fill:#f4a8b8!important}
+  .cat-loader-eye{fill:#30343b!important}
+  .cat-loader-eye-glint{fill:#fff!important}
+  .cat-loader-nose{fill:#ef8ea3!important}
+  .cat-loader-mouth{stroke:#594943!important}
+  .cat-loader-cheek{fill:#f7bec9!important}
+}
 @media(prefers-reduced-motion:reduce){
   .cat-loader-orbit{animation:catLoaderOrbit 8s linear infinite!important}
 }
 </style>
 </head>
-<body data-build="v1-139">
+<body data-build="v1-140">
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.139';
+const APP_VERSION = '1.140';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
-const APP_BUILD_ID = 'v1-139';
+const APP_BUILD_ID = 'v1-140';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
 
 // V1.84 performance: keep the login and ordinary work pages light.  Large
