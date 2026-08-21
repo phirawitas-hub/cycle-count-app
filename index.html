@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V1.145: support the deployed variance_approvals schema without created_at
+     so WMS Import and Count History do not stop with PostgREST 400. -->
 <!-- V1.144: restore exact Count-1 OH even in auto-pass Sessions and always
      reload the live Variance queue after historical repair. -->
 <!-- V1.143: restore remaining zero-OH Locations from Audit/LPN history and
@@ -18,14 +20,14 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.144</title>
+<title>Cycle Count V1.145</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
 if (['http:','https:'].includes(location.protocol)) {
   const manifestLink = document.createElement('link');
   manifestLink.rel = 'manifest';
-  manifestLink.href = './manifest.webmanifest?v=144';
+  manifestLink.href = './manifest.webmanifest?v=145';
   document.head.appendChild(manifestLink);
 }
 </script>
@@ -34,8 +36,8 @@ if (['http:','https:'].includes(location.protocol)) {
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Cycle Count">
-<link rel="apple-touch-icon" href="./icons/icon-192.png?v=144">
-<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=144">
+<link rel="apple-touch-icon" href="./icons/icon-192.png?v=145">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=145">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -60,6 +62,7 @@ if (['http:','https:'].includes(location.protocol)) {
 <!-- V1.116: ทุกปุ่มบันทึก Count ตรวจ DIFF ทันที และเปิด Count รอบถัดไปของ Item เดิมโดยไม่รอครบ Location -->
 <!-- V1.141: Import WMS แบบ Merge ไม่ตั้ง OH/AL ที่หายเป็น 0 และไม่แก้ Snapshot ของงานที่เริ่มนับแล้ว -->
 <!-- V1.142: ผังคลังยึดประวัติ completed เป็นสีเขียว และกู้ OH จาก Count ที่จบแล้วก่อนคำนวณสถานะ -->
+<!-- V1.145: แก้ Import และประวัติให้รองรับ variance_approvals ที่ไม่มี created_at -->
 <!-- V1.144: กู้ OH จาก Count 1 ที่จบแล้วแม้ Session ใช้ auto-pass และไม่ใช้ Cache เก่าบนหน้าผลต่าง -->
 <!-- V1.143: กู้ Location ที่เหลือจาก Audit/LPN-Lot และคืนสถานะ completed เมื่อ OH เดิมตรง Count ครบทุก Item -->
 <!-- V1.127: กรอง Snapshot Item ว่าง/กำพร้าแบบรวมศูนย์ ไม่ให้ UUID ค้างงานเมื่อ Location มี Item จริง พร้อม Audit และล้างแถวปลอดภัย -->
@@ -22713,13 +22716,13 @@ body.count-page-active #app .count-handheld-page .citem-wrap {
 }
 </style>
 </head>
-<body data-build="v1-144">
+<body data-build="v1-145">
 <div id="app"></div>
 
 <script>
-// V1.144: one authoritative application version for the browser title,
+// V1.145: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '1.144';
+const APP_VERSION = '1.145';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -24242,7 +24245,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.144':'e.g. Warehouse V1.144',
+  'เช่น Warehouse V1.145':'e.g. Warehouse V1.145',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -54432,7 +54435,7 @@ async function loadAdTxLog() {
   const [{ data: asgn }, { data: recs }, { data: approvals, error: apprErr }] = await Promise.all([
     sb.from('assignments').select('id,status,location_id,session_id,locations(code,zone),count_sessions(name)').eq('id', aid).single(),
     sb.from('count_records').select('id,assignment_id,item_id,round,count_qty,counted_at,type_issue,remark,photo_url,actual_counter_name,items(code,description)').eq('assignment_id', aid).order('counted_at'),
-    sb.from('variance_approvals').select('assignment_id,item_id,final_qty,variance,resolution,approved_by,approved_at,created_at,review_status,items(code,description),profiles!approved_by(name)').eq('assignment_id', aid).order('created_at'),
+    sb.from('variance_approvals').select('assignment_id,item_id,final_qty,variance,resolution,approved_by,approved_at,updated_at,review_status,items(code,description),profiles!approved_by(name)').eq('assignment_id', aid).order('approved_at'),
   ]);
   if (!asgn) { go('ad-history'); return; }
 
@@ -55814,7 +55817,7 @@ async function doImportXlsx() {
       assignmentIds.length
         ? fetchSupabaseRowsByValues(
             'variance_approvals',
-            'assignment_id,item_id,final_qty,variance,review_status,approved_at,created_at,updated_at',
+            'assignment_id,item_id,final_qty,variance,review_status,approved_at,updated_at',
             'assignment_id',
             assignmentIds,
           )
@@ -59982,7 +59985,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.144" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.145" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
@@ -60906,7 +60909,7 @@ window.addEventListener('DOMContentLoaded', () => {
 if ('serviceWorker' in navigator && ['https:','http:'].includes(location.protocol)) {
   window.addEventListener('load', async () => {
     try {
-      const registration = await navigator.serviceWorker.register('./sw.js?v=144', { scope:'./' });
+      const registration = await navigator.serviceWorker.register('./sw.js?v=145', { scope:'./' });
       registration.update().catch(() => {});
       document.documentElement.dataset.pwaReady = 'true';
     } catch (error) {
