@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V1.144: restore exact Count-1 OH even in auto-pass Sessions and always
+     reload the live Variance queue after historical repair. -->
+<!-- V1.143: restore remaining zero-OH Locations from Audit/LPN history and
+     close false WMS review work when every recovered Item matches Count. -->
 <!-- V1.142: Warehouse Layout honors terminal Count history and restores exact
      OH for completed work before deriving live yellow/green status. -->
 <!-- V1.141: Import WMS preserves historical OH/LPN rows, locks every started
@@ -14,14 +18,14 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.142</title>
+<title>Cycle Count V1.144</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
 if (['http:','https:'].includes(location.protocol)) {
   const manifestLink = document.createElement('link');
   manifestLink.rel = 'manifest';
-  manifestLink.href = './manifest.webmanifest?v=142';
+  manifestLink.href = './manifest.webmanifest?v=144';
   document.head.appendChild(manifestLink);
 }
 </script>
@@ -30,8 +34,8 @@ if (['http:','https:'].includes(location.protocol)) {
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Cycle Count">
-<link rel="apple-touch-icon" href="./icons/icon-192.png?v=142">
-<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=142">
+<link rel="apple-touch-icon" href="./icons/icon-192.png?v=144">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=144">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -56,6 +60,8 @@ if (['http:','https:'].includes(location.protocol)) {
 <!-- V1.116: ทุกปุ่มบันทึก Count ตรวจ DIFF ทันที และเปิด Count รอบถัดไปของ Item เดิมโดยไม่รอครบ Location -->
 <!-- V1.141: Import WMS แบบ Merge ไม่ตั้ง OH/AL ที่หายเป็น 0 และไม่แก้ Snapshot ของงานที่เริ่มนับแล้ว -->
 <!-- V1.142: ผังคลังยึดประวัติ completed เป็นสีเขียว และกู้ OH จาก Count ที่จบแล้วก่อนคำนวณสถานะ -->
+<!-- V1.144: กู้ OH จาก Count 1 ที่จบแล้วแม้ Session ใช้ auto-pass และไม่ใช้ Cache เก่าบนหน้าผลต่าง -->
+<!-- V1.143: กู้ Location ที่เหลือจาก Audit/LPN-Lot และคืนสถานะ completed เมื่อ OH เดิมตรง Count ครบทุก Item -->
 <!-- V1.127: กรอง Snapshot Item ว่าง/กำพร้าแบบรวมศูนย์ ไม่ให้ UUID ค้างงานเมื่อ Location มี Item จริง พร้อม Audit และล้างแถวปลอดภัย -->
 <!-- V1.112: แก้ Flow ยืนยัน Item ให้ส่งเข้าคิวปรับปรุงยอด WMS ทันที และรองรับรายการเดิมที่ released_to_wms=false -->
 <!-- V1.111: เพิ่มกล่องยอดยืนยันและ Variance ต่อจาก COUNT 3 ในรายการปรับยอด WMS -->
@@ -22707,13 +22713,13 @@ body.count-page-active #app .count-handheld-page .citem-wrap {
 }
 </style>
 </head>
-<body data-build="v1-142">
+<body data-build="v1-144">
 <div id="app"></div>
 
 <script>
-// V1.142: one authoritative application version for the browser title,
+// V1.144: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '1.142';
+const APP_VERSION = '1.144';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -24236,7 +24242,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.142':'e.g. Warehouse V1.142',
+  'เช่น Warehouse V1.144':'e.g. Warehouse V1.144',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -27165,10 +27171,10 @@ function paintDashboardView(tab, cache = _dashboardViewCache) {
 }
 
 function paintCachedDashboardView(tab) {
-  // Layout and WMS are operational views of the current database state.
+  // Layout, Variance and WMS are operational views of the current database state.
   // Never repaint their five-minute Dashboard cache: accuracy and a complete
   // fresh paginated read take priority over opening speed on these pages.
-  if (['layout','wms'].includes(tab)) return false;
+  if (['layout','variance','wms'].includes(tab)) return false;
   const cache = _dashboardViewCacheStore.get(dashboardViewCacheKey(tab)) || _dashboardViewCache;
   if (!cache || cache.sessionId !== S._dashSid) return false;
   if (cache.userId !== (me?.id || '') || cache.role !== (prof?.role || '')) return false;
@@ -30253,18 +30259,144 @@ function recoverHistoricalOhInMemory(snapshotRows=[],assignments=[],approvalRows
   return repairs;
 }
 
+function historicalNumberFromAudit(value) {
+  const normalized = String(value ?? '').trim().replace(/,/g,'');
+  if (!normalized || !/^[+-]?(?:\d+\.?\d*|\.\d+)$/.test(normalized)) return null;
+  const number = Number(normalized);
+  return Number.isFinite(number) ? number : null;
+}
+
+function historicalAssignmentStatusByAudit(auditRows=[]) {
+  const statusByAssignment = new Map();
+  [...(auditRows || [])]
+    .sort((left,right) => {
+      const leftTime = Date.parse(left?.created_at || '') || 0;
+      const rightTime = Date.parse(right?.created_at || '') || 0;
+      return leftTime-rightTime || (Number(left?.id)||0)-(Number(right?.id)||0);
+    })
+    .forEach(row => {
+      const assignmentId = String(row?.assignment_id || '');
+      if (!assignmentId) return;
+      const value = String(row?.new_value || '');
+      const action = String(row?.action || '').toLowerCase();
+      let status = '';
+      if (action === 'count_round_submit') {
+        status = value.match(/(?:ผล|result)\s+(approved|completed|round3_done|round2_done|round1_done|in_progress|pending)/i)?.[1] || '';
+      } else if (action === 'variance_location_closed') {
+        status = value.match(/\b(approved|completed)\b/i)?.[1] || '';
+      } else if (['variance_item_reopened','variance_reopened','wms_return_review'].includes(action)) {
+        status = 'round3_done';
+      } else if (['assignment_history_restored','count_confirmed','count_completed'].includes(action)) {
+        status = 'completed';
+      } else if (/assignment.*status|count.*(?:submit|confirm|complete)/.test(action)) {
+        status = value.match(/\b(approved|completed|round3_done|round2_done|round1_done|in_progress|pending)\b/i)?.[1] || '';
+        if (!status && /นับครบ|ยอด(?:นับ)?ตรง|ผ่านเกณฑ์/.test(value)) status = 'completed';
+        if (!status && /รอตรวจสอบ|ผลต่าง|\bdiff\b/i.test(value)) status = 'round3_done';
+      }
+      if (status) statusByAssignment.set(assignmentId,status.toLowerCase());
+    });
+  return statusByAssignment;
+}
+
+function recoverHistoricalOhFromAuditInMemory(snapshotRows=[],assignments=[],auditRows=[],sessionId='') {
+  const assignmentByLocation = new Map(
+    (assignments || []).filter(row => row?.location_id).map(row => [String(row.location_id),row])
+  );
+  const evidenceByKey = new Map();
+  [...(auditRows || [])]
+    .filter(row => ['oh_edit','wms_import_oh_restored'].includes(row?.action))
+    .sort((left,right) => {
+      const leftTime = Date.parse(left?.created_at || '') || 0;
+      const rightTime = Date.parse(right?.created_at || '') || 0;
+      return leftTime-rightTime || (Number(left?.id)||0)-(Number(right?.id)||0);
+    })
+    .forEach(row => {
+      if (!row?.location_id || !row?.item_id) return;
+      const historicalOh = historicalNumberFromAudit(row.new_value);
+      if (historicalOh === null) return;
+      evidenceByKey.set(`${row.location_id}|${row.item_id}`,{
+        onhandQty:historicalOh,
+        assignmentId:row.assignment_id || assignmentByLocation.get(String(row.location_id))?.id || null,
+      });
+    });
+
+  const repairs = [];
+  (snapshotRows || []).forEach(snapshot => {
+    if (!snapshot?.id || Number(snapshot.onhand_qty) !== 0) return;
+    const evidence = evidenceByKey.get(`${snapshot.location_id}|${snapshot.item_id}`);
+    if (!evidence || !Number.isFinite(evidence.onhandQty) || evidence.onhandQty === 0) return;
+    repairs.push({
+      id:snapshot.id,
+      sessionId:snapshot.session_id || sessionId || '',
+      locationId:snapshot.location_id,
+      itemId:snapshot.item_id,
+      assignmentId:evidence.assignmentId,
+      oldOh:snapshot.onhand_qty,
+      onhandQty:evidence.onhandQty,
+      alQty:snapshot.al_qty,
+      snapshot,
+      source:'audit_history',
+    });
+    snapshot.onhand_qty = evidence.onhandQty;
+    snapshot._historicalOhRecovered = true;
+  });
+  return repairs;
+}
+
+function recoverHistoricalOhFromStockDetailsInMemory(
+  snapshotRows=[],detailRows=[],assignments=[],sessionId=''
+) {
+  const assignmentByLocation = new Map(
+    (assignments || []).filter(row => row?.location_id).map(row => [String(row.location_id),row])
+  );
+  const detailTotals = new Map();
+  wmsImportConsolidateDetailMap(detailRows || []).forEach(detail => {
+    const key = `${detail.location_id}|${detail.item_id}`;
+    detailTotals.set(key,(detailTotals.get(key) || 0) + (Number(detail.qty) || 0));
+  });
+  const repairs = [];
+  (snapshotRows || []).forEach(snapshot => {
+    if (!snapshot?.id || Number(snapshot.onhand_qty) !== 0) return;
+    const historicalOh = detailTotals.get(`${snapshot.location_id}|${snapshot.item_id}`);
+    if (!Number.isFinite(historicalOh) || historicalOh === 0) return;
+    repairs.push({
+      id:snapshot.id,
+      sessionId:snapshot.session_id || sessionId || '',
+      locationId:snapshot.location_id,
+      itemId:snapshot.item_id,
+      assignmentId:assignmentByLocation.get(String(snapshot.location_id))?.id || null,
+      oldOh:snapshot.onhand_qty,
+      onhandQty:historicalOh,
+      alQty:snapshot.al_qty,
+      snapshot,
+      source:'stock_detail_history',
+    });
+    snapshot.onhand_qty = historicalOh;
+    snapshot._historicalOhRecovered = true;
+  });
+  return repairs;
+}
+
 // A persisted completed Assignment is exact evidence that physical counting
 // reached an OK result under the Session rules that were active at the time.
-// Except for auto_pass (where two equal Counts may intentionally differ from
-// OH), the last saved Count is therefore the original OH that ended the job.
+// Count 1 is exact evidence even in auto_pass Sessions: completion after the
+// first round is possible only when Count 1 matched OH. Later auto-pass rounds
+// are deliberately excluded because two repeated Counts may differ from OH.
 function recoverHistoricalOhFromCompletedCountsInMemory(
-  snapshotRows=[],assignments=[],countRows=[],rules={},sessionId=''
+  snapshotRows=[],assignments=[],countRows=[],rules={},sessionId='',completedAssignmentIds=[]
 ) {
-  if (String(rules?.repeatMatchAction || '') === 'auto_pass') return [];
+  const autoPass = String(rules?.repeatMatchAction || '') === 'auto_pass';
+  const auditedCompletedIds = completedAssignmentIds instanceof Set
+    ? completedAssignmentIds
+    : new Set(completedAssignmentIds || []);
   const completedByLocation = new Map();
   (assignments || []).forEach(assignment => {
     const storedStatus = String(assignment?._storedStatus || assignment?.status || '');
-    if (storedStatus !== 'completed' || !assignment?.id || !assignment?.location_id) return;
+    if (
+      storedStatus !== 'completed'
+      && !auditedCompletedIds.has(String(assignment?.id || ''))
+    ) return;
+    if (!assignment?.id || !assignment?.location_id) return;
     const locationKey = String(assignment.location_id);
     if (!completedByLocation.has(locationKey)) completedByLocation.set(locationKey,[]);
     completedByLocation.get(locationKey).push(assignment);
@@ -30298,7 +30430,7 @@ function recoverHistoricalOhFromCompletedCountsInMemory(
         assignment,
         record:latestCountByWork.get(`${assignment.id}|${snapshot.item_id}`),
       }))
-      .filter(entry => entry.record)
+      .filter(entry => entry.record && (!autoPass || Number(entry.record.round) === 1))
       .sort((left,right) => {
         const leftTime = Date.parse(left.record.counted_at || '') || 0;
         const rightTime = Date.parse(right.record.counted_at || '') || 0;
@@ -30320,6 +30452,65 @@ function recoverHistoricalOhFromCompletedCountsInMemory(
     });
     snapshot.onhand_qty = historicalOh;
     snapshot._historicalOhRecovered = true;
+  });
+  return repairs;
+}
+
+function recoverCompletedAssignmentStatusesInMemory(
+  snapshotRows=[],assignments=[],countRows=[],approvalRows=[],rules={},auditRows=[]
+) {
+  const auditStatuses = historicalAssignmentStatusByAudit(auditRows);
+  const roundsByAssignment = {};
+  (countRows || []).forEach(record => {
+    if (!record?.assignment_id || !record?.item_id) return;
+    roundsByAssignment[record.assignment_id] = roundsByAssignment[record.assignment_id] || {};
+    roundsByAssignment[record.assignment_id][record.item_id] = roundsByAssignment[record.assignment_id][record.item_id] || {};
+    roundsByAssignment[record.assignment_id][record.item_id][record.round] = Number(record.count_qty);
+  });
+  const snapshotsByLocation = {};
+  (snapshotRows || []).forEach(snapshot => {
+    snapshotsByLocation[snapshot.location_id] = snapshotsByLocation[snapshot.location_id] || [];
+    snapshotsByLocation[snapshot.location_id].push(snapshot);
+  });
+  const confirmedDiffAssignments = new Set(
+    (approvalRows || [])
+      .filter(row => varianceReviewState(row) === 'confirmed' && Number(row.variance) !== 0)
+      .map(row => String(row.assignment_id || ''))
+      .filter(Boolean)
+  );
+  const repairs = [];
+  (assignments || []).forEach(assignment => {
+    if (!assignment?.id || !assignment?.location_id || assignment.wms_closed_at) return;
+    const databaseStatus = String(assignment._databaseStatus || assignment.status || '');
+    if (databaseStatus === 'approved' || confirmedDiffAssignments.has(String(assignment.id))) return;
+    const snapshots = operationalStockSnapshotRows(snapshotsByLocation[assignment.location_id] || []);
+    const rounds = roundsByAssignment[assignment.id] || {};
+    const allOK = snapshots.length > 0 && snapshots.every(snapshot => {
+      const values = rounds[snapshot.item_id] || {};
+      return computeItemStatus(
+        snapshot.onhand_qty,values[1],values[2],values[3],rules,
+      ) === 'OK';
+    });
+    const auditedStatus = auditStatuses.get(String(assignment.id)) || '';
+    const auditSaysCompleted = auditedStatus === 'completed';
+    // A saved non-completed result (especially round3_done) is explicit DIFF
+    // history. Preserve it so the legitimate 41-item queue is not auto-closed
+    // merely because a later LPN snapshot happens to equal the physical Count.
+    if (auditedStatus && !auditSaysCompleted) return;
+    if (!allOK && !auditSaysCompleted) return;
+    assignment._databaseStatus = databaseStatus;
+    assignment._historicalStatus = 'completed';
+    assignment._historicalStatusSource = auditSaysCompleted ? 'audit_history' : 'recovered_oh_match';
+    if (databaseStatus !== 'completed') {
+      repairs.push({
+        id:assignment.id,
+        sessionId:assignment.session_id || '',
+        locationId:assignment.location_id,
+        oldStatus:databaseStatus,
+        status:'completed',
+        assignment,
+      });
+    }
   });
   return repairs;
 }
@@ -30432,6 +30623,58 @@ function persistRecoveredHistoricalOhInBackground(repairs=[]) {
     .finally(() => pending.forEach(repair =>
       _historicalOhPersistenceKeys.delete(repair._historicalOhPersistenceKey || historicalOhRepairKey(repair))
     ));
+}
+
+const _historicalAssignmentStatusPersistenceIds = new Set();
+
+function persistRecoveredAssignmentStatusesInBackground(repairs=[]) {
+  const pending = repairs.filter(repair => {
+    const id = String(repair?.id || '');
+    if (!id || _historicalAssignmentStatusPersistenceIds.has(id)) return false;
+    _historicalAssignmentStatusPersistenceIds.add(id);
+    return true;
+  });
+  if (!pending.length) return Promise.resolve({ saved:0,failed:0 });
+  return Promise.resolve().then(async () => {
+    let saved = 0;
+    let failed = 0;
+    for (let start = 0; start < pending.length; start += HISTORICAL_OH_WRITE_BATCH_SIZE) {
+      const batch = pending.slice(start,start + HISTORICAL_OH_WRITE_BATCH_SIZE);
+      try {
+        const { data,error } = await sb.from('assignments')
+          .update({ status:'completed' })
+          .in('id',batch.map(repair => repair.id))
+          .in('status',['pending','in_progress','round1_done','round2_done','round3_done','expired'])
+          .select('id');
+        if (error) throw error;
+        const savedIds = new Set((data || []).map(row => String(row.id)));
+        const savedBatch = batch.filter(repair => savedIds.has(String(repair.id)));
+        saved += savedBatch.length;
+        failed += batch.length-savedBatch.length;
+        if (savedBatch.length) {
+          await writeAuditRows(savedBatch.map(repair => buildAuditRow(
+            repair.sessionId,repair.locationId,null,
+            'assignment_history_restored',repair.oldStatus,'completed',repair.id,
+          )));
+        }
+      } catch (error) {
+        failed += batch.length;
+        if (error?.name !== 'AbortError') {
+          console.warn(`คืนสถานะงานเดิมไม่สำเร็จ ${batch.length} Location:`,error?.message || error);
+        }
+      }
+    }
+    if (saved) {
+      invalidateDashboardCache();
+      invalidatePageViewCache();
+    }
+    return { saved,failed };
+  }).catch(error => {
+    if (error?.name !== 'AbortError') console.warn('คืนสถานะงานเดิมเบื้องหลังไม่สำเร็จ:',error?.message || error);
+    return { saved:0,failed:pending.length };
+  }).finally(() => pending.forEach(repair =>
+    _historicalAssignmentStatusPersistenceIds.delete(String(repair.id || ''))
+  ));
 }
 
 function stockSnapshotItemKind(snapshot={}) {
@@ -40357,6 +40600,12 @@ async function fetchWarehouseLayoutLiveSessionData(sessionId,sessionName='') {
     ...liveApprovalRepairs,
     ...liveCompletedRepairs,
   ]);
+  const liveAssignmentStatusRepairs = recoverCompletedAssignmentStatusesInMemory(
+    snapshots,assignments,counts,approvalResult.data || [],rules,[],
+  );
+  if (liveAssignmentStatusRepairs.length) {
+    persistRecoveredAssignmentStatusesInBackground(liveAssignmentStatusRepairs);
+  }
   const snapshotsByLocation = {};
   snapshots.forEach(snapshot => {
     snapshotsByLocation[snapshot.location_id] = snapshotsByLocation[snapshot.location_id] || [];
@@ -40369,13 +40618,14 @@ async function fetchWarehouseLayoutLiveSessionData(sessionId,sessionName='') {
     countsByAssignment[record.assignment_id][record.item_id][record.round] = Number(record.count_qty);
   });
   const normalizedAssignments = assignments.map(assignment => {
+    const historicalStatus = assignment._historicalStatus || assignment.status;
     const workflow = deriveAssignmentWorkflowStatus(
       snapshotsByLocation[assignment.location_id] || [],
       countsByAssignment[assignment.id] || {},
       rules,
-      assignment.status === 'approved' ? 'pending' : assignment.status,
+      historicalStatus === 'approved' ? 'pending' : historicalStatus,
     );
-    return { ...assignment,_storedStatus:assignment.status,_workflow:workflow,status:workflow.effectiveStatus };
+    return { ...assignment,_storedStatus:historicalStatus,_workflow:workflow,status:workflow.effectiveStatus };
   });
   const approvals = (approvalResult.data || [])
     .map(normalizeWarehouseLayoutLiveApproval)
@@ -45492,18 +45742,93 @@ async function loadSvDash() {
       curSid,
     ));
   }
-  const completedCountOhRepairs = recoverHistoricalOhFromCompletedCountsInMemory(
+  dashboardOhRepairs.push(...recoverHistoricalOhFromCompletedCountsInMemory(
     allSnapshots,
     asgns,
     rawCounts,
     rules,
     curSid,
+  ));
+
+  // V1.143: remaining zero-OH work needs stronger evidence than Assignment
+  // status alone. Query only the still-damaged counted Locations, not the full
+  // Session, so a six-Location repair cannot make WMS load thousands of rows.
+  const countedAssignmentIdsForRecovery = new Set(
+    rawCounts.map(record => String(record.assignment_id || '')).filter(Boolean)
   );
-  const allDashboardOhRepairs = [...dashboardOhRepairs,...completedCountOhRepairs];
-  if (allDashboardOhRepairs.length) {
-    persistRecoveredHistoricalOhInBackground(allDashboardOhRepairs);
+  const countedLocationIdsForRecovery = new Set(
+    asgns
+      .filter(assignment => countedAssignmentIdsForRecovery.has(String(assignment.id || '')))
+      .map(assignment => String(assignment.location_id || ''))
+      .filter(Boolean)
+  );
+  const remainingZeroLocationIds = [...new Set(
+    allSnapshots
+      .filter(snapshot => Number(snapshot.onhand_qty) === 0
+        && countedLocationIdsForRecovery.has(String(snapshot.location_id || '')))
+      .map(snapshot => snapshot.location_id)
+      .filter(Boolean)
+  )];
+  const remainingZeroLocationIdSet = new Set(remainingZeroLocationIds.map(String));
+  const remainingRecoveryAssignments = asgns.filter(assignment =>
+    remainingZeroLocationIdSet.has(String(assignment.location_id || ''))
+    && countedAssignmentIdsForRecovery.has(String(assignment.id || ''))
+  );
+  const remainingRecoveryAssignmentIds = remainingRecoveryAssignments
+    .map(assignment => assignment.id).filter(Boolean);
+  let recoveryAuditRows = [];
+  let recoveryDetailRows = detailResult.data || [];
+  if (remainingRecoveryAssignmentIds.length) {
+    const [auditRecoveryResult,detailRecoveryResult] = await Promise.all([
+      fetchSupabaseRowsByValues(
+        'audit_log',
+        'id,session_id,location_id,item_id,assignment_id,action,old_value,new_value,created_at',
+        'assignment_id',
+        remainingRecoveryAssignmentIds,
+        query => query.eq('session_id',curSid).order('created_at'),
+      ),
+      recoveryDetailRows.length
+        ? Promise.resolve({ data:recoveryDetailRows,error:null })
+        : fetchSupabaseRowsByValues(
+            'stock_snapshot_detail',
+            'id,session_id,location_id,item_id,license_plate,lot,inventory_status,qty,uom',
+            'location_id',
+            remainingZeroLocationIds,
+            query => query.eq('session_id',curSid).order('id'),
+          ),
+    ]);
+    if (isStaleLoad()) return;
+    if (auditRecoveryResult.error) console.warn('โหลด Audit สำหรับกู้ OH ไม่สำเร็จ:',auditRecoveryResult.error.message);
+    else recoveryAuditRows = auditRecoveryResult.data || [];
+    if (detailRecoveryResult.error) console.warn('โหลด LPN/Lot สำหรับกู้ OH ไม่สำเร็จ:',detailRecoveryResult.error.message);
+    else recoveryDetailRows = detailRecoveryResult.data || [];
+  }
+
+  dashboardOhRepairs.push(...recoverHistoricalOhFromAuditInMemory(
+    allSnapshots,asgns,recoveryAuditRows,curSid,
+  ));
+  const historicalStatusMap = historicalAssignmentStatusByAudit(recoveryAuditRows);
+  const auditedCompletedAssignmentIds = new Set(
+    [...historicalStatusMap.entries()]
+      .filter(([,status]) => status === 'completed')
+      .map(([assignmentId]) => assignmentId)
+  );
+  dashboardOhRepairs.push(...recoverHistoricalOhFromCompletedCountsInMemory(
+    allSnapshots,asgns,rawCounts,rules,curSid,auditedCompletedAssignmentIds,
+  ));
+  dashboardOhRepairs.push(...recoverHistoricalOhFromStockDetailsInMemory(
+    allSnapshots,recoveryDetailRows,asgns,curSid,
+  ));
+  const assignmentStatusRepairs = recoverCompletedAssignmentStatusesInMemory(
+    allSnapshots,asgns,rawCounts,varianceApprovalResult?.data || [],rules,recoveryAuditRows,
+  );
+  if (dashboardOhRepairs.length) {
+    persistRecoveredHistoricalOhInBackground(dashboardOhRepairs);
     invalidateWmsFastCacheV179(curSid);
     invalidatePageViewCache();
+  }
+  if (assignmentStatusRepairs.length) {
+    persistRecoveredAssignmentStatusesInBackground(assignmentStatusRepairs);
   }
   let executiveItemMasterRows = [];
   let executiveFoundRows = [];
@@ -45564,7 +45889,8 @@ async function loadSvDash() {
     snapshotsByLocation[snapshot.location_id].push(snapshot);
   });
   asgns.forEach(assignment => {
-    const storedStatus = assignment.status;
+    const storedStatus = assignment._historicalStatus || assignment.status;
+    assignment._databaseStatus = assignment._databaseStatus || assignment.status;
     const workflow = deriveAssignmentWorkflowStatus(
       snapshotsByLocation[assignment.location_id] || [],
       sessionCountByAsgn[assignment.id] || {},
@@ -54110,16 +54436,32 @@ async function loadAdTxLog() {
   ]);
   if (!asgn) { go('ad-history'); return; }
 
-  const [{ data: snaps }, { data: auditRows, error: auditErr }, rules] = await Promise.all([
+  const [
+    { data: snaps },
+    { data: historyDetails, error:historyDetailErr },
+    { data: auditRows, error: auditErr },
+    rules,
+  ] = await Promise.all([
     sb.from('stock_snapshot').select('id,session_id,location_id,item_id,onhand_qty,al_qty').eq('session_id', asgn.session_id).eq('location_id', asgn.location_id),
-    sb.from('audit_log').select('action,old_value,new_value,item_id,created_at,items(code,description),profiles!performed_by(name)').eq('session_id', asgn.session_id).eq('location_id', asgn.location_id).order('created_at'),
+    sb.from('stock_snapshot_detail').select('id,session_id,location_id,item_id,license_plate,lot,inventory_status,qty,uom').eq('session_id',asgn.session_id).eq('location_id',asgn.location_id),
+    sb.from('audit_log').select('id,assignment_id,location_id,action,old_value,new_value,item_id,created_at,items(code,description),profiles!performed_by(name)').eq('session_id', asgn.session_id).eq('location_id', asgn.location_id).order('created_at'),
     getSessionRules(asgn.session_id),
   ]);
-  const historyOhRepairs = recoverHistoricalOhInMemory(
+  if (historyDetailErr) console.warn('โหลด LPN/Lot สำหรับกู้ OH ในประวัติไม่สำเร็จ:',historyDetailErr.message);
+  const historyOhRepairs = recoverHistoricalOhFromAuditInMemory(
+    snaps || [],[asgn],auditRows || [],asgn.session_id,
+  );
+  historyOhRepairs.push(...recoverHistoricalOhInMemory(
     snaps || [],
     [asgn],
     approvals || [],
     asgn.session_id,
+  ));
+  const historyStatusMap = historicalAssignmentStatusByAudit(auditRows || []);
+  const historyAuditedCompletedIds = new Set(
+    [...historyStatusMap.entries()]
+      .filter(([,status]) => status === 'completed')
+      .map(([assignmentId]) => assignmentId)
   );
   const completedHistoryOhRepairs = recoverHistoricalOhFromCompletedCountsInMemory(
     snaps || [],
@@ -54127,11 +54469,22 @@ async function loadAdTxLog() {
     recs || [],
     rules,
     asgn.session_id,
+    historyAuditedCompletedIds,
   );
+  historyOhRepairs.push(...recoverHistoricalOhFromStockDetailsInMemory(
+    snaps || [],historyDetails || [],[asgn],asgn.session_id,
+  ));
+  const historyAssignmentStatusRepairs = recoverCompletedAssignmentStatusesInMemory(
+    snaps || [],[asgn],recs || [],approvals || [],rules,auditRows || [],
+  );
+  if (asgn._historicalStatus) asgn.status = asgn._historicalStatus;
   persistRecoveredHistoricalOhInBackground([
     ...historyOhRepairs,
     ...completedHistoryOhRepairs,
   ]);
+  if (historyAssignmentStatusRepairs.length) {
+    persistRecoveredAssignmentStatusesInBackground(historyAssignmentStatusRepairs);
+  }
   const ohMap = {}; (snaps||[]).forEach(s => { ohMap[s.item_id] = { oh: +s.onhand_qty, al: s.al_qty }; });
 
   const byItemRounds = {};
@@ -54162,6 +54515,7 @@ async function loadAdTxLog() {
     count_confirmed:{ icon:'🔐',label:'Supervisor คอนเฟิร์มยอด' },
     oh_edit:{ icon:'✏️',label:'แก้ไขยอด OH' },
     wms_import_oh_restored:{ icon:'↩️',label:'กู้ OH เดิมหลัง Import' },
+    assignment_history_restored:{ icon:'✅',label:'คืนสถานะงานเดิมหลัง Import' },
     reassign:{ icon:'🔄',label:'เปลี่ยน User ผู้รับงาน' },
     variance_reopened:{ icon:'↩️',label:'ส่งกลับตรวจ Variance' },
     wms_status_change:{ icon:'🛠️',label:'เปลี่ยนสถานะปรับยอด WMS' },
@@ -55443,12 +55797,12 @@ async function doImportXlsx() {
     const [existingSnapshots,existingDetails,existingAssignments,existingAnnualItems] = await Promise.all([
       fetchImportedScopeRows('stock_snapshot',['id','session_id','location_id','item_id','onhand_qty','al_qty','items(code)'],sid,importScopeLocationIds),
       fetchImportedScopeRows('stock_snapshot_detail',['id','session_id','location_id','item_id','license_plate','lot','inventory_status','qty','uom'],sid,importScopeLocationIds),
-      fetchImportedScopeRows('assignments',['id','location_id','status'],sid,importScopeLocationIds),
+      fetchImportedScopeRows('assignments',['id','session_id','location_id','status'],sid,importScopeLocationIds),
       fetchImportedScopeRows('annual_count_job_items',['job_id','location_id'],sid,importScopeLocationIds),
     ]);
     const assignmentIds = existingAssignments.map(row => row.id).filter(Boolean);
     const annualJobIds = [...new Set(existingAnnualItems.map(row => row.job_id).filter(Boolean))];
-    const [countResult,approvalResult,annualJobResult,importRules] = await Promise.all([
+    const [countResult,approvalResult,annualJobResult,importAuditResult,importRules] = await Promise.all([
       assignmentIds.length
         ? fetchSupabaseRowsByValues(
             'count_records',
@@ -55468,12 +55822,22 @@ async function doImportXlsx() {
       annualJobIds.length
         ? fetchSupabaseRowsByValues('annual_count_jobs','id,status','id',annualJobIds)
         : Promise.resolve({data:[],error:null}),
+      assignmentIds.length
+        ? fetchSupabaseRowsByValues(
+            'audit_log',
+            'id,session_id,location_id,item_id,assignment_id,action,old_value,new_value,created_at',
+            'assignment_id',
+            assignmentIds,
+            query => query.eq('session_id',sid).order('created_at'),
+          )
+        : Promise.resolve({data:[],error:null}),
       getSessionRules(sid),
     ]);
-    if (countResult.error || approvalResult.error || annualJobResult.error) {
-      throw (countResult.error || approvalResult.error || annualJobResult.error);
+    if (countResult.error || approvalResult.error || annualJobResult.error || importAuditResult.error) {
+      throw (countResult.error || approvalResult.error || annualJobResult.error || importAuditResult.error);
     }
     const existingCountRows = countResult.data || [];
+    const importAuditRows = importAuditResult.data || [];
     const countedAssignmentIds = new Set(existingCountRows.map(row => row.assignment_id).filter(Boolean));
     const confirmedAssignmentIds = new Set((approvalResult.data || []).map(row => row.assignment_id).filter(Boolean));
     const assignmentByLocation = new Map(existingAssignments.map(row => [row.location_id,row]));
@@ -55514,6 +55878,16 @@ async function doImportXlsx() {
       sid,
     );
     const approvalOhRepairResult = await persistRecoveredHistoricalOh(approvalOhRepairs);
+    const auditOhRepairs = recoverHistoricalOhFromAuditInMemory(
+      existingSnapshots,existingAssignments,importAuditRows,sid,
+    );
+    const auditOhRepairResult = await persistRecoveredHistoricalOh(auditOhRepairs);
+    const importHistoricalStatusMap = historicalAssignmentStatusByAudit(importAuditRows);
+    const importAuditedCompletedAssignmentIds = new Set(
+      [...importHistoricalStatusMap.entries()]
+        .filter(([,status]) => status === 'completed')
+        .map(([assignmentId]) => assignmentId)
+    );
     // A completed Count is also exact OH history when the Session does not use
     // auto-pass. Restore it during Import itself so the first screen opened
     // after Import already has the original OH and completed (green) result.
@@ -55523,8 +55897,27 @@ async function doImportXlsx() {
       existingCountRows,
       importRules,
       sid,
+      importAuditedCompletedAssignmentIds,
     );
     const completedCountOhRepairResult = await persistRecoveredHistoricalOh(completedCountOhRepairs);
+    const detailOhRepairs = recoverHistoricalOhFromStockDetailsInMemory(
+      existingSnapshots,
+      existingDetails,
+      existingAssignments,
+      sid,
+    );
+    const detailOhRepairResult = await persistRecoveredHistoricalOh(detailOhRepairs);
+    const importAssignmentStatusRepairs = recoverCompletedAssignmentStatusesInMemory(
+      existingSnapshots,
+      existingAssignments,
+      existingCountRows,
+      approvalResult.data || [],
+      importRules,
+      importAuditRows,
+    );
+    if (importAssignmentStatusRepairs.length) {
+      persistRecoveredAssignmentStatusesInBackground(importAssignmentStatusRepairs);
+    }
 
     const mergedSnapshots = wmsImportBuildMergeSnapshots(
       sid,
@@ -55567,10 +55960,12 @@ async function doImportXlsx() {
     let newSnapshotCount = 0;
     let updatedSnapshotCount = 0;
     let recoveredHistoricalSnapshotCount = approvalOhRepairResult.saved
+      + auditOhRepairResult.saved
+      + detailOhRepairResult.saved
       + completedCountOhRepairResult.saved;
     let unchangedSnapshotCount = 0;
     const snapshotChanges = [];
-    [...approvalOhRepairs,...completedCountOhRepairs]
+    [...approvalOhRepairs,...detailOhRepairs,...completedCountOhRepairs]
       .filter(repair => repair.snapshot?._historicalOhRecovered)
       .forEach(repair => snapshotChanges.push({
         type:'updated',
@@ -59587,7 +59982,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.142" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.144" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
@@ -60511,7 +60906,7 @@ window.addEventListener('DOMContentLoaded', () => {
 if ('serviceWorker' in navigator && ['https:','http:'].includes(location.protocol)) {
   window.addEventListener('load', async () => {
     try {
-      const registration = await navigator.serviceWorker.register('./sw.js?v=142', { scope:'./' });
+      const registration = await navigator.serviceWorker.register('./sw.js?v=144', { scope:'./' });
       registration.update().catch(() => {});
       document.documentElement.dataset.pwaReady = 'true';
     } catch (error) {
