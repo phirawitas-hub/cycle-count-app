@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V1.146: Full WMS Snapshot with frozen Count OH baselines (verified).
+     Items omitted inside the selected scope become live OH=0 while historical Count/DIFF/status remain unchanged. -->
 <!-- V1.145: support the deployed variance_approvals schema without created_at
      so WMS Import and Count History do not stop with PostgREST 400. -->
 <!-- V1.144: restore exact Count-1 OH even in auto-pass Sessions and always
@@ -20,14 +22,14 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.145</title>
+<title>Cycle Count V1.146</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
 if (['http:','https:'].includes(location.protocol)) {
   const manifestLink = document.createElement('link');
   manifestLink.rel = 'manifest';
-  manifestLink.href = './manifest.webmanifest?v=145';
+  manifestLink.href = './manifest.webmanifest?v=146';
   document.head.appendChild(manifestLink);
 }
 </script>
@@ -36,8 +38,8 @@ if (['http:','https:'].includes(location.protocol)) {
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Cycle Count">
-<link rel="apple-touch-icon" href="./icons/icon-192.png?v=145">
-<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=145">
+<link rel="apple-touch-icon" href="./icons/icon-192.png?v=146">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=146">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -62,6 +64,7 @@ if (['http:','https:'].includes(location.protocol)) {
 <!-- V1.116: ทุกปุ่มบันทึก Count ตรวจ DIFF ทันที และเปิด Count รอบถัดไปของ Item เดิมโดยไม่รอครบ Location -->
 <!-- V1.141: Import WMS แบบ Merge ไม่ตั้ง OH/AL ที่หายเป็น 0 และไม่แก้ Snapshot ของงานที่เริ่มนับแล้ว -->
 <!-- V1.142: ผังคลังยึดประวัติ completed เป็นสีเขียว และกู้ OH จาก Count ที่จบแล้วก่อนคำนวณสถานะ -->
+<!-- V1.146: Import แบบ Full WMS Snapshot ตั้งรายการที่หายเป็น OH=0 และแยก OH ตอนเริ่มนับเพื่อรักษา Count/DIFF/สถานะย้อนหลัง -->
 <!-- V1.145: แก้ Import และประวัติให้รองรับ variance_approvals ที่ไม่มี created_at -->
 <!-- V1.144: กู้ OH จาก Count 1 ที่จบแล้วแม้ Session ใช้ auto-pass และไม่ใช้ Cache เก่าบนหน้าผลต่าง -->
 <!-- V1.143: กู้ Location ที่เหลือจาก Audit/LPN-Lot และคืนสถานะ completed เมื่อ OH เดิมตรง Count ครบทุก Item -->
@@ -22716,13 +22719,13 @@ body.count-page-active #app .count-handheld-page .citem-wrap {
 }
 </style>
 </head>
-<body data-build="v1-145">
+<body data-build="v1-146">
 <div id="app"></div>
 
 <script>
-// V1.145: one authoritative application version for the browser title,
+// V1.146: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '1.145';
+const APP_VERSION = '1.146';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -24245,7 +24248,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.145':'e.g. Warehouse V1.145',
+  'เช่น Warehouse V1.146':'e.g. Warehouse V1.146',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -30240,7 +30243,7 @@ function recoverHistoricalOhInMemory(snapshotRows=[],assignments=[],approvalRows
 
   const repairs = [];
   (snapshotRows || []).forEach(snapshot => {
-    if (!snapshot?.id || Number(snapshot.onhand_qty) !== 0) return;
+    if (!snapshot?.id || snapshot._countBaselineApplied || Number(snapshot.onhand_qty) !== 0) return;
     const key = `${snapshot.location_id}|${snapshot.item_id}`;
     const candidate = historicalOhByKey.get(key);
     if (!candidate || candidate.onhandQty === 0) return;
@@ -30325,7 +30328,7 @@ function recoverHistoricalOhFromAuditInMemory(snapshotRows=[],assignments=[],aud
 
   const repairs = [];
   (snapshotRows || []).forEach(snapshot => {
-    if (!snapshot?.id || Number(snapshot.onhand_qty) !== 0) return;
+    if (!snapshot?.id || snapshot._countBaselineApplied || Number(snapshot.onhand_qty) !== 0) return;
     const evidence = evidenceByKey.get(`${snapshot.location_id}|${snapshot.item_id}`);
     if (!evidence || !Number.isFinite(evidence.onhandQty) || evidence.onhandQty === 0) return;
     repairs.push({
@@ -30359,7 +30362,7 @@ function recoverHistoricalOhFromStockDetailsInMemory(
   });
   const repairs = [];
   (snapshotRows || []).forEach(snapshot => {
-    if (!snapshot?.id || Number(snapshot.onhand_qty) !== 0) return;
+    if (!snapshot?.id || snapshot._countBaselineApplied || Number(snapshot.onhand_qty) !== 0) return;
     const historicalOh = detailTotals.get(`${snapshot.location_id}|${snapshot.item_id}`);
     if (!Number.isFinite(historicalOh) || historicalOh === 0) return;
     repairs.push({
@@ -30426,7 +30429,7 @@ function recoverHistoricalOhFromCompletedCountsInMemory(
 
   const repairs = [];
   (snapshotRows || []).forEach(snapshot => {
-    if (!snapshot?.id || Number(snapshot.onhand_qty) !== 0) return;
+    if (!snapshot?.id || snapshot._countBaselineApplied || Number(snapshot.onhand_qty) !== 0) return;
     const assignmentsAtLocation = completedByLocation.get(String(snapshot.location_id || '')) || [];
     const evidence = assignmentsAtLocation
       .map(assignment => ({
@@ -30693,11 +30696,61 @@ function stockSnapshotItemKind(snapshot={}) {
 // Once a real Item exists in the same Location it becomes historical metadata,
 // not another count line. Missing Item Master relations are never operational.
 function operationalStockSnapshotRows(snapshotRows=[]) {
-  const rows = (snapshotRows || []).filter(Boolean);
+  // Items added to a Location after this Assignment had already started are
+  // live WMS stock, but they were not part of that historical Count scope.
+  const rows = (snapshotRows || []).filter(row => row && !row._countBaselineExcluded);
   const realItems = rows.filter(snapshot => stockSnapshotItemKind(snapshot) === 'item');
   if (realItems.length) return realItems;
   const emptyRows = rows.filter(snapshot => stockSnapshotItemKind(snapshot) === 'empty');
   return emptyRows.length ? [emptyRows[0]] : [];
+}
+
+const WMS_COUNT_BASELINE_ACTION = 'wms_import_count_baseline';
+
+function wmsCountBaselineKey(assignmentId,itemId) {
+  return `${assignmentId || ''}|${itemId || ''}`;
+}
+
+function wmsCountBaselineMap(auditRows=[]) {
+  const map = new Map();
+  (auditRows || [])
+    .filter(row => row?.action === WMS_COUNT_BASELINE_ACTION && row.assignment_id && row.item_id)
+    .sort((left,right) => new Date(left.created_at || 0) - new Date(right.created_at || 0))
+    .forEach(row => {
+      const key = wmsCountBaselineKey(row.assignment_id,row.item_id);
+      const value = Number(row.old_value);
+      if (!map.has(key) && Number.isFinite(value)) map.set(key,value);
+    });
+  return map;
+}
+
+// Keep live WMS OH in `_liveOnhandQty`, then expose the frozen Count baseline
+// to existing Count/DIFF/Layout code. This avoids rewriting historical logic
+// while still letting every Import update stock_snapshot with today's OH.
+function applyWmsCountBaselines(snapshotRows=[],assignments=[],auditRows=[]) {
+  const baselines = wmsCountBaselineMap(auditRows);
+  if (!baselines.size) return { applied:0,excluded:0,baselines };
+  const assignmentByLocation = new Map((assignments || []).map(row => [String(row.location_id || ''),row]));
+  const assignmentsWithBaseline = new Set(
+    [...baselines.keys()].map(key => key.split('|')[0]).filter(Boolean)
+  );
+  let applied = 0;
+  let excluded = 0;
+  (snapshotRows || []).forEach(snapshot => {
+    const assignment = assignmentByLocation.get(String(snapshot.location_id || ''));
+    if (!assignment || !assignmentsWithBaseline.has(String(assignment.id || ''))) return;
+    const key = wmsCountBaselineKey(assignment.id,snapshot.item_id);
+    if (!baselines.has(key)) {
+      snapshot._countBaselineExcluded = true;
+      excluded += 1;
+      return;
+    }
+    snapshot._liveOnhandQty = snapshot.onhand_qty;
+    snapshot.onhand_qty = baselines.get(key);
+    snapshot._countBaselineApplied = true;
+    applied += 1;
+  });
+  return { applied,excluded,baselines };
 }
 
 function operationalStockSnapshotsByLocation(snapshotRows=[]) {
@@ -31771,6 +31824,18 @@ async function loadCTasks() {
       }
       taskSnapshotRows = enrichedSnapshots.data || [];
     }
+    const taskBaselineResult = await fetchSupabaseRowsByValues(
+      'audit_log',
+      'id,assignment_id,item_id,action,old_value,new_value,created_at',
+      'assignment_id',
+      assignmentIds,
+      query => query.eq('action',WMS_COUNT_BASELINE_ACTION).order('created_at'),
+    );
+    if (taskBaselineResult.error) {
+      cnt().innerHTML = errBox(`โหลด OH ตอนเริ่มนับไม่สำเร็จ: ${taskBaselineResult.error.message}`);
+      return;
+    }
+    applyWmsCountBaselines(taskSnapshotRows,asgns,taskBaselineResult.data || []);
     const rulesBySession = Object.fromEntries(sessionRules);
     const countsByAssignment = {};
     (countResult.data || []).forEach(record => {
@@ -35723,7 +35788,7 @@ async function loadCCount() {
   const l   = asgn.locations;
   const sub = [l.zone, l.area, l.row_no && 'Row '+l.row_no, l.level && 'Level '+l.level].filter(Boolean).join(' · ');
 
-  const [{ data: rawSnaps }, { data: rawDetails }, { data: sessInfo }, { data: counterNames }, { data: countRemarkRows }, rules, existingCountsResult] = await Promise.all([
+  const [{ data: rawSnaps }, { data: rawDetails }, { data: sessInfo }, { data: counterNames }, { data: countRemarkRows }, rules, existingCountsResult, baselineAuditResult] = await Promise.all([
     sb.from('stock_snapshot')
       .select('item_id,onhand_qty,al_qty,items(id,code,description)')
       .eq('session_id', asgn.session_id)
@@ -35740,10 +35805,20 @@ async function loadCCount() {
       .select('item_id,round,count_qty,actual_counter_name,remark,photo_url,type_issue')
       .eq('assignment_id',aid)
       .order('round'),
+    sb.from('audit_log')
+      .select('id,assignment_id,item_id,action,old_value,new_value,created_at')
+      .eq('assignment_id',aid)
+      .eq('action',WMS_COUNT_BASELINE_ACTION)
+      .order('created_at'),
     loadCountTypeIssueOptions(),
   ]);
   // การนับแบบ JOB ใช้ขอบเขตงานระดับ Location เหมือนงานปกติ:
   // โหลดสินค้ากับรายละเอียดทั้งหมดของ Location ไม่ตัดเหลือเฉพาะ ITEM ที่ใช้แบ่ง JOB
+  if (baselineAuditResult?.error) {
+    cnt().innerHTML = errBox(`โหลด OH ตอนเริ่มนับไม่สำเร็จ: ${baselineAuditResult.error.message}`);
+    return;
+  }
+  applyWmsCountBaselines(rawSnaps || [],[asgn],baselineAuditResult?.data || []);
   const snaps = stableCountSnapshotsV128(aid,operationalStockSnapshotRows(rawSnaps || []));
   const details = rawDetails || [];
   const annualItemIds = new Set(snaps.map(item => item.item_id).filter(Boolean));
@@ -36586,7 +36661,7 @@ async function resolveCountWorkflowAfterSave({
     return { handled:true,error:assignmentResult.error || new Error('Assignment not found') };
   }
 
-  const [snapshotResult,countResult,rules] = await Promise.all([
+  const [snapshotResult,countResult,rules,baselineAuditResult] = await Promise.all([
     sb.from('stock_snapshot')
       .select('item_id,onhand_qty,items(code)')
       .eq('session_id',assignment.session_id)
@@ -36596,13 +36671,19 @@ async function resolveCountWorkflowAfterSave({
       .eq('assignment_id',aid)
       .order('round'),
     getSessionRules(assignment.session_id),
+    sb.from('audit_log')
+      .select('id,assignment_id,item_id,action,old_value,new_value,created_at')
+      .eq('assignment_id',aid)
+      .eq('action',WMS_COUNT_BASELINE_ACTION)
+      .order('created_at'),
   ]);
-  if (snapshotResult.error || countResult.error) {
-    const error = snapshotResult.error || countResult.error;
+  if (snapshotResult.error || countResult.error || baselineAuditResult.error) {
+    const error = snapshotResult.error || countResult.error || baselineAuditResult.error;
     if (alertBox) alertBox.innerHTML = errBox(`บันทึก Count แล้ว แต่ตรวจสอบ DIFF ไม่สำเร็จ: ${error.message}`);
     return { handled:true,error };
   }
 
+  applyWmsCountBaselines(snapshotResult.data || [],[assignment],baselineAuditResult.data || []);
   const snapshots = operationalStockSnapshotRows(snapshotResult.data || []);
   const roundsByItem = {};
   (countResult.data || []).forEach(record => {
@@ -37806,17 +37887,23 @@ async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
     return;
   }
 
-  const [snapshotResult,roundResult,rules] = await Promise.all([
+  const [snapshotResult,roundResult,rules,baselineAuditResult] = await Promise.all([
     sb.from('stock_snapshot').select('item_id,onhand_qty')
       .eq('session_id', asgn.session_id).eq('location_id', asgn.location_id),
     sb.from('count_records').select('item_id,round,count_qty').eq('assignment_id', aid),
     getSessionRules(asgn.session_id),
+    sb.from('audit_log')
+      .select('id,assignment_id,item_id,action,old_value,new_value,created_at')
+      .eq('assignment_id',aid)
+      .eq('action',WMS_COUNT_BASELINE_ACTION)
+      .order('created_at'),
   ]);
-  if (snapshotResult.error || roundResult.error) {
-    al.innerHTML = errBox((snapshotResult.error || roundResult.error).message);
+  if (snapshotResult.error || roundResult.error || baselineAuditResult.error) {
+    al.innerHTML = errBox((snapshotResult.error || roundResult.error || baselineAuditResult.error).message);
     restoreButton(); return;
   }
   const rawSnaps = snapshotResult.data;
+  applyWmsCountBaselines(rawSnaps || [],[{...asgn,id:aid}],baselineAuditResult.data || []);
   const rawAllRounds = roundResult.data;
   const countingItemIds = new Set(ids);
   // Verify completion from the exact operational rows rendered on screen.
@@ -37960,7 +38047,7 @@ async function refreshAnnualJobProgress(jobId) {
     const assignments = (assignmentsResult.data || []).filter(row => row.session_id === job.session_id);
     const assignmentByLocation = Object.fromEntries(assignments.map(row => [row.location_id,row]));
     const assignmentIds = assignments.map(row => row.id);
-    const [snapshotResult,countResult,rules] = await Promise.all([
+    const [snapshotResult,countResult,rules,baselineAuditResult] = await Promise.all([
       fetchSupabaseRowsByValues(
         'stock_snapshot',
         'session_id,location_id,item_id,onhand_qty,items(code)',
@@ -37974,8 +38061,18 @@ async function refreshAnnualJobProgress(jobId) {
         assignmentIds,
       ),
       getSessionRules(job.session_id),
+      fetchSupabaseRowsByValues(
+        'audit_log',
+        'id,assignment_id,item_id,action,old_value,new_value,created_at',
+        'assignment_id',
+        assignmentIds,
+        query => query.eq('session_id',job.session_id).eq('action',WMS_COUNT_BASELINE_ACTION).order('created_at'),
+      ),
     ]);
-    if (snapshotResult.error || countResult.error) throw (snapshotResult.error || countResult.error);
+    if (snapshotResult.error || countResult.error || baselineAuditResult.error) {
+      throw (snapshotResult.error || countResult.error || baselineAuditResult.error);
+    }
+    applyWmsCountBaselines(snapshotResult.data || [],assignments,baselineAuditResult.data || []);
     const jobSnapshots = operationalStockSnapshotsByLocation(
       (snapshotResult.data || []).filter(row => row.session_id === job.session_id)
     );
@@ -40575,7 +40672,7 @@ async function fetchWarehouseLayoutLiveSessionData(sessionId,sessionName='') {
 
   const assignments = assignmentResult.data || [];
   const assignmentIds = assignments.map(row => row.id).filter(Boolean);
-  const [countResult,approvalResult] = await Promise.all([
+  const [countResult,approvalResult,baselineAuditResult] = await Promise.all([
     fetchSupabaseRowsByValues(
       'count_records',
       'id,assignment_id,item_id,round,count_qty,counted_by,counted_at,actual_counter_name,type_issue,remark,photo_url',
@@ -40586,11 +40683,21 @@ async function fetchWarehouseLayoutLiveSessionData(sessionId,sessionName='') {
     fetchSupabaseRowsByValues(
       'variance_approvals','*','assignment_id',assignmentIds,query => query.order('id'),
     ),
+    fetchSupabaseRowsByValues(
+      'audit_log',
+      'id,session_id,location_id,item_id,assignment_id,action,old_value,new_value,created_at',
+      'assignment_id',
+      assignmentIds,
+      query => query.eq('session_id',sessionId).eq('action',WMS_COUNT_BASELINE_ACTION).order('created_at'),
+    ),
   ]);
-  if (countResult.error || approvalResult.error) throw countResult.error || approvalResult.error;
+  if (countResult.error || approvalResult.error || baselineAuditResult.error) {
+    throw countResult.error || approvalResult.error || baselineAuditResult.error;
+  }
 
   const snapshots = snapshotResult.data || [];
   const counts = countResult.data || [];
+  applyWmsCountBaselines(snapshots,assignments,baselineAuditResult.data || []);
   const liveApprovalRepairs = recoverHistoricalOhInMemory(
     snapshots,assignments,approvalResult.data || [],sessionId,
   );
@@ -45654,6 +45761,7 @@ async function loadSvDash() {
     rules,
     paperResult,
     varianceApprovalResult,
+    baselineAuditResult,
   ] = await Promise.all([
     fetchSupabaseRowsByValues(
       'count_records',
@@ -45707,6 +45815,13 @@ async function loadSvDash() {
       allAsgnIds,
       query => tab === 'layout' ? query.order('id') : query,
     ),
+    fetchSupabaseRowsByValues(
+      'audit_log',
+      'id,session_id,location_id,item_id,assignment_id,action,old_value,new_value,created_at',
+      'assignment_id',
+      allAsgnIds,
+      query => query.eq('session_id',curSid).eq('action',WMS_COUNT_BASELINE_ACTION).order('created_at'),
+    ),
   ]);
   if (isStaleLoad()) return;
   if (countResult.error || snapshotResult.error || detailResult.error || annualJobsResult.error || annualJobItemsResult.error) {
@@ -45736,6 +45851,11 @@ async function loadSvDash() {
     pct = total ? Math.round((done / total) * 100) : 0;
   }
   const allSnapshots = snapshotResult.data || [];
+  if (baselineAuditResult?.error) {
+    console.warn('โหลด OH ตอนเริ่มนับไม่สำเร็จ:',baselineAuditResult.error.message);
+  } else {
+    applyWmsCountBaselines(allSnapshots,asgns,baselineAuditResult?.data || []);
+  }
   const dashboardOhRepairs = [];
   if (!varianceApprovalResult?.error) {
     dashboardOhRepairs.push(...recoverHistoricalOhInMemory(
@@ -48898,7 +49018,7 @@ async function renderVarianceItemDetail(aid, container, idx, targetItemId='') {
 
   if (!asgn) { container.innerHTML = `<div class="alert alert-red" style="margin:10px">ไม่พบข้อมูล</div>`; return; }
 
-  const [{ data: snaps }, { data: counts }, { data: users }, { data: countRemarkRows }, rules, , approvalResult] = await Promise.all([
+  const [{ data: snaps }, { data: counts }, { data: users }, { data: countRemarkRows }, rules, , approvalResult, baselineAuditResult] = await Promise.all([
     sb.from('stock_snapshot').select('item_id,onhand_qty,al_qty,items(id,code,description)').eq('session_id', asgn.session_id).eq('location_id', asgn.location_id),
     sb.from('count_records').select('id,item_id,round,count_qty,remark,photo_url,type_issue,actual_counter_name').eq('assignment_id', aid),
     sb.from('profiles').select('id,name').order('name'),
@@ -48908,12 +49028,18 @@ async function renderVarianceItemDetail(aid, container, idx, targetItemId='') {
     sb.from('variance_approvals')
       .select('id,item_id,final_qty,variance,resolution,approved_by,approved_at,review_status,draft_saved_by,draft_saved_at,updated_at')
       .eq('assignment_id',aid),
+    sb.from('audit_log')
+      .select('id,assignment_id,item_id,action,old_value,new_value,created_at')
+      .eq('assignment_id',aid)
+      .eq('action',WMS_COUNT_BASELINE_ACTION)
+      .order('created_at'),
   ]);
 
-  if (approvalResult.error) {
-    container.innerHTML = `<div class="alert alert-red" style="margin:10px">${escapeWmsText(approvalResult.error.message)}</div>`;
+  if (approvalResult.error || baselineAuditResult.error) {
+    container.innerHTML = `<div class="alert alert-red" style="margin:10px">${escapeWmsText((approvalResult.error || baselineAuditResult.error).message)}</div>`;
     return;
   }
+  applyWmsCountBaselines(snaps || [],[asgn],baselineAuditResult.data || []);
 
   window._countRemarkOptions = countRemarkRows || [];
   window._photoMap = window._photoMap || {};
@@ -49373,7 +49499,7 @@ async function loadSvList() {
 
   const assignmentIds = (rawAssignments || []).map(assignment => assignment.id);
   const sessionIds = sess.map(session => session.id);
-  const [countResult,snapshotResult,approvalResult,sessionRules] = await Promise.all([
+  const [countResult,snapshotResult,approvalResult,sessionRules,baselineAuditResult] = await Promise.all([
     fetchSupabaseRowsByValues(
       'count_records',
       'assignment_id,item_id,round,count_qty,actual_counter_name',
@@ -49391,11 +49517,19 @@ async function loadSvList() {
       assignmentIds,
     ),
     Promise.all(sessionIds.map(async sessionId => [sessionId,await getSessionRules(sessionId)])),
+    fetchSupabaseRowsByValues(
+      'audit_log',
+      'id,session_id,assignment_id,item_id,action,old_value,new_value,created_at',
+      'assignment_id',
+      assignmentIds,
+      query => query.eq('action',WMS_COUNT_BASELINE_ACTION).order('created_at'),
+    ),
   ]);
-  if (countResult.error || snapshotResult.error || approvalResult.error) {
-    cnt().innerHTML = errBox((countResult.error || snapshotResult.error || approvalResult.error).message);
+  if (countResult.error || snapshotResult.error || approvalResult.error || baselineAuditResult.error) {
+    cnt().innerHTML = errBox((countResult.error || snapshotResult.error || approvalResult.error || baselineAuditResult.error).message);
     return;
   }
+  applyWmsCountBaselines(snapshotResult.data || [],rawAssignments || [],baselineAuditResult.data || []);
   const rulesBySession = Object.fromEntries(sessionRules);
   const countsByAssignment = {};
   (countResult.data || []).forEach(record => {
@@ -49752,7 +49886,7 @@ async function loadSvDetail() {
   const l = asgn.locations;
   const isAdminOrSup = ['admin','supervisor'].includes(prof?.role);
 
-  const [{ data: snaps }, { data: counts }, { data: users }, { data: countRemarkRows }, rules, , approvalResult] = await Promise.all([
+  const [{ data: snaps }, { data: counts }, { data: users }, { data: countRemarkRows }, rules, , approvalResult, baselineAuditResult] = await Promise.all([
     sb.from('stock_snapshot').select('item_id,onhand_qty,al_qty,items(id,code,description)').eq('session_id', asgn.session_id).eq('location_id', asgn.location_id),
     sb.from('count_records').select('id,item_id,round,count_qty,remark,photo_url,type_issue,actual_counter_name').eq('assignment_id', aid),
     sb.from('profiles').select('id,name').order('name'),
@@ -49762,13 +49896,19 @@ async function loadSvDetail() {
     sb.from('variance_approvals')
       .select('id,item_id,final_qty,variance,resolution,approved_by,approved_at,review_status,draft_saved_by,draft_saved_at,updated_at')
       .eq('assignment_id',aid),
+    sb.from('audit_log')
+      .select('id,assignment_id,item_id,action,old_value,new_value,created_at')
+      .eq('assignment_id',aid)
+      .eq('action',WMS_COUNT_BASELINE_ACTION)
+      .order('created_at'),
   ]);
 
 
-  if (approvalResult.error) {
-    cnt().innerHTML = errBox(approvalResult.error.message);
+  if (approvalResult.error || baselineAuditResult.error) {
+    cnt().innerHTML = errBox((approvalResult.error || baselineAuditResult.error).message);
     return;
   }
+  applyWmsCountBaselines(snaps || [],[asgn],baselineAuditResult.data || []);
 
   window._countRemarkOptions = countRemarkRows || [];
   window._photoMap = window._photoMap || {};
@@ -51906,7 +52046,8 @@ async function renderManageImport(container) {
         <div class="alert alert-blue" style="font-size:13px;margin:16px 0;line-height:1.6">
           📁 <strong>Upload Excel (.xlsx)</strong> — ดึงข้อมูลจากระบบ WMS ได้เลย<br>✅ ระบบอ่านหัวตารางอัตโนมัติ<br>🏷️ ดึง LPN / Lot / OH / AL มาแสดงตอนนับ<br>
           🔄 Import ซ้ำใน Session เดิมแบบปลอดภัย: Match ด้วย <strong>Location + LPN + Item + Lot</strong>
-          และอัปเดต OH/AL ได้รวมถึงงานที่กำลังนับหรือเป็น DIFF โดยจะล็อกงานที่หัวหน้าคอนเฟิร์มแล้ว
+          ไฟล์นี้เป็น Full WMS Snapshot: รายการเดิมที่หายจากไฟล์ในขอบเขตที่เลือกจะถูกตั้ง OH เป็น 0
+          ส่วน OH ตอนเริ่มนับ, Count, DIFF และสถานะงานย้อนหลังจะถูกเก็บแยกและไม่เปลี่ยน
         </div>
         <div class="fg"><label>SESSION <span style="color:var(--accent-red)">*</span></label><select id="is" required onchange="refreshXlsxPreview()">${sessOpts}</select></div>
         <div class="fg"><label>กรอง LOCATION (ไม่บังคับ)</label><input id="ilocfilter" placeholder="เช่น B-EA% หรือเว้นว่างเพื่อ import ทั้งหมด" oninput="refreshXlsxPreview()"></div>
@@ -54451,6 +54592,7 @@ async function loadAdTxLog() {
     getSessionRules(asgn.session_id),
   ]);
   if (historyDetailErr) console.warn('โหลด LPN/Lot สำหรับกู้ OH ในประวัติไม่สำเร็จ:',historyDetailErr.message);
+  applyWmsCountBaselines(snaps || [],[asgn],auditRows || []);
   const historyOhRepairs = recoverHistoricalOhFromAuditInMemory(
     snaps || [],[asgn],auditRows || [],asgn.session_id,
   );
@@ -54518,6 +54660,7 @@ async function loadAdTxLog() {
     count_confirmed:{ icon:'🔐',label:'Supervisor คอนเฟิร์มยอด' },
     oh_edit:{ icon:'✏️',label:'แก้ไขยอด OH' },
     wms_import_oh_restored:{ icon:'↩️',label:'กู้ OH เดิมหลัง Import' },
+    wms_import_count_baseline:{ icon:'📌',label:'เก็บ OH ตอนเริ่มนับก่อนอัปเดต WMS' },
     assignment_history_restored:{ icon:'✅',label:'คืนสถานะงานเดิมหลัง Import' },
     reassign:{ icon:'🔄',label:'เปลี่ยน User ผู้รับงาน' },
     variance_reopened:{ icon:'↩️',label:'ส่งกลับตรวจ Variance' },
@@ -55324,7 +55467,8 @@ function analyzeXlsxImportRows(rows, locFilter='') {
     const onhandValue = parseImportNumber(onhandRaw);
     const reasons = [];
     if (!locCode) reasons.push('Location ว่าง');
-    if (onhandRaw && onhandValue === null) reasons.push(`OH ไม่ใช่ตัวเลข (${onhandRaw})`);
+    if (!onhandRaw) reasons.push('OH ว่าง');
+    else if (onhandValue === null) reasons.push(`OH ไม่ใช่ตัวเลข (${onhandRaw})`);
     if (reasons.length) {
       rejected.push({ rowNumber:index + 2, reasons, locCode, itemCode, onhandRaw });
       return;
@@ -55336,7 +55480,7 @@ function analyzeXlsxImportRows(rows, locFilter='') {
       itemCode,
       itemDesc:itemCode ? value('description') : '',
       isEmptyLocation:isEmptyLocationItem(itemCode),
-      onhand:onhandValue ?? 0,
+      onhand:onhandValue,
       alQty:parseImportNumber(allocatedRaw),
       lpn:value('licensePlate'),
       lot:value('lot'),
@@ -55396,8 +55540,8 @@ function renderXlsxImportPreview(analysis) {
     <div class="alert alert-amber" style="font-size:11px;margin-top:10px;line-height:1.6">
       ไฟล์นี้จะเป็นข้อมูล WMS ล่าสุดของ${locationFilterValue
         ? ` Location Filter <strong>${escapeWmsText(locationFilterValue)}</strong>`
-        : ' Session ที่เลือกทั้งหมด'} · Location + Item + LPN/Lot เดิมที่ไม่อยู่ในไฟล์จะถูกนำออก
-      ระบบอัปเดตเฉพาะ Location / Item ที่อยู่ในไฟล์ และคง OH เดิมของงานที่เริ่มนับแล้ว
+        : ' Session ที่เลือกทั้งหมด'} · Item เดิมที่ไม่อยู่ในไฟล์จะคงแถวไว้แต่ตั้ง OH/AL เป็น 0 และ LPN/Lot เดิมจะถูกนำออก
+      งานที่เริ่มนับแล้วจะใช้ OH ตอนเริ่มนับจากประวัติ ส่วน OH ล่าสุดอัปเดตตามไฟล์นี้
     </div>
     ${analysis.errors.length ? `<div class="alert alert-red" style="font-size:12px;margin-top:10px">${analysis.errors.map(escapeWmsText).join('<br>')}</div>` : ''}
     ${analysis.metrics.emptyLocationRows ? `<div class="alert alert-blue" style="font-size:12px;margin-top:10px;line-height:1.6">
@@ -55516,14 +55660,30 @@ async function fetchImportedScopeRows(table,columns,sessionId,locationIds) {
 }
 
 async function fetchWmsImportMergeLocationScope(sessionId,incomingLocationIds,locationFilter='') {
-  // V1.141: Omission is not deletion. The Import may touch only Locations that
-  // are actually present in this file (after the optional Location filter).
-  // Keeping this helper async preserves the existing Import call flow.
-  void sessionId;
-  void locationFilter;
+  // Full WMS Snapshot: omission means live OH=0, but only inside the selected
+  // Location filter. With no filter, the whole selected Session is authoritative.
+  const locationRegex = importLocationFilterRegex(locationFilter);
+  const result = await fetchPagedSupabaseRows(
+    'stock_snapshot',
+    'location_id,locations(code)',
+    query => query.eq('session_id',sessionId).order('location_id'),
+  );
+  if (result.error) throw result.error;
+  const locationCodeById = new Map();
+  const existingLocationIds = [];
+  (result.data || []).forEach(row => {
+    const code = row.locations?.code || '';
+    if (row.location_id) locationCodeById.set(row.location_id,code || row.location_id);
+    if (row.location_id && (!locationRegex || locationRegex.test(code))) {
+      existingLocationIds.push(row.location_id);
+    }
+  });
   return {
-    locationIds:[...new Set((incomingLocationIds || []).filter(Boolean))],
-    locationCodeById:new Map(),
+    locationIds:[...new Set([
+      ...existingLocationIds,
+      ...(incomingLocationIds || []).filter(Boolean),
+    ])],
+    locationCodeById,
   };
 }
 
@@ -55551,8 +55711,8 @@ function wmsImportConsolidateDetailMap(rows=[]) {
   return map;
 }
 
-function wmsImportBuildMergeSnapshots(sessionId,incomingSnapshots,existingSnapshots,safeLocationIds) {
-  const safeIds = safeLocationIds instanceof Set ? safeLocationIds : new Set(safeLocationIds || []);
+function wmsImportBuildMergeSnapshots(sessionId,incomingSnapshots,existingSnapshots,scopeLocationIds) {
+  const scopeIds = scopeLocationIds instanceof Set ? scopeLocationIds : new Set(scopeLocationIds || []);
   const knownEmptyItemIds = new Set((existingSnapshots || [])
     .filter(row => stockSnapshotItemKind(row) === 'empty')
     .map(row => row.item_id)
@@ -55563,7 +55723,7 @@ function wmsImportBuildMergeSnapshots(sessionId,incomingSnapshots,existingSnapsh
     .filter(Boolean));
   const expectedMap = new Map();
   (incomingSnapshots || []).forEach(row => {
-    if (!safeIds.has(row.location_id)) return;
+    if (!scopeIds.has(row.location_id)) return;
     expectedMap.set(`${row.location_id}|${row.item_id}`,{
       session_id:sessionId,
       location_id:row.location_id,
@@ -55574,10 +55734,10 @@ function wmsImportBuildMergeSnapshots(sessionId,incomingSnapshots,existingSnapsh
         : Number(row.al_qty) || 0,
     });
   });
-  const preservedKeys = new Set();
+  const zeroedKeys = new Set();
   const suppressedHistoricalRows = [];
   (existingSnapshots || []).forEach(row => {
-    if (!safeIds.has(row.location_id)) return;
+    if (!scopeIds.has(row.location_id)) return;
     const key = `${row.location_id}|${row.item_id}`;
     if (expectedMap.has(key)) return;
     const kind = stockSnapshotItemKind(row);
@@ -55588,21 +55748,19 @@ function wmsImportBuildMergeSnapshots(sessionId,incomingSnapshots,existingSnapsh
       suppressedHistoricalRows.push(row);
       return;
     }
-    // A partial WMS file must never rewrite a historical Snapshot to zero.
-    // Preserve the exact previous OH/AL so Layout, Variance and Count History
-    // continue comparing the physical Count against its original WMS balance.
+    // The row is absent from this authoritative Snapshot inside the selected
+    // scope: it was picked, moved, or no longer exists in WMS. Keep its identity
+    // for traceability but make the live balance zero.
     expectedMap.set(key,{
       session_id:sessionId,
       location_id:row.location_id,
       item_id:row.item_id,
-      onhand_qty:Number(row.onhand_qty) || 0,
-      al_qty:row.al_qty === null || row.al_qty === undefined || row.al_qty === ''
-        ? null
-        : Number(row.al_qty) || 0,
+      onhand_qty:0,
+      al_qty:0,
     });
-    preservedKeys.add(key);
+    zeroedKeys.add(key);
   });
-  return { rows:[...expectedMap.values()],preservedKeys,suppressedHistoricalRows };
+  return { rows:[...expectedMap.values()],zeroedKeys,suppressedHistoricalRows };
 }
 
 function wmsImportDetailMatchKey(row={}) {
@@ -55627,6 +55785,51 @@ function wmsImportLocationIsProtected(assignment,confirmedAssignmentIds) {
   // started/Counted Location in doImportXlsx before any Snapshot write.
   if (confirmedAssignmentIds.has(assignment.id)) return true;
   return assignment.status === 'approved';
+}
+
+function buildWmsCountBaselineAuditRows({
+  sessionId,
+  existingSnapshots=[],
+  incomingSnapshots=[],
+  assignments=[],
+  protectedLocationIds=new Set(),
+  existingAuditRows=[],
+}={}) {
+  const existingBaselines = wmsCountBaselineMap(existingAuditRows);
+  const assignmentByLocation = new Map((assignments || []).map(row => [row.location_id,row]));
+  const incomingByKey = new Map((incomingSnapshots || []).map(row => [
+    `${row.location_id}|${row.item_id}`,
+    row,
+  ]));
+  const rows = [];
+  (existingSnapshots || []).forEach(snapshot => {
+    if (!protectedLocationIds.has(snapshot.location_id)) return;
+    if (stockSnapshotItemKind(snapshot) === 'orphan') return;
+    const assignment = assignmentByLocation.get(snapshot.location_id);
+    if (!assignment?.id || !snapshot.item_id) return;
+    const baselineKey = wmsCountBaselineKey(assignment.id,snapshot.item_id);
+    if (existingBaselines.has(baselineKey)) return;
+    const currentOh = Number(snapshot.onhand_qty);
+    const incoming = incomingByKey.get(`${snapshot.location_id}|${snapshot.item_id}`);
+    const incomingOh = Number(incoming?.onhand_qty);
+    // Recovery bridge for Sessions damaged by the previous Import: when the
+    // stored OH is zero but the re-imported source contains a non-zero value,
+    // use that source as the first frozen baseline.
+    const baselineOh = currentOh === 0 && Number.isFinite(incomingOh) && incomingOh !== 0
+      ? incomingOh
+      : (Number.isFinite(currentOh) ? currentOh : 0);
+    rows.push(buildAuditRow(
+      sessionId,
+      snapshot.location_id,
+      snapshot.item_id,
+      WMS_COUNT_BASELINE_ACTION,
+      baselineOh,
+      Number.isFinite(incomingOh) ? incomingOh : 0,
+      assignment.id,
+    ));
+    existingBaselines.set(baselineKey,baselineOh);
+  });
+  return rows;
 }
 
 function wmsImportChangePreview(changes,limit=8) {
@@ -55870,7 +56073,23 @@ async function doImportXlsx() {
       ...annualProtectedLocationIds,
       ...countedProtectedLocationIds,
     ]);
-    const safeLocationIds = new Set(importScopeLocationIds.filter(locationId => !protectedLocationIds.has(locationId)));
+    // Live WMS stock must update for every Location in the authoritative scope.
+    // Historical Count protection is handled by the frozen baseline audit,
+    // not by blocking Snapshot writes.
+    const safeLocationIds = new Set(importScopeLocationIds);
+
+    const baselineAuditRows = buildWmsCountBaselineAuditRows({
+      sessionId:sid,
+      existingSnapshots,
+      incomingSnapshots:snapList,
+      assignments:existingAssignments,
+      protectedLocationIds,
+      existingAuditRows:importAuditRows,
+    });
+    for (let start = 0; start < baselineAuditRows.length; start += BATCH) {
+      const saved = await writeAuditRows(baselineAuditRows.slice(start,start + BATCH));
+      if (!saved) throw new Error('เก็บ OH ตอนเริ่มนับก่อน Import ไม่สำเร็จ จึงหยุด Import เพื่อป้องกันประวัติ');
+    }
 
     // Repair already-damaged zero OH first when a saved Variance decision still
     // contains the original equation. This is exact recovery, not estimation.
@@ -55929,7 +56148,7 @@ async function doImportXlsx() {
       safeLocationIds,
     );
     const safeSnapList = mergedSnapshots.rows;
-    const preservedSnapshotKeys = mergedSnapshots.preservedKeys;
+    const zeroedSnapshotKeys = mergedSnapshots.zeroedKeys;
     const suppressedHistoricalSnapshotCount = mergedSnapshots.suppressedHistoricalRows?.length || 0;
     const safeImportedDetails = importedDetailsList.filter(row => safeLocationIds.has(row.location_id));
     const confirmedProtectedImportRows = parsedRows.filter(row =>
@@ -55940,16 +56159,8 @@ async function doImportXlsx() {
     ).length;
 
     const existingSnapshotMap = new Map(existingSnapshots.map(row => [`${row.location_id}|${row.item_id}`,row]));
-    // If the old Import zeroed a started job before Variance was confirmed,
-    // the approval history cannot contain its former OH. Re-importing a WMS
-    // file that contains that Item restores the zero directly from the file,
-    // while every other field in the started Location remains locked.
-    const fileHistoricalRestoreRows = snapList.filter(incoming => {
-      if (!protectedLocationIds.has(incoming.location_id)) return false;
-      const current = existingSnapshotMap.get(`${incoming.location_id}|${incoming.item_id}`);
-      return current && Number(current.onhand_qty) === 0 && Number(incoming.onhand_qty) !== 0;
-    }).map(incoming => ({ ...incoming }));
-    const snapshotsToUpsert = [...safeSnapList,...fileHistoricalRestoreRows];
+    const fileHistoricalRestoreRows = [];
+    const snapshotsToUpsert = safeSnapList;
     const locationCodeById = new Map(mergeScope.locationCodeById || []);
     (dbLocs || []).forEach(row => locationCodeById.set(row.id,row.code || row.id));
     const itemCodeById = new Map(existingSnapshots.map(row => [
@@ -55997,10 +56208,6 @@ async function doImportXlsx() {
         });
         return;
       }
-      if (preservedSnapshotKeys.has(snapshotKey)) {
-        unchangedSnapshotCount++;
-        return;
-      }
       const ohChanged = !wmsImportQtyEqual(current.onhand_qty,expected.onhand_qty);
       const alChanged = !wmsImportQtyEqual(current.al_qty,expected.al_qty);
       if (ohChanged || alChanged) {
@@ -56037,11 +56244,8 @@ async function doImportXlsx() {
     const existingDetailMap = wmsImportConsolidateDetailMap(
       existingDetails.filter(row => safeLocationIds.has(row.location_id))
     );
-    // Merge details by key. A partial file may update or add LPN/Lot rows, but
-    // omission is not a delete command and must not erase historical detail.
-    const mergedDetailMap = new Map(
-      [...existingDetailMap.entries()].map(([key,row]) => [key,{ ...row,session_id:sid }])
-    );
+    // Full Snapshot replaces LPN/Lot detail inside the authoritative scope.
+    const mergedDetailMap = new Map();
     let newDetailCount = 0;
     let updatedDetailCount = 0;
     let preservedDetailCount = 0;
@@ -56100,7 +56304,19 @@ async function doImportXlsx() {
     });
     const importedDetailKeys = new Set(safeImportedDetails.map(wmsImportDetailMatchKey));
     existingDetailMap.forEach((current,key) => {
-      if (!importedDetailKeys.has(key)) preservedDetailCount++;
+      if (!importedDetailKeys.has(key)) {
+        preservedDetailCount++;
+        detailChanges.push({
+          type:'removed',
+          location:locationCodeById.get(current.location_id) || current.location_id,
+          item:itemCodeById.get(current.item_id) || current.item_id,
+          lpn:current.license_plate || '',
+          lot:current.lot || '',
+          oldQty:displayQty(current.qty),
+          inventoryStatus:current.inventory_status || '',
+          uom:current.uom || '',
+        });
+      }
     });
     const mergedDetailsList = Array.from(mergedDetailMap.values());
 
@@ -56145,10 +56361,7 @@ async function doImportXlsx() {
     }
 
     al.innerHTML = `<div class="alert alert-blue">⏳ กำลังตรวจยอดหลัง Import...</div>`;
-    const snapshotWriteLocationIds = [...new Set([
-      ...safeLocationIdList,
-      ...fileHistoricalRestoreRows.map(row => row.location_id),
-    ].filter(Boolean))];
+    const snapshotWriteLocationIds = safeLocationIdList;
     const [savedSnapshots,savedDetails] = await Promise.all([
       fetchImportedScopeRows('stock_snapshot',['id','location_id','item_id','onhand_qty','al_qty'],sid,snapshotWriteLocationIds),
       fetchImportedScopeRows('stock_snapshot_detail',['id','location_id','item_id','license_plate','lot','inventory_status','qty','uom'],sid,safeLocationIdList),
@@ -56180,17 +56393,17 @@ async function doImportXlsx() {
     const importedRowsForLayoutCheck = parsedRows.map(row => ({locCode:row.locCode}));
     al.innerHTML = `<div class="alert alert-green" style="line-height:1.55;padding:16px">
       <strong style="display:block;font-size:16px">✅ Import / Update WMS สำเร็จ</strong>
-      <div style="margin-top:5px;font-size:12px;font-weight:700">อัปเดตเฉพาะรายการในไฟล์แล้ว · OH และประวัติงานที่เริ่มนับถูกล็อกไว้</div>
+      <div style="margin-top:5px;font-size:12px;font-weight:700">อัปเดต Full WMS Snapshot แล้ว · รายการที่หายถูกตั้ง OH เป็น 0 · ประวัติ Count/DIFF ไม่เปลี่ยน</div>
       <div class="wms-import-inline-summary">
         <span>${metrics.rows.toLocaleString(uiLocale())} แถวจากไฟล์</span>
         <span>${metrics.locations.toLocaleString(uiLocale())} Location</span>
         <span>SUM OH ${Number(metrics.sumOH).toLocaleString(uiLocale(),{maximumFractionDigits:2})}</span>
-        <span>คงข้อมูลเดิม ${Number(preservedSnapshotKeys.size+preservedDetailCount).toLocaleString(uiLocale())} รายการ</span>
+        <span>ตั้ง OH เป็น 0 ${Number(zeroedSnapshotKeys.size).toLocaleString(uiLocale())} รายการ</span>
       </div>
     </div>`;
     showWmsImportResult({
       title:'Import / Update WMS สำเร็จ',
-      message:'อัปเดตเฉพาะข้อมูลที่มีในไฟล์ · ไม่ตั้ง OH เป็น 0 และไม่ลบประวัติเดิม',
+      message:'Full WMS Snapshot สำเร็จ · รายการที่หายในขอบเขตถูกตั้ง OH เป็น 0 โดย Count, DIFF และสถานะย้อนหลังไม่เปลี่ยน',
       facts:[
         {group:'overview',label:'แถวที่อ่านจากไฟล์',value:metrics.rows.toLocaleString(uiLocale())},
         {group:'overview',label:'Location ในไฟล์',value:metrics.locations.toLocaleString(uiLocale())},
@@ -56200,13 +56413,14 @@ async function doImportXlsx() {
         {group:'updated',label:'OH/AL อัปเดต',value:updatedSnapshotCount.toLocaleString(uiLocale()),rawValue:updatedSnapshotCount},
         {group:'updated',label:'LPN/Lot อัปเดต',value:updatedDetailCount.toLocaleString(uiLocale()),rawValue:updatedDetailCount},
         {group:'updated',label:'กู้ OH ประวัติเดิม',value:recoveredHistoricalSnapshotCount.toLocaleString(uiLocale()),rawValue:recoveredHistoricalSnapshotCount},
-        {group:'updated',label:'Snapshot เดิมที่คงไว้',value:preservedSnapshotKeys.size.toLocaleString(uiLocale()),rawValue:preservedSnapshotKeys.size},
-        {group:'updated',label:'LPN/Lot เดิมที่คงไว้',value:preservedDetailCount.toLocaleString(uiLocale()),rawValue:preservedDetailCount},
+        {group:'updated',label:'รายการหายที่ตั้ง OH = 0',value:zeroedSnapshotKeys.size.toLocaleString(uiLocale()),rawValue:zeroedSnapshotKeys.size},
+        {group:'updated',label:'LPN/Lot ที่นำออก',value:preservedDetailCount.toLocaleString(uiLocale()),rawValue:preservedDetailCount},
+        {group:'updated',label:'เก็บ OH ตอนเริ่มนับ',value:baselineAuditRows.length.toLocaleString(uiLocale()),rawValue:baselineAuditRows.length},
         ...(suppressedHistoricalSnapshotCount ? [{label:'แถว Location ว่างเดิมที่ไม่นำมาคำนวณ',value:suppressedHistoricalSnapshotCount.toLocaleString(uiLocale())}] : []),
         {label:'ไม่เปลี่ยน',value:(unchangedSnapshotCount+unchangedDetailCount).toLocaleString(uiLocale())},
-        {label:'ล็อกงานที่เริ่มนับแล้ว',value:`${countedProtectedLocationIds.size.toLocaleString(uiLocale())} Location`},
-        {label:'ล็อกหลังคอนเฟิร์ม',value:`${confirmedProtectedLocationIds.size.toLocaleString(uiLocale())} Location · ${confirmedProtectedImportRows.toLocaleString(uiLocale())} แถว`},
-        ...(annualProtectedLocationIds.size ? [{label:'ล็อก Annual ที่เริ่มแล้ว',value:`${annualProtectedLocationIds.size.toLocaleString(uiLocale())} Location · ${annualProtectedImportRows.toLocaleString(uiLocale())} แถว`}] : []),
+        {label:'งานที่รักษาประวัติ Count',value:`${countedProtectedLocationIds.size.toLocaleString(uiLocale())} Location`},
+        {label:'งานคอนเฟิร์มที่รักษาประวัติ',value:`${confirmedProtectedLocationIds.size.toLocaleString(uiLocale())} Location · ${confirmedProtectedImportRows.toLocaleString(uiLocale())} แถว`},
+        ...(annualProtectedLocationIds.size ? [{label:'Annual ที่รักษาประวัติ',value:`${annualProtectedLocationIds.size.toLocaleString(uiLocale())} Location · ${annualProtectedImportRows.toLocaleString(uiLocale())} แถว`}] : []),
       ],
       snapshotChanges,
       detailChanges,
@@ -59985,7 +60199,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.145" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.146" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
@@ -60909,7 +61123,7 @@ window.addEventListener('DOMContentLoaded', () => {
 if ('serviceWorker' in navigator && ['https:','http:'].includes(location.protocol)) {
   window.addEventListener('load', async () => {
     try {
-      const registration = await navigator.serviceWorker.register('./sw.js?v=145', { scope:'./' });
+      const registration = await navigator.serviceWorker.register('./sw.js?v=146', { scope:'./' });
       registration.update().catch(() => {});
       document.documentElement.dataset.pwaReady = 'true';
     } catch (error) {
