@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V1.147: Import without a Location Filter is authoritative only for Locations present in the file (verified). -->
 <!-- V1.146: Full WMS Snapshot with frozen Count OH baselines (verified).
      Items omitted inside the selected scope become live OH=0 while historical Count/DIFF/status remain unchanged. -->
 <!-- V1.145: support the deployed variance_approvals schema without created_at
@@ -22,14 +23,14 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.146</title>
+<title>Cycle Count V1.147</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
 if (['http:','https:'].includes(location.protocol)) {
   const manifestLink = document.createElement('link');
   manifestLink.rel = 'manifest';
-  manifestLink.href = './manifest.webmanifest?v=146';
+  manifestLink.href = './manifest.webmanifest?v=147';
   document.head.appendChild(manifestLink);
 }
 </script>
@@ -38,8 +39,8 @@ if (['http:','https:'].includes(location.protocol)) {
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Cycle Count">
-<link rel="apple-touch-icon" href="./icons/icon-192.png?v=146">
-<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=146">
+<link rel="apple-touch-icon" href="./icons/icon-192.png?v=147">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=147">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -64,6 +65,7 @@ if (['http:','https:'].includes(location.protocol)) {
 <!-- V1.116: ทุกปุ่มบันทึก Count ตรวจ DIFF ทันที และเปิด Count รอบถัดไปของ Item เดิมโดยไม่รอครบ Location -->
 <!-- V1.141: Import WMS แบบ Merge ไม่ตั้ง OH/AL ที่หายเป็น 0 และไม่แก้ Snapshot ของงานที่เริ่มนับแล้ว -->
 <!-- V1.142: ผังคลังยึดประวัติ completed เป็นสีเขียว และกู้ OH จาก Count ที่จบแล้วก่อนคำนวณสถานะ -->
+<!-- V1.147: ไม่ใส่ Filter จะอัปเดตเฉพาะ Location ที่มีในไฟล์ ไม่ตั้ง OH=0 ให้ Location อื่นใน Session -->
 <!-- V1.146: Import แบบ Full WMS Snapshot ตั้งรายการที่หายเป็น OH=0 และแยก OH ตอนเริ่มนับเพื่อรักษา Count/DIFF/สถานะย้อนหลัง -->
 <!-- V1.145: แก้ Import และประวัติให้รองรับ variance_approvals ที่ไม่มี created_at -->
 <!-- V1.144: กู้ OH จาก Count 1 ที่จบแล้วแม้ Session ใช้ auto-pass และไม่ใช้ Cache เก่าบนหน้าผลต่าง -->
@@ -22719,13 +22721,13 @@ body.count-page-active #app .count-handheld-page .citem-wrap {
 }
 </style>
 </head>
-<body data-build="v1-146">
+<body data-build="v1-147">
 <div id="app"></div>
 
 <script>
-// V1.146: one authoritative application version for the browser title,
+// V1.147: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '1.146';
+const APP_VERSION = '1.147';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -24248,7 +24250,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.146':'e.g. Warehouse V1.146',
+  'เช่น Warehouse V1.147':'e.g. Warehouse V1.147',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -52046,11 +52048,12 @@ async function renderManageImport(container) {
         <div class="alert alert-blue" style="font-size:13px;margin:16px 0;line-height:1.6">
           📁 <strong>Upload Excel (.xlsx)</strong> — ดึงข้อมูลจากระบบ WMS ได้เลย<br>✅ ระบบอ่านหัวตารางอัตโนมัติ<br>🏷️ ดึง LPN / Lot / OH / AL มาแสดงตอนนับ<br>
           🔄 Import ซ้ำใน Session เดิมแบบปลอดภัย: Match ด้วย <strong>Location + LPN + Item + Lot</strong>
-          ไฟล์นี้เป็น Full WMS Snapshot: รายการเดิมที่หายจากไฟล์ในขอบเขตที่เลือกจะถูกตั้ง OH เป็น 0
-          ส่วน OH ตอนเริ่มนับ, Count, DIFF และสถานะงานย้อนหลังจะถูกเก็บแยกและไม่เปลี่ยน
+          <br>📍 <strong>ไม่ใส่ Filter</strong> = อัปเดตเฉพาะ Location ที่พบในไฟล์ โดยไม่แตะ Location อื่นใน Session
+          <br>🎯 <strong>ใส่ Filter</strong> = ทุก Location ที่ตรง Filter เป็นขอบเขต Full Snapshot และรายการที่หายจะถูกตั้ง OH เป็น 0
+          <br>ส่วน OH ตอนเริ่มนับ, Count, DIFF และสถานะงานย้อนหลังจะถูกเก็บแยกและไม่เปลี่ยน
         </div>
         <div class="fg"><label>SESSION <span style="color:var(--accent-red)">*</span></label><select id="is" required onchange="refreshXlsxPreview()">${sessOpts}</select></div>
-        <div class="fg"><label>กรอง LOCATION (ไม่บังคับ)</label><input id="ilocfilter" placeholder="เช่น B-EA% หรือเว้นว่างเพื่อ import ทั้งหมด" oninput="refreshXlsxPreview()"></div>
+        <div class="fg"><label>กรอง LOCATION (ไม่บังคับ)</label><input id="ilocfilter" placeholder="เช่น B-EA% · เว้นว่าง = เฉพาะ Location ที่มีในไฟล์" oninput="refreshXlsxPreview()"></div>
         <div class="fg"><label>เลือกไฟล์ XLSX</label>
           <input type="file" id="ixlsx" accept=".xlsx,.xls" style="padding:16px;border:none;border-radius:var(--border-radius-lg);cursor:pointer;background:var(--neu-surface);box-shadow: inset 4px 4px 8px var(--neu-shadow-dark), inset -4px -4px 8px var(--neu-shadow-light);width:100%;font-size:14px">
         </div>
@@ -55540,7 +55543,7 @@ function renderXlsxImportPreview(analysis) {
     <div class="alert alert-amber" style="font-size:11px;margin-top:10px;line-height:1.6">
       ไฟล์นี้จะเป็นข้อมูล WMS ล่าสุดของ${locationFilterValue
         ? ` Location Filter <strong>${escapeWmsText(locationFilterValue)}</strong>`
-        : ' Session ที่เลือกทั้งหมด'} · Item เดิมที่ไม่อยู่ในไฟล์จะคงแถวไว้แต่ตั้ง OH/AL เป็น 0 และ LPN/Lot เดิมจะถูกนำออก
+        : ' <strong>เฉพาะ Location ที่พบในไฟล์</strong> (Location อื่นใน Session จะไม่เปลี่ยน)'} · Item เดิมที่หายภายในขอบเขตนี้จะคงแถวไว้แต่ตั้ง OH/AL เป็น 0 และ LPN/Lot เดิมจะถูกนำออก
       งานที่เริ่มนับแล้วจะใช้ OH ตอนเริ่มนับจากประวัติ ส่วน OH ล่าสุดอัปเดตตามไฟล์นี้
     </div>
     ${analysis.errors.length ? `<div class="alert alert-red" style="font-size:12px;margin-top:10px">${analysis.errors.map(escapeWmsText).join('<br>')}</div>` : ''}
@@ -55660,9 +55663,16 @@ async function fetchImportedScopeRows(table,columns,sessionId,locationIds) {
 }
 
 async function fetchWmsImportMergeLocationScope(sessionId,incomingLocationIds,locationFilter='') {
-  // Full WMS Snapshot: omission means live OH=0, but only inside the selected
-  // Location filter. With no filter, the whole selected Session is authoritative.
+  // Safe default: without an explicit filter, only Locations physically present
+  // in the uploaded file are authoritative. Never zero an unrelated Location
+  // merely because it belongs to the same Session.
   const locationRegex = importLocationFilterRegex(locationFilter);
+  const incomingIds = [...new Set((incomingLocationIds || []).filter(Boolean))];
+  if (!locationRegex) {
+    return { locationIds:incomingIds,locationCodeById:new Map() };
+  }
+  // An explicit filter is deliberate scope expansion. Example B-CR% means all
+  // existing B-CR Locations are covered, so missing Items inside B-CR become 0.
   const result = await fetchPagedSupabaseRows(
     'stock_snapshot',
     'location_id,locations(code)',
@@ -55674,14 +55684,14 @@ async function fetchWmsImportMergeLocationScope(sessionId,incomingLocationIds,lo
   (result.data || []).forEach(row => {
     const code = row.locations?.code || '';
     if (row.location_id) locationCodeById.set(row.location_id,code || row.location_id);
-    if (row.location_id && (!locationRegex || locationRegex.test(code))) {
+    if (row.location_id && locationRegex.test(code)) {
       existingLocationIds.push(row.location_id);
     }
   });
   return {
     locationIds:[...new Set([
       ...existingLocationIds,
-      ...(incomingLocationIds || []).filter(Boolean),
+      ...incomingIds,
     ])],
     locationCodeById,
   };
@@ -60199,7 +60209,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.146" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.147" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
@@ -61123,7 +61133,7 @@ window.addEventListener('DOMContentLoaded', () => {
 if ('serviceWorker' in navigator && ['https:','http:'].includes(location.protocol)) {
   window.addEventListener('load', async () => {
     try {
-      const registration = await navigator.serviceWorker.register('./sw.js?v=146', { scope:'./' });
+      const registration = await navigator.serviceWorker.register('./sw.js?v=147', { scope:'./' });
       registration.update().catch(() => {});
       document.documentElement.dataset.pwaReady = 'true';
     } catch (error) {
