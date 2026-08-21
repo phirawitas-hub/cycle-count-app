@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.126</title>
+<title>Cycle Count V1.127</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -38,7 +38,7 @@
 <!-- V1.115: จัด Dashboard iPad แนวตั้งให้เริ่มชิดด้านบนเต็มสัดส่วน และคืนปุ่มเปิด Sidebar -->
 <!-- V1.116: ทุกปุ่มบันทึก Count ตรวจ DIFF ทันที และเปิด Count รอบถัดไปของ Item เดิมโดยไม่รอครบ Location -->
 <!-- V1.120: Import WMS แบบ authoritative ภายในขอบเขต ลบ LPN/Lot ที่หายและตั้ง OH/AL ของ Snapshot ที่หายเป็น 0 โดยคงประวัติ Count -->
-<!-- V1.126: ตัด AIM Symbology Identifier เช่น ]Q1 / ]C1 จากเลเซอร์ Handheld ก่อนเทียบ Location, Item และ LPN -->
+<!-- V1.127: กรอง Snapshot Item ว่าง/กำพร้าแบบรวมศูนย์ ไม่ให้ UUID ค้างงานเมื่อ Location มี Item จริง พร้อม Audit และล้างแถวปลอดภัย -->
 <!-- V1.112: แก้ Flow ยืนยัน Item ให้ส่งเข้าคิวปรับปรุงยอด WMS ทันที และรองรับรายการเดิมที่ released_to_wms=false -->
 <!-- V1.111: เพิ่มกล่องยอดยืนยันและ Variance ต่อจาก COUNT 3 ในรายการปรับยอด WMS -->
 <!-- V1.110: รายการ DIFF ที่ Supervisor ยืนยันแล้วจัดเป็นรอ WMS เสมอ ไม่ย้อนกลับไปเป็นรอ Variance -->
@@ -22357,7 +22357,7 @@ body.count-page-active #app .count-sticky-stack .count-entry-progress {
   }
 }
 
-/* V1.126 · Compact, balanced scanner for rugged Handheld, phones and iPad.
+/* V1.127 · Compact, balanced scanner for rugged Handheld, phones and iPad.
    The physical laser capture stays focusable while the manual controls are
    folded, so Android IME/wedge scanners keep a live destination. */
 .count-item-collapse-button { display:none; }
@@ -22493,15 +22493,181 @@ body.count-page-active #app .count-sticky-stack .count-entry-progress {
     line-height:1.1 !important;
   }
 }
+
+/* V1.128 · A fully opaque sticky tool shelf keeps Count cards visually below
+   Scan + Summary instead of letting their text show through the floating box.
+   scroll-margin uses the measured shelf height for every programmatic Item/LPN
+   jump on desktop, iPad, phones and rugged Handheld terminals. */
+body.count-page-active #app .count-handheld-page .count-sticky-stack {
+  background:var(--theme-page-bg) !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 17%,var(--theme-border-color)) !important;
+  box-shadow:0 7px 18px rgba(12,63,66,.13),0 -8px 0 var(--theme-page-bg) !important;
+}
+body.count-page-active #app .count-handheld-page .count-items-card {
+  position:relative;
+  z-index:1;
+  scroll-padding-top:calc(var(--count-sticky-stack-height,150px) + 12px);
+}
+body.count-page-active #app .count-handheld-page .citem-wrap {
+  scroll-margin-top:calc(
+    var(--count-sticky-header-height,var(--topbar-height,70px))
+    + var(--count-sticky-stack-height,150px)
+    + 16px
+  );
+}
+
+/* V1.138 · Loading Cat — follows the supplied reference with the requested
+   white canvas, orange elastic cat and centered Loading label. Progress runs
+   internally for accessibility, but no percentage or progress bar is shown. */
+.page-loading-overlay{
+  position:absolute!important;
+  z-index:190!important;
+  inset:0!important;
+  display:grid!important;
+  place-items:center!important;
+  min-height:100%!important;
+  padding:0!important;
+  overflow:hidden!important;
+  background:#fff!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  opacity:1;
+  transition:opacity .28s ease!important;
+}
+.page-loading-overlay::before{display:none!important}
+.vespa-loader-card{
+  position:relative!important;
+  z-index:1!important;
+  display:grid!important;
+  place-items:center!important;
+  width:min(320px,82vw)!important;
+  aspect-ratio:1!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  text-align:center!important;
+}
+.vespa-loader-kicker,
+.vespa-loader-copy,
+.vespa-loader-percent,
+.vespa-loader-progress,
+.vespa-loader-hint{display:none!important}
+.vespa-loader-stage{
+  position:relative!important;
+  width:100%!important;
+  height:auto!important;
+  aspect-ratio:1!important;
+  overflow:visible!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.vespa-loader-stage::before,
+.vespa-loader-stage::after{display:none!important}
+.cat-loader-art{
+  position:absolute;
+  inset:0;
+  display:block;
+  width:100%;
+  height:100%;
+  overflow:visible;
+}
+.cat-loader-orbit{
+  transform-origin:110px 110px;
+  transform-box:view-box;
+  animation:catLoaderOrbit 2s linear infinite;
+  will-change:transform;
+}
+.cat-loader-body-shadow,
+.cat-loader-body,
+.cat-loader-body-highlight{
+  fill:none;
+  stroke-linecap:round;
+  transform-origin:110px 110px;
+  transform:rotate(-90deg);
+  animation:catLoaderStretch 2s linear infinite;
+}
+.cat-loader-body-shadow{stroke:#d98220;stroke-width:31;stroke-linecap:butt}
+.cat-loader-body{stroke:#f3a33b;stroke-width:26;stroke-linecap:butt}
+.cat-loader-body-highlight{stroke:rgba(255,220,157,.88);stroke-width:5;stroke-linecap:round;transform:rotate(-90deg) translateX(-4px)}
+.cat-loader-head{filter:drop-shadow(0 2px 1px rgba(0,0,0,.14))}
+.cat-loader-hind-legs{filter:none}
+.cat-loader-face{fill:#f3a33b;stroke:#d98220;stroke-width:1.4}
+.cat-loader-ear{fill:#f3a33b;stroke:#d98220;stroke-width:1.1;stroke-linejoin:round}
+.cat-loader-ear-inner{fill:#f4a8b8}
+.cat-loader-paw{fill:#f3a33b;stroke:#d98220;stroke-width:1.15}
+.cat-loader-hind-outer{fill:#d98220;stroke:none}
+.cat-loader-hind-inner{fill:#f3a33b;stroke:none}
+.cat-loader-paw-line{fill:none;stroke:#d98220;stroke-width:.9;stroke-linecap:round}
+.cat-loader-eye{fill:#30343b}
+.cat-loader-eye-glint{fill:#fff}
+.cat-loader-nose{fill:#ef8ea3}
+.cat-loader-mouth{fill:none;stroke:#594943;stroke-width:1.1;stroke-linecap:round}
+.cat-loader-cheek{fill:#f7bec9;opacity:.62}
+.cat-loader-word{
+  position:absolute;
+  z-index:2;
+  inset:0;
+  display:grid;
+  place-items:center;
+  color:#000;
+  font-family:Arial,'Sarabun',sans-serif;
+  font-size:1.9rem;
+  font-weight:400;
+  line-height:1.2;
+  letter-spacing:0;
+  pointer-events:none;
+}
+.cat-loader-sr-only{
+  position:absolute!important;
+  width:1px!important;
+  height:1px!important;
+  padding:0!important;
+  margin:-1px!important;
+  overflow:hidden!important;
+  clip:rect(0,0,0,0)!important;
+  white-space:nowrap!important;
+  border:0!important;
+}
+.vespa-loader-complete{display:none!important}
+.page-loading-overlay.is-complete .cat-loader-orbit{animation-play-state:paused}
+.page-loading-overlay.is-error{background:#fff!important}
+.page-loading-overlay.is-leaving{opacity:0!important;pointer-events:none!important}
+@keyframes catLoaderOrbit{
+  from{transform:rotate(0deg)}
+  /* Counter-clockwise keeps the cat's head at the leading end of its body. */
+  to{transform:rotate(-360deg)}
+}
+@keyframes catLoaderStretch{
+  0%,100%{stroke-dasharray:62 377;stroke-dashoffset:0}
+  18%{stroke-dasharray:76 377;stroke-dashoffset:0}
+  42%{stroke-dasharray:168 377;stroke-dashoffset:0}
+  70%{stroke-dasharray:310 377;stroke-dashoffset:0}
+  78%{stroke-dasharray:296 377;stroke-dashoffset:0}
+  90%{stroke-dasharray:150 377;stroke-dashoffset:0}
+}
+@media(max-width:620px){
+  .vespa-loader-card{width:min(320px,84vw)!important;padding:0!important;border-radius:0!important}
+  .vespa-loader-stage{height:auto!important}
+}
+@media(prefers-reduced-motion:reduce){
+  .cat-loader-orbit{animation:catLoaderOrbit 8s linear infinite!important}
+  .cat-loader-body-shadow,.cat-loader-body,.cat-loader-body-highlight{animation:none!important;stroke-dasharray:210 377!important;stroke-linecap:round!important}
+  .cat-loader-hind-legs{display:none!important}
+}
 </style>
 </head>
-<body data-build="v1-126">
+<body data-build="v1-138">
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.126';
+const APP_VERSION = '1.138';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
-const APP_BUILD_ID = 'v1-126';
+const APP_BUILD_ID = 'v1-138';
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
 
 // V1.84 performance: keep the login and ordinary work pages light.  Large
@@ -24022,7 +24188,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.126':'e.g. Warehouse V1.126',
+  'เช่น Warehouse V1.127':'e.g. Warehouse V1.127',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -26979,18 +27145,40 @@ function vespaLoaderSvg() {
 function pageLoadingOverlayHtml() {
   return `<section class="page-loading-overlay" id="page-loading-overlay" aria-live="polite">
     <div class="vespa-loader-card">
-      <div class="vespa-loader-kicker">CYCLE COUNT WAREHOUSE</div>
       <div class="vespa-loader-stage" id="vespa-loader-progress" role="progressbar" aria-label="${uiCopy('ความคืบหน้าการโหลด','Loading progress')}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="4">
-        <div class="vespa-loader-scenery" aria-hidden="true"><span class="vespa-loader-sun"></span><span class="vespa-loader-cloud vespa-loader-cloud-one"></span><span class="vespa-loader-cloud vespa-loader-cloud-two"></span><span class="vespa-loader-mountain vespa-loader-mountain-back"></span><span class="vespa-loader-mountain vespa-loader-mountain-front"></span><span class="vespa-loader-forest vespa-loader-forest-far"></span><span class="vespa-loader-forest vespa-loader-forest-near"></span><span class="vespa-loader-road"></span></div>
-        <div class="vespa-loader-position"><div class="vespa-loader-bike"><span class="vespa-loader-speed"><i></i><i></i><i></i></span><span class="vespa-loader-smoke"><i></i><i></i><i></i></span>${vespaLoaderSvg()}<i class="vespa-loader-wheel vespa-loader-wheel-rear"></i><i class="vespa-loader-wheel vespa-loader-wheel-front"></i></div></div>
+        <svg class="cat-loader-art" viewBox="0 0 220 220" aria-hidden="true" focusable="false">
+          <g class="cat-loader-orbit">
+            <circle class="cat-loader-body-shadow" cx="110" cy="110" r="60"></circle>
+            <circle class="cat-loader-body" cx="110" cy="110" r="60"></circle>
+            <circle class="cat-loader-body-highlight" cx="110" cy="110" r="60"></circle>
+            <g class="cat-loader-hind-legs" opacity="0">
+              <path class="cat-loader-hind-outer" d="M-6-15.5 C1-15.5 8-15 13-14 C16.5-13.2 18.5-11.5 19-9.5 C19.5-7.2 18-5.5 16-5 L12-5 C9.5-5 8-3 8 0 C8 3 9.5 5 12 5 L16 5 C18 5.5 19.5 7.2 19 9.5 C18.5 11.5 16.5 13.2 13 14 C8 15 1 15.5-6 15.5 Z"></path>
+              <path class="cat-loader-hind-inner" d="M-11-13 C-2-13 7-12.8 13-12.2 C15.5-11.8 17-10.5 17.3-9 C17.6-7.8 16.8-7.3 15.5-7 L12.5-7 C8.5-7 6-4 5.5 0 C6 4 8.5 7 12.5 7 L15.5 7 C16.8 7.3 17.6 7.8 17.3 9 C17 10.5 15.5 11.8 13 12.2 C7 12.8-2 13-11 13 Z"></path>
+              <set attributeName="opacity" to="1" begin="0s" dur="indefinite"></set>
+              <animateMotion dur="2s" repeatCount="indefinite" calcMode="linear" rotate="auto" path="M110 50 A60 60 0 1 1 109.99 50" keyTimes="0;0.18;0.42;0.70;0.78;0.90;1" keyPoints="0.164;0.202;0.446;0.822;0.785;0.398;0.164"></animateMotion>
+            </g>
+            <g class="cat-loader-head" transform="translate(91 50) rotate(-90)">
+              <ellipse class="cat-loader-paw" cx="-13" cy="17" rx="4.2" ry="9.5" transform="rotate(-14 -13 17)"></ellipse>
+              <ellipse class="cat-loader-paw" cx="13" cy="17" rx="4.2" ry="9.5" transform="rotate(14 13 17)"></ellipse>
+              <path class="cat-loader-paw-line" d="M-15 19 L-11.5 18.5 M15 19 L11.5 18.5"></path>
+              <path class="cat-loader-ear" d="M-15-5 L-12-22 L-3-12 Z"></path>
+              <path class="cat-loader-ear" d="M15-5 L12-22 L3-12 Z"></path>
+              <path class="cat-loader-ear-inner" d="M-12-8 L-10.5-17 L-6-11 Z"></path>
+              <path class="cat-loader-ear-inner" d="M12-8 L10.5-17 L6-11 Z"></path>
+              <circle class="cat-loader-face" cx="0" cy="0" r="17.5"></circle>
+              <circle class="cat-loader-eye" cx="-6.3" cy="-2.8" r="4.1"></circle>
+              <circle class="cat-loader-eye" cx="6.3" cy="-2.8" r="4.1"></circle>
+              <circle class="cat-loader-eye-glint" cx="-5.2" cy="-4.1" r="1.2"></circle>
+              <circle class="cat-loader-eye-glint" cx="7.4" cy="-4.1" r="1.2"></circle>
+              <path class="cat-loader-nose" d="M-1.7 2.8 Q0 1.5 1.7 2.8 Q0 5-1.7 2.8 Z"></path>
+              <path class="cat-loader-mouth" d="M0 4.5 Q-.8 7.5-4 7 M0 4.5 Q.8 7.5 4 7"></path>
+            </g>
+          </g>
+        </svg>
+        <div class="cat-loader-word">Loading</div>
+        <div class="cat-loader-sr-only"><h2 id="vespa-loader-title">${uiCopy('กำลังโหลดข้อมูล...','Loading data...')}</h2><p id="vespa-loader-subtitle">${uiCopy('กำลังเตรียมหน้าจอให้พร้อมใช้งาน','Preparing your workspace')}</p></div>
         <div class="vespa-loader-complete" id="vespa-loader-complete">${uiCopy('✓ พร้อมใช้งาน','✓ Ready')}</div>
       </div>
-      <div class="vespa-loader-copy">
-        <div><h2 id="vespa-loader-title">${uiCopy('กำลังโหลดข้อมูล...','Loading data...')}</h2><p id="vespa-loader-subtitle">${uiCopy('กำลังเตรียมหน้าจอให้พร้อมใช้งาน','Preparing your workspace')}</p></div>
-        <strong class="vespa-loader-percent" id="vespa-loader-percent">4%</strong>
-      </div>
-      <div class="vespa-loader-progress" aria-hidden="true"><span></span></div>
-      <div class="vespa-loader-hint"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5l3 2"></path></svg><span>${uiCopy('กำลังโหลดเฉพาะข้อมูลที่จำเป็นของหน้าที่เลือก','Loading only the data required for the selected page.')}</span></div>
     </div>
   </section>`;
 }
@@ -28165,6 +28353,116 @@ const rs=getComputedStyle(document.documentElement);
 
 let _countStickyHeaderObserver = null;
 let _countStickyHeaderFrame = 0;
+let _countStickyStackObserverV128 = null;
+let _pendingCountViewportAnchorV128 = null;
+const _countItemOrderByAssignmentV128 = new Map();
+
+function stableCountSnapshotsV128(assignmentId,rows=[]) {
+  const key = String(assignmentId || '');
+  const currentRows = [...(rows || [])];
+  if (!key || currentRows.length < 2) return currentRows;
+  const currentIds = currentRows.map(row => String(row?.item_id || '')).filter(Boolean);
+  const currentSet = new Set(currentIds);
+  const previous = (_countItemOrderByAssignmentV128.get(key) || [])
+    .filter(itemId => currentSet.has(itemId));
+  currentIds.forEach(itemId => {
+    if (!previous.includes(itemId)) previous.push(itemId);
+  });
+  _countItemOrderByAssignmentV128.set(key,previous);
+  const rank = new Map(previous.map((itemId,index) => [itemId,index]));
+  return currentRows.sort((left,right) =>
+    (rank.get(String(left?.item_id || '')) ?? Number.MAX_SAFE_INTEGER)
+    - (rank.get(String(right?.item_id || '')) ?? Number.MAX_SAFE_INTEGER)
+  );
+}
+
+function countViewportRestorePendingV128(assignmentId='') {
+  return Boolean(
+    _pendingCountViewportAnchorV128
+    && String(_pendingCountViewportAnchorV128.assignmentId || '') === String(assignmentId || '')
+  );
+}
+
+function captureCountViewportAnchorV128(preferredItemId='') {
+  if (S?.page !== 'c-count') return null;
+  const page = document.querySelector('.count-handheld-page');
+  const main = page?.closest('.main-wrapper');
+  if (!page || !main) return null;
+  const cards = [...page.querySelectorAll('.citem-wrap[data-hw-item-id]')];
+  if (!cards.length) return null;
+  const preferredKey = String(preferredItemId || '');
+  const stickyBottom = page.querySelector('.count-sticky-stack')?.getBoundingClientRect().bottom || 0;
+  const visibleLine = Math.max(stickyBottom + 10,0);
+  const card = cards.find(node => String(node.dataset.hwItemId || '') === preferredKey)
+    || cards
+      .map(node => ({ node,distance:Math.abs(node.getBoundingClientRect().top - visibleLine) }))
+      .sort((left,right) => left.distance - right.distance)[0]?.node;
+  if (!card) return null;
+  const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  _pendingCountViewportAnchorV128 = {
+    assignmentId:String(S.aid || window._countFoundContext?.assignmentId || ''),
+    itemId:String(card.dataset.hwItemId || ''),
+    viewportTop:card.getBoundingClientRect().top,
+    activeId:active?.id || '',
+    scannerCollapsed:page.querySelector('.count-item-lookup')?.classList.contains('is-mobile-collapsed') ?? null,
+    capturedAt:Date.now(),
+  };
+  return _pendingCountViewportAnchorV128;
+}
+
+function syncCountStickyStackMetricsV128() {
+  const app = Q('app');
+  const stack = app?.querySelector('.count-handheld-page .count-sticky-stack');
+  if (!app || !stack || S?.page !== 'c-count') return;
+  const height = Math.ceil(stack.getBoundingClientRect().height);
+  if (height > 0) app.style.setProperty('--count-sticky-stack-height',`${height}px`);
+}
+
+function startCountStickyStackTrackingV128() {
+  _countStickyStackObserverV128?.disconnect();
+  _countStickyStackObserverV128 = null;
+  syncCountStickyStackMetricsV128();
+  const stack = document.querySelector('.count-handheld-page .count-sticky-stack');
+  if (stack && typeof ResizeObserver === 'function') {
+    _countStickyStackObserverV128 = new ResizeObserver(syncCountStickyStackMetricsV128);
+    _countStickyStackObserverV128.observe(stack);
+  }
+}
+
+function scheduleCountViewportRestoreV128(assignmentId='') {
+  startCountStickyStackTrackingV128();
+  const anchor = _pendingCountViewportAnchorV128;
+  if (!anchor) return false;
+  if (String(anchor.assignmentId || '') !== String(assignmentId || '')) {
+    _pendingCountViewportAnchorV128 = null;
+    return false;
+  }
+  const restore = () => {
+    if (S?.page !== 'c-count' || String(S.aid || '') !== String(anchor.assignmentId || '')) return;
+    const card = [...document.querySelectorAll('.count-handheld-page .citem-wrap[data-hw-item-id]')]
+      .find(node => String(node.dataset.hwItemId || '') === String(anchor.itemId || ''));
+    const main = card?.closest('.main-wrapper');
+    if (!card || !main) {
+      _pendingCountViewportAnchorV128 = null;
+      return;
+    }
+    if (anchor.scannerCollapsed !== null) {
+      setCountScanPanelExpanded(!anchor.scannerCollapsed);
+      syncCountStickyStackMetricsV128();
+    }
+    const delta = card.getBoundingClientRect().top - Number(anchor.viewportTop || 0);
+    if (Number.isFinite(delta) && Math.abs(delta) > .5) {
+      main.scrollTop = Math.max(0,main.scrollTop + delta);
+    }
+    const previousInput = anchor.activeId ? Q(anchor.activeId) : null;
+    if (previousInput && !previousInput.disabled && previousInput.offsetParent !== null) {
+      try { previousInput.focus({ preventScroll:true }); } catch (_) {}
+    }
+    _pendingCountViewportAnchorV128 = null;
+  };
+  requestAnimationFrame(() => requestAnimationFrame(restore));
+  return true;
+}
 
 function stopCountStickyHeaderTracking() {
   if (_countStickyHeaderObserver) {
@@ -28175,7 +28473,10 @@ function stopCountStickyHeaderTracking() {
     cancelAnimationFrame(_countStickyHeaderFrame);
     _countStickyHeaderFrame = 0;
   }
+  _countStickyStackObserverV128?.disconnect();
+  _countStickyStackObserverV128 = null;
   Q('app')?.style.removeProperty('--count-sticky-header-height');
+  Q('app')?.style.removeProperty('--count-sticky-stack-height');
 }
 
 function syncCountStickyHeaderOffset() {
@@ -28219,8 +28520,10 @@ function render() {
   syncNavigationStateGlobals();
   const { page } = S;
   if (page !== 'sv-dash' || (S?._dashTab || _dashTab) !== 'layout') stopWarehouseLayoutLiveSync();
-  if (page !== 'c-count') teardownCountTouchControls();
-  else removeCountNumericKeypad();
+  if (page !== 'c-count') {
+    teardownCountTouchControls();
+    _pendingCountViewportAnchorV128 = null;
+  } else removeCountNumericKeypad();
   const renderRequestId = ++_renderRequestSerial;
   const pageRequestScope = beginPageRequestScope();
   const tabletUi = syncTabletUiClass();
@@ -29641,7 +29944,7 @@ function determineItemNextRequiredRound(snapshot,itemRounds,rules) {
 }
 
 function determineImmediateCountRound(snapshotRows,itemRounds,rules,preferredItemId='') {
-  const snapshots = snapshotRows || [];
+  const snapshots = operationalStockSnapshotRows(snapshotRows);
   const roundsByItem = itemRounds || {};
   const preferredKey = String(preferredItemId || '');
   const preferred = preferredKey
@@ -29713,8 +30016,75 @@ function reconcileApprovalWithPhysicalCount(approval, rounds, oh, rules) {
   };
 }
 
+function stockSnapshotItemKind(snapshot={}) {
+  // Several lightweight status queries intentionally omit the Item relation.
+  // Absence of the selected field is not proof that Item Master is missing.
+  if (!Object.prototype.hasOwnProperty.call(snapshot || {},'items')) return 'item';
+  const item = snapshot?.items;
+  if (!item || typeof item !== 'object') return 'orphan';
+  return isEmptyLocationItem(item.code) ? 'empty' : 'item';
+}
+
+// A blank Item is a deliberate placeholder only while the Location is empty.
+// Once a real Item exists in the same Location it becomes historical metadata,
+// not another count line. Missing Item Master relations are never operational.
+function operationalStockSnapshotRows(snapshotRows=[]) {
+  const rows = (snapshotRows || []).filter(Boolean);
+  const realItems = rows.filter(snapshot => stockSnapshotItemKind(snapshot) === 'item');
+  if (realItems.length) return realItems;
+  const emptyRows = rows.filter(snapshot => stockSnapshotItemKind(snapshot) === 'empty');
+  return emptyRows.length ? [emptyRows[0]] : [];
+}
+
+function operationalStockSnapshotsByLocation(snapshotRows=[]) {
+  const groups = new Map();
+  (snapshotRows || []).forEach(snapshot => {
+    const key = `${snapshot?.session_id || ''}|${snapshot?.location_id || snapshot?.locations?.id || snapshot?.locations?.code || ''}`;
+    if (!groups.has(key)) groups.set(key,[]);
+    groups.get(key).push(snapshot);
+  });
+  return [...groups.values()].flatMap(operationalStockSnapshotRows);
+}
+
+function analyzeStockSnapshotHygiene(snapshotRows=[]) {
+  const groups = new Map();
+  (snapshotRows || []).forEach(snapshot => {
+    const locationId = snapshot?.location_id || snapshot?.locations?.id || '';
+    const locationCode = snapshot?.locations?.code || locationId || 'ไม่ทราบ Location';
+    const key = `${snapshot?.session_id || ''}|${locationId || locationCode}`;
+    if (!groups.has(key)) groups.set(key,{ key,locationId,locationCode,rows:[] });
+    groups.get(key).rows.push(snapshot);
+  });
+  const mixedEmptyRows = [];
+  const orphanRows = [];
+  const emptyOnlyLocations = [];
+  const issues = [];
+  groups.forEach(group => {
+    const realRows = group.rows.filter(row => stockSnapshotItemKind(row) === 'item');
+    const emptyRows = group.rows.filter(row => stockSnapshotItemKind(row) === 'empty');
+    const missingRows = group.rows.filter(row => stockSnapshotItemKind(row) === 'orphan');
+    if (realRows.length && emptyRows.length) {
+      emptyRows.forEach(row => mixedEmptyRows.push({...row,_locationCode:group.locationCode}));
+      issues.push({
+        type:'mixed_empty',locationId:group.locationId,locationCode:group.locationCode,
+        count:emptyRows.length,message:`มี Item จริง ${realRows.length} รายการ แต่ยังค้างแถว Location ว่าง ${emptyRows.length} รายการ`,
+      });
+    } else if (!realRows.length && emptyRows.length) {
+      emptyOnlyLocations.push({ locationId:group.locationId,locationCode:group.locationCode,count:emptyRows.length });
+    }
+    if (missingRows.length) {
+      missingRows.forEach(row => orphanRows.push({...row,_locationCode:group.locationCode,_hasRealItem:realRows.length > 0}));
+      issues.push({
+        type:'orphan',locationId:group.locationId,locationCode:group.locationCode,
+        count:missingRows.length,message:`ไม่พบ Item Master ${missingRows.length} รายการ`,
+      });
+    }
+  });
+  return { issues,mixedEmptyRows,orphanRows,emptyOnlyLocations };
+}
+
 function determineNextRequiredCountRound(snapshotRows,itemRounds,rules) {
-  const snapshots = snapshotRows || [];
+  const snapshots = operationalStockSnapshotRows(snapshotRows);
   const roundsByItem = itemRounds || {};
   const maxRounds = Math.max(1,Math.min(3,Number(rules?.maxRounds) || 3));
   const has = value => value !== null && value !== undefined && value !== '';
@@ -29788,7 +30158,7 @@ function assignmentNeedsAnotherCount(assignmentOrStatus) {
 }
 
 function deriveAssignmentWorkflowStatus(snapshotRows, itemRounds, rules, storedStatus='pending') {
-  const snapshots = snapshotRows || [];
+  const snapshots = operationalStockSnapshotRows(snapshotRows);
   const roundsByItem = itemRounds || {};
   if (storedStatus === 'approved') {
     return {
@@ -30668,12 +31038,26 @@ async function loadCTasks() {
             'assignment_id',
             assignmentIds,
           ),
-          fetchSnapshotsForAssignmentScopes(asgns,'session_id,location_id,item_id,onhand_qty'),
+          fetchSnapshotsForAssignmentScopes(asgns,'session_id,location_id,item_id,onhand_qty,items(code)'),
           Promise.all(sessionIds.map(async sessionId => [sessionId,await getSessionRules(sessionId)])),
         ]);
     if (countResult.error || snapshotResult.error) {
       cnt().innerHTML = errBox((countResult.error || snapshotResult.error).message);
       return;
+    }
+    let taskSnapshotRows = snapshotResult.data || [];
+    const taskSnapshotsNeedItemMeta = taskSnapshotRows.length
+      && !taskSnapshotRows.every(row => Object.prototype.hasOwnProperty.call(row || {},'items'));
+    if (taskSnapshotsNeedItemMeta) {
+      const enrichedSnapshots = await fetchSnapshotsForAssignmentScopes(
+        asgns,
+        'session_id,location_id,item_id,onhand_qty,items(code)',
+      );
+      if (enrichedSnapshots.error) {
+        cnt().innerHTML = errBox(enrichedSnapshots.error.message);
+        return;
+      }
+      taskSnapshotRows = enrichedSnapshots.data || [];
     }
     const rulesBySession = Object.fromEntries(sessionRules);
     const countsByAssignment = {};
@@ -30684,7 +31068,7 @@ async function loadCTasks() {
       countsByAssignment[record.assignment_id][record.item_id][record.round] = Number(record.count_qty);
     });
     const snapshotsByScope = {};
-    (snapshotResult.data || []).forEach(snapshot => {
+    taskSnapshotRows.forEach(snapshot => {
       const key = `${snapshot.session_id}|${snapshot.location_id}`;
       snapshotsByScope[key] = snapshotsByScope[key] || [];
       snapshotsByScope[key].push(snapshot);
@@ -31435,14 +31819,14 @@ let _taskLocationFocusToken = 0;
 let _taskLocationFocusHoldUntil = 0;
 let _taskLocationLastConnectionAt = 0;
 let _taskLocationLastInputAt = 0;
-let _countLaserFocusTimersV126 = [];
-let _countLaserFocusTokenV126 = 0;
-let _countLaserModeV126 = 'scan';
-let _countLaserLastConnectionAtV126 = 0;
-let _countLaserLastInputAtV126 = 0;
-let _countLaserImeBufferV126 = '';
-let _countLaserImeLastAtV126 = 0;
-let _countLaserImeCommitTimerV126 = null;
+let _countLaserFocusTimersV127 = [];
+let _countLaserFocusTokenV127 = 0;
+let _countLaserModeV127 = 'scan';
+let _countLaserLastConnectionAtV127 = 0;
+let _countLaserLastInputAtV127 = 0;
+let _countLaserImeBufferV127 = '';
+let _countLaserImeLastAtV127 = 0;
+let _countLaserImeCommitTimerV127 = null;
 let _hardwareCapturePollTimer = null;
 let _hardwareCapturePollValue = '';
 let _hardwareCapturePollChangedAt = 0;
@@ -31967,39 +32351,39 @@ function scheduleHandheldCountEntryFocus() {
   });
 }
 
-function countLaserWedgeDeviceV126() {
+function countLaserWedgeDeviceV127() {
   return /Android/i.test(navigator.userAgent) && isNarrowHandheldTerminal();
 }
 
-function clearCountLaserFocusTimersV126() {
-  _countLaserFocusTokenV126 += 1;
-  _countLaserFocusTimersV126.forEach(timer => clearTimeout(timer));
-  _countLaserFocusTimersV126 = [];
+function clearCountLaserFocusTimersV127() {
+  _countLaserFocusTokenV127 += 1;
+  _countLaserFocusTimersV127.forEach(timer => clearTimeout(timer));
+  _countLaserFocusTimersV127 = [];
 }
 
-function resetCountLaserImeBufferV126() {
-  clearTimeout(_countLaserImeCommitTimerV126);
-  _countLaserImeCommitTimerV126 = null;
-  _countLaserImeBufferV126 = '';
-  _countLaserImeLastAtV126 = 0;
+function resetCountLaserImeBufferV127() {
+  clearTimeout(_countLaserImeCommitTimerV127);
+  _countLaserImeCommitTimerV127 = null;
+  _countLaserImeBufferV127 = '';
+  _countLaserImeLastAtV127 = 0;
 }
 
-function captureCountLaserImeTextV126(target,chunk='') {
+function captureCountLaserImeTextV127(target,chunk='') {
   if (target?.id !== 'count_hardware_scan') return false;
   const rawChunk = String(chunk || '');
   if (!rawChunk) return false;
   const now = Date.now();
-  if (_countLaserImeLastAtV126 && now - _countLaserImeLastAtV126 > 650) {
-    _countLaserImeBufferV126 = '';
+  if (_countLaserImeLastAtV127 && now - _countLaserImeLastAtV127 > 650) {
+    _countLaserImeBufferV127 = '';
   }
-  _countLaserImeLastAtV126 = now;
-  _countLaserImeBufferV126 += rawChunk;
-  clearTimeout(_countLaserImeCommitTimerV126);
-  _countLaserImeCommitTimerV126 = setTimeout(() => {
+  _countLaserImeLastAtV127 = now;
+  _countLaserImeBufferV127 += rawChunk;
+  clearTimeout(_countLaserImeCommitTimerV127);
+  _countLaserImeCommitTimerV127 = setTimeout(() => {
     const fieldValue = normalizeHardwareScanValue(target.value || '');
-    const imeValue = normalizeHardwareScanValue(_countLaserImeBufferV126);
+    const imeValue = normalizeHardwareScanValue(_countLaserImeBufferV127);
     const candidate = fieldValue.length >= imeValue.length ? fieldValue : imeValue;
-    resetCountLaserImeBufferV126();
+    resetCountLaserImeBufferV127();
     if (candidate.length >= HANDHELD_SCAN_CONFIG.minLength) {
       commitHardwareCaptureTarget(target,candidate);
     }
@@ -32007,7 +32391,7 @@ function captureCountLaserImeTextV126(target,chunk='') {
   return true;
 }
 
-function countLaserUserEntryActiveV126(active=document.activeElement) {
+function countLaserUserEntryActiveV127(active=document.activeElement) {
   if (!active || active === document.body || active === document.documentElement) return false;
   if (active.id === 'count_hardware_scan') return false;
   return Boolean(
@@ -32017,15 +32401,15 @@ function countLaserUserEntryActiveV126(active=document.activeElement) {
   );
 }
 
-function focusCountLaserCaptureV126({ force=false,reconnect=false }={}) {
-  if (S?.page !== 'c-count' || !countLaserWedgeDeviceV126() || Q('scanOverlay')) return false;
-  if (_countLaserModeV126 !== 'scan' && !force) return false;
+function focusCountLaserCaptureV127({ force=false,reconnect=false }={}) {
+  if (S?.page !== 'c-count' || !countLaserWedgeDeviceV127() || Q('scanOverlay')) return false;
+  if (_countLaserModeV127 !== 'scan' && !force) return false;
   if (document.querySelector('.counter-picker-menu:not([hidden]),.multi-filter.open')) return false;
   const target = Q('count_hardware_scan');
   if (!target) return false;
-  resetCountLaserImeBufferV126();
+  resetCountLaserImeBufferV127();
   const active = document.activeElement;
-  if (!force && countLaserUserEntryActiveV126(active)) return false;
+  if (!force && countLaserUserEntryActiveV127(active)) return false;
   if (reconnect && active === target) target.blur();
   focusHardwareScanTarget(target);
   try { target.click(); } catch (_) {}
@@ -32033,27 +32417,27 @@ function focusCountLaserCaptureV126({ force=false,reconnect=false }={}) {
   requestHideHandheldSoftKeyboard();
   const connected = document.activeElement === target;
   if (connected) {
-    _countLaserLastConnectionAtV126 = Date.now();
+    _countLaserLastConnectionAtV127 = Date.now();
     target.dataset.scannerConnected = 'true';
   }
   return connected;
 }
 
-function scheduleCountLaserFocusV126() {
+function scheduleCountLaserFocusV127() {
   clearHandheldCountFocusTimers();
-  clearCountLaserFocusTimersV126();
-  if (S?.page !== 'c-count' || !countLaserWedgeDeviceV126()) return;
-  _countLaserModeV126 = 'scan';
-  const token = _countLaserFocusTokenV126;
-  focusCountLaserCaptureV126({ force:true,reconnect:true });
+  clearCountLaserFocusTimersV127();
+  if (S?.page !== 'c-count' || !countLaserWedgeDeviceV127()) return;
+  _countLaserModeV127 = 'scan';
+  const token = _countLaserFocusTokenV127;
+  focusCountLaserCaptureV127({ force:true,reconnect:true });
   requestAnimationFrame(() => {
-    if (token !== _countLaserFocusTokenV126 || S?.page !== 'c-count' || _countLaserModeV126 !== 'scan') return;
-    if (document.activeElement?.id !== 'count_hardware_scan') focusCountLaserCaptureV126({ force:true });
+    if (token !== _countLaserFocusTokenV127 || S?.page !== 'c-count' || _countLaserModeV127 !== 'scan') return;
+    if (document.activeElement?.id !== 'count_hardware_scan') focusCountLaserCaptureV127({ force:true });
   });
   [80,220,520,1000,1800,3000].forEach(delay => {
-    _countLaserFocusTimersV126.push(setTimeout(() => {
-      if (token !== _countLaserFocusTokenV126 || S?.page !== 'c-count' || _countLaserModeV126 !== 'scan') return;
-      if (document.activeElement?.id !== 'count_hardware_scan') focusCountLaserCaptureV126({ force:true });
+    _countLaserFocusTimersV127.push(setTimeout(() => {
+      if (token !== _countLaserFocusTokenV127 || S?.page !== 'c-count' || _countLaserModeV127 !== 'scan') return;
+      if (document.activeElement?.id !== 'count_hardware_scan') focusCountLaserCaptureV127({ force:true });
     },delay));
   });
   startHardwareCapturePolling('count_hardware_scan');
@@ -32082,12 +32466,12 @@ function startHardwareCapturePolling(targetId) {
     const value = normalizeHardwareScanValue(target.value || '');
     const now = Date.now();
     if (targetId === 'count_hardware_scan'
-        && _countLaserModeV126 === 'scan'
+        && _countLaserModeV127 === 'scan'
         && !Q('scanOverlay')
         && !document.querySelector('.counter-picker-menu:not([hidden]),.multi-filter.open')) {
       const active = document.activeElement;
-      if (active !== target && !countLaserUserEntryActiveV126(active)) {
-        focusCountLaserCaptureV126({ force:true,reconnect:true });
+      if (active !== target && !countLaserUserEntryActiveV127(active)) {
+        focusCountLaserCaptureV127({ force:true,reconnect:true });
       }
     }
     if (targetId === 'task_hardware_scan'
@@ -32143,7 +32527,13 @@ function startHardwareCapturePolling(targetId) {
 function activateHardwareLaserScanner() {
   if (S?.page === 'c-count') {
     clearTaskLocationFocusTimers();
-    if (countLaserWedgeDeviceV126()) scheduleCountLaserFocusV126();
+    if (countLaserWedgeDeviceV127()) scheduleCountLaserFocusV127();
+    else if (countViewportRestorePendingV128(S.aid)) {
+      // A post-save re-render must not focus/scroll the first remaining Item.
+      // The exact Item and viewport position are restored after the DOM settles.
+      stopHardwareCapturePolling();
+      clearHandheldCountFocusTimers();
+    }
     else {
       stopHardwareCapturePolling();
       scheduleHandheldCountEntryFocus();
@@ -32154,11 +32544,11 @@ function activateHardwareLaserScanner() {
   _hardwareScanNavigationPending = false;
   if (!isNarrowHandheldTerminal()) {
     clearTaskLocationFocusTimers();
-    clearCountLaserFocusTimersV126();
+    clearCountLaserFocusTimersV127();
     return;
   }
   clearHandheldCountFocusTimers();
-  clearCountLaserFocusTimersV126();
+  clearCountLaserFocusTimersV127();
   const targetId = S?.page === 'c-tasks'
     ? 'task_hardware_scan'
     : S?.page === 'c-found'
@@ -32216,28 +32606,28 @@ document.addEventListener('focusin',event => {
   if (S?.page !== 'c-count') return;
   const target = event.target instanceof HTMLElement ? event.target : null;
   if (target?.id === 'count_hardware_scan') {
-    _countLaserModeV126 = 'scan';
+    _countLaserModeV127 = 'scan';
     return;
   }
   if (target?.id === 'count_item_search') {
-    _countLaserModeV126 = 'manual';
-    clearCountLaserFocusTimersV126();
+    _countLaserModeV127 = 'manual';
+    clearCountLaserFocusTimersV127();
     return;
   }
   if (target?.classList?.contains('cqty')) {
-    _countLaserModeV126 = 'qty';
-    clearCountLaserFocusTimersV126();
+    _countLaserModeV127 = 'qty';
+    clearCountLaserFocusTimersV127();
   }
 },true);
 document.addEventListener('visibilitychange',() => {
   if (!document.hidden && S?.page === 'c-tasks') setTimeout(scheduleTaskLocationScanFocus,120);
-  if (!document.hidden && S?.page === 'c-count' && countLaserWedgeDeviceV126()) {
-    setTimeout(scheduleCountLaserFocusV126,120);
+  if (!document.hidden && S?.page === 'c-count' && countLaserWedgeDeviceV127()) {
+    setTimeout(scheduleCountLaserFocusV127,120);
   }
 });
 window.addEventListener('pageshow',() => {
   if (S?.page === 'c-tasks') setTimeout(scheduleTaskLocationScanFocus,120);
-  if (S?.page === 'c-count' && countLaserWedgeDeviceV126()) setTimeout(scheduleCountLaserFocusV126,120);
+  if (S?.page === 'c-count' && countLaserWedgeDeviceV127()) setTimeout(scheduleCountLaserFocusV127,120);
 });
 
 function assignHardwareScanToField(input,value,role='') {
@@ -32290,8 +32680,8 @@ function handleCountHardwareScan(value,target=null) {
   const locationKey = hardwareScanCompareKey(page?.dataset.hwLocationCode || '');
   if (candidateKeys.size && locationKey && candidateKeys.has(locationKey)) {
     handheldScanFeedback('success',uiCopy('Location ถูกต้อง','Location Verified'),scanValue,uiCopy('ยิง LPN หรือ Item เพื่อเลือกสินค้าที่จะนับ','Scan an LPN or Item to select the count line'));
-    _countLaserModeV126 = 'scan';
-    setTimeout(() => focusCountLaserCaptureV126({ force:true,reconnect:true }),80);
+    _countLaserModeV127 = 'scan';
+    setTimeout(() => focusCountLaserCaptureV127({ force:true,reconnect:true }),80);
     return true;
   }
   const wrappers = [...document.querySelectorAll('.count-handheld-page .citem-wrap[data-hw-item-id]')];
@@ -32308,14 +32698,14 @@ function handleCountHardwareScan(value,target=null) {
   });
   if (!match) {
     handheldScanFeedback('error',uiCopy('ไม่พบ Barcode ใน Location นี้','Barcode Not Found in This Location'),scanValue,uiCopy('ตรวจสอบ LPN / Item หรือ Location แล้วลองอีกครั้ง','Check the LPN, Item or Location and try again'));
-    _countLaserModeV126 = 'scan';
-    setTimeout(() => focusCountLaserCaptureV126({ force:true,reconnect:true }),80);
+    _countLaserModeV127 = 'scan';
+    setTimeout(() => focusCountLaserCaptureV127({ force:true,reconnect:true }),80);
     return false;
   }
   const resolvedMatch = match.classList.contains('is-count-resolved');
-  _countLaserModeV126 = resolvedMatch ? 'scan' : 'qty';
-  if (!resolvedMatch) clearCountLaserFocusTimersV126();
-  if (compactCountScannerViewportV126()) setCountScanPanelExpanded(false);
+  _countLaserModeV127 = resolvedMatch ? 'scan' : 'qty';
+  if (!resolvedMatch) clearCountLaserFocusTimersV127();
+  if (compactCountScannerViewportV127()) setCountScanPanelExpanded(false);
   document.querySelectorAll('.citem-wrap.handheld-scan-match').forEach(card => card.classList.remove('handheld-scan-match'));
   match.classList.add('handheld-scan-match');
   setTimeout(() => match.classList.remove('handheld-scan-match'),1800);
@@ -32350,7 +32740,7 @@ function handleCountHardwareScan(value,target=null) {
         ? uiCopy('ยอดยังไม่ตรงและรอหัวหน้างานตรวจสอบ','The variance is awaiting supervisor review')
         : uiCopy('ไม่ต้องนับซ้ำ กรุณาสแกน ITEM ที่ต้องนับใหม่','No recount needed; scan an Item awaiting recount'),
     );
-    setTimeout(() => focusCountLaserCaptureV126({ force:true,reconnect:true }),220);
+    setTimeout(() => focusCountLaserCaptureV127({ force:true,reconnect:true }),220);
     return true;
   }
   const qtyInput = Q(`q_${itemId}`);
@@ -32442,7 +32832,7 @@ function commitHardwareCaptureTarget(target,fallbackValue='') {
   const value = bestHardwareCaptureValue(target,fieldValue,fallback);
   if (value.length < HANDHELD_SCAN_CONFIG.minLength) return false;
   target.value = '';
-  if (target.id === 'count_hardware_scan') resetCountLaserImeBufferV126();
+  if (target.id === 'count_hardware_scan') resetCountLaserImeBufferV127();
   resetHardwareScanBuffer();
   return routeHardwareLaserScan(value,target);
 }
@@ -32637,7 +33027,7 @@ document.addEventListener('input',event => {
   const target = event.target instanceof HTMLElement ? event.target : null;
   if (!hardwareScanOperationalPage() || !target?.dataset?.hwScanCapture) return;
   if (target.id === 'task_hardware_scan') _taskLocationLastInputAt = Date.now();
-  if (target.id === 'count_hardware_scan') _countLaserLastInputAtV126 = Date.now();
+  if (target.id === 'count_hardware_scan') _countLaserLastInputAtV127 = Date.now();
   const value = normalizeHardwareScanValue(target.value || '');
   if (value.length >= HANDHELD_SCAN_CONFIG.minLength) scheduleHardwareCaptureCommit(target,value);
 },true);
@@ -32649,7 +33039,7 @@ document.addEventListener('beforeinput',event => {
     // Older Android scanner IMEs may provide decoded characters only through
     // beforeinput and never publish input/keydown. Accumulate that stream as a
     // second source while keeping the real field value as the first choice.
-    captureCountLaserImeTextV126(target,event.data);
+    captureCountLaserImeTextV127(target,event.data);
     return;
   }
   // The timeout runs after the browser applies beforeinput to the field. The
@@ -33108,7 +33498,7 @@ function countItemSearchMatches(rawQuery='') {
       || left.itemCode.localeCompare(right.itemCode,'th',{ numeric:true }));
 }
 
-function compactCountScannerViewportV126() {
+function compactCountScannerViewportV127() {
   return Boolean(window.matchMedia?.(
     '(max-width:760px), (max-width:1400px) and (any-pointer:coarse)'
   ).matches);
@@ -33136,16 +33526,16 @@ function setCountScanPanelExpanded(expanded,{ focusSearch=false }={}) {
     const active = document.activeElement;
     if (active && panel.contains(active) && active !== button) active.blur?.();
     if (isNarrowHandheldTerminal() && !handheldSoftKeyboardEnabled()) requestHideHandheldSoftKeyboard();
-    if (_countLaserModeV126 === 'manual') _countLaserModeV126 = 'scan';
-    if (countLaserWedgeDeviceV126() && _countLaserModeV126 === 'scan') {
-      setTimeout(() => focusCountLaserCaptureV126({ force:true,reconnect:true }),40);
+    if (_countLaserModeV127 === 'manual') _countLaserModeV127 = 'scan';
+    if (countLaserWedgeDeviceV127() && _countLaserModeV127 === 'scan') {
+      setTimeout(() => focusCountLaserCaptureV127({ force:true,reconnect:true }),40);
     }
     return true;
   }
 
   if (focusSearch) {
-    _countLaserModeV126 = 'manual';
-    clearCountLaserFocusTimersV126();
+    _countLaserModeV127 = 'manual';
+    clearCountLaserFocusTimersV127();
     setTimeout(() => {
       const input = Q('count_item_search');
       if (!input || panel.classList.contains('is-mobile-collapsed')) return;
@@ -33163,7 +33553,7 @@ function toggleCountScanPanel(event) {
   const panel = document.querySelector('.count-handheld-page .count-item-lookup');
   if (!panel) return false;
   const expand = panel.classList.contains('is-mobile-collapsed');
-  return setCountScanPanelExpanded(expand,{ focusSearch:expand && compactCountScannerViewportV126() });
+  return setCountScanPanelExpanded(expand,{ focusSearch:expand && compactCountScannerViewportV127() });
 }
 
 function renderCountItemSearchResults(matches=[],query='') {
@@ -34525,8 +34915,8 @@ async function saveCountItemFromKeypad(input) {
 
 async function loadCCount() {
   window._hardwareScanReturnInputId = '';
-  _countLaserModeV126 = 'scan';
-  clearCountLaserFocusTimersV126();
+  _countLaserModeV127 = 'scan';
+  clearCountLaserFocusTimersV127();
   const { aid } = S;
   let jid = S.jid || '';
   let jitemid = S.jitemid || '';
@@ -34642,7 +35032,7 @@ async function loadCCount() {
   ]);
   // การนับแบบ JOB ใช้ขอบเขตงานระดับ Location เหมือนงานปกติ:
   // โหลดสินค้ากับรายละเอียดทั้งหมดของ Location ไม่ตัดเหลือเฉพาะ ITEM ที่ใช้แบ่ง JOB
-  const snaps = rawSnaps || [];
+  const snaps = stableCountSnapshotsV128(aid,operationalStockSnapshotRows(rawSnaps || []));
   const details = rawDetails || [];
   const annualItemIds = new Set(snaps.map(item => item.item_id).filter(Boolean));
   if (existingCountsResult.error) {
@@ -34801,14 +35191,6 @@ async function loadCCount() {
       resolvedRound:matchedRound,
       resolvedQty:counted[matchedRound],
     };
-  }).sort((left,right) => {
-    if (left.resolvedBeforeRound !== right.resolvedBeforeRound) {
-      return left.resolvedBeforeRound ? 1 : -1;
-    }
-    const leftPreferred = String(left.snapshot.item_id) === String(S.countItemId || '');
-    const rightPreferred = String(right.snapshot.item_id) === String(S.countItemId || '');
-    if (leftPreferred !== rightPreferred) return leftPreferred ? -1 : 1;
-    return left.index - right.index;
   });
   window._countEntryResolvedCount = countEntryRows.filter(row => row.resolvedBeforeRound).length;
   window._countEntryActiveCount = countEntryRows.length - window._countEntryResolvedCount;
@@ -34818,6 +35200,8 @@ async function loadCCount() {
     .filter(row => row.resolvedBeforeRound && row.itemStatus === 'Diff').length;
 
   let items = '';
+  const initialActiveItemIdV128 = countEntryRows
+    .find(row => !row.resolvedBeforeRound)?.snapshot?.item_id;
   for (const countEntryRow of countEntryRows) {
     const s = countEntryRow.snapshot;
     const resolvedBeforeRound = countEntryRow.resolvedBeforeRound;
@@ -34917,7 +35301,9 @@ async function loadCCount() {
       .filter(Boolean)
       .join('|');
     const firstCountItem = items === '';
-    const initialCountFocusAttr = firstCountItem && !resolvedBeforeRound
+    const initialCountFocusAttr = !resolvedBeforeRound
+      && String(it.id) === String(initialActiveItemIdV128 || '')
+      && !countViewportRestorePendingV128(aid)
       ? 'autofocus data-count-initial-focus="true"'
       : '';
     items += `<div class="citem-wrap ${resolvedBeforeRound ? `is-count-resolved is-count-inactive-${countEntryRow.inactiveState}` : ''}"
@@ -35195,6 +35581,7 @@ async function loadCCount() {
   // Initialize the current round first, then focus its first Count field.
   // This runs for Count 1, Count 2 and Count 3 alike.
   activateHardwareLaserScanner();
+  scheduleCountViewportRestoreV128(aid);
 
   if (annualMode && annualJob.status === 'pending') {
     const { data:startedJobs,error:startJobError } = await sb.from('annual_count_jobs')
@@ -35489,7 +35876,7 @@ async function resolveCountWorkflowAfterSave({
 
   const [snapshotResult,countResult,rules] = await Promise.all([
     sb.from('stock_snapshot')
-      .select('item_id,onhand_qty')
+      .select('item_id,onhand_qty,items(code)')
       .eq('session_id',assignment.session_id)
       .eq('location_id',assignment.location_id),
     sb.from('count_records')
@@ -35504,7 +35891,7 @@ async function resolveCountWorkflowAfterSave({
     return { handled:true,error };
   }
 
-  const snapshots = snapshotResult.data || [];
+  const snapshots = operationalStockSnapshotRows(snapshotResult.data || []);
   const roundsByItem = {};
   (countResult.data || []).forEach(record => {
     const key = String(record.item_id || '');
@@ -35564,6 +35951,7 @@ async function resolveCountWorkflowAfterSave({
   }
 
   if (immediateRecount) {
+    captureCountViewportAnchorV128(candidateKeys.length === 1 ? candidateKeys[0] : '');
     const latestRound = Math.max(...Object.keys(immediateRecount.rounds).map(Number));
     const latestQty = immediateRecount.rounds[latestRound];
     const variance = Number(latestQty) - Number(immediateRecount.snapshot.onhand_qty);
@@ -35617,6 +36005,7 @@ async function resolveCountWorkflowAfterSave({
     );
   }
   if (anyNext) {
+    captureCountViewportAnchorV128(candidateKeys.length === 1 ? candidateKeys[0] : '');
     go('c-count',immediateCountRouteExtra(aid,annualJobId,anyNext.itemId),{ replace:true });
     return { handled:true,navigated:true,itemId:anyNext.itemId,nextRound:anyNext.nextRound };
   }
@@ -35844,9 +36233,9 @@ function focusNextCountField(currentInput) {
   if (window._hardwareScanReturnInputId && currentInput?.id === window._hardwareScanReturnInputId) {
     window._hardwareScanReturnInputId = '';
     closeCountNumericKeypad();
-    _countLaserModeV126 = 'scan';
-    if (countLaserWedgeDeviceV126()) {
-      focusCountLaserCaptureV126({ force:true,reconnect:true });
+    _countLaserModeV127 = 'scan';
+    if (countLaserWedgeDeviceV127()) {
+      focusCountLaserCaptureV127({ force:true,reconnect:true });
       startHardwareCapturePolling('count_hardware_scan');
     } else {
       focusHardwareScanTarget('count_hardware_scan');
@@ -36407,6 +36796,8 @@ async function handlePhoto(itemId,input) {
 }
 
 async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
+  const countMainV128 = document.querySelector('.count-handheld-page')?.closest('.main-wrapper');
+  const countScrollTopV128 = Number(countMainV128?.scrollTop || 0);
   closeCountNumericKeypad();
   document.activeElement?.blur?.();
   const pauseAndContinue = options?.pauseAndContinue === true;
@@ -36697,8 +37088,9 @@ async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
       title:'บันทึกความคืบหน้าแล้ว',
       message:`${savedCount}/${ids.length} Item · เหลือ ${remainingCount} Item`,
     });
-    const nextInput = nextPendingCountInput(null,visibleCountInputs());
-    if (nextInput) focusCountInputForEntry(nextInput);
+    // A partial save is a checkpoint, not navigation. Keep the operator at the
+    // same card instead of auto-focusing the next Item and moving the screen.
+    if (countMainV128?.isConnected) countMainV128.scrollTop = countScrollTopV128;
     return;
   }
 
@@ -36715,8 +37107,11 @@ async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
   const rawSnaps = snapshotResult.data;
   const rawAllRounds = roundResult.data;
   const countingItemIds = new Set(ids);
-  const snaps = (rawSnaps || []).filter(row => !annualJobId || countingItemIds.has(String(row.item_id)));
-  const allRounds = (rawAllRounds || []).filter(row => !annualJobId || countingItemIds.has(String(row.item_id)));
+  // Verify completion from the exact operational rows rendered on screen.
+  // Historical empty placeholders may still exist in Stock Snapshot, but they
+  // must never reopen a Location after its real Items were counted.
+  const snaps = (rawSnaps || []).filter(row => countingItemIds.has(String(row.item_id)));
+  const allRounds = (rawAllRounds || []).filter(row => countingItemIds.has(String(row.item_id)));
 
   const ohMap = Object.fromEntries(snaps?.map(s => [s.item_id, +s.onhand_qty]) || []);
   const byItem = {};
@@ -36789,6 +37184,7 @@ async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
     if (await openNextCountFromCachedTasks(aid,asgn,newStatus,annualJobId)) return;
     returnToMyTasksAndOpenNextCount(aid,asgn,annualJobId);
   } else if (anyPending) {
+    captureCountViewportAnchorV128();
     await showCountResultPopup({
       kind:'warning',
       title:'ยอดไม่ตรง',
@@ -36855,7 +37251,7 @@ async function refreshAnnualJobProgress(jobId) {
     const [snapshotResult,countResult,rules] = await Promise.all([
       fetchSupabaseRowsByValues(
         'stock_snapshot',
-        'session_id,location_id,item_id,onhand_qty',
+        'session_id,location_id,item_id,onhand_qty,items(code)',
         'location_id',
         locationIds,
       ),
@@ -36868,9 +37264,11 @@ async function refreshAnnualJobProgress(jobId) {
       getSessionRules(job.session_id),
     ]);
     if (snapshotResult.error || countResult.error) throw (snapshotResult.error || countResult.error);
+    const jobSnapshots = operationalStockSnapshotsByLocation(
+      (snapshotResult.data || []).filter(row => row.session_id === job.session_id)
+    );
     const snapshotMap = {};
-    (snapshotResult.data || [])
-      .filter(row => row.session_id === job.session_id)
+    jobSnapshots
       .forEach(row => { snapshotMap[`${row.location_id}|${row.item_id}`] = row; });
     const countMap = {};
     (countResult.data || []).forEach(row => {
@@ -36878,20 +37276,21 @@ async function refreshAnnualJobProgress(jobId) {
       countMap[`${row.assignment_id}|${row.item_id}`][row.round] = Number(row.count_qty);
     });
     let started = false;
-    const statuses = items.map(item => {
+    const activeItems = items.filter(item => snapshotMap[`${item.location_id}|${item.item_id}`]);
+    const statuses = activeItems.map(item => {
       const assignment = assignmentByLocation[item.location_id];
       const rounds = assignment ? (countMap[`${assignment.id}|${item.item_id}`] || {}) : {};
       if (rounds[1] !== undefined || rounds[2] !== undefined || rounds[3] !== undefined) started = true;
       const snapshot = snapshotMap[`${item.location_id}|${item.item_id}`];
       return computeItemStatus(snapshot?.onhand_qty,rounds[1],rounds[2],rounds[3],rules);
     });
-    const completed = statuses.length > 0 && statuses.every(status => status === 'OK' || status === 'Diff');
+    const completed = statuses.length === 0 || statuses.every(status => status === 'OK' || status === 'Diff');
     const nextStatus = completed ? 'completed' : (started ? 'in_progress' : 'pending');
 
     for (const assignment of assignments) {
-      const locationSnapshots = (snapshotResult.data || []).filter(row =>
-        row.session_id === job.session_id && row.location_id === assignment.location_id
-      );
+      const locationSnapshots = operationalStockSnapshotRows(jobSnapshots.filter(row =>
+        row.location_id === assignment.location_id
+      ));
       const locationRounds = {};
       locationSnapshots.forEach(snapshot => {
         locationRounds[snapshot.item_id] = countMap[`${assignment.id}|${snapshot.item_id}`] || {};
@@ -37225,8 +37624,8 @@ async function selectAdminFormCountAssignment(assignmentId,options={}) {
     ]);
     const firstError = snapshotResult.error || detailResult.error || countResult.error;
     if (firstError) throw firstError;
-    const snapshots = snapshotResult.data || [];
-    if (!snapshots.length) throw new Error('Location นี้ไม่มีรายการ Stock Snapshot สำหรับกรอก');
+    const snapshots = operationalStockSnapshotRows(snapshotResult.data || []);
+    if (!snapshots.length) throw new Error('Location นี้ไม่มีรายการ Stock Snapshot ที่ใช้งานได้สำหรับกรอก');
     const detailsByItem = {};
     (detailResult.data || []).forEach(detail => {
       detailsByItem[detail.item_id] = detailsByItem[detail.item_id] || [];
@@ -38708,7 +39107,7 @@ function buildWorkTrackerRows({ snapshots=[],details=[],assignments=[],counts=[]
     approvalMap[`${approval.assignment_id}|${approval.item_id}`] = approval;
   });
 
-  return snapshots.map(snapshot => {
+  return operationalStockSnapshotsByLocation(snapshots).map(snapshot => {
     const assignment = assignmentByLocation[snapshot.location_id] || null;
     const key = `${snapshot.location_id}|${snapshot.item_id}`;
     const roundRecords = assignment ? (countMap[`${assignment.id}|${snapshot.item_id}`] || {}) : {};
@@ -38769,8 +39168,10 @@ function buildWorkTrackerRows({ snapshots=[],details=[],assignments=[],counts=[]
       zone:assignment?.locations?.zone || snapshot.locations?.zone || '',
       row:assignment?.locations?.row_no || snapshot.locations?.row_no || '',
       level:assignment?.locations?.level || snapshot.locations?.level || '',
-      item:snapshot.items?.code || '',
-      description:snapshot.items?.description || '',
+      item:stockSnapshotItemKind(snapshot) === 'empty' ? 'Location ว่าง' : (snapshot.items?.code || ''),
+      description:stockSnapshotItemKind(snapshot) === 'empty'
+        ? 'ไม่มีสินค้าใน Location ตามข้อมูล WMS'
+        : (snapshot.items?.description || ''),
       category:snapshot.items?.category || '',
       uom:snapshot.items?.uom || itemDetails.find(row => row.uom)?.uom || '',
       oh,
@@ -40682,13 +41083,14 @@ function warehouseLayoutStatusForLocation(imported,assignment,approvals=[]) {
 function buildWarehouseLayoutRuntime(config=_warehouseLayoutConfig,sessionData=window._warehouseLayoutSessionData || {}) {
   const runtimeRepair = repairWarehouseLegacyRackIdentities(config,sessionData);
   const generated = generateWarehouseLayoutLocations(runtimeRepair.config,sessionData);
+  const snapshotAudit = analyzeStockSnapshotHygiene(sessionData.snapshots || []);
   const layoutByCode = new Map();
   generated.locations.forEach(location => {
     if (location.code && !layoutByCode.has(location.code)) layoutByCode.set(location.code,location);
   });
 
   const importedByCode = new Map();
-  (sessionData.snapshots || []).forEach(snapshot => {
+  operationalStockSnapshotsByLocation(sessionData.snapshots || []).forEach(snapshot => {
     const location = snapshot.locations || {};
     const code = warehouseLocationKey(location.code || '');
     if (!code) return;
@@ -40777,6 +41179,7 @@ function buildWarehouseLayoutRuntime(config=_warehouseLayoutConfig,sessionData=w
     sessionId:sessionData.sessionId || '',
     sessionName:sessionData.sessionName || '',
     loadedAt:sessionData.loadedAt || '',
+    snapshotAudit,
   };
 }
 
@@ -40984,6 +41387,158 @@ function warehouseLayoutEmptyHtml() {
   </div>`;
 }
 
+function warehouseLayoutSnapshotAuditAlertHtml(runtime) {
+  const audit = runtime?.snapshotAudit || {};
+  const mixedCount = (audit.mixedEmptyRows || []).length;
+  const orphanCount = (audit.orphanRows || []).length;
+  if (!mixedCount && !orphanCount) return '';
+  return `<div class="alert alert-amber" style="margin:0 0 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+    <div><strong>⚠️ ตรวจพบข้อมูล Item ผิดปกติ ${Number(mixedCount + orphanCount).toLocaleString(uiLocale())} แถว</strong><br>
+    <span style="font-size:10px">ระบบไม่นำแถว Location ว่างที่ซ้ำกับ Item จริงมาคำนวณงานแล้ว · Item ว่างซ้ำ ${mixedCount.toLocaleString(uiLocale())} · Item Master ไม่พบ ${orphanCount.toLocaleString(uiLocale())}</span></div>
+    <button class="btn btn-ghost btn-sm" type="button" onclick="showWarehouseSnapshotAuditReport()">ตรวจทุก Location</button>
+  </div>`;
+}
+
+function showWarehouseSnapshotAuditReport() {
+  const runtime = window._warehouseLayoutRuntime || refreshWarehouseLayoutRuntime();
+  const audit = runtime.snapshotAudit || { issues:[],mixedEmptyRows:[],orphanRows:[],emptyOnlyLocations:[] };
+  const cleanupCandidateCount = (audit.mixedEmptyRows || []).length
+    + (audit.orphanRows || []).filter(row => row._hasRealItem).length;
+  const issueRows = (audit.issues || []).map(issue => `<div class="warehouse-match-list" style="margin-bottom:8px">
+    <div><strong>${escapeWmsText(issue.locationCode)}</strong> · ${escapeWmsText(issue.message)}</div>
+  </div>`).join('');
+  openWarehouseLayoutDialog('ตรวจข้อมูล Item ทุก Location',`
+    <div class="alert ${audit.issues?.length ? 'alert-amber' : 'alert-green'}" style="margin-bottom:13px">
+      <strong>${audit.issues?.length ? `พบ ${audit.issues.length.toLocaleString(uiLocale())} Location ที่ต้องตรวจ` : '✓ ไม่พบ Item ว่างซ้ำหรือ Item Master กำพร้า'}</strong><br>
+      ระบบตรวจ Stock Snapshot ทั้ง Session และแยก Location ว่างจริงออกจากแถวว่างที่ค้างหลังมี Item จริง
+    </div>
+    <div class="warehouse-location-summary" style="margin-bottom:13px">
+      <div class="warehouse-location-summary-card pending"><span>Item ว่างซ้ำ</span><strong>${Number(audit.mixedEmptyRows?.length || 0).toLocaleString(uiLocale())}</strong></div>
+      <div class="warehouse-location-summary-card diff"><span>Item Master ไม่พบ</span><strong>${Number(audit.orphanRows?.length || 0).toLocaleString(uiLocale())}</strong></div>
+      <div class="warehouse-location-summary-card match"><span>Location ว่างจริง</span><strong>${Number(audit.emptyOnlyLocations?.length || 0).toLocaleString(uiLocale())}</strong></div>
+    </div>
+    ${issueRows || '<div class="warehouse-location-empty-items">ไม่พบข้อมูลผิดปกติ</div>'}
+    <div class="alert alert-blue" style="margin-top:13px;font-size:10px;line-height:1.6">
+      Location ว่างจริงจะยังเก็บไว้เป็น 1 งานและแสดงชื่อ “Location ว่าง” · การล้างจะลบเฉพาะ Stock Snapshot OH/AL = 0 ที่มี Item จริงใน Location เดียวกัน และไม่มี Count, Variance, LPN/Lot หรือ Annual JOB อ้างอิง
+    </div>
+    ${prof?.role === 'admin' && cleanupCandidateCount ? `<div class="warehouse-layout-dialog-actions"><button class="btn btn-red" type="button" onclick="cleanupWarehouseSnapshotIssues()">ตรวจอ้างอิงและล้างแถวที่ปลอดภัย</button></div>` : ''}
+  `,{ wide:true });
+}
+
+async function cleanupWarehouseSnapshotIssues() {
+  if (prof?.role !== 'admin') { adminOnlyMessage(); return; }
+  const sessionData = window._warehouseLayoutSessionData || {};
+  const sessionId = String(sessionData.sessionId || '');
+  const runtime = window._warehouseLayoutRuntime || refreshWarehouseLayoutRuntime();
+  const audit = runtime.snapshotAudit || {};
+  if (!sessionId) return alert('กรุณาเลือก Session ก่อน');
+  const rawCandidates = [
+    ...(audit.mixedEmptyRows || []),
+    ...(audit.orphanRows || []).filter(row => row._hasRealItem),
+  ];
+  const candidates = [...new Map(rawCandidates
+    .filter(row => row?.id && Number(row.onhand_qty || 0) === 0 && Number(row.al_qty || 0) === 0)
+    .map(row => [String(row.id),row])).values()];
+  if (!candidates.length) {
+    alert('ไม่พบแถว OH/AL = 0 ที่เข้าเงื่อนไขล้างอย่างปลอดภัย');
+    return;
+  }
+
+  const assignmentById = new Map((sessionData.assignments || []).map(row => [String(row.id),row]));
+  const protectedKeys = new Set();
+  (sessionData.counts || []).forEach(record => {
+    const assignment = assignmentById.get(String(record.assignment_id || ''));
+    if (assignment?.location_id && record.item_id) protectedKeys.add(`${assignment.location_id}|${record.item_id}`);
+  });
+  (sessionData.approvals || []).forEach(record => {
+    const assignment = assignmentById.get(String(record.assignment_id || ''));
+    if (assignment?.location_id && record.item_id) protectedKeys.add(`${assignment.location_id}|${record.item_id}`);
+  });
+  const prelim = candidates.filter(row => !protectedKeys.has(`${row.location_id}|${row.item_id}`));
+  if (!prelim.length) {
+    alert('ทุกแถวมีประวัติ Count หรือ Variance จึงเก็บไว้เป็นประวัติและซ่อนจากงานปัจจุบันแล้ว');
+    return;
+  }
+  const locationIds = [...new Set(prelim.map(row => row.location_id).filter(Boolean))];
+  const candidateAssignmentIds = (sessionData.assignments || [])
+    .filter(row => locationIds.includes(row.location_id))
+    .map(row => row.id)
+    .filter(Boolean);
+  const [detailResult,annualResult,approvalResult,paperResult,foundResult] = await Promise.all([
+    fetchSupabaseRowsByValues(
+      'stock_snapshot_detail','id,session_id,location_id,item_id','location_id',locationIds,
+      query => query.eq('session_id',sessionId),
+    ),
+    fetchSupabaseRowsByValues(
+      'annual_count_job_items','id,session_id,location_id,item_id','location_id',locationIds,
+      query => query.eq('session_id',sessionId),
+    ),
+    fetchSupabaseRowsByValues(
+      'variance_approvals','id,assignment_id,item_id','assignment_id',candidateAssignmentIds,
+    ),
+    fetchSupabaseRowsByValues(
+      'paper_form_counts','id,session_id,source_location_id,source_item_id','source_location_id',locationIds,
+      query => query.eq('session_id',sessionId),
+    ),
+    fetchSupabaseRowsByValues(
+      'found_items','id,session_id,location_id,item_id','location_id',locationIds,
+      query => query.eq('session_id',sessionId),
+    ),
+  ]);
+  if (detailResult.error || annualResult.error || approvalResult.error || paperResult.error || foundResult.error) {
+    alert(`ตรวจข้อมูลอ้างอิงไม่สำเร็จ: ${(detailResult.error || annualResult.error || approvalResult.error || paperResult.error || foundResult.error).message}`);
+    return;
+  }
+  (approvalResult.data || []).forEach(record => {
+    const assignment = assignmentById.get(String(record.assignment_id || ''));
+    if (assignment?.location_id && record.item_id) protectedKeys.add(`${assignment.location_id}|${record.item_id}`);
+  });
+  const linkedKeys = new Set([
+    ...(detailResult.data || []).map(row => `${row.location_id}|${row.item_id}`),
+    ...(annualResult.data || []).map(row => `${row.location_id}|${row.item_id}`),
+    ...(paperResult.data || []).map(row => `${row.source_location_id}|${row.source_item_id}`),
+    ...(foundResult.data || []).map(row => `${row.location_id}|${row.item_id}`),
+  ]);
+  const safeRows = prelim.filter(row => {
+    const key = `${row.location_id}|${row.item_id}`;
+    return !protectedKeys.has(key) && !linkedKeys.has(key);
+  });
+  if (!safeRows.length) {
+    alert('ทุกแถวมี LPN/Lot หรือ Annual JOB อ้างอิง จึงไม่ลบและซ่อนจากงานปัจจุบันแทน');
+    return;
+  }
+  const locationCount = new Set(safeRows.map(row => row.location_id)).size;
+  if (!confirm(`ยืนยันล้าง ${safeRows.length.toLocaleString(uiLocale())} Stock Snapshot จาก ${locationCount.toLocaleString(uiLocale())} Location?\n\nระบบตรวจแล้วว่า OH/AL = 0 และไม่มี Count, Variance, LPN/Lot หรือ Annual JOB อ้างอิง\nItem Master และประวัติอื่นจะไม่ถูกลบ`)) return;
+
+  const deletedIds = [];
+  for (let start=0; start<safeRows.length; start+=100) {
+    const ids = safeRows.slice(start,start+100).map(row => row.id);
+    const { data,error } = await sb.from('stock_snapshot')
+      .delete()
+      .eq('session_id',sessionId)
+      .in('id',ids)
+      .select('id');
+    if (error) {
+      alert(`ล้าง Stock Snapshot ไม่สำเร็จ: ${error.message}`);
+      return;
+    }
+    deletedIds.push(...(data || []).map(row => String(row.id)));
+  }
+  if (deletedIds.length !== safeRows.length) {
+    alert(`ล้างได้ ${deletedIds.length}/${safeRows.length} แถว กรุณารีเฟรชและตรวจสิทธิ์ฐานข้อมูล`);
+    return;
+  }
+  const deletedSet = new Set(deletedIds);
+  sessionData.snapshots = (sessionData.snapshots || []).filter(row => !deletedSet.has(String(row.id)));
+  window._warehouseLayoutSessionData = sessionData;
+  invalidateDashboardCache();
+  closeWarehouseLayoutDialog();
+  refreshWarehouseLayoutRuntime();
+  renderWarehouseLayoutTabPreservingScroll();
+  showActionSuccessToast(`ล้าง ${deletedIds.length.toLocaleString(uiLocale())} แถวที่ปลอดภัยแล้ว`,{ title:'ตรวจและล้างข้อมูลสำเร็จ' });
+  scheduleWarehouseLayoutLiveRefresh('snapshot-cleanup');
+}
+
 function warehouseLayoutViewHtml(runtime) {
   const zones = runtime.config.zones || [];
   const currentZoneId = zones.some(zone => zone.id === S._layoutZone)
@@ -41031,6 +41586,7 @@ function warehouseLayoutViewHtml(runtime) {
   const planPercentText = planMetrics.countPercent.toLocaleString(uiLocale(),{minimumFractionDigits:1,maximumFractionDigits:1});
   return `<div class="warehouse-layout-shell">
     ${hero}
+    ${warehouseLayoutSnapshotAuditAlertHtml(runtime)}
     <section class="warehouse-layout-metric-section master">
       <div class="warehouse-layout-metric-heading"><span>ข้อมูลผังแม่</span><small>จำนวนช่องตามโครงสร้าง Layout</small></div>
       <div class="warehouse-layout-kpis">
@@ -41183,10 +41739,10 @@ function warehouseLayoutLocationItemRows(detail) {
   const sessionData = window._warehouseLayoutSessionData || {};
   const assignment = detail.assignment || null;
   const locationId = String(detail.imported?.id || assignment?.location_id || '');
-  const snapshots = (sessionData.snapshots || []).filter(snapshot => {
+  const snapshots = operationalStockSnapshotRows((sessionData.snapshots || []).filter(snapshot => {
     if (locationId && String(snapshot.location_id || '') === locationId) return true;
     return warehouseLocationKey(snapshot.locations?.code || '') === warehouseLocationKey(detail.code);
-  });
+  }));
   const assignmentCounts = assignment
     ? (sessionData.counts || []).filter(record => String(record.assignment_id || '') === String(assignment.id || ''))
     : [];
@@ -41253,8 +41809,12 @@ function warehouseLayoutLocationItemRows(detail) {
     }).filter(Boolean);
     return {
       itemId,
-      itemCode:snapshot.items?.code || itemId || '—',
-      description:snapshot.items?.description || '',
+      itemCode:stockSnapshotItemKind(snapshot) === 'empty'
+        ? 'Location ว่าง'
+        : (snapshot.items?.code || 'ข้อมูล Item ผิดปกติ'),
+      description:stockSnapshotItemKind(snapshot) === 'empty'
+        ? 'ไม่มีสินค้าใน Location ตามข้อมูล WMS'
+        : (snapshot.items?.description || ''),
       uom:snapshot.items?.uom || '',
       oh,al,rounds,latestRound,latestQty,approval,finalQty,finalVariance,
       stageKey,stageLabel,counterEntries,
@@ -45096,7 +45656,7 @@ async function loadSvDash() {
   dashboardAssignments.forEach(assignment => {
     const locationKey = assignment.location_id || assignment.locations?.code || assignment.id;
     if (!locationKey) return;
-    const locationSnapshots = snapshotsByLocation[assignment.location_id] || [];
+    const locationSnapshots = operationalStockSnapshotRows(snapshotsByLocation[assignment.location_id] || []);
     if (!locationSnapshots.length) {
       plannedWorkSet.add(`${locationKey}|__EMPTY__`);
       return;
@@ -48971,7 +49531,7 @@ async function loadAssignmentWorkspaceData(sessionId) {
   const promise = Promise.all([
     fetchPagedSupabaseRows(
       'stock_snapshot',
-      'location_id',
+      'id,session_id,location_id,item_id,onhand_qty,al_qty,items(code)',
       query => query.eq('session_id',sessionId).order('id'),
     ),
     fetchPagedSupabaseRows(
@@ -48983,7 +49543,7 @@ async function loadAssignmentWorkspaceData(sessionId) {
     if (snapshotResult.error) throw snapshotResult.error;
     if (assignmentResult.error) throw assignmentResult.error;
 
-    const snapshotRows = snapshotResult.data || [];
+    const snapshotRows = operationalStockSnapshotsByLocation(snapshotResult.data || []);
     const assignmentRows = assignmentResult.data || [];
     const locationIds = [...new Set([
       ...snapshotRows.map(row => row.location_id),
@@ -49902,7 +50462,7 @@ async function generateAnnualJobsClientSide({ sessionId,size,prefix,alertBox }) 
     query => query.eq('session_id',sessionId).order('id'),
   );
   if (snapshotResult.error) throw snapshotResult.error;
-  const snapshots = snapshotResult.data || [];
+  const snapshots = operationalStockSnapshotsByLocation(snapshotResult.data || []);
   if (!snapshots.length) throw new Error('Session นี้ยังไม่มี Stock Snapshot สำหรับสร้าง JOB');
 
   const collator = new Intl.Collator('en',{ numeric:true,sensitivity:'base' });
@@ -49977,13 +50537,31 @@ async function generateAnnualJobs() {
   if (button) { button.disabled = true; button.textContent = '⏳ กำลังสร้าง Annual JOB...'; }
   setAnnualJobGenerationProgress(alertBox,'กำลังเรียงและแบ่ง Stock Snapshot เป็น JOB...');
   try {
-    const rpcResult = await sb.rpc('generate_annual_count_jobs',{
-      p_session_id:config.sessionId,
-      p_items_per_job:size,
-      p_prefix:prefix,
-    });
     let summary;
-    if (rpcResult.error) {
+    const hygieneResult = await fetchPagedSupabaseRows(
+      'stock_snapshot','id,session_id,location_id,item_id,items(code)',
+      query => query.eq('session_id',config.sessionId).order('id'),
+    );
+    if (hygieneResult.error) throw hygieneResult.error;
+    const rawJobSnapshots = hygieneResult.data || [];
+    const operationalJobSnapshots = operationalStockSnapshotsByLocation(rawJobSnapshots);
+    const requiresHygieneFilter = operationalJobSnapshots.length !== rawJobSnapshots.length;
+    const rpcResult = requiresHygieneFilter
+      ? { data:null,error:null,_skippedForHygiene:true }
+      : await sb.rpc('generate_annual_count_jobs',{
+          p_session_id:config.sessionId,
+          p_items_per_job:size,
+          p_prefix:prefix,
+        });
+    if (requiresHygieneFilter) {
+      setAnnualJobGenerationProgress(alertBox,'พบ Item ว่างซ้ำ/กำพร้า · กำลังสร้าง JOB จากรายการที่ใช้งานจริงเท่านั้น...');
+      summary = await generateAnnualJobsClientSide({
+        sessionId:config.sessionId,
+        size,
+        prefix,
+        alertBox,
+      });
+    } else if (rpcResult.error) {
       const deniedSessionTable = /permission denied for table count_sessions/i.test(String(rpcResult.error.message || ''));
       if (!deniedSessionTable) throw rpcResult.error;
       setAnnualJobGenerationProgress(alertBox,'สิทธิ์แก้ Session ถูกปฏิเสธ กำลังสร้าง JOB ด้วยวิธีสำรอง...');
@@ -50607,7 +51185,7 @@ async function refreshR23Preview() {
     const workspace = await loadAssignmentWorkspaceData(sid);
     if (Q('as-sess')?.value !== sid) return;
     asgns = (workspace.assignments || []).filter(assignment => assignment.status === status);
-    snapshots = workspace.snapshots || [];
+    snapshots = operationalStockSnapshotsByLocation(workspace.snapshots || []);
   } catch (error) {
     prev.innerHTML = `<span style="color:var(--accent-red)">${escapeWmsText(error.message)}</span>`;
     btn.disabled = true;
@@ -53789,6 +54367,24 @@ function isEmptyLocationItem(value) {
   return normalizeImportText(value) === '';
 }
 
+function normalizeWmsImportOperationalRows(rows=[]) {
+  const source = (rows || []).filter(Boolean);
+  const locationsWithRealItems = new Set(
+    source
+      .filter(row => !isEmptyLocationItem(row.itemCode))
+      .map(row => importCodeKey(row.locCode))
+      .filter(Boolean)
+  );
+  let suppressedMixedEmptyRows = 0;
+  const operationalRows = source.filter(row => {
+    const mixedEmpty = isEmptyLocationItem(row.itemCode)
+      && locationsWithRealItems.has(importCodeKey(row.locCode));
+    if (mixedEmpty) suppressedMixedEmptyRows += 1;
+    return !mixedEmpty;
+  });
+  return { rows:operationalRows,suppressedMixedEmptyRows };
+}
+
 function resolveImportColumn(headers, rule) {
   const normalizedHeaders = headers.map(header => ({ header, normalized:normalizeImportHeader(header) }));
   for (const term of rule.exact || []) {
@@ -53864,20 +54460,23 @@ function analyzeXlsxImportRows(rows, locFilter='') {
     });
   });
 
+  const normalizedOperational = normalizeWmsImportOperationalRows(parsed);
+  const operationalParsed = normalizedOperational.rows;
   const metrics = {
-    rows:parsed.length,
-    items:new Set(parsed.map(row => importCodeKey(row.itemCode)).filter(Boolean)).size,
-    locations:new Set(parsed.map(row => importCodeKey(row.locCode))).size,
+    rows:operationalParsed.length,
+    items:new Set(operationalParsed.map(row => importCodeKey(row.itemCode)).filter(Boolean)).size,
+    locations:new Set(operationalParsed.map(row => importCodeKey(row.locCode))).size,
     licensePlates:columns.licensePlate
-      ? new Set(parsed.map(row => importCodeKey(row.lpn)).filter(Boolean)).size
+      ? new Set(operationalParsed.map(row => importCodeKey(row.lpn)).filter(Boolean)).size
       : 0,
-    sumOH:parsed.reduce((sum,row) => sum + (Number(row.onhand) || 0),0),
+    sumOH:operationalParsed.reduce((sum,row) => sum + (Number(row.onhand) || 0),0),
     emptyLocations:new Set(
-      parsed.filter(row => row.isEmptyLocation).map(row => importCodeKey(row.locCode))
+      operationalParsed.filter(row => row.isEmptyLocation).map(row => importCodeKey(row.locCode))
     ).size,
-    emptyLocationRows:parsed.filter(row => row.isEmptyLocation).length,
+    emptyLocationRows:operationalParsed.filter(row => row.isEmptyLocation).length,
+    suppressedMixedEmptyRows:normalizedOperational.suppressedMixedEmptyRows,
   };
-  return { headers, columns, errors, parsed, rejected, ignoredByFilter, metrics };
+  return { headers, columns, errors, parsed:operationalParsed, rejected, ignoredByFilter, metrics };
 }
 
 function renderXlsxImportPreview(analysis) {
@@ -53920,6 +54519,10 @@ function renderXlsxImportPreview(analysis) {
       พบ Location ว่าง ${metric(analysis.metrics.emptyLocations)} Location
       (${metric(analysis.metrics.emptyLocationRows)} แถว) — ระบบจะนำเข้าและสร้างงานนับตามปกติ
       โดยคง Item และ Description เป็นค่าว่าง
+    </div>` : ''}
+    ${analysis.metrics.suppressedMixedEmptyRows ? `<div class="alert alert-amber" style="font-size:12px;margin-top:10px;line-height:1.6">
+      พบแถว Item ว่าง ${metric(analysis.metrics.suppressedMixedEmptyRows)} แถวใน Location ที่มี Item จริงแล้ว
+      — ระบบตัดแถวว่างออกอัตโนมัติเพื่อไม่ให้เกิดงาน UUID ซ้ำ
     </div>` : ''}
     ${analysis.rejected.length ? `<div class="alert alert-red" style="font-size:12px;margin-top:10px">
       พบแถวผิดปกติ ${metric(analysis.rejected.length)} แถว ระบบหยุดไว้เพื่อไม่ให้ยอดหาย<br>
@@ -54085,6 +54688,14 @@ function wmsImportConsolidateDetailMap(rows=[]) {
 
 function wmsImportBuildAuthoritativeSnapshots(sessionId,incomingSnapshots,existingSnapshots,safeLocationIds) {
   const safeIds = safeLocationIds instanceof Set ? safeLocationIds : new Set(safeLocationIds || []);
+  const knownEmptyItemIds = new Set((existingSnapshots || [])
+    .filter(row => stockSnapshotItemKind(row) === 'empty')
+    .map(row => row.item_id)
+    .filter(Boolean));
+  const incomingRealLocationIds = new Set((incomingSnapshots || [])
+    .filter(row => !knownEmptyItemIds.has(row.item_id))
+    .map(row => row.location_id)
+    .filter(Boolean));
   const expectedMap = new Map();
   (incomingSnapshots || []).forEach(row => {
     if (!safeIds.has(row.location_id)) return;
@@ -54099,10 +54710,19 @@ function wmsImportBuildAuthoritativeSnapshots(sessionId,incomingSnapshots,existi
     });
   });
   const missingKeys = new Set();
+  const suppressedHistoricalRows = [];
   (existingSnapshots || []).forEach(row => {
     if (!safeIds.has(row.location_id)) return;
     const key = `${row.location_id}|${row.item_id}`;
     if (expectedMap.has(key)) return;
+    const kind = stockSnapshotItemKind(row);
+    if (incomingRealLocationIds.has(row.location_id) && (kind === 'empty' || kind === 'orphan')) {
+      // Keep the database row until the reference audit proves it is safe to
+      // delete, but do not re-upsert it as an active zero Item or warn on every
+      // later Import. Operational screens already exclude this historical row.
+      suppressedHistoricalRows.push(row);
+      return;
+    }
     // Keep the Snapshot row so Count history, Annual items and reports retain
     // their references, but make the latest WMS state explicitly zero.
     expectedMap.set(key,{
@@ -54114,7 +54734,7 @@ function wmsImportBuildAuthoritativeSnapshots(sessionId,incomingSnapshots,existi
     });
     missingKeys.add(key);
   });
-  return { rows:[...expectedMap.values()],missingKeys };
+  return { rows:[...expectedMap.values()],missingKeys,suppressedHistoricalRows };
 }
 
 function wmsImportDetailMatchKey(row={}) {
@@ -54370,6 +54990,7 @@ async function doImportXlsx() {
     );
     const safeSnapList = authoritativeSnapshots.rows;
     const removedSnapshotKeys = authoritativeSnapshots.missingKeys;
+    const suppressedHistoricalSnapshotCount = authoritativeSnapshots.suppressedHistoricalRows?.length || 0;
     const safeImportedDetails = importedDetailsList.filter(row => safeLocationIds.has(row.location_id));
     const confirmedProtectedImportRows = parsedRows.filter(row =>
       confirmedProtectedLocationIds.has(locIdMap.get(importCodeKey(row.locCode)))
@@ -54635,6 +55256,7 @@ async function doImportXlsx() {
         {group:'updated',label:'LPN/Lot อัปเดต',value:updatedDetailCount.toLocaleString(uiLocale()),rawValue:updatedDetailCount},
         {group:'updated',label:'Snapshot หาย → OH/AL 0',value:removedSnapshotCount.toLocaleString(uiLocale()),rawValue:removedSnapshotCount},
         {group:'updated',label:'LPN/Lot ออกจากไฟล์',value:removedDetailCount.toLocaleString(uiLocale()),rawValue:removedDetailCount},
+        ...(suppressedHistoricalSnapshotCount ? [{label:'แถว Location ว่างเดิมที่ไม่นำมาคำนวณ',value:suppressedHistoricalSnapshotCount.toLocaleString(uiLocale())}] : []),
         {label:'ไม่เปลี่ยน',value:(unchangedSnapshotCount+unchangedDetailCount).toLocaleString(uiLocale())},
         {label:'งานนับ/DIFF ที่อัปเดต',value:`${countedOrDiffLocationIds.size.toLocaleString(uiLocale())} Location`},
         {label:'ล็อกหลังคอนเฟิร์ม',value:`${confirmedProtectedLocationIds.size.toLocaleString(uiLocale())} Location · ${confirmedProtectedImportRows.toLocaleString(uiLocale())} แถว`},
@@ -56883,7 +57505,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.126' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.127' },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -57144,7 +57766,7 @@ async function exportBackupZip() {
       format:BACKUP_ZIP_FORMAT,
       version:BACKUP_ZIP_VERSION,
       created_at:new Date().toISOString(),
-      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.126',
+      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.127',
       excel_file:excelFileName,
       excel_sha256:excelSha256,
       excel_manifest_hash:built.manifestHash,
@@ -58417,7 +59039,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.126" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.127" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
