@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V1.141: Import WMS preserves historical OH/LPN rows, locks every started
+     count, and repairs zeroed historical OH from saved Variance evidence. -->
 <!-- V1.140: keep the application palette identical on browsers that force
      websites into dark mode (Samsung Internet, Chrome/Android and iPadOS). -->
 <meta name="color-scheme" content="only light">
@@ -10,7 +12,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.140</title>
+<title>Cycle Count V1.141</title>
 <link rel="manifest" href="./manifest.webmanifest?v=5">
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
@@ -41,7 +43,7 @@
 <!-- V1.114: แก้ Dashboard บน iPad แนวตั้ง ไม่ให้ค่า Zoom/ความสูงชดเชยดันกริดลงด้านล่าง -->
 <!-- V1.115: จัด Dashboard iPad แนวตั้งให้เริ่มชิดด้านบนเต็มสัดส่วน และคืนปุ่มเปิด Sidebar -->
 <!-- V1.116: ทุกปุ่มบันทึก Count ตรวจ DIFF ทันที และเปิด Count รอบถัดไปของ Item เดิมโดยไม่รอครบ Location -->
-<!-- V1.120: Import WMS แบบ authoritative ภายในขอบเขต ลบ LPN/Lot ที่หายและตั้ง OH/AL ของ Snapshot ที่หายเป็น 0 โดยคงประวัติ Count -->
+<!-- V1.141: Import WMS แบบ Merge ไม่ตั้ง OH/AL ที่หายเป็น 0 และไม่แก้ Snapshot ของงานที่เริ่มนับแล้ว -->
 <!-- V1.127: กรอง Snapshot Item ว่าง/กำพร้าแบบรวมศูนย์ ไม่ให้ UUID ค้างงานเมื่อ Location มี Item จริง พร้อม Audit และล้างแถวปลอดภัย -->
 <!-- V1.112: แก้ Flow ยืนยัน Item ให้ส่งเข้าคิวปรับปรุงยอด WMS ทันที และรองรับรายการเดิมที่ released_to_wms=false -->
 <!-- V1.111: เพิ่มกล่องยอดยืนยันและ Variance ต่อจาก COUNT 3 ในรายการปรับยอด WMS -->
@@ -30173,6 +30175,118 @@ function reconcileApprovalWithPhysicalCount(approval, rounds, oh, rules) {
   };
 }
 
+// V1.141: A saved Variance row contains the historical equation
+// variance = final_qty - OH.  It is therefore the safest recovery source for
+// Snapshot rows that the former authoritative Import incorrectly changed to 0.
+function historicalOhFromVarianceEvidence(record={}) {
+  if (record.final_qty === null || record.final_qty === undefined || record.final_qty === '') return null;
+  if (record.variance === null || record.variance === undefined || record.variance === '') return null;
+  const finalQty = Number(record.final_qty);
+  const variance = Number(record.variance);
+  if (!Number.isFinite(finalQty) || !Number.isFinite(variance)) return null;
+  const historicalOh = finalQty - variance;
+  return Number.isFinite(historicalOh) ? historicalOh : null;
+}
+
+function recoverHistoricalOhInMemory(snapshotRows=[],assignments=[],approvalRows=[],sessionId='') {
+  const locationByAssignment = new Map(
+    (assignments || [])
+      .filter(row => row?.id && row?.location_id)
+      .map(row => [String(row.id),row.location_id])
+  );
+  const evidence = (approvalRows || []).slice().sort((left,right) => {
+    const leftTime = Date.parse(left?.approved_at || left?.created_at || left?.updated_at || '') || 0;
+    const rightTime = Date.parse(right?.approved_at || right?.created_at || right?.updated_at || '') || 0;
+    return leftTime-rightTime;
+  });
+  const historicalOhByKey = new Map();
+  evidence.forEach(record => {
+    const locationId = locationByAssignment.get(String(record?.assignment_id || ''));
+    const itemId = record?.item_id;
+    const historicalOh = historicalOhFromVarianceEvidence(record);
+    if (!locationId || !itemId || historicalOh === null || historicalOh === 0) return;
+    const key = `${locationId}|${itemId}`;
+    // The first saved decision is closest to the original Count/OH comparison.
+    if (!historicalOhByKey.has(key)) {
+      historicalOhByKey.set(key,{
+        onhandQty:historicalOh,
+        assignmentId:record.assignment_id || null,
+      });
+    }
+  });
+
+  const repairs = [];
+  (snapshotRows || []).forEach(snapshot => {
+    if (!snapshot?.id || Number(snapshot.onhand_qty) !== 0) return;
+    const key = `${snapshot.location_id}|${snapshot.item_id}`;
+    const candidate = historicalOhByKey.get(key);
+    if (!candidate || candidate.onhandQty === 0) return;
+    repairs.push({
+      id:snapshot.id,
+      sessionId:snapshot.session_id || sessionId || '',
+      locationId:snapshot.location_id,
+      itemId:snapshot.item_id,
+      assignmentId:candidate.assignmentId,
+      oldOh:snapshot.onhand_qty,
+      onhandQty:candidate.onhandQty,
+      alQty:snapshot.al_qty,
+      snapshot,
+      source:'variance_history',
+    });
+    snapshot.onhand_qty = candidate.onhandQty;
+    snapshot._historicalOhRecovered = true;
+  });
+  return repairs;
+}
+
+async function persistRecoveredHistoricalOh(repairs=[]) {
+  if (!repairs.length) return { saved:0,failed:0 };
+  const savedRepairs = [];
+  for (const repair of repairs) {
+    try {
+      if (prof?.role === 'supervisor') {
+        await invokeWmsImportAction('upsert_snapshots',repair.sessionId,{
+          rows:[{
+            session_id:repair.sessionId,
+            location_id:repair.locationId,
+            item_id:repair.itemId,
+            onhand_qty:repair.onhandQty,
+            al_qty:repair.alQty === undefined ? null : repair.alQty,
+          }],
+        });
+        savedRepairs.push(repair);
+      } else {
+        const { data,error } = await sb.from('stock_snapshot')
+          .update({ onhand_qty:repair.onhandQty })
+          .eq('id',repair.id)
+          .eq('onhand_qty',0)
+          .select('id');
+        if (error) throw error;
+        if (data?.length) savedRepairs.push(repair);
+        else {
+          repair.snapshot.onhand_qty = repair.oldOh;
+          repair.snapshot._historicalOhRecovered = false;
+        }
+      }
+    } catch (error) {
+      repair.snapshot.onhand_qty = repair.oldOh;
+      repair.snapshot._historicalOhRecovered = false;
+      console.warn('กู้ OH จากประวัติไม่สำเร็จ:',error?.message || error);
+    }
+  }
+  if (savedRepairs.length) {
+    try {
+      await writeAuditRows(savedRepairs.map(repair => buildAuditRow(
+        repair.sessionId,repair.locationId,repair.itemId,
+        'wms_import_oh_restored',repair.oldOh,repair.onhandQty,repair.assignmentId,
+      )));
+    } catch (error) {
+      console.warn('บันทึกประวัติการกู้ OH ไม่สำเร็จ:',error?.message || error);
+    }
+  }
+  return { saved:savedRepairs.length,failed:repairs.length-savedRepairs.length };
+}
+
 function stockSnapshotItemKind(snapshot={}) {
   // Several lightweight status queries intentionally omit the Item relation.
   // Absence of the selected field is not proof that Item Master is missing.
@@ -45155,6 +45269,22 @@ async function loadSvDash() {
     pct = total ? Math.round((done / total) * 100) : 0;
   }
   const allSnapshots = snapshotResult.data || [];
+  if (!varianceApprovalResult?.error) {
+    const dashboardOhRepairs = recoverHistoricalOhInMemory(
+      allSnapshots,
+      asgns,
+      varianceApprovalResult?.data || [],
+      curSid,
+    );
+    if (dashboardOhRepairs.length) {
+      const repairResult = await persistRecoveredHistoricalOh(dashboardOhRepairs);
+      if (isStaleLoad()) return;
+      if (repairResult.saved) {
+        invalidateWmsFastCacheV179(curSid);
+        invalidatePageViewCache();
+      }
+    }
+  }
   let executiveItemMasterRows = [];
   let executiveFoundRows = [];
   if (tab === 'executive') {
@@ -53753,15 +53883,22 @@ async function loadAdTxLog() {
   const [{ data: asgn }, { data: recs }, { data: approvals, error: apprErr }] = await Promise.all([
     sb.from('assignments').select('id,status,location_id,session_id,locations(code,zone),count_sessions(name)').eq('id', aid).single(),
     sb.from('count_records').select('item_id,round,count_qty,counted_at,type_issue,remark,photo_url,actual_counter_name,items(code,description)').eq('assignment_id', aid).order('counted_at'),
-    sb.from('variance_approvals').select('item_id,final_qty,variance,resolution,approved_by,approved_at,created_at,review_status,items(code,description),profiles!approved_by(name)').eq('assignment_id', aid).order('created_at'),
+    sb.from('variance_approvals').select('assignment_id,item_id,final_qty,variance,resolution,approved_by,approved_at,created_at,review_status,items(code,description),profiles!approved_by(name)').eq('assignment_id', aid).order('created_at'),
   ]);
   if (!asgn) { go('ad-history'); return; }
 
   const [{ data: snaps }, { data: auditRows, error: auditErr }, rules] = await Promise.all([
-    sb.from('stock_snapshot').select('item_id,onhand_qty,al_qty').eq('session_id', asgn.session_id).eq('location_id', asgn.location_id),
+    sb.from('stock_snapshot').select('id,session_id,location_id,item_id,onhand_qty,al_qty').eq('session_id', asgn.session_id).eq('location_id', asgn.location_id),
     sb.from('audit_log').select('action,old_value,new_value,item_id,created_at,items(code,description),profiles!performed_by(name)').eq('session_id', asgn.session_id).eq('location_id', asgn.location_id).order('created_at'),
     getSessionRules(asgn.session_id),
   ]);
+  const historyOhRepairs = recoverHistoricalOhInMemory(
+    snaps || [],
+    [asgn],
+    approvals || [],
+    asgn.session_id,
+  );
+  if (historyOhRepairs.length) await persistRecoveredHistoricalOh(historyOhRepairs);
   const ohMap = {}; (snaps||[]).forEach(s => { ohMap[s.item_id] = { oh: +s.onhand_qty, al: s.al_qty }; });
 
   const byItemRounds = {};
@@ -53791,6 +53928,7 @@ async function loadAdTxLog() {
     count_round_submit:{ icon:'✅',label:'ยืนยันรอบการนับ' },
     count_confirmed:{ icon:'🔐',label:'Supervisor คอนเฟิร์มยอด' },
     oh_edit:{ icon:'✏️',label:'แก้ไขยอด OH' },
+    wms_import_oh_restored:{ icon:'↩️',label:'กู้ OH เดิมหลัง Import' },
     reassign:{ icon:'🔄',label:'เปลี่ยน User ผู้รับงาน' },
     variance_reopened:{ icon:'↩️',label:'ส่งกลับตรวจ Variance' },
     wms_status_change:{ icon:'🛠️',label:'เปลี่ยนสถานะปรับยอด WMS' },
@@ -54669,7 +54807,7 @@ function renderXlsxImportPreview(analysis) {
       ไฟล์นี้จะเป็นข้อมูล WMS ล่าสุดของ${locationFilterValue
         ? ` Location Filter <strong>${escapeWmsText(locationFilterValue)}</strong>`
         : ' Session ที่เลือกทั้งหมด'} · Location + Item + LPN/Lot เดิมที่ไม่อยู่ในไฟล์จะถูกนำออก
-      และ Snapshot ที่หายทั้ง Item จะถูกตั้ง OH/AL เป็น 0 โดยไม่ลบประวัติ Count
+      ระบบอัปเดตเฉพาะ Location / Item ที่อยู่ในไฟล์ และคง OH เดิมของงานที่เริ่มนับแล้ว
     </div>
     ${analysis.errors.length ? `<div class="alert alert-red" style="font-size:12px;margin-top:10px">${analysis.errors.map(escapeWmsText).join('<br>')}</div>` : ''}
     ${analysis.metrics.emptyLocationRows ? `<div class="alert alert-blue" style="font-size:12px;margin-top:10px;line-height:1.6">
@@ -54787,36 +54925,16 @@ async function fetchImportedScopeRows(table,columns,sessionId,locationIds) {
   return output;
 }
 
-async function fetchWmsImportAuthoritativeLocationScope(sessionId,incomingLocationIds,locationFilter='') {
-  const [snapshotResult,detailResult] = await Promise.all([
-    fetchPagedSupabaseRows(
-      'stock_snapshot',
-      'id,location_id,locations(code)',
-      query => query.eq('session_id',sessionId).order('id'),
-    ),
-    fetchPagedSupabaseRows(
-      'stock_snapshot_detail',
-      'id,location_id,locations(code)',
-      query => query.eq('session_id',sessionId).order('id'),
-    ),
-  ]);
-  if (snapshotResult.error || detailResult.error) throw (snapshotResult.error || detailResult.error);
-  const filterRegex = importLocationFilterRegex(locationFilter);
-  const locationIds = new Set((incomingLocationIds || []).filter(Boolean));
-  const locationCodeById = new Map();
-  [...(snapshotResult.data || []),...(detailResult.data || [])].forEach(row => {
-    const locationId = row.location_id;
-    const locationCode = normalizeImportText(row.locations?.code || '');
-    if (!locationId) return;
-    if (locationCode) locationCodeById.set(locationId,locationCode);
-    // No filter means the uploaded file is authoritative for the whole Session.
-    // With a filter, only matching existing Locations plus incoming Locations
-    // are allowed to lose stale WMS rows.
-    if (!filterRegex || (locationCode && filterRegex.test(locationCode))) {
-      locationIds.add(locationId);
-    }
-  });
-  return { locationIds:[...locationIds],locationCodeById };
+async function fetchWmsImportMergeLocationScope(sessionId,incomingLocationIds,locationFilter='') {
+  // V1.141: Omission is not deletion. The Import may touch only Locations that
+  // are actually present in this file (after the optional Location filter).
+  // Keeping this helper async preserves the existing Import call flow.
+  void sessionId;
+  void locationFilter;
+  return {
+    locationIds:[...new Set((incomingLocationIds || []).filter(Boolean))],
+    locationCodeById:new Map(),
+  };
 }
 
 function wmsImportConsolidateDetailMap(rows=[]) {
@@ -54843,7 +54961,7 @@ function wmsImportConsolidateDetailMap(rows=[]) {
   return map;
 }
 
-function wmsImportBuildAuthoritativeSnapshots(sessionId,incomingSnapshots,existingSnapshots,safeLocationIds) {
+function wmsImportBuildMergeSnapshots(sessionId,incomingSnapshots,existingSnapshots,safeLocationIds) {
   const safeIds = safeLocationIds instanceof Set ? safeLocationIds : new Set(safeLocationIds || []);
   const knownEmptyItemIds = new Set((existingSnapshots || [])
     .filter(row => stockSnapshotItemKind(row) === 'empty')
@@ -54866,7 +54984,7 @@ function wmsImportBuildAuthoritativeSnapshots(sessionId,incomingSnapshots,existi
         : Number(row.al_qty) || 0,
     });
   });
-  const missingKeys = new Set();
+  const preservedKeys = new Set();
   const suppressedHistoricalRows = [];
   (existingSnapshots || []).forEach(row => {
     if (!safeIds.has(row.location_id)) return;
@@ -54880,18 +54998,21 @@ function wmsImportBuildAuthoritativeSnapshots(sessionId,incomingSnapshots,existi
       suppressedHistoricalRows.push(row);
       return;
     }
-    // Keep the Snapshot row so Count history, Annual items and reports retain
-    // their references, but make the latest WMS state explicitly zero.
+    // A partial WMS file must never rewrite a historical Snapshot to zero.
+    // Preserve the exact previous OH/AL so Layout, Variance and Count History
+    // continue comparing the physical Count against its original WMS balance.
     expectedMap.set(key,{
       session_id:sessionId,
       location_id:row.location_id,
       item_id:row.item_id,
-      onhand_qty:0,
-      al_qty:0,
+      onhand_qty:Number(row.onhand_qty) || 0,
+      al_qty:row.al_qty === null || row.al_qty === undefined || row.al_qty === ''
+        ? null
+        : Number(row.al_qty) || 0,
     });
-    missingKeys.add(key);
+    preservedKeys.add(key);
   });
-  return { rows:[...expectedMap.values()],missingKeys,suppressedHistoricalRows };
+  return { rows:[...expectedMap.values()],preservedKeys,suppressedHistoricalRows };
 }
 
 function wmsImportDetailMatchKey(row={}) {
@@ -54912,8 +55033,8 @@ function wmsImportQtyEqual(left,right) {
 
 function wmsImportLocationIsProtected(assignment,confirmedAssignmentIds) {
   if (!assignment) return false;
-  // A physical count or DIFF alone must not freeze OH on a later WMS import.
-  // Only a supervisor confirmation (approval row/status) locks this location.
+  // Confirmed work is always protected. V1.141 additionally protects every
+  // started/Counted Location in doImportXlsx before any Snapshot write.
   if (confirmedAssignmentIds.has(assignment.id)) return true;
   return assignment.status === 'approved';
 }
@@ -55078,17 +55199,17 @@ async function doImportXlsx() {
     const importedDetailsList = Array.from(importedDetailMap.values());
     const importedLocationIds = [...new Set(snapList.map(row => row.location_id).filter(Boolean))];
     const locationFilterValue = Q('ilocfilter')?.value || '';
-    const authoritativeScope = await fetchWmsImportAuthoritativeLocationScope(
+    const mergeScope = await fetchWmsImportMergeLocationScope(
       sid,
       importedLocationIds,
       locationFilterValue,
     );
-    const importScopeLocationIds = authoritativeScope.locationIds;
+    const importScopeLocationIds = mergeScope.locationIds;
     const BATCH = 200;
     al.innerHTML = `<div class="alert alert-blue">⏳ กำลังตรวจข้อมูลเดิมและสถานะการนับ...</div>`;
     const [existingSnapshots,existingDetails,existingAssignments,existingAnnualItems] = await Promise.all([
-      fetchImportedScopeRows('stock_snapshot',['id','location_id','item_id','onhand_qty','al_qty','items(code)'],sid,importScopeLocationIds),
-      fetchImportedScopeRows('stock_snapshot_detail',['id','location_id','item_id','license_plate','lot','inventory_status','qty','uom'],sid,importScopeLocationIds),
+      fetchImportedScopeRows('stock_snapshot',['id','session_id','location_id','item_id','onhand_qty','al_qty','items(code)'],sid,importScopeLocationIds),
+      fetchImportedScopeRows('stock_snapshot_detail',['id','session_id','location_id','item_id','license_plate','lot','inventory_status','qty','uom'],sid,importScopeLocationIds),
       fetchImportedScopeRows('assignments',['id','location_id','status'],sid,importScopeLocationIds),
       fetchImportedScopeRows('annual_count_job_items',['job_id','location_id'],sid,importScopeLocationIds),
     ]);
@@ -55099,7 +55220,12 @@ async function doImportXlsx() {
         ? fetchSupabaseRowsByValues('count_records','assignment_id','assignment_id',assignmentIds)
         : Promise.resolve({data:[],error:null}),
       assignmentIds.length
-        ? fetchSupabaseRowsByValues('variance_approvals','assignment_id','assignment_id',assignmentIds)
+        ? fetchSupabaseRowsByValues(
+            'variance_approvals',
+            'assignment_id,item_id,final_qty,variance,review_status,approved_at,created_at,updated_at',
+            'assignment_id',
+            assignmentIds,
+          )
         : Promise.resolve({data:[],error:null}),
       annualJobIds.length
         ? fetchSupabaseRowsByValues('annual_count_jobs','id,status','id',annualJobIds)
@@ -55126,28 +55252,39 @@ async function doImportXlsx() {
     const annualProtectedLocationIds = new Set(importScopeLocationIds.filter(locationId =>
       startedAnnualLocationIds.has(locationId)
     ));
-    const protectedLocationIds = new Set([
-      ...confirmedProtectedLocationIds,
-      ...annualProtectedLocationIds,
-    ]);
-    const safeLocationIds = new Set(importScopeLocationIds.filter(locationId => !protectedLocationIds.has(locationId)));
-    const countedOrDiffLocationIds = new Set(importScopeLocationIds.filter(locationId => {
-      if (!safeLocationIds.has(locationId)) return false;
+    const countedProtectedLocationIds = new Set(importScopeLocationIds.filter(locationId => {
       const assignment = assignmentByLocation.get(locationId);
       return Boolean(assignment && (
         countedAssignmentIds.has(assignment.id)
-        || ['in_progress','round1_done','round2_done','round3_done','completed'].includes(assignment.status)
+        || ['in_progress','round1_done','round2_done','round3_done','completed','approved'].includes(assignment.status)
       ));
     }));
-    const authoritativeSnapshots = wmsImportBuildAuthoritativeSnapshots(
+    const protectedLocationIds = new Set([
+      ...confirmedProtectedLocationIds,
+      ...annualProtectedLocationIds,
+      ...countedProtectedLocationIds,
+    ]);
+    const safeLocationIds = new Set(importScopeLocationIds.filter(locationId => !protectedLocationIds.has(locationId)));
+
+    // Repair already-damaged zero OH first when a saved Variance decision still
+    // contains the original equation. This is exact recovery, not estimation.
+    const approvalOhRepairs = recoverHistoricalOhInMemory(
+      existingSnapshots,
+      existingAssignments,
+      approvalResult.data || [],
+      sid,
+    );
+    const approvalOhRepairResult = await persistRecoveredHistoricalOh(approvalOhRepairs);
+
+    const mergedSnapshots = wmsImportBuildMergeSnapshots(
       sid,
       snapList,
       existingSnapshots,
       safeLocationIds,
     );
-    const safeSnapList = authoritativeSnapshots.rows;
-    const removedSnapshotKeys = authoritativeSnapshots.missingKeys;
-    const suppressedHistoricalSnapshotCount = authoritativeSnapshots.suppressedHistoricalRows?.length || 0;
+    const safeSnapList = mergedSnapshots.rows;
+    const preservedSnapshotKeys = mergedSnapshots.preservedKeys;
+    const suppressedHistoricalSnapshotCount = mergedSnapshots.suppressedHistoricalRows?.length || 0;
     const safeImportedDetails = importedDetailsList.filter(row => safeLocationIds.has(row.location_id));
     const confirmedProtectedImportRows = parsedRows.filter(row =>
       confirmedProtectedLocationIds.has(locIdMap.get(importCodeKey(row.locCode)))
@@ -55157,7 +55294,17 @@ async function doImportXlsx() {
     ).length;
 
     const existingSnapshotMap = new Map(existingSnapshots.map(row => [`${row.location_id}|${row.item_id}`,row]));
-    const locationCodeById = new Map(authoritativeScope.locationCodeById || []);
+    // If the old Import zeroed a started job before Variance was confirmed,
+    // the approval history cannot contain its former OH. Re-importing a WMS
+    // file that contains that Item restores the zero directly from the file,
+    // while every other field in the started Location remains locked.
+    const fileHistoricalRestoreRows = snapList.filter(incoming => {
+      if (!protectedLocationIds.has(incoming.location_id)) return false;
+      const current = existingSnapshotMap.get(`${incoming.location_id}|${incoming.item_id}`);
+      return current && Number(current.onhand_qty) === 0 && Number(incoming.onhand_qty) !== 0;
+    }).map(incoming => ({ ...incoming }));
+    const snapshotsToUpsert = [...safeSnapList,...fileHistoricalRestoreRows];
+    const locationCodeById = new Map(mergeScope.locationCodeById || []);
     (dbLocs || []).forEach(row => locationCodeById.set(row.id,row.code || row.id));
     const itemCodeById = new Map(existingSnapshots.map(row => [
       row.item_id,
@@ -55169,9 +55316,21 @@ async function doImportXlsx() {
       : Number(value).toLocaleString(uiLocale(),{maximumFractionDigits:2});
     let newSnapshotCount = 0;
     let updatedSnapshotCount = 0;
-    let removedSnapshotCount = 0;
+    let recoveredHistoricalSnapshotCount = approvalOhRepairResult.saved;
     let unchangedSnapshotCount = 0;
     const snapshotChanges = [];
+    approvalOhRepairs
+      .filter(repair => repair.snapshot?._historicalOhRecovered)
+      .forEach(repair => snapshotChanges.push({
+        type:'updated',
+        location:locationCodeById.get(repair.locationId) || repair.locationId,
+        item:itemCodeById.get(repair.itemId) || repair.itemId,
+        oldOH:displayQty(repair.oldOh),
+        newOH:displayQty(repair.onhandQty),
+        oldAL:displayQty(repair.alQty),
+        newAL:displayQty(repair.alQty),
+        alChanged:false,
+      }));
     safeSnapList.forEach(expected => {
       const snapshotKey = `${expected.location_id}|${expected.item_id}`;
       const current = existingSnapshotMap.get(snapshotKey);
@@ -55189,18 +55348,8 @@ async function doImportXlsx() {
         });
         return;
       }
-      if (removedSnapshotKeys.has(snapshotKey)) {
-        removedSnapshotCount++;
-        snapshotChanges.push({
-          type:'removed',
-          location:locationCodeById.get(expected.location_id) || expected.location_id,
-          item:itemCodeById.get(expected.item_id) || expected.item_id,
-          oldOH:displayQty(current.onhand_qty),
-          newOH:displayQty(0),
-          oldAL:displayQty(current.al_qty),
-          newAL:displayQty(0),
-          alChanged:!wmsImportQtyEqual(current.al_qty,0),
-        });
+      if (preservedSnapshotKeys.has(snapshotKey)) {
+        unchangedSnapshotCount++;
         return;
       }
       const ohChanged = !wmsImportQtyEqual(current.onhand_qty,expected.onhand_qty);
@@ -55221,17 +55370,32 @@ async function doImportXlsx() {
         unchangedSnapshotCount++;
       }
     });
+    fileHistoricalRestoreRows.forEach(expected => {
+      recoveredHistoricalSnapshotCount++;
+      const current = existingSnapshotMap.get(`${expected.location_id}|${expected.item_id}`);
+      snapshotChanges.push({
+        type:'updated',
+        location:locationCodeById.get(expected.location_id) || expected.location_id,
+        item:itemCodeById.get(expected.item_id) || expected.item_id,
+        oldOH:displayQty(current?.onhand_qty ?? 0),
+        newOH:displayQty(expected.onhand_qty),
+        oldAL:displayQty(current?.al_qty),
+        newAL:displayQty(expected.al_qty),
+        alChanged:!wmsImportQtyEqual(current?.al_qty,expected.al_qty),
+      });
+    });
 
     const existingDetailMap = wmsImportConsolidateDetailMap(
       existingDetails.filter(row => safeLocationIds.has(row.location_id))
     );
-    // The replacement map starts from the new file, not the old database.
-    // This is the key difference from the former Merge behavior: an old
-    // Location + Item + LPN + Lot that is absent now will not be reinserted.
-    const mergedDetailMap = new Map();
+    // Merge details by key. A partial file may update or add LPN/Lot rows, but
+    // omission is not a delete command and must not erase historical detail.
+    const mergedDetailMap = new Map(
+      [...existingDetailMap.entries()].map(([key,row]) => [key,{ ...row,session_id:sid }])
+    );
     let newDetailCount = 0;
     let updatedDetailCount = 0;
-    let removedDetailCount = 0;
+    let preservedDetailCount = 0;
     let unchangedDetailCount = 0;
     const detailChanges = [];
     safeImportedDetails.forEach(incoming => {
@@ -55285,45 +55449,16 @@ async function doImportXlsx() {
         uom:nextUom,
       });
     });
+    const importedDetailKeys = new Set(safeImportedDetails.map(wmsImportDetailMatchKey));
     existingDetailMap.forEach((current,key) => {
-      if (mergedDetailMap.has(key)) return;
-      removedDetailCount++;
-      detailChanges.push({
-        type:'removed',
-        location:locationCodeById.get(current.location_id) || current.location_id,
-        item:itemCodeById.get(current.item_id) || current.item_id,
-        lpn:current.license_plate || '',
-        lot:current.lot || '',
-        oldQty:displayQty(current.qty),
-        newQty:displayQty(0),
-        metaChanged:false,
-        inventoryStatus:current.inventory_status || '',
-        uom:current.uom || '',
-      });
+      if (!importedDetailKeys.has(key)) preservedDetailCount++;
     });
     const mergedDetailsList = Array.from(mergedDetailMap.values());
 
-    if (removedSnapshotCount || removedDetailCount) {
-      const scopeLabel = locationFilterValue
-        ? `Location Filter “${locationFilterValue}”`
-        : 'Session นี้ทั้งหมด';
-      const proceed = confirm(
-        `พบข้อมูลเดิมที่ไม่อยู่ในไฟล์ใหม่\n\n`
-        + `Snapshot ที่จะตั้ง OH/AL = 0: ${removedSnapshotCount.toLocaleString(uiLocale())} รายการ\n`
-        + `LPN/Lot ที่จะนำออก: ${removedDetailCount.toLocaleString(uiLocale())} รายการ\n`
-        + `ขอบเขต: ${scopeLabel}\n\n`
-        + `ระบบจะคงผล Count, รูปถ่าย, Remark และประวัติเดิมไว้ ดำเนินการต่อหรือไม่?`
-      );
-      if (!proceed) {
-        al.innerHTML = '<div class="alert alert-amber">ยกเลิก Import แล้ว · ยังไม่มีการแก้ไข Stock Snapshot หรือ LPN/Lot</div>';
-        return;
-      }
-    }
-
-    if (safeSnapList.length) {
-      al.innerHTML = `<div class="alert alert-blue">⏳ กำลังเพิ่ม/อัปเดต Stock Snapshot (${safeSnapList.length.toLocaleString()} รายการ)...</div>`;
-      for (let start = 0; start < safeSnapList.length; start += BATCH) {
-        const rows = safeSnapList.slice(start,start + BATCH);
+    if (snapshotsToUpsert.length) {
+      al.innerHTML = `<div class="alert alert-blue">⏳ กำลังเพิ่ม/อัปเดต Stock Snapshot (${snapshotsToUpsert.length.toLocaleString()} รายการ)...</div>`;
+      for (let start = 0; start < snapshotsToUpsert.length; start += BATCH) {
+        const rows = snapshotsToUpsert.slice(start,start + BATCH);
         if (prof?.role === 'supervisor') {
           await invokeWmsImportAction('upsert_snapshots',sid,{ rows });
         } else {
@@ -55361,12 +55496,16 @@ async function doImportXlsx() {
     }
 
     al.innerHTML = `<div class="alert alert-blue">⏳ กำลังตรวจยอดหลัง Import...</div>`;
+    const snapshotWriteLocationIds = [...new Set([
+      ...safeLocationIdList,
+      ...fileHistoricalRestoreRows.map(row => row.location_id),
+    ].filter(Boolean))];
     const [savedSnapshots,savedDetails] = await Promise.all([
-      fetchImportedScopeRows('stock_snapshot',['id','location_id','item_id','onhand_qty','al_qty'],sid,safeLocationIdList),
+      fetchImportedScopeRows('stock_snapshot',['id','location_id','item_id','onhand_qty','al_qty'],sid,snapshotWriteLocationIds),
       fetchImportedScopeRows('stock_snapshot_detail',['id','location_id','item_id','license_plate','lot','inventory_status','qty','uom'],sid,safeLocationIdList),
     ]);
     const savedSnapshotMap = new Map(savedSnapshots.map(row => [`${row.location_id}|${row.item_id}`,row]));
-    const snapshotMismatch = safeSnapList.find(expected => {
+    const snapshotMismatch = snapshotsToUpsert.find(expected => {
       const actual = savedSnapshotMap.get(`${expected.location_id}|${expected.item_id}`);
       return !actual
         || !wmsImportQtyEqual(actual.onhand_qty,expected.onhand_qty)
@@ -55392,17 +55531,17 @@ async function doImportXlsx() {
     const importedRowsForLayoutCheck = parsedRows.map(row => ({locCode:row.locCode}));
     al.innerHTML = `<div class="alert alert-green" style="line-height:1.55;padding:16px">
       <strong style="display:block;font-size:16px">✅ Import / Update WMS สำเร็จ</strong>
-      <div style="margin-top:5px;font-size:12px;font-weight:700">ระบบอัปเดตตามไฟล์ล่าสุด นำข้อมูลที่หายออก และตรวจยอดหลัง Import เรียบร้อยแล้ว</div>
+      <div style="margin-top:5px;font-size:12px;font-weight:700">อัปเดตเฉพาะรายการในไฟล์แล้ว · OH และประวัติงานที่เริ่มนับถูกล็อกไว้</div>
       <div class="wms-import-inline-summary">
         <span>${metrics.rows.toLocaleString(uiLocale())} แถวจากไฟล์</span>
         <span>${metrics.locations.toLocaleString(uiLocale())} Location</span>
         <span>SUM OH ${Number(metrics.sumOH).toLocaleString(uiLocale(),{maximumFractionDigits:2})}</span>
-        <span>ออกจากไฟล์ ${Number(removedSnapshotCount+removedDetailCount).toLocaleString(uiLocale())} รายการ</span>
+        <span>คงข้อมูลเดิม ${Number(preservedSnapshotKeys.size+preservedDetailCount).toLocaleString(uiLocale())} รายการ</span>
       </div>
     </div>`;
     showWmsImportResult({
       title:'Import / Update WMS สำเร็จ',
-      message:'อัปเดต WMS ตามไฟล์ล่าสุดเสร็จสมบูรณ์ · ข้อมูลที่หายถูกปรับทุกส่วนที่เกี่ยวข้องโดยคงประวัติ Count',
+      message:'อัปเดตเฉพาะข้อมูลที่มีในไฟล์ · ไม่ตั้ง OH เป็น 0 และไม่ลบประวัติเดิม',
       facts:[
         {group:'overview',label:'แถวที่อ่านจากไฟล์',value:metrics.rows.toLocaleString(uiLocale())},
         {group:'overview',label:'Location ในไฟล์',value:metrics.locations.toLocaleString(uiLocale())},
@@ -55411,11 +55550,12 @@ async function doImportXlsx() {
         {group:'new',label:'LPN/Lot ใหม่',value:newDetailCount.toLocaleString(uiLocale()),rawValue:newDetailCount},
         {group:'updated',label:'OH/AL อัปเดต',value:updatedSnapshotCount.toLocaleString(uiLocale()),rawValue:updatedSnapshotCount},
         {group:'updated',label:'LPN/Lot อัปเดต',value:updatedDetailCount.toLocaleString(uiLocale()),rawValue:updatedDetailCount},
-        {group:'updated',label:'Snapshot หาย → OH/AL 0',value:removedSnapshotCount.toLocaleString(uiLocale()),rawValue:removedSnapshotCount},
-        {group:'updated',label:'LPN/Lot ออกจากไฟล์',value:removedDetailCount.toLocaleString(uiLocale()),rawValue:removedDetailCount},
+        {group:'updated',label:'กู้ OH ประวัติเดิม',value:recoveredHistoricalSnapshotCount.toLocaleString(uiLocale()),rawValue:recoveredHistoricalSnapshotCount},
+        {group:'updated',label:'Snapshot เดิมที่คงไว้',value:preservedSnapshotKeys.size.toLocaleString(uiLocale()),rawValue:preservedSnapshotKeys.size},
+        {group:'updated',label:'LPN/Lot เดิมที่คงไว้',value:preservedDetailCount.toLocaleString(uiLocale()),rawValue:preservedDetailCount},
         ...(suppressedHistoricalSnapshotCount ? [{label:'แถว Location ว่างเดิมที่ไม่นำมาคำนวณ',value:suppressedHistoricalSnapshotCount.toLocaleString(uiLocale())}] : []),
         {label:'ไม่เปลี่ยน',value:(unchangedSnapshotCount+unchangedDetailCount).toLocaleString(uiLocale())},
-        {label:'งานนับ/DIFF ที่อัปเดต',value:`${countedOrDiffLocationIds.size.toLocaleString(uiLocale())} Location`},
+        {label:'ล็อกงานที่เริ่มนับแล้ว',value:`${countedProtectedLocationIds.size.toLocaleString(uiLocale())} Location`},
         {label:'ล็อกหลังคอนเฟิร์ม',value:`${confirmedProtectedLocationIds.size.toLocaleString(uiLocale())} Location · ${confirmedProtectedImportRows.toLocaleString(uiLocale())} แถว`},
         ...(annualProtectedLocationIds.size ? [{label:'ล็อก Annual ที่เริ่มแล้ว',value:`${annualProtectedLocationIds.size.toLocaleString(uiLocale())} Location · ${annualProtectedImportRows.toLocaleString(uiLocale())} แถว`}] : []),
       ],
