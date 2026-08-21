@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V1.142: Warehouse Layout honors terminal Count history and restores exact
+     OH for completed work before deriving live yellow/green status. -->
 <!-- V1.141: Import WMS preserves historical OH/LPN rows, locks every started
      count, and repairs zeroed historical OH from saved Variance evidence. -->
 <!-- V1.140: keep the application palette identical on browsers that force
@@ -12,15 +14,24 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.141</title>
-<link rel="manifest" href="./manifest.webmanifest?v=5">
+<title>Cycle Count V1.142</title>
+<script>
+// A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
+// directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
+if (['http:','https:'].includes(location.protocol)) {
+  const manifestLink = document.createElement('link');
+  manifestLink.rel = 'manifest';
+  manifestLink.href = './manifest.webmanifest?v=142';
+  document.head.appendChild(manifestLink);
+}
+</script>
 <meta name="theme-color" content="#006D77">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Cycle Count">
-<link rel="apple-touch-icon" href="./icons/icon-192.png?v=5">
-<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=5">
+<link rel="apple-touch-icon" href="./icons/icon-192.png?v=142">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=142">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -44,6 +55,7 @@
 <!-- V1.115: จัด Dashboard iPad แนวตั้งให้เริ่มชิดด้านบนเต็มสัดส่วน และคืนปุ่มเปิด Sidebar -->
 <!-- V1.116: ทุกปุ่มบันทึก Count ตรวจ DIFF ทันที และเปิด Count รอบถัดไปของ Item เดิมโดยไม่รอครบ Location -->
 <!-- V1.141: Import WMS แบบ Merge ไม่ตั้ง OH/AL ที่หายเป็น 0 และไม่แก้ Snapshot ของงานที่เริ่มนับแล้ว -->
+<!-- V1.142: ผังคลังยึดประวัติ completed เป็นสีเขียว และกู้ OH จาก Count ที่จบแล้วก่อนคำนวณสถานะ -->
 <!-- V1.127: กรอง Snapshot Item ว่าง/กำพร้าแบบรวมศูนย์ ไม่ให้ UUID ค้างงานเมื่อ Location มี Item จริง พร้อม Audit และล้างแถวปลอดภัย -->
 <!-- V1.112: แก้ Flow ยืนยัน Item ให้ส่งเข้าคิวปรับปรุงยอด WMS ทันที และรองรับรายการเดิมที่ released_to_wms=false -->
 <!-- V1.111: เพิ่มกล่องยอดยืนยันและ Variance ต่อจาก COUNT 3 ในรายการปรับยอด WMS -->
@@ -22695,13 +22707,15 @@ body.count-page-active #app .count-handheld-page .citem-wrap {
 }
 </style>
 </head>
-<body data-build="v1-140">
+<body data-build="v1-142">
 <div id="app"></div>
 
 <script>
-const APP_VERSION = '1.140';
+// V1.142: one authoritative application version for the browser title,
+// Sidebar, login screen, cache/build identity and Backup manifest.
+const APP_VERSION = '1.142';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
-const APP_BUILD_ID = 'v1-140';
+const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
 
 // V1.84 performance: keep the login and ordinary work pages light.  Large
@@ -24222,7 +24236,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.127':'e.g. Warehouse V1.127',
+  'เช่น Warehouse V1.142':'e.g. Warehouse V1.142',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -30239,52 +30253,185 @@ function recoverHistoricalOhInMemory(snapshotRows=[],assignments=[],approvalRows
   return repairs;
 }
 
+// A persisted completed Assignment is exact evidence that physical counting
+// reached an OK result under the Session rules that were active at the time.
+// Except for auto_pass (where two equal Counts may intentionally differ from
+// OH), the last saved Count is therefore the original OH that ended the job.
+function recoverHistoricalOhFromCompletedCountsInMemory(
+  snapshotRows=[],assignments=[],countRows=[],rules={},sessionId=''
+) {
+  if (String(rules?.repeatMatchAction || '') === 'auto_pass') return [];
+  const completedByLocation = new Map();
+  (assignments || []).forEach(assignment => {
+    const storedStatus = String(assignment?._storedStatus || assignment?.status || '');
+    if (storedStatus !== 'completed' || !assignment?.id || !assignment?.location_id) return;
+    const locationKey = String(assignment.location_id);
+    if (!completedByLocation.has(locationKey)) completedByLocation.set(locationKey,[]);
+    completedByLocation.get(locationKey).push(assignment);
+  });
+  if (!completedByLocation.size) return [];
+
+  const latestCountByWork = new Map();
+  (countRows || []).forEach(record => {
+    if (!record?.assignment_id || !record?.item_id) return;
+    const key = `${record.assignment_id}|${record.item_id}`;
+    const current = latestCountByWork.get(key);
+    const nextRound = Number(record.round) || 0;
+    const currentRound = Number(current?.round) || 0;
+    const nextTime = Date.parse(record.counted_at || '') || 0;
+    const currentTime = Date.parse(current?.counted_at || '') || 0;
+    const nextId = Number(record.id) || 0;
+    const currentId = Number(current?.id) || 0;
+    if (!current || nextRound > currentRound
+      || (nextRound === currentRound && nextTime > currentTime)
+      || (nextRound === currentRound && nextTime === currentTime && nextId >= currentId)) {
+      latestCountByWork.set(key,record);
+    }
+  });
+
+  const repairs = [];
+  (snapshotRows || []).forEach(snapshot => {
+    if (!snapshot?.id || Number(snapshot.onhand_qty) !== 0) return;
+    const assignmentsAtLocation = completedByLocation.get(String(snapshot.location_id || '')) || [];
+    const evidence = assignmentsAtLocation
+      .map(assignment => ({
+        assignment,
+        record:latestCountByWork.get(`${assignment.id}|${snapshot.item_id}`),
+      }))
+      .filter(entry => entry.record)
+      .sort((left,right) => {
+        const leftTime = Date.parse(left.record.counted_at || '') || 0;
+        const rightTime = Date.parse(right.record.counted_at || '') || 0;
+        return rightTime-leftTime || (Number(right.record.id)||0)-(Number(left.record.id)||0);
+      })[0];
+    const historicalOh = Number(evidence?.record?.count_qty);
+    if (!evidence || !Number.isFinite(historicalOh) || historicalOh === 0) return;
+    repairs.push({
+      id:snapshot.id,
+      sessionId:snapshot.session_id || sessionId || '',
+      locationId:snapshot.location_id,
+      itemId:snapshot.item_id,
+      assignmentId:evidence.assignment.id,
+      oldOh:snapshot.onhand_qty,
+      onhandQty:historicalOh,
+      alQty:snapshot.al_qty,
+      snapshot,
+      source:'completed_count_history',
+    });
+    snapshot.onhand_qty = historicalOh;
+    snapshot._historicalOhRecovered = true;
+  });
+  return repairs;
+}
+
+const HISTORICAL_OH_WRITE_BATCH_SIZE = 200;
+const _historicalOhPersistenceKeys = new Set();
+
+function historicalOhRepairKey(repair={}) {
+  return `${repair.sessionId || ''}|${repair.locationId || ''}|${repair.itemId || ''}`;
+}
+
+function historicalOhSnapshotPayload(repair={}) {
+  return {
+    session_id:repair.sessionId,
+    location_id:repair.locationId,
+    item_id:repair.itemId,
+    onhand_qty:repair.onhandQty,
+    al_qty:repair.alQty === undefined ? null : repair.alQty,
+  };
+}
+
 async function persistRecoveredHistoricalOh(repairs=[]) {
   if (!repairs.length) return { saved:0,failed:0 };
+  // Collapse duplicate Location + Item evidence before writing. The former
+  // one-request-per-Item loop could keep a 2,000 Item WMS page on Loading for
+  // minutes. Batch writes reduce that to only a handful of requests.
+  const uniqueRepairs = [...new Map(
+    repairs.filter(Boolean).map(repair => [historicalOhRepairKey(repair),repair])
+  ).values()];
   const savedRepairs = [];
-  for (const repair of repairs) {
-    try {
-      if (prof?.role === 'supervisor') {
-        await invokeWmsImportAction('upsert_snapshots',repair.sessionId,{
-          rows:[{
-            session_id:repair.sessionId,
-            location_id:repair.locationId,
-            item_id:repair.itemId,
-            onhand_qty:repair.onhandQty,
-            al_qty:repair.alQty === undefined ? null : repair.alQty,
-          }],
+  const failedRepairs = [];
+  const groups = new Map();
+  if (prof?.role === 'supervisor') {
+    uniqueRepairs.forEach(repair => {
+      const sessionId = String(repair.sessionId || '');
+      if (!groups.has(sessionId)) groups.set(sessionId,[]);
+      groups.get(sessionId).push(repair);
+    });
+  } else {
+    groups.set('direct',uniqueRepairs);
+  }
+
+  for (const [sessionKey,group] of groups) {
+    for (let start = 0; start < group.length; start += HISTORICAL_OH_WRITE_BATCH_SIZE) {
+      const batch = group.slice(start,start + HISTORICAL_OH_WRITE_BATCH_SIZE);
+      try {
+        const rows = batch.map(historicalOhSnapshotPayload);
+        if (prof?.role === 'supervisor') {
+          await invokeWmsImportAction('upsert_snapshots',sessionKey,{ rows });
+        } else {
+          const { error } = await sb.from('stock_snapshot')
+            .upsert(rows,{ onConflict:'session_id,location_id,item_id' });
+          if (error) throw error;
+        }
+        savedRepairs.push(...batch);
+      } catch (error) {
+        failedRepairs.push(...batch);
+        batch.forEach(repair => {
+          if (repair.snapshot) {
+            repair.snapshot.onhand_qty = repair.oldOh;
+            repair.snapshot._historicalOhRecovered = false;
+          }
         });
-        savedRepairs.push(repair);
-      } else {
-        const { data,error } = await sb.from('stock_snapshot')
-          .update({ onhand_qty:repair.onhandQty })
-          .eq('id',repair.id)
-          .eq('onhand_qty',0)
-          .select('id');
-        if (error) throw error;
-        if (data?.length) savedRepairs.push(repair);
-        else {
-          repair.snapshot.onhand_qty = repair.oldOh;
-          repair.snapshot._historicalOhRecovered = false;
+        // Navigation intentionally aborts page-scoped requests. It is not a
+        // recovery error and must not flood DevTools or hold the loader open.
+        if (error?.name !== 'AbortError') {
+          console.warn(`กู้ OH จากประวัติไม่สำเร็จ ${batch.length} รายการ:`,error?.message || error);
         }
       }
-    } catch (error) {
-      repair.snapshot.onhand_qty = repair.oldOh;
-      repair.snapshot._historicalOhRecovered = false;
-      console.warn('กู้ OH จากประวัติไม่สำเร็จ:',error?.message || error);
     }
   }
-  if (savedRepairs.length) {
+  for (let start = 0; start < savedRepairs.length; start += HISTORICAL_OH_WRITE_BATCH_SIZE) {
+    const auditBatch = savedRepairs.slice(start,start + HISTORICAL_OH_WRITE_BATCH_SIZE);
     try {
-      await writeAuditRows(savedRepairs.map(repair => buildAuditRow(
+      await writeAuditRows(auditBatch.map(repair => buildAuditRow(
         repair.sessionId,repair.locationId,repair.itemId,
         'wms_import_oh_restored',repair.oldOh,repair.onhandQty,repair.assignmentId,
       )));
     } catch (error) {
-      console.warn('บันทึกประวัติการกู้ OH ไม่สำเร็จ:',error?.message || error);
+      if (error?.name !== 'AbortError') {
+        console.warn('บันทึกประวัติการกู้ OH ไม่สำเร็จ:',error?.message || error);
+      }
     }
   }
-  return { saved:savedRepairs.length,failed:repairs.length-savedRepairs.length };
+  return { saved:savedRepairs.length,failed:failedRepairs.length };
+}
+
+function persistRecoveredHistoricalOhInBackground(repairs=[]) {
+  const pending = repairs.filter(repair => {
+    const key = historicalOhRepairKey(repair);
+    if (!key || _historicalOhPersistenceKeys.has(key)) return false;
+    _historicalOhPersistenceKeys.add(key);
+    repair._historicalOhPersistenceKey = key;
+    return true;
+  });
+  if (!pending.length) return Promise.resolve({ saved:0,failed:0 });
+  return Promise.resolve()
+    .then(() => persistRecoveredHistoricalOh(pending))
+    .then(result => {
+      if (result.saved) {
+        invalidateWmsFastCacheV179(pending[0]?.sessionId || '');
+        invalidatePageViewCache();
+      }
+      return result;
+    })
+    .catch(error => {
+      if (error?.name !== 'AbortError') console.warn('กู้ OH เบื้องหลังไม่สำเร็จ:',error?.message || error);
+      return { saved:0,failed:pending.length };
+    })
+    .finally(() => pending.forEach(repair =>
+      _historicalOhPersistenceKeys.delete(repair._historicalOhPersistenceKey || historicalOhRepairKey(repair))
+    ));
 }
 
 function stockSnapshotItemKind(snapshot={}) {
@@ -30482,6 +30629,54 @@ function deriveAssignmentWorkflowStatus(snapshotRows, itemRounds, rules, storedS
   const allTerminal = itemStatuses.length > 0
     && itemStatuses.every(status => status === 'OK' || status === 'Diff');
   const nextRequiredRound = determineNextRequiredCountRound(snapshots,roundsByItem,rules);
+
+  // V1.142: completed/round3_done are persisted Count-history facts. A later
+  // Import may change the mutable OH Snapshot, but it must never reopen that
+  // historical work as PENDING, create thousands of false WMS confirmations,
+  // or repaint a completed Location yellow.
+  if (storedStatus === 'completed' && started) {
+    const historicalItemStatuses = snapshots.map(snapshot => {
+      const rounds = roundsByItem[snapshot.item_id] || {};
+      const counted = [1,2,3].some(round =>
+        rounds[round] !== undefined && rounds[round] !== null && rounds[round] !== '');
+      const historicalStatus = counted ? 'OK' : (itemStatusByItem[String(snapshot.item_id)] || '');
+      itemStatusByItem[String(snapshot.item_id)] = historicalStatus;
+      return historicalStatus;
+    });
+    return {
+      effectiveStatus:'completed',
+      itemStatuses:historicalItemStatuses,
+      itemStatusByItem,
+      hasDiff:false,
+      hasPending:false,
+      started:true,
+      highestRound,
+      nextRequiredRound:null,
+      recoveredFromStoredHistory:true,
+    };
+  }
+  if (storedStatus === 'round3_done' && started) {
+    const historicalItemStatuses = snapshots.map(snapshot => {
+      const rounds = roundsByItem[snapshot.item_id] || {};
+      const counted = [1,2,3].some(round =>
+        rounds[round] !== undefined && rounds[round] !== null && rounds[round] !== '');
+      const currentStatus = itemStatusByItem[String(snapshot.item_id)] || '';
+      const historicalStatus = counted ? (currentStatus === 'OK' ? 'OK' : 'Diff') : currentStatus;
+      itemStatusByItem[String(snapshot.item_id)] = historicalStatus;
+      return historicalStatus;
+    });
+    return {
+      effectiveStatus:'round3_done',
+      itemStatuses:historicalItemStatuses,
+      itemStatusByItem,
+      hasDiff:true,
+      hasPending:false,
+      started:true,
+      highestRound,
+      nextRequiredRound:null,
+      recoveredFromStoredHistory:true,
+    };
+  }
 
   let effectiveStatus = storedStatus || 'pending';
   if (allTerminal && hasDiff) effectiveStatus = 'round3_done';
@@ -40150,6 +40345,18 @@ async function fetchWarehouseLayoutLiveSessionData(sessionId,sessionName='') {
 
   const snapshots = snapshotResult.data || [];
   const counts = countResult.data || [];
+  const liveApprovalRepairs = recoverHistoricalOhInMemory(
+    snapshots,assignments,approvalResult.data || [],sessionId,
+  );
+  const liveCompletedRepairs = recoverHistoricalOhFromCompletedCountsInMemory(
+    snapshots,assignments,counts,rules,sessionId,
+  );
+  // The restored values are already present in this in-memory page model.
+  // Persist them asynchronously so Layout never waits for thousands of writes.
+  persistRecoveredHistoricalOhInBackground([
+    ...liveApprovalRepairs,
+    ...liveCompletedRepairs,
+  ]);
   const snapshotsByLocation = {};
   snapshots.forEach(snapshot => {
     snapshotsByLocation[snapshot.location_id] = snapshotsByLocation[snapshot.location_id] || [];
@@ -41306,6 +41513,14 @@ function warehouseLayoutStatusForLocation(imported,assignment,approvals=[]) {
   // A DIFF Location stays in the WMS stage until the guarded "ปิด Location"
   // action writes wms_closed_at. Item checkboxes alone are not the final close.
   const hasWmsPending = Boolean(varianceApprovals.length);
+  const storedStatus = String(assignment._storedStatus || assignment.status || '');
+
+  // Confirmed Variance has already left physical counting and belongs to WMS.
+  if (hasWmsPending || hasUnfixedWmsItem) return 'wms_pending';
+  // Preserve the terminal Count-history stage before consulting mutable OH.
+  if (storedStatus === 'completed' && assignment._workflow?.started !== false) return 'completed';
+  if (storedStatus === 'round3_done' && !confirmedApprovals.length) return 'variance';
+  if (storedStatus === 'approved' && !confirmedApprovals.length) return 'wms_pending';
 
   // A Location is complete when every Item has reached a final business
   // result. A confirmed zero-variance approval is final even when the raw
@@ -41343,7 +41558,6 @@ function warehouseLayoutStatusForLocation(imported,assignment,approvals=[]) {
     return 'completed';
   }
 
-  if (hasWmsPending || hasUnfixedWmsItem) return 'wms_pending';
   if (['completed','approved'].includes(status)) return 'completed';
   if (status === 'round3_done') return 'variance';
   if (['round1_done','round2_done'].includes(status)) return 'counting';
@@ -45269,21 +45483,27 @@ async function loadSvDash() {
     pct = total ? Math.round((done / total) * 100) : 0;
   }
   const allSnapshots = snapshotResult.data || [];
+  const dashboardOhRepairs = [];
   if (!varianceApprovalResult?.error) {
-    const dashboardOhRepairs = recoverHistoricalOhInMemory(
+    dashboardOhRepairs.push(...recoverHistoricalOhInMemory(
       allSnapshots,
       asgns,
       varianceApprovalResult?.data || [],
       curSid,
-    );
-    if (dashboardOhRepairs.length) {
-      const repairResult = await persistRecoveredHistoricalOh(dashboardOhRepairs);
-      if (isStaleLoad()) return;
-      if (repairResult.saved) {
-        invalidateWmsFastCacheV179(curSid);
-        invalidatePageViewCache();
-      }
-    }
+    ));
+  }
+  const completedCountOhRepairs = recoverHistoricalOhFromCompletedCountsInMemory(
+    allSnapshots,
+    asgns,
+    rawCounts,
+    rules,
+    curSid,
+  );
+  const allDashboardOhRepairs = [...dashboardOhRepairs,...completedCountOhRepairs];
+  if (allDashboardOhRepairs.length) {
+    persistRecoveredHistoricalOhInBackground(allDashboardOhRepairs);
+    invalidateWmsFastCacheV179(curSid);
+    invalidatePageViewCache();
   }
   let executiveItemMasterRows = [];
   let executiveFoundRows = [];
@@ -45390,11 +45610,14 @@ async function loadSvDash() {
     // round3_done, the Location was explicitly submitted to the supervisor and
     // must stay in both review queues until an approval row exists. Re-running
     // today's rules against mutable OH must not erase that queued work.
-    if (storedNeedsSupervisorReview || workflow.hasDiff || workflow.hasPending) {
+    // Only a terminal DIFF belongs in Variance/WMS confirmation. PENDING means
+    // another physical Count round is still required and must never be cloned
+    // into the WMS "รอยืนยันผล" queue.
+    const storedIsFinalHistory = ['completed','approved'].includes(storedWorkflowStatus);
+    if (!storedIsFinalHistory && (storedNeedsSupervisorReview || workflow.hasDiff)) {
       diffAssignments.push({
         ...a,
         _hasDiff:Boolean(workflow.hasDiff),
-        _hasPending:Boolean(workflow.hasPending),
         _storedNeedsSupervisorReview:storedNeedsSupervisorReview,
       });
     }
@@ -45671,7 +45894,7 @@ async function loadSvDash() {
         continue;
       }
       const st = computeItemStatus(oh, rounds[1], rounds[2], rounds[3], rules);
-      if (!a._storedNeedsSupervisorReview && st !== 'Diff' && st !== 'PENDING') continue;
+      if (!a._storedNeedsSupervisorReview && st !== 'Diff') continue;
       const variance = countQty - oh;
       if (Number(variance) === 0) {
         if (a._storedNeedsSupervisorReview) {
@@ -45685,7 +45908,7 @@ async function loadSvDash() {
         item_id: itemId,
         final_qty: countQty,
         variance: variance,
-        resolution: a._storedNeedsSupervisorReview || st === 'Diff' ? 'pending_diff' : 'pending_recount',
+        resolution:'pending_diff',
         approved_by: null,
         wms_fixed: false,
         wms_fixed_at: null,
@@ -53882,7 +54105,7 @@ async function loadAdTxLog() {
   const { aid } = S; if (!aid) { go('ad-history'); return; }
   const [{ data: asgn }, { data: recs }, { data: approvals, error: apprErr }] = await Promise.all([
     sb.from('assignments').select('id,status,location_id,session_id,locations(code,zone),count_sessions(name)').eq('id', aid).single(),
-    sb.from('count_records').select('item_id,round,count_qty,counted_at,type_issue,remark,photo_url,actual_counter_name,items(code,description)').eq('assignment_id', aid).order('counted_at'),
+    sb.from('count_records').select('id,assignment_id,item_id,round,count_qty,counted_at,type_issue,remark,photo_url,actual_counter_name,items(code,description)').eq('assignment_id', aid).order('counted_at'),
     sb.from('variance_approvals').select('assignment_id,item_id,final_qty,variance,resolution,approved_by,approved_at,created_at,review_status,items(code,description),profiles!approved_by(name)').eq('assignment_id', aid).order('created_at'),
   ]);
   if (!asgn) { go('ad-history'); return; }
@@ -53898,7 +54121,17 @@ async function loadAdTxLog() {
     approvals || [],
     asgn.session_id,
   );
-  if (historyOhRepairs.length) await persistRecoveredHistoricalOh(historyOhRepairs);
+  const completedHistoryOhRepairs = recoverHistoricalOhFromCompletedCountsInMemory(
+    snaps || [],
+    [asgn],
+    recs || [],
+    rules,
+    asgn.session_id,
+  );
+  persistRecoveredHistoricalOhInBackground([
+    ...historyOhRepairs,
+    ...completedHistoryOhRepairs,
+  ]);
   const ohMap = {}; (snaps||[]).forEach(s => { ohMap[s.item_id] = { oh: +s.onhand_qty, al: s.al_qty }; });
 
   const byItemRounds = {};
@@ -55215,9 +55448,14 @@ async function doImportXlsx() {
     ]);
     const assignmentIds = existingAssignments.map(row => row.id).filter(Boolean);
     const annualJobIds = [...new Set(existingAnnualItems.map(row => row.job_id).filter(Boolean))];
-    const [countResult,approvalResult,annualJobResult] = await Promise.all([
+    const [countResult,approvalResult,annualJobResult,importRules] = await Promise.all([
       assignmentIds.length
-        ? fetchSupabaseRowsByValues('count_records','assignment_id','assignment_id',assignmentIds)
+        ? fetchSupabaseRowsByValues(
+            'count_records',
+            'id,assignment_id,item_id,round,count_qty,counted_at',
+            'assignment_id',
+            assignmentIds,
+          )
         : Promise.resolve({data:[],error:null}),
       assignmentIds.length
         ? fetchSupabaseRowsByValues(
@@ -55230,6 +55468,7 @@ async function doImportXlsx() {
       annualJobIds.length
         ? fetchSupabaseRowsByValues('annual_count_jobs','id,status','id',annualJobIds)
         : Promise.resolve({data:[],error:null}),
+      getSessionRules(sid),
     ]);
     if (countResult.error || approvalResult.error || annualJobResult.error) {
       throw (countResult.error || approvalResult.error || annualJobResult.error);
@@ -55275,6 +55514,17 @@ async function doImportXlsx() {
       sid,
     );
     const approvalOhRepairResult = await persistRecoveredHistoricalOh(approvalOhRepairs);
+    // A completed Count is also exact OH history when the Session does not use
+    // auto-pass. Restore it during Import itself so the first screen opened
+    // after Import already has the original OH and completed (green) result.
+    const completedCountOhRepairs = recoverHistoricalOhFromCompletedCountsInMemory(
+      existingSnapshots,
+      existingAssignments,
+      existingCountRows,
+      importRules,
+      sid,
+    );
+    const completedCountOhRepairResult = await persistRecoveredHistoricalOh(completedCountOhRepairs);
 
     const mergedSnapshots = wmsImportBuildMergeSnapshots(
       sid,
@@ -55316,10 +55566,11 @@ async function doImportXlsx() {
       : Number(value).toLocaleString(uiLocale(),{maximumFractionDigits:2});
     let newSnapshotCount = 0;
     let updatedSnapshotCount = 0;
-    let recoveredHistoricalSnapshotCount = approvalOhRepairResult.saved;
+    let recoveredHistoricalSnapshotCount = approvalOhRepairResult.saved
+      + completedCountOhRepairResult.saved;
     let unchangedSnapshotCount = 0;
     const snapshotChanges = [];
-    approvalOhRepairs
+    [...approvalOhRepairs,...completedCountOhRepairs]
       .filter(repair => repair.snapshot?._historicalOhRecovered)
       .forEach(repair => snapshotChanges.push({
         type:'updated',
@@ -57802,7 +58053,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     { key:'backup_format', value:BACKUP_FORMAT },
     { key:'format_version', value:formatVersion },
     { key:'created_at', value:createdAt },
-    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || 'V1.127' },
+    { key:'app_build', value:window.__CYCLE_COUNT_BUILD__ || APP_VERSION_LABEL },
     { key:'project_ref', value:'uiuaboxsfepyftqjlwil' },
     { key:'file_name', value:fileName },
     { key:'session_ids', value:JSON.stringify(sessionIds) },
@@ -58063,7 +58314,7 @@ async function exportBackupZip() {
       format:BACKUP_ZIP_FORMAT,
       version:BACKUP_ZIP_VERSION,
       created_at:new Date().toISOString(),
-      app_build:window.__CYCLE_COUNT_BUILD__ || 'V1.127',
+      app_build:window.__CYCLE_COUNT_BUILD__ || APP_VERSION_LABEL,
       excel_file:excelFileName,
       excel_sha256:excelSha256,
       excel_manifest_hash:built.manifestHash,
@@ -59336,7 +59587,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.127" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.142" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
@@ -60260,7 +60511,7 @@ window.addEventListener('DOMContentLoaded', () => {
 if ('serviceWorker' in navigator && ['https:','http:'].includes(location.protocol)) {
   window.addEventListener('load', async () => {
     try {
-      const registration = await navigator.serviceWorker.register('./sw.js', { scope:'./' });
+      const registration = await navigator.serviceWorker.register('./sw.js?v=142', { scope:'./' });
       registration.update().catch(() => {});
       document.documentElement.dataset.pwaReady = 'true';
     } catch (error) {
