@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V1.154: Refine the WMS closure summary labels, sizing, and spacing (verified). -->
+<!-- V1.152: Add the live closed-Location summary inside the right side of the WMS Review Completed card (verified). -->
 <!-- V1.151: Compare each WMS Import with the immediately previous committed Snapshot, never the original historical OH (verified). -->
 <!-- V1.150: Remove the optional Location Filter; every Import is authoritative only for Locations present in the file (verified). -->
 <!-- V1.149: Split Import results into New, OH/AL Updated, and Left Location Types with filters (verified). -->
@@ -26,14 +28,14 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.151</title>
+<title>Cycle Count V1.154</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
 if (['http:','https:'].includes(location.protocol)) {
   const manifestLink = document.createElement('link');
   manifestLink.rel = 'manifest';
-  manifestLink.href = './manifest.webmanifest?v=151';
+  manifestLink.href = './manifest.webmanifest?v=154';
   document.head.appendChild(manifestLink);
 }
 </script>
@@ -42,8 +44,8 @@ if (['http:','https:'].includes(location.protocol)) {
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Cycle Count">
-<link rel="apple-touch-icon" href="./icons/icon-192.png?v=151">
-<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=151">
+<link rel="apple-touch-icon" href="./icons/icon-192.png?v=154">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=154">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -68,6 +70,8 @@ if (['http:','https:'].includes(location.protocol)) {
 <!-- V1.116: ทุกปุ่มบันทึก Count ตรวจ DIFF ทันที และเปิด Count รอบถัดไปของ Item เดิมโดยไม่รอครบ Location -->
 <!-- V1.141: Import WMS แบบ Merge ไม่ตั้ง OH/AL ที่หายเป็น 0 และไม่แก้ Snapshot ของงานที่เริ่มนับแล้ว -->
 <!-- V1.142: ผังคลังยึดประวัติ completed เป็นสีเขียว และกู้ OH จาก Count ที่จบแล้วก่อนคำนวณสถานะ -->
+<!-- V1.154: สรุปการปิดแยกเป็น มีทั้งหมด ปิดแล้ว และยังไม่ปิด พร้อมปรับขนาดข้อความและระยะห่าง -->
+<!-- V1.152: เพิ่มยอดปิด Location ไว้ด้านขวาภายในกรอบตรวจสอบเสร็จสิ้นของศูนย์ควบคุม WMS -->
 <!-- V1.151: ผล Import แต่ละรอบเทียบ Snapshot ล่าสุดก่อน Import รอบนั้น ไม่ย้อนกลับไปเทียบ OH ประวัติรอบแรก -->
 <!-- V1.150: เอา Location Filter ออกจาก Import และใช้เฉพาะ Location ที่มีจริงในไฟล์เป็นขอบเขตเสมอ -->
 <!-- V1.149: ผล Import แยก 3 Type และกรองรายละเอียดได้ โดยยังรวม Snapshot กับ LPN/Lot ต่อ Location + Item -->
@@ -21954,6 +21958,67 @@ body.count-issue-open { overscroll-behavior:none; }
   min-height:150px;
   align-items:start;
 }
+#app .wms-kpi-card.fixed.has-location-close-summary {
+  grid-template-columns:40px minmax(82px,.7fr) minmax(225px,1.35fr);
+}
+#app .wms-location-close-summary {
+  grid-column:3;
+  grid-row:1;
+  align-self:stretch;
+  min-width:0;
+  padding:8px 0 8px 13px;
+  display:grid;
+  align-content:center;
+  gap:8px;
+  border-left:1px solid color-mix(in srgb,currentColor 24%,transparent);
+  text-align:left;
+}
+#app .wms-location-close-title {
+  color:var(--theme-muted-text-color);
+  font-size:10px;
+  font-weight:900;
+  line-height:1.35;
+  text-align:center;
+}
+#app .wms-location-close-grid {
+  min-width:0;
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:7px;
+}
+#app .wms-location-close-stat {
+  min-width:0;
+  min-height:54px;
+  padding:9px 5px 8px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  border:1px solid color-mix(in srgb,currentColor 12%,transparent);
+  border-radius:11px;
+  background:color-mix(in srgb,var(--theme-card-bg) 78%,transparent);
+  text-align:center;
+}
+#app .wms-location-close-stat span {
+  display:block;
+  overflow:hidden;
+  color:var(--theme-muted-text-color);
+  font-size:10px;
+  font-weight:850;
+  line-height:1.3;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+#app .wms-location-close-stat strong {
+  display:block;
+  margin-top:5px;
+  color:currentColor;
+  font-family:'Fredoka','Mitr',sans-serif;
+  font-size:22px;
+  font-weight:900;
+  line-height:1;
+}
+#app .wms-location-close-stat.is-closed strong { color:var(--theme-success-color); }
+#app .wms-location-close-stat.is-open strong { color:var(--theme-warning-color); }
 #app .workflow-status-details {
   grid-column:1 / -1;
   width:100%;
@@ -21964,6 +22029,10 @@ body.count-issue-open { overscroll-behavior:none; }
   margin:11px 0 0;
   padding:10px 0 0;
   border-top:1px solid color-mix(in srgb,currentColor 18%,transparent);
+}
+#app .wms-kpi-card.fixed.has-location-close-summary .workflow-status-details {
+  grid-column:1 / -1;
+  grid-row:2;
 }
 #app .variance-queue-kpi .workflow-status-details { margin-top:auto; }
 #app .workflow-status-details > div {
@@ -22010,6 +22079,27 @@ body.count-issue-open { overscroll-behavior:none; }
 #app .variance-status-card .workflow-status-details { margin-top:11px; }
 @media (max-width:700px) {
   #app .variance-queue-kpis { grid-template-columns:1fr; }
+}
+@media (max-width:480px) {
+  #app .wms-kpi-card.fixed.has-location-close-summary {
+    grid-template-columns:36px minmax(0,1fr);
+    column-gap:8px;
+    padding:13px;
+  }
+  #app .wms-location-close-summary {
+    grid-column:1 / -1;
+    grid-row:2;
+    margin-top:5px;
+    padding:9px 0 0;
+    border-top:1px solid color-mix(in srgb,currentColor 18%,transparent);
+    border-left:0;
+  }
+  #app .wms-location-close-grid { gap:5px; }
+  #app .wms-location-close-stat { min-height:50px; padding:8px 3px; }
+  #app .wms-location-close-stat strong { font-size:20px; }
+  #app .wms-kpi-card.fixed.has-location-close-summary .workflow-status-details {
+    grid-row:3;
+  }
 }
 
 /* V1.93 · 64px Profile card with black text and icon-only log-out. */
@@ -22871,13 +22961,13 @@ body.count-page-active #app .count-handheld-page .citem-wrap {
 }
 </style>
 </head>
-<body data-build="v1-151">
+<body data-build="v1-154">
 <div id="app"></div>
 
 <script>
-// V1.151: one authoritative application version for the browser title,
+// V1.154: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '1.151';
+const APP_VERSION = '1.154';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -24398,7 +24488,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.151':'e.g. Warehouse V1.151',
+  'เช่น Warehouse V1.154':'e.g. Warehouse V1.154',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -45721,6 +45811,40 @@ function workflowStatusDetailsHtml(metrics) {
   </dl>`;
 }
 
+function wmsLocationClosureMetrics(rows=[],assignmentMap={}) {
+  const totalLocations = new Set();
+  const closedLocations = new Set();
+  (rows || []).forEach(row => {
+    if (!isWmsQueueRow(row)) return;
+    const assignment = assignmentMap?.[row.assignment_id];
+    const locationKey = String(assignment?.location_id || row.assignment_id || '');
+    if (!locationKey) return;
+    if (!row?._isPending && row?.wms_fixed) totalLocations.add(locationKey);
+    if (assignment?.wms_closed_at) {
+      totalLocations.add(locationKey);
+      closedLocations.add(locationKey);
+    }
+  });
+  const total = totalLocations.size;
+  const closed = closedLocations.size;
+  return { total,closed,unclosed:Math.max(0,total-closed) };
+}
+
+function wmsClosedLocationSummaryHtml(metrics={}) {
+  const format = value => Number(value || 0).toLocaleString(uiLocale());
+  const total = format(metrics.total);
+  const closed = format(metrics.closed);
+  const unclosed = format(metrics.unclosed);
+  return `<div class="wms-location-close-summary" aria-label="สรุปการปิดโลเคชั่น มีทั้งหมด ${total} ปิดแล้ว ${closed} ยังไม่ปิด ${unclosed}">
+    <div class="wms-location-close-title">สรุปการปิดโลเคชั่น</div>
+    <div class="wms-location-close-grid">
+      <div class="wms-location-close-stat is-total"><span>มีทั้งหมด</span><strong id="wms-location-total-count">${total}</strong></div>
+      <div class="wms-location-close-stat is-closed"><span>ปิดแล้ว</span><strong id="wms-location-closed-count">${closed}</strong></div>
+      <div class="wms-location-close-stat is-open"><span>ยังไม่ปิด</span><strong id="wms-location-unclosed-count">${unclosed}</strong></div>
+    </div>
+  </div>`;
+}
+
 function mergeWmsFastAuditV179(rows,auditRows) {
   const activeState = reduceActiveWmsRemarkAudit(auditRows || []);
   const statusByItem = new Map();
@@ -45807,6 +45931,7 @@ function buildWmsFastWorkspaceHtmlV179(rows,asgnInfoMap,options={}) {
   const pendingMetrics = workflowQuantityMetrics(pendingRows,asgnInfoMap);
   const unfixedMetrics = workflowQuantityMetrics(unfixedRows,asgnInfoMap);
   const fixedMetrics = workflowQuantityMetrics(fixedRows,asgnInfoMap);
+  const locationClosureMetrics = wmsLocationClosureMetrics(rows,asgnInfoMap);
   const sourceLabel = options.fromCache
     ? `แสดงข้อมูลจากเครื่องทันที · ซิงก์ล่าสุด ${escapeWmsText(workTrackerDate(options.generatedAt || options.savedAt))}`
     : `ข้อมูลล่าสุดจากฐานข้อมูล · ${Number(options.elapsedMs || 0).toLocaleString(uiLocale())} ms`;
@@ -45832,8 +45957,9 @@ function buildWmsFastWorkspaceHtmlV179(rows,asgnInfoMap,options={}) {
           <div class="wms-kpi-icon">${wmsIconSvg('pending',21)}</div><div class="wms-kpi-copy"><strong id="wms-unfixed-count">${unfixed}</strong><span>รอตรวจสอบ</span></div>
           ${workflowStatusDetailsHtml(unfixedMetrics)}
         </button>
-        <button type="button" class="wms-kpi-card fixed ${wmsFilter==='fixed'?'active':''}" data-wms-kpi="fixed" onclick="setWmsStatusFilter('fixed')">
+        <button type="button" class="wms-kpi-card fixed has-location-close-summary ${wmsFilter==='fixed'?'active':''}" data-wms-kpi="fixed" onclick="setWmsStatusFilter('fixed')">
           <div class="wms-kpi-icon">${wmsIconSvg('reviewed',21)}</div><div class="wms-kpi-copy"><strong id="wms-fixed-count">${fixed}</strong><span>ตรวจสอบเสร็จสิ้น</span></div>
+          ${wmsClosedLocationSummaryHtml(locationClosureMetrics)}
           ${workflowStatusDetailsHtml(fixedMetrics)}
         </button>
       </div>
@@ -47685,6 +47811,7 @@ async function loadSvDash() {
   const wmsPendingMetrics = workflowQuantityMetrics(wmsPendingRows,asgnInfoMap);
   const wmsUnfixedMetrics = workflowQuantityMetrics(wmsUnfixedRows,asgnInfoMap);
   const wmsFixedMetrics = workflowQuantityMetrics(wmsFixedRows,asgnInfoMap);
+  const wmsClosureMetrics = wmsLocationClosureMetrics(wmsWorkspaceRows,asgnInfoMap);
 
   const errorBanner = vaError 
     ? `<div class="alert alert-red" style="margin-bottom:14px;font-size:13px">⚠️ ไม่สามารถดึงข้อมูลคอนเฟิร์มแล้วได้</div>`
@@ -47725,10 +47852,11 @@ async function loadSvDash() {
             <div class="wms-kpi-copy"><strong id="wms-unfixed-count">${wmsUnfixedCount}</strong><span>รอตรวจสอบ</span></div>
             ${workflowStatusDetailsHtml(wmsUnfixedMetrics)}
           </button>
-          <button type="button" class="wms-kpi-card fixed ${wmsFilter==='fixed'?'active':''}" data-wms-kpi="fixed"
+          <button type="button" class="wms-kpi-card fixed has-location-close-summary ${wmsFilter==='fixed'?'active':''}" data-wms-kpi="fixed"
             onclick="setWmsStatusFilter('fixed')">
             <div class="wms-kpi-icon">${wmsIconSvg('reviewed',21)}</div>
             <div class="wms-kpi-copy"><strong id="wms-fixed-count">${wmsFixedCount}</strong><span>ตรวจสอบเสร็จสิ้น</span></div>
+            ${wmsClosedLocationSummaryHtml(wmsClosureMetrics)}
             ${workflowStatusDetailsHtml(wmsFixedMetrics)}
           </button>
         </div>
@@ -47866,16 +47994,21 @@ function showWmsFeedback(message, type='success') {
 
 function updateWmsOverview() {
   const rows = (window._wmsRows || []).filter(isWmsQueueRow);
+  const assignmentMap = window._wmsAsgnInfoMap || {};
   const pendingCount = rows.filter(v => v._isPending).length;
   const confirmedRows = rows.filter(v => !v._isPending);
   const fixedCount = confirmedRows.filter(v => v.wms_fixed).length;
   const unfixedCount = confirmedRows.length - fixedCount;
+  const locationClosureMetrics = wmsLocationClosureMetrics(rows,assignmentMap);
   const percent = rows.length ? Math.round((fixedCount / rows.length) * 100) : 0;
   const values = {
     'wms-total-count': rows.length,
     'wms-pending-count': pendingCount,
     'wms-unfixed-count': unfixedCount,
     'wms-fixed-count': fixedCount,
+    'wms-location-total-count': locationClosureMetrics.total,
+    'wms-location-closed-count': locationClosureMetrics.closed,
+    'wms-location-unclosed-count': locationClosureMetrics.unclosed,
     'wms-fixed-percent': `${percent}%`,
   };
   Object.entries(values).forEach(([id, value]) => {
@@ -60455,7 +60588,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.151" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.154" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
@@ -61379,7 +61512,7 @@ window.addEventListener('DOMContentLoaded', () => {
 if ('serviceWorker' in navigator && ['https:','http:'].includes(location.protocol)) {
   window.addEventListener('load', async () => {
     try {
-      const registration = await navigator.serviceWorker.register('./sw.js?v=151', { scope:'./' });
+      const registration = await navigator.serviceWorker.register('./sw.js?v=154', { scope:'./' });
       registration.update().catch(() => {});
       document.documentElement.dataset.pwaReady = 'true';
     } catch (error) {
