@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V1.148: Group Import result Snapshot and LPN/Lot changes by Location + Item (verified). -->
 <!-- V1.147: Import without a Location Filter is authoritative only for Locations present in the file (verified). -->
 <!-- V1.146: Full WMS Snapshot with frozen Count OH baselines (verified).
      Items omitted inside the selected scope become live OH=0 while historical Count/DIFF/status remain unchanged. -->
@@ -23,14 +24,14 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.147</title>
+<title>Cycle Count V1.148</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
 if (['http:','https:'].includes(location.protocol)) {
   const manifestLink = document.createElement('link');
   manifestLink.rel = 'manifest';
-  manifestLink.href = './manifest.webmanifest?v=147';
+  manifestLink.href = './manifest.webmanifest?v=148';
   document.head.appendChild(manifestLink);
 }
 </script>
@@ -39,8 +40,8 @@ if (['http:','https:'].includes(location.protocol)) {
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Cycle Count">
-<link rel="apple-touch-icon" href="./icons/icon-192.png?v=147">
-<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=147">
+<link rel="apple-touch-icon" href="./icons/icon-192.png?v=148">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=148">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -65,6 +66,7 @@ if (['http:','https:'].includes(location.protocol)) {
 <!-- V1.116: ทุกปุ่มบันทึก Count ตรวจ DIFF ทันที และเปิด Count รอบถัดไปของ Item เดิมโดยไม่รอครบ Location -->
 <!-- V1.141: Import WMS แบบ Merge ไม่ตั้ง OH/AL ที่หายเป็น 0 และไม่แก้ Snapshot ของงานที่เริ่มนับแล้ว -->
 <!-- V1.142: ผังคลังยึดประวัติ completed เป็นสีเขียว และกู้ OH จาก Count ที่จบแล้วก่อนคำนวณสถานะ -->
+<!-- V1.148: รายละเอียด Import รวม Snapshot และ LPN/Lot ของ Location + Item เดียวกันไว้ในการ์ดเดียว -->
 <!-- V1.147: ไม่ใส่ Filter จะอัปเดตเฉพาะ Location ที่มีในไฟล์ ไม่ตั้ง OH=0 ให้ Location อื่นใน Session -->
 <!-- V1.146: Import แบบ Full WMS Snapshot ตั้งรายการที่หายเป็น OH=0 และแยก OH ตอนเริ่มนับเพื่อรักษา Count/DIFF/สถานะย้อนหลัง -->
 <!-- V1.145: แก้ Import และประวัติให้รองรับ variance_approvals ที่ไม่มี created_at -->
@@ -20810,6 +20812,79 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
   font-weight: 700;
   text-align: center;
 }
+.wms-import-combined-list {
+  margin-top: 8px;
+  display: grid;
+  gap: 10px;
+}
+.wms-import-combined-row {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb,var(--theme-border-color) 68%,transparent);
+  border-radius: 15px;
+  background: color-mix(in srgb,var(--theme-primary-color) 3%,var(--theme-card-bg));
+}
+.wms-import-combined-head {
+  padding: 11px 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid color-mix(in srgb,var(--theme-border-color) 55%,transparent);
+  background: color-mix(in srgb,var(--theme-card-bg) 91%,var(--theme-primary-color));
+}
+.wms-import-combined-head strong {
+  min-width: 0;
+  color: var(--theme-heading-color);
+  font-size: 12px;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+.wms-import-combined-head span {
+  flex: 0 0 auto;
+  color: var(--theme-muted-text-color);
+  font-size: 10px;
+  font-weight: 800;
+}
+.wms-import-combined-body { display: grid; }
+.wms-import-combined-block {
+  padding: 11px 13px;
+  display: grid;
+  grid-template-columns: minmax(120px,.65fr) minmax(0,1.8fr);
+  gap: 10px 16px;
+  align-items: start;
+}
+.wms-import-combined-block + .wms-import-combined-block {
+  border-top: 1px dashed color-mix(in srgb,var(--theme-border-color) 72%,transparent);
+}
+.wms-import-combined-label {
+  color: var(--theme-heading-color);
+  font-size: 10px;
+  font-weight: 900;
+}
+.wms-import-combined-value {
+  min-width: 0;
+  color: var(--theme-body-text-color);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.wms-import-combined-value b { color: var(--theme-success-color);font-size: 12px; }
+.wms-import-combined-value .is-change { color: var(--theme-danger-color); }
+.wms-import-combined-lpn-list { display: grid;gap: 7px; }
+.wms-import-combined-lpn {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: color-mix(in srgb,var(--theme-card-bg) 82%,var(--theme-page-bg));
+}
+.wms-import-combined-lpn strong {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--theme-heading-color);
+  font-size: 10px;
+  font-weight: 850;
+}
 .wms-import-inline-summary {
   margin-top: 9px;
   display: grid;
@@ -20840,6 +20915,7 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
   .wms-import-result-fact { min-height: 82px; }
   .wms-import-result-actions { grid-template-columns: 1fr; }
   .wms-import-detail-row { grid-template-columns: 1fr;gap: 5px; }
+  .wms-import-combined-block { grid-template-columns: 1fr;gap: 5px; }
   .wms-import-detail-section-head { top: -16px; }
   .wms-import-inline-summary { grid-template-columns: 1fr; }
 }
@@ -22721,13 +22797,13 @@ body.count-page-active #app .count-handheld-page .citem-wrap {
 }
 </style>
 </head>
-<body data-build="v1-147">
+<body data-build="v1-148">
 <div id="app"></div>
 
 <script>
-// V1.147: one authoritative application version for the browser title,
+// V1.148: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '1.147';
+const APP_VERSION = '1.148';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -24250,7 +24326,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.147':'e.g. Warehouse V1.147',
+  'เช่น Warehouse V1.148':'e.g. Warehouse V1.148',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -29588,6 +29664,89 @@ function wmsImportDetailSectionHtml(title,rows,renderer) {
   </section>`;
 }
 
+function wmsImportCombinedChangeGroups(snapshotChanges=[],detailChanges=[]) {
+  const groups = new Map();
+  const ensureGroup = change => {
+    const location = String(change?.location || '—');
+    const item = String(change?.item || '—');
+    const key = `${location}\u241f${item}`;
+    if (!groups.has(key)) groups.set(key,{ location,item,snapshots:[],details:[] });
+    return groups.get(key);
+  };
+  (snapshotChanges || []).forEach(change => ensureGroup(change).snapshots.push(change));
+  (detailChanges || []).forEach(change => ensureGroup(change).details.push(change));
+  return [...groups.values()];
+}
+
+function wmsImportCombinedSnapshotHtml(change={}) {
+  const isNew = change.type === 'new';
+  const isRemoved = change.type === 'removed';
+  const action = isNew ? 'เพิ่ม Snapshot ใหม่' : isRemoved ? 'ไม่อยู่ในไฟล์ใหม่ · ตั้งยอดเป็น 0' : 'อัปเดต OH / AL';
+  const ohText = isNew
+    ? `OH ใหม่ <b>${escapeWmsText(change.newOH ?? '—')}</b>`
+    : `OH <span class="is-change">${escapeWmsText(change.oldOH ?? '—')} → ${escapeWmsText(change.newOH ?? '—')}</span>`;
+  const alText = change.alChanged || isNew
+    ? (isNew
+      ? `AL ใหม่ <b>${escapeWmsText(change.newAL ?? '—')}</b>`
+      : `AL <span class="is-change">${escapeWmsText(change.oldAL ?? '—')} → ${escapeWmsText(change.newAL ?? '—')}</span>`)
+    : 'AL ไม่เปลี่ยน';
+  return `<div>${escapeWmsText(action)}<br>${ohText}<br>${alText}</div>`;
+}
+
+function wmsImportCombinedLpnHtml(change={}) {
+  const isNew = change.type === 'new';
+  const isRemoved = change.type === 'removed';
+  const action = isNew ? 'เพิ่ม LPN/Lot ใหม่' : isRemoved ? 'ไม่อยู่ในไฟล์ใหม่ · นำออกจาก Snapshot' : 'อัปเดต LPN/Lot';
+  const qtyText = isNew
+    ? `QTY ใหม่ <b>${escapeWmsText(change.newQty ?? '—')}</b>`
+    : `QTY <span class="is-change">${escapeWmsText(change.oldQty ?? '—')} → ${escapeWmsText(isRemoved ? 0 : (change.newQty ?? '—'))}</span>`;
+  const metadata = [
+    `LPN ${escapeWmsText(change.lpn || '—')}`,
+    `Lot ${escapeWmsText(change.lot || '—')}`,
+    change.inventoryStatus ? `Status ${escapeWmsText(change.inventoryStatus)}` : '',
+    change.uom ? `UOM ${escapeWmsText(change.uom)}` : '',
+  ].filter(Boolean).join(' · ');
+  return `<div class="wms-import-combined-lpn">
+    <strong>${metadata}</strong>
+    ${escapeWmsText(action)} · ${qtyText}${change.metaChanged ? '<br><span class="is-change">Status / UOM เปลี่ยน</span>' : ''}
+  </div>`;
+}
+
+function wmsImportCombinedDetailHtml(group={}) {
+  const snapshots = Array.isArray(group.snapshots) ? group.snapshots : [];
+  const details = Array.isArray(group.details) ? group.details : [];
+  const partCount = snapshots.length + details.length;
+  return `<article class="wms-import-combined-row" data-i18n-skip>
+    <div class="wms-import-combined-head">
+      <strong>${escapeWmsText(group.location || '—')}<br>${escapeWmsText(group.item || '—')}</strong>
+      <span>${partCount.toLocaleString(uiLocale())} การเปลี่ยนแปลง</span>
+    </div>
+    <div class="wms-import-combined-body">
+      ${snapshots.length ? `<section class="wms-import-combined-block">
+        <div class="wms-import-combined-label">Stock Snapshot / OH / AL</div>
+        <div class="wms-import-combined-value">${snapshots.map(wmsImportCombinedSnapshotHtml).join('')}</div>
+      </section>` : ''}
+      ${details.length ? `<section class="wms-import-combined-block">
+        <div class="wms-import-combined-label">LPN / Lot / QTY</div>
+        <div class="wms-import-combined-value wms-import-combined-lpn-list">${details.map(wmsImportCombinedLpnHtml).join('')}</div>
+      </section>` : ''}
+    </div>
+  </article>`;
+}
+
+function wmsImportCombinedSectionHtml(groups=[]) {
+  const items = Array.isArray(groups) ? groups : [];
+  return `<section class="wms-import-detail-section">
+    <div class="wms-import-detail-section-head">
+      <strong>รายการตาม Location + Item</strong>
+      <span>${items.length.toLocaleString(uiLocale())} รายการ</span>
+    </div>
+    <div class="wms-import-combined-list">
+      ${items.length ? items.map(wmsImportCombinedDetailHtml).join('') : '<div class="wms-import-detail-empty">ไม่มีรายการเปลี่ยนแปลง</div>'}
+    </div>
+  </section>`;
+}
+
 function renderWmsImportResultSummary() {
   const state = _wmsImportResultState;
   const body = Q('wms-import-result-body');
@@ -29596,6 +29755,7 @@ function renderWmsImportResultSummary() {
   const newFacts = state.facts.filter(fact => fact.group === 'new');
   const updatedFacts = state.facts.filter(fact => fact.group === 'updated');
   const secondaryFacts = state.facts.filter(fact => !['overview','new','updated'].includes(fact.group));
+  const combinedChanges = wmsImportCombinedChangeGroups(state.snapshotChanges,state.detailChanges);
   body.innerHTML = `
     <div class="wms-import-summary-lead">${escapeWmsText(state.message)}</div>
     <div class="wms-import-result-facts is-overview">${wmsImportResultFactsHtml(overviewFacts)}</div>
@@ -29606,7 +29766,7 @@ function renderWmsImportResultSummary() {
     ${secondaryFacts.length ? `<div class="wms-import-result-facts is-secondary">${wmsImportResultFactsHtml(secondaryFacts)}</div>` : ''}
     <div class="wms-import-result-actions">
       <button class="btn btn-ghost" type="button" onclick="closeWmsImportResult()">ปิด</button>
-      <button class="btn primary" type="button" onclick="openWmsImportResultDetails()">ดูรายละเอียดทั้งหมด (${(state.snapshotChanges.length + state.detailChanges.length).toLocaleString(uiLocale())})</button>
+      <button class="btn primary" type="button" onclick="openWmsImportResultDetails()">ดูรายละเอียดทั้งหมด (${combinedChanges.length.toLocaleString(uiLocale())} รายการ)</button>
     </div>`;
   const title = Q('wms-import-result-title');
   const subtitle = Q('wms-import-result-subtitle');
@@ -29619,18 +29779,18 @@ function openWmsImportResultDetails() {
   const state = _wmsImportResultState;
   const body = Q('wms-import-result-body');
   if (!state || !body) return;
-  const total = state.snapshotChanges.length + state.detailChanges.length;
+  const combinedChanges = wmsImportCombinedChangeGroups(state.snapshotChanges,state.detailChanges);
+  const total = combinedChanges.length;
   const title = Q('wms-import-result-title');
   const subtitle = Q('wms-import-result-subtitle');
   if (title) title.textContent = 'รายละเอียด Import / Update WMS';
   if (subtitle) subtitle.textContent = `เลื่อนดูได้ทั้งหมด ${total.toLocaleString(uiLocale())} รายการ`;
   body.innerHTML = `
     <div class="wms-import-detail-toolbar">
-      <div><strong>รายการที่เพิ่มหรือเปลี่ยนแปลง</strong><br><span>แยก Snapshot และ LPN/Lot เพื่อตรวจสอบง่าย</span></div>
+      <div><strong>รายการที่เพิ่มหรือเปลี่ยนแปลง</strong><br><span>รวม Snapshot และ LPN/Lot ของ Location + Item เดียวกันไว้ด้วยกัน</span></div>
       <button class="btn btn-ghost btn-sm" type="button" onclick="renderWmsImportResultSummary()">← กลับหน้าสรุป</button>
     </div>
-    ${wmsImportDetailSectionHtml('Stock Snapshot / OH / AL',state.snapshotChanges,wmsImportSnapshotDetailHtml)}
-    ${wmsImportDetailSectionHtml('LPN / Lot / QTY',state.detailChanges,wmsImportLpnDetailHtml)}
+    ${wmsImportCombinedSectionHtml(combinedChanges)}
     <div class="wms-import-result-actions">
       <button class="btn btn-ghost" type="button" onclick="renderWmsImportResultSummary()">กลับหน้าสรุป</button>
       <button class="btn primary" type="button" onclick="closeWmsImportResult()">ปิด</button>
@@ -60209,7 +60369,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.147" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.148" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
@@ -61133,7 +61293,7 @@ window.addEventListener('DOMContentLoaded', () => {
 if ('serviceWorker' in navigator && ['https:','http:'].includes(location.protocol)) {
   window.addEventListener('load', async () => {
     try {
-      const registration = await navigator.serviceWorker.register('./sw.js?v=147', { scope:'./' });
+      const registration = await navigator.serviceWorker.register('./sw.js?v=148', { scope:'./' });
       registration.update().catch(() => {});
       document.documentElement.dataset.pwaReady = 'true';
     } catch (error) {
