@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- V1.148: Group Import result Snapshot and LPN/Lot changes by Location + Item (verified). -->
-<!-- V1.147: Import without a Location Filter is authoritative only for Locations present in the file (verified). -->
+<!-- V1.150: Remove the optional Location Filter; every Import is authoritative only for Locations present in the file (verified). -->
+<!-- V1.149: Split Import results into New, OH/AL Updated, and Left Location Types with filters (verified). -->
+<!-- V1.147: Import scope is authoritative only for Locations present in the file (verified). -->
 <!-- V1.146: Full WMS Snapshot with frozen Count OH baselines (verified).
      Items omitted inside the selected scope become live OH=0 while historical Count/DIFF/status remain unchanged. -->
 <!-- V1.145: support the deployed variance_approvals schema without created_at
@@ -24,14 +25,14 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.148</title>
+<title>Cycle Count V1.150</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
 if (['http:','https:'].includes(location.protocol)) {
   const manifestLink = document.createElement('link');
   manifestLink.rel = 'manifest';
-  manifestLink.href = './manifest.webmanifest?v=148';
+  manifestLink.href = './manifest.webmanifest?v=150';
   document.head.appendChild(manifestLink);
 }
 </script>
@@ -40,8 +41,8 @@ if (['http:','https:'].includes(location.protocol)) {
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Cycle Count">
-<link rel="apple-touch-icon" href="./icons/icon-192.png?v=148">
-<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=148">
+<link rel="apple-touch-icon" href="./icons/icon-192.png?v=150">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=150">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -66,8 +67,9 @@ if (['http:','https:'].includes(location.protocol)) {
 <!-- V1.116: ทุกปุ่มบันทึก Count ตรวจ DIFF ทันที และเปิด Count รอบถัดไปของ Item เดิมโดยไม่รอครบ Location -->
 <!-- V1.141: Import WMS แบบ Merge ไม่ตั้ง OH/AL ที่หายเป็น 0 และไม่แก้ Snapshot ของงานที่เริ่มนับแล้ว -->
 <!-- V1.142: ผังคลังยึดประวัติ completed เป็นสีเขียว และกู้ OH จาก Count ที่จบแล้วก่อนคำนวณสถานะ -->
-<!-- V1.148: รายละเอียด Import รวม Snapshot และ LPN/Lot ของ Location + Item เดียวกันไว้ในการ์ดเดียว -->
-<!-- V1.147: ไม่ใส่ Filter จะอัปเดตเฉพาะ Location ที่มีในไฟล์ ไม่ตั้ง OH=0 ให้ Location อื่นใน Session -->
+<!-- V1.150: เอา Location Filter ออกจาก Import และใช้เฉพาะ Location ที่มีจริงในไฟล์เป็นขอบเขตเสมอ -->
+<!-- V1.149: ผล Import แยก 3 Type และกรองรายละเอียดได้ โดยยังรวม Snapshot กับ LPN/Lot ต่อ Location + Item -->
+<!-- V1.147: Import อัปเดตเฉพาะ Location ที่มีในไฟล์ ไม่ตั้ง OH=0 ให้ Location อื่นใน Session -->
 <!-- V1.146: Import แบบ Full WMS Snapshot ตั้งรายการที่หายเป็น OH=0 และแยก OH ตอนเริ่มนับเพื่อรักษา Count/DIFF/สถานะย้อนหลัง -->
 <!-- V1.145: แก้ Import และประวัติให้รองรับ variance_approvals ที่ไม่มี created_at -->
 <!-- V1.144: กู้ OH จาก Count 1 ที่จบแล้วแม้ Session ใช้ auto-pass และไม่ใช้ Cache เก่าบนหน้าผลต่าง -->
@@ -20641,7 +20643,7 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
 .wms-import-change-groups {
   margin-top: 16px;
   display: grid;
-  grid-template-columns: repeat(2,minmax(0,1fr));
+  grid-template-columns: repeat(3,minmax(0,1fr));
   gap: 14px;
 }
 .wms-import-change-panel {
@@ -20657,6 +20659,10 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
 .wms-import-change-panel.is-updated {
   border-color: color-mix(in srgb,var(--theme-primary-color) 48%,transparent);
   background: color-mix(in srgb,var(--theme-primary-color) 8%,var(--theme-card-bg));
+}
+.wms-import-change-panel.is-exit {
+  border-color: color-mix(in srgb,var(--theme-warning-color) 58%,transparent);
+  background: color-mix(in srgb,var(--theme-warning-color) 10%,var(--theme-card-bg));
 }
 .wms-import-change-panel-head {
   display: flex;
@@ -20698,6 +20704,18 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
 .wms-import-change-panel .wms-import-result-fact {
   min-height: 88px;
   background: color-mix(in srgb,var(--theme-card-bg) 94%,white);
+}
+.wms-import-change-panel-action {
+  width: 100%;
+  min-height: 38px;
+  margin-top: 12px;
+  border: 1px solid color-mix(in srgb,var(--theme-border-color) 76%,transparent);
+  border-radius: 11px;
+  color: var(--theme-heading-color);
+  background: color-mix(in srgb,var(--theme-card-bg) 90%,white);
+  font-size: 11px;
+  font-weight: 850;
+  cursor: pointer;
 }
 .wms-import-result-facts.is-secondary {
   grid-template-columns: repeat(3,minmax(0,1fr));
@@ -20751,6 +20769,31 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
   color: var(--theme-muted-text-color);
   font-size: 10px;
   font-weight: 700;
+}
+.wms-import-detail-filters {
+  margin: 0 0 14px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  padding-bottom: 3px;
+}
+.wms-import-detail-filter {
+  flex: 0 0 auto;
+  min-height: 38px;
+  padding: 8px 13px;
+  border: 1px solid color-mix(in srgb,var(--theme-border-color) 75%,transparent);
+  border-radius: 999px;
+  color: var(--theme-body-text-color);
+  background: var(--theme-card-bg);
+  font-size: 10px;
+  font-weight: 850;
+  cursor: pointer;
+}
+.wms-import-detail-filter.is-active {
+  border-color: var(--theme-primary-color);
+  color: white;
+  background: var(--theme-primary-color);
 }
 .wms-import-detail-section + .wms-import-detail-section { margin-top: 18px; }
 .wms-import-detail-section-head {
@@ -20824,6 +20867,9 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
   border-radius: 15px;
   background: color-mix(in srgb,var(--theme-primary-color) 3%,var(--theme-card-bg));
 }
+.wms-import-combined-row.is-new { border-color: color-mix(in srgb,var(--theme-success-color) 45%,transparent); }
+.wms-import-combined-row.is-updated { border-color: color-mix(in srgb,var(--theme-primary-color) 42%,transparent); }
+.wms-import-combined-row.is-exit { border-color: color-mix(in srgb,var(--theme-warning-color) 58%,transparent); }
 .wms-import-combined-head {
   padding: 11px 13px;
   display: flex;
@@ -20840,11 +20886,37 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
   font-weight: 900;
   overflow-wrap: anywhere;
 }
-.wms-import-combined-head span {
+.wms-import-combined-meta {
   flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.wms-import-combined-count {
   color: var(--theme-muted-text-color);
   font-size: 10px;
   font-weight: 800;
+}
+.wms-import-type-badge {
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+.wms-import-type-badge.is-new {
+  color: var(--theme-success-color);
+  background: color-mix(in srgb,var(--theme-success-color) 13%,var(--theme-card-bg));
+}
+.wms-import-type-badge.is-updated {
+  color: var(--theme-primary-color);
+  background: color-mix(in srgb,var(--theme-primary-color) 13%,var(--theme-card-bg));
+}
+.wms-import-type-badge.is-exit {
+  color: color-mix(in srgb,var(--theme-warning-color) 72%,var(--theme-heading-color));
+  background: color-mix(in srgb,var(--theme-warning-color) 18%,var(--theme-card-bg));
 }
 .wms-import-combined-body { display: grid; }
 .wms-import-combined-block {
@@ -22797,13 +22869,13 @@ body.count-page-active #app .count-handheld-page .citem-wrap {
 }
 </style>
 </head>
-<body data-build="v1-148">
+<body data-build="v1-150">
 <div id="app"></div>
 
 <script>
-// V1.148: one authoritative application version for the browser title,
+// V1.150: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '1.148';
+const APP_VERSION = '1.150';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -23944,7 +24016,6 @@ const UI_EN_EXACT = Object.freeze({
   'บันทึกและส่ง Supervisor ตรวจสอบ':'Save and Submit for Supervisor Review',
   'งานพบเพิ่ม':'Additional Inventory Findings',
   'ค้นหา LOCATION / ITEM':'Search LOCATION / ITEM',
-  'กรอง LOCATION (ไม่บังคับ)':'Filter LOCATION (optional)',
   'ไม่บังคับ':'Optional',
   'พร้อมพิมพ์':'Ready to print',
   'พร้อมใช้งาน':'Ready',
@@ -24126,7 +24197,6 @@ const UI_EN_EXACT = Object.freeze({
   'ตรวจสอบและพิมพ์':'Review and Print',
   'ตรวจสอบงานก่อนส่งให้ User':'Verify count work before assignment.',
   'กำหนดชุดงานก่อนเริ่มจ่ายงานให้ User':'Define the work scope before assigning it to a user.',
-  'กรอง LOCATION (ไม่บังคับ)':'Filter Storage Location (Optional)',
   'แหล่งที่พบ':'Source of Finding',
   'ผู้พบ/ผู้ตรวจนับ':'Discovering User / Physical Counter',
   'ผู้บันทึก':'Recorded By',
@@ -24326,7 +24396,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.148':'e.g. Warehouse V1.148',
+  'เช่น Warehouse V1.150':'e.g. Warehouse V1.150',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -29599,18 +29669,21 @@ function wmsImportResultFactsHtml(facts=[]) {
     </div>`).join('');
 }
 
-function wmsImportChangePanelHtml(kind,title,description,facts=[]) {
+function wmsImportChangePanelHtml(kind,title,description,facts=[],totalOverride=null,detailFilter=kind) {
   const items = Array.isArray(facts) ? facts : [];
-  const total = items.reduce((sum,fact) => sum + (Number(fact.rawValue) || 0),0);
-  return `<section class="wms-import-change-panel ${kind === 'new' ? 'is-new' : 'is-updated'}">
+  const factTotal = items.reduce((sum,fact) => sum + (Number(fact.rawValue) || 0),0);
+  const total = Number.isFinite(Number(totalOverride)) ? Number(totalOverride) : factTotal;
+  const panelKind = ['new','updated','exit'].includes(kind) ? kind : 'updated';
+  return `<section class="wms-import-change-panel is-${panelKind}">
     <div class="wms-import-change-panel-head">
       <div>
         <h3>${escapeWmsText(title)}</h3>
         <p>${escapeWmsText(description)}</p>
       </div>
-      <div class="wms-import-change-panel-total" title="รวมรายการในกลุ่ม">${total.toLocaleString(uiLocale())}</div>
+      <div class="wms-import-change-panel-total" title="รวม Location + Item ในกลุ่ม">${total.toLocaleString(uiLocale())}</div>
     </div>
     <div class="wms-import-result-facts">${wmsImportResultFactsHtml(items)}</div>
+    <button class="wms-import-change-panel-action" type="button" onclick="openWmsImportResultDetails('${escapeWmsText(detailFilter)}')">ดูรายละเอียด Type นี้</button>
   </section>`;
 }
 
@@ -29675,7 +29748,36 @@ function wmsImportCombinedChangeGroups(snapshotChanges=[],detailChanges=[]) {
   };
   (snapshotChanges || []).forEach(change => ensureGroup(change).snapshots.push(change));
   (detailChanges || []).forEach(change => ensureGroup(change).details.push(change));
-  return [...groups.values()];
+  return [...groups.values()].map(group => ({ ...group,type:wmsImportCombinedChangeType(group) }));
+}
+
+function wmsImportDisplayNumber(value) {
+  const raw = String(value ?? '').trim().replace(/,/g,'').replace(/^\+/, '');
+  if (!raw || raw === '—' || raw === '-') return null;
+  const number = Number(raw);
+  return Number.isFinite(number) ? number : null;
+}
+
+function wmsImportCombinedChangeType(group={}) {
+  const snapshots = Array.isArray(group.snapshots) ? group.snapshots : [];
+  const leftLocation = snapshots.some(change => {
+    if (change?.type === 'removed') return true;
+    const oldOH = wmsImportDisplayNumber(change?.oldOH);
+    const newOH = wmsImportDisplayNumber(change?.newOH);
+    return oldOH !== null && oldOH !== 0 && newOH === 0;
+  });
+  if (leftLocation) return 'exit';
+  if (snapshots.some(change => change?.type === 'new')) return 'new';
+  return 'updated';
+}
+
+function wmsImportTypeMeta(type='updated') {
+  const types = {
+    new:{ label:'งานเข้าใหม่',description:'Location + Item ที่ยังไม่เคยมีในระบบและเพิ่มจากไฟล์นี้' },
+    updated:{ label:'OH/AL อัปเดต',description:'รายการเดิมที่ยังอยู่ใน Location และยอด OH/AL หรือ LPN/Lot เปลี่ยน' },
+    exit:{ label:'สินค้าออกจาก Location',description:'ไม่อยู่ใน WMS ล่าสุด อาจถูก Pick หมดหรือย้าย Location และถูกตั้ง OH = 0' },
+  };
+  return types[type] || types.updated;
 }
 
 function wmsImportCombinedSnapshotHtml(change={}) {
@@ -29716,10 +29818,15 @@ function wmsImportCombinedDetailHtml(group={}) {
   const snapshots = Array.isArray(group.snapshots) ? group.snapshots : [];
   const details = Array.isArray(group.details) ? group.details : [];
   const partCount = snapshots.length + details.length;
-  return `<article class="wms-import-combined-row" data-i18n-skip>
+  const type = ['new','updated','exit'].includes(group.type) ? group.type : wmsImportCombinedChangeType(group);
+  const typeMeta = wmsImportTypeMeta(type);
+  return `<article class="wms-import-combined-row is-${type}" data-i18n-skip>
     <div class="wms-import-combined-head">
       <strong>${escapeWmsText(group.location || '—')}<br>${escapeWmsText(group.item || '—')}</strong>
-      <span>${partCount.toLocaleString(uiLocale())} การเปลี่ยนแปลง</span>
+      <div class="wms-import-combined-meta">
+        <span class="wms-import-type-badge is-${type}" title="${escapeWmsText(typeMeta.description)}">${escapeWmsText(typeMeta.label)}</span>
+        <span class="wms-import-combined-count">${partCount.toLocaleString(uiLocale())} การเปลี่ยนแปลง</span>
+      </div>
     </div>
     <div class="wms-import-combined-body">
       ${snapshots.length ? `<section class="wms-import-combined-block">
@@ -29747,6 +29854,25 @@ function wmsImportCombinedSectionHtml(groups=[]) {
   </section>`;
 }
 
+function wmsImportDetailFiltersHtml(groups=[],active='all') {
+  const items = Array.isArray(groups) ? groups : [];
+  const counts = {
+    all:items.length,
+    new:items.filter(group => group.type === 'new').length,
+    updated:items.filter(group => group.type === 'updated').length,
+    exit:items.filter(group => group.type === 'exit').length,
+  };
+  const filters = [
+    ['all','ทั้งหมด'],
+    ['new','งานเข้าใหม่'],
+    ['updated','OH/AL อัปเดต'],
+    ['exit','สินค้าออกจาก Location'],
+  ];
+  return `<div class="wms-import-detail-filters" role="tablist" aria-label="กรองรายละเอียดตาม Type">
+    ${filters.map(([key,label]) => `<button class="wms-import-detail-filter${active === key ? ' is-active' : ''}" type="button" role="tab" aria-selected="${active === key ? 'true' : 'false'}" onclick="openWmsImportResultDetails('${key}')">${escapeWmsText(label)} · ${counts[key].toLocaleString(uiLocale())}</button>`).join('')}
+  </div>`;
+}
+
 function renderWmsImportResultSummary() {
   const state = _wmsImportResultState;
   const body = Q('wms-import-result-body');
@@ -29754,14 +29880,21 @@ function renderWmsImportResultSummary() {
   const overviewFacts = state.facts.filter(fact => fact.group === 'overview');
   const newFacts = state.facts.filter(fact => fact.group === 'new');
   const updatedFacts = state.facts.filter(fact => fact.group === 'updated');
-  const secondaryFacts = state.facts.filter(fact => !['overview','new','updated'].includes(fact.group));
+  const exitFacts = state.facts.filter(fact => fact.group === 'exit');
+  const secondaryFacts = state.facts.filter(fact => !['overview','new','updated','exit'].includes(fact.group));
   const combinedChanges = wmsImportCombinedChangeGroups(state.snapshotChanges,state.detailChanges);
+  const typeCounts = {
+    new:combinedChanges.filter(group => group.type === 'new').length,
+    updated:combinedChanges.filter(group => group.type === 'updated').length,
+    exit:combinedChanges.filter(group => group.type === 'exit').length,
+  };
   body.innerHTML = `
     <div class="wms-import-summary-lead">${escapeWmsText(state.message)}</div>
     <div class="wms-import-result-facts is-overview">${wmsImportResultFactsHtml(overviewFacts)}</div>
     <div class="wms-import-change-groups">
-      ${wmsImportChangePanelHtml('new','งานเข้าใหม่','ข้อมูลที่ยังไม่เคยมีในระบบและถูกเพิ่มจากไฟล์นี้',newFacts)}
-      ${wmsImportChangePanelHtml('updated','งานอัปเดต','ข้อมูลเดิมที่มีการเปลี่ยนแปลงจากไฟล์นี้',updatedFacts)}
+      ${wmsImportChangePanelHtml('new',wmsImportTypeMeta('new').label,wmsImportTypeMeta('new').description,newFacts,typeCounts.new)}
+      ${wmsImportChangePanelHtml('updated',wmsImportTypeMeta('updated').label,wmsImportTypeMeta('updated').description,updatedFacts,typeCounts.updated)}
+      ${wmsImportChangePanelHtml('exit',wmsImportTypeMeta('exit').label,wmsImportTypeMeta('exit').description,exitFacts,typeCounts.exit)}
     </div>
     ${secondaryFacts.length ? `<div class="wms-import-result-facts is-secondary">${wmsImportResultFactsHtml(secondaryFacts)}</div>` : ''}
     <div class="wms-import-result-actions">
@@ -29775,21 +29908,27 @@ function renderWmsImportResultSummary() {
   body.scrollTop = 0;
 }
 
-function openWmsImportResultDetails() {
+function openWmsImportResultDetails(filter='all') {
   const state = _wmsImportResultState;
   const body = Q('wms-import-result-body');
   if (!state || !body) return;
-  const combinedChanges = wmsImportCombinedChangeGroups(state.snapshotChanges,state.detailChanges);
+  const activeFilter = ['all','new','updated','exit'].includes(filter) ? filter : 'all';
+  const allCombinedChanges = wmsImportCombinedChangeGroups(state.snapshotChanges,state.detailChanges);
+  const combinedChanges = activeFilter === 'all'
+    ? allCombinedChanges
+    : allCombinedChanges.filter(group => group.type === activeFilter);
   const total = combinedChanges.length;
+  const activeMeta = activeFilter === 'all' ? null : wmsImportTypeMeta(activeFilter);
   const title = Q('wms-import-result-title');
   const subtitle = Q('wms-import-result-subtitle');
   if (title) title.textContent = 'รายละเอียด Import / Update WMS';
-  if (subtitle) subtitle.textContent = `เลื่อนดูได้ทั้งหมด ${total.toLocaleString(uiLocale())} รายการ`;
+  if (subtitle) subtitle.textContent = `${activeMeta ? `${activeMeta.label} · ` : ''}แสดง ${total.toLocaleString(uiLocale())} จาก ${allCombinedChanges.length.toLocaleString(uiLocale())} รายการ`;
   body.innerHTML = `
     <div class="wms-import-detail-toolbar">
-      <div><strong>รายการที่เพิ่มหรือเปลี่ยนแปลง</strong><br><span>รวม Snapshot และ LPN/Lot ของ Location + Item เดียวกันไว้ด้วยกัน</span></div>
+      <div><strong>รายละเอียดแยกตาม Type</strong><br><span>Snapshot และ LPN/Lot ของ Location + Item เดียวกันจะแสดงอยู่ในการ์ดเดียวกัน</span></div>
       <button class="btn btn-ghost btn-sm" type="button" onclick="renderWmsImportResultSummary()">← กลับหน้าสรุป</button>
     </div>
+    ${wmsImportDetailFiltersHtml(allCombinedChanges,activeFilter)}
     ${wmsImportCombinedSectionHtml(combinedChanges)}
     <div class="wms-import-result-actions">
       <button class="btn btn-ghost" type="button" onclick="renderWmsImportResultSummary()">กลับหน้าสรุป</button>
@@ -52208,12 +52347,11 @@ async function renderManageImport(container) {
         <div class="alert alert-blue" style="font-size:13px;margin:16px 0;line-height:1.6">
           📁 <strong>Upload Excel (.xlsx)</strong> — ดึงข้อมูลจากระบบ WMS ได้เลย<br>✅ ระบบอ่านหัวตารางอัตโนมัติ<br>🏷️ ดึง LPN / Lot / OH / AL มาแสดงตอนนับ<br>
           🔄 Import ซ้ำใน Session เดิมแบบปลอดภัย: Match ด้วย <strong>Location + LPN + Item + Lot</strong>
-          <br>📍 <strong>ไม่ใส่ Filter</strong> = อัปเดตเฉพาะ Location ที่พบในไฟล์ โดยไม่แตะ Location อื่นใน Session
-          <br>🎯 <strong>ใส่ Filter</strong> = ทุก Location ที่ตรง Filter เป็นขอบเขต Full Snapshot และรายการที่หายจะถูกตั้ง OH เป็น 0
+          <br>📍 ระบบอัปเดตเฉพาะ <strong>Location ที่พบในไฟล์</strong> โดยไม่แตะ Location อื่นใน Session
+          <br>รายการเดิมที่หายภายใน Location ในไฟล์จะถูกตั้ง OH เป็น 0 เพื่อรองรับสินค้าที่ถูก Pick หรือย้าย Location
           <br>ส่วน OH ตอนเริ่มนับ, Count, DIFF และสถานะงานย้อนหลังจะถูกเก็บแยกและไม่เปลี่ยน
         </div>
         <div class="fg"><label>SESSION <span style="color:var(--accent-red)">*</span></label><select id="is" required onchange="refreshXlsxPreview()">${sessOpts}</select></div>
-        <div class="fg"><label>กรอง LOCATION (ไม่บังคับ)</label><input id="ilocfilter" placeholder="เช่น B-EA% · เว้นว่าง = เฉพาะ Location ที่มีในไฟล์" oninput="refreshXlsxPreview()"></div>
         <div class="fg"><label>เลือกไฟล์ XLSX</label>
           <input type="file" id="ixlsx" accept=".xlsx,.xls" style="padding:16px;border:none;border-radius:var(--border-radius-lg);cursor:pointer;background:var(--neu-surface);box-shadow: inset 4px 4px 8px var(--neu-shadow-dark), inset -4px -4px 8px var(--neu-shadow-light);width:100%;font-size:14px">
         </div>
@@ -55599,14 +55737,7 @@ function parseImportNumber(value) {
   return Number.isFinite(parsedValue) ? (negative ? -parsedValue : parsedValue) : null;
 }
 
-function importLocationFilterRegex(value) {
-  const source = normalizeImportText(value);
-  if (!source) return null;
-  const escaped = source.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/%/g,'.*');
-  return new RegExp(`^${escaped}`,'i');
-}
-
-function analyzeXlsxImportRows(rows, locFilter='') {
+function analyzeXlsxImportRows(rows) {
   const headers = [...new Set((rows || []).flatMap(row => Object.keys(row || {})))];
   const columns = Object.fromEntries(
     Object.entries(XLSX_IMPORT_COLUMN_RULES).map(([key,rule]) => [key,resolveImportColumn(headers,rule)])
@@ -55615,16 +55746,10 @@ function analyzeXlsxImportRows(rows, locFilter='') {
   const errors = missingRequired.map(key => `ไม่พบคอลัมน์ ${XLSX_IMPORT_COLUMN_RULES[key].label}`);
   const parsed = [];
   const rejected = [];
-  let ignoredByFilter = 0;
-  const locationRegex = importLocationFilterRegex(locFilter);
 
   (rows || []).forEach((row,index) => {
     const value = key => columns[key] ? normalizeImportText(row?.[columns[key]]) : '';
     const locCode = value('location');
-    if (locationRegex && locCode && !locationRegex.test(locCode)) {
-      ignoredByFilter++;
-      return;
-    }
     const itemCode = value('item');
     const onhandRaw = value('onhand');
     const onhandValue = parseImportNumber(onhandRaw);
@@ -55668,7 +55793,7 @@ function analyzeXlsxImportRows(rows, locFilter='') {
     emptyLocationRows:operationalParsed.filter(row => row.isEmptyLocation).length,
     suppressedMixedEmptyRows:normalizedOperational.suppressedMixedEmptyRows,
   };
-  return { headers, columns, errors, parsed:operationalParsed, rejected, ignoredByFilter, metrics };
+  return { headers, columns, errors, parsed:operationalParsed, rejected, metrics };
 }
 
 function renderXlsxImportPreview(analysis) {
@@ -55682,13 +55807,11 @@ function renderXlsxImportPreview(analysis) {
     `แถว ${row.rowNumber}: ${row.reasons.join(', ')}`
   );
   const hasBlockingProblem = analysis.errors.length || analysis.rejected.length;
-  const locationFilterValue = normalizeImportText(Q('ilocfilter')?.value || '');
   return `
     <div class="alert ${hasBlockingProblem ? 'alert-red' : 'alert-green'}" style="font-size:13px;line-height:1.6">
       <strong>${hasBlockingProblem ? '❌ ไฟล์ยังไม่พร้อม Import' : '✅ ตรวจข้อมูลก่อน Import ผ่าน'}</strong>
       ${_xlsxWorksheetName ? `<br>ชีตที่อ่าน: <strong>${escapeWmsText(_xlsxWorksheetName)}</strong>` : ''}
       <br>แถวพร้อม Import ${metric(analysis.metrics.rows)} จาก ${metric(_xlsxRawRows?.length || 0)} แถว
-      ${analysis.ignoredByFilter ? ` · ไม่อยู่ใน Filter ${metric(analysis.ignoredByFilter)} แถว` : ''}
     </div>
     <div class="backup-count-grid" style="margin:12px 0">
       <div class="backup-count-chip"><strong>${metric(analysis.metrics.items)}</strong><span>Distinct Item</span></div>
@@ -55701,9 +55824,7 @@ function renderXlsxImportPreview(analysis) {
       <br>ช่อง Description / UOM ที่ว่าง จะ Match จาก Item Master ตอน Import
     </div>
     <div class="alert alert-amber" style="font-size:11px;margin-top:10px;line-height:1.6">
-      ไฟล์นี้จะเป็นข้อมูล WMS ล่าสุดของ${locationFilterValue
-        ? ` Location Filter <strong>${escapeWmsText(locationFilterValue)}</strong>`
-        : ' <strong>เฉพาะ Location ที่พบในไฟล์</strong> (Location อื่นใน Session จะไม่เปลี่ยน)'} · Item เดิมที่หายภายในขอบเขตนี้จะคงแถวไว้แต่ตั้ง OH/AL เป็น 0 และ LPN/Lot เดิมจะถูกนำออก
+      ไฟล์นี้จะเป็นข้อมูล WMS ล่าสุดของ <strong>เฉพาะ Location ที่พบในไฟล์</strong> (Location อื่นใน Session จะไม่เปลี่ยน) · Item เดิมที่หายภายใน Location เหล่านี้จะคงแถวไว้แต่ตั้ง OH/AL เป็น 0 และ LPN/Lot เดิมจะถูกนำออก
       งานที่เริ่มนับแล้วจะใช้ OH ตอนเริ่มนับจากประวัติ ส่วน OH ล่าสุดอัปเดตตามไฟล์นี้
     </div>
     ${analysis.errors.length ? `<div class="alert alert-red" style="font-size:12px;margin-top:10px">${analysis.errors.map(escapeWmsText).join('<br>')}</div>` : ''}
@@ -55749,7 +55870,6 @@ async function readXlsxFile(e) {
     try {
       const data = new Uint8Array(evt.target.result);
       const workbook = XLSX.read(data, { type:'array', cellDates:false });
-      const filterValue = Q('ilocfilter')?.value || '';
       const candidates = workbook.SheetNames.map((sheetName,index) => {
         const worksheet = workbook.Sheets[sheetName];
         const rows = XLSX.utils.sheet_to_json(worksheet, {
@@ -55757,7 +55877,7 @@ async function readXlsxFile(e) {
           raw:false,
           blankrows:false,
         });
-        const analysis = analyzeXlsxImportRows(rows,filterValue);
+        const analysis = analyzeXlsxImportRows(rows);
         const score = (analysis.errors.length ? -1000000 : 0) + analysis.parsed.length;
         return { sheetName, rows, analysis, score, index };
       }).sort((a,b) => b.score - a.score || a.index - b.index);
@@ -55791,7 +55911,7 @@ function refreshXlsxPreview() {
     if (btn) btn.disabled = true;
     return;
   }
-  const analysis = analyzeXlsxImportRows(_xlsxRawRows,Q('ilocfilter')?.value || '');
+  const analysis = analyzeXlsxImportRows(_xlsxRawRows);
   _xlsxImportAnalysis = analysis;
   _xlsxParsed = analysis.parsed;
   if (prev) {
@@ -55820,41 +55940,6 @@ async function fetchImportedScopeRows(table,columns,sessionId,locationIds) {
     }
   }
   return output;
-}
-
-async function fetchWmsImportMergeLocationScope(sessionId,incomingLocationIds,locationFilter='') {
-  // Safe default: without an explicit filter, only Locations physically present
-  // in the uploaded file are authoritative. Never zero an unrelated Location
-  // merely because it belongs to the same Session.
-  const locationRegex = importLocationFilterRegex(locationFilter);
-  const incomingIds = [...new Set((incomingLocationIds || []).filter(Boolean))];
-  if (!locationRegex) {
-    return { locationIds:incomingIds,locationCodeById:new Map() };
-  }
-  // An explicit filter is deliberate scope expansion. Example B-CR% means all
-  // existing B-CR Locations are covered, so missing Items inside B-CR become 0.
-  const result = await fetchPagedSupabaseRows(
-    'stock_snapshot',
-    'location_id,locations(code)',
-    query => query.eq('session_id',sessionId).order('location_id'),
-  );
-  if (result.error) throw result.error;
-  const locationCodeById = new Map();
-  const existingLocationIds = [];
-  (result.data || []).forEach(row => {
-    const code = row.locations?.code || '';
-    if (row.location_id) locationCodeById.set(row.location_id,code || row.location_id);
-    if (row.location_id && locationRegex.test(code)) {
-      existingLocationIds.push(row.location_id);
-    }
-  });
-  return {
-    locationIds:[...new Set([
-      ...existingLocationIds,
-      ...incomingIds,
-    ])],
-    locationCodeById,
-  };
 }
 
 function wmsImportConsolidateDetailMap(rows=[]) {
@@ -56161,13 +56246,9 @@ async function doImportXlsx() {
     const snapList = Array.from(snapMap.values());
     const importedDetailsList = Array.from(importedDetailMap.values());
     const importedLocationIds = [...new Set(snapList.map(row => row.location_id).filter(Boolean))];
-    const locationFilterValue = Q('ilocfilter')?.value || '';
-    const mergeScope = await fetchWmsImportMergeLocationScope(
-      sid,
-      importedLocationIds,
-      locationFilterValue,
-    );
-    const importScopeLocationIds = mergeScope.locationIds;
+    // The uploaded file is authoritative only for Locations it actually contains.
+    // Locations outside the file remain untouched.
+    const importScopeLocationIds = importedLocationIds;
     const BATCH = 200;
     al.innerHTML = `<div class="alert alert-blue">⏳ กำลังตรวจข้อมูลเดิมและสถานะการนับ...</div>`;
     const [existingSnapshots,existingDetails,existingAssignments,existingAnnualItems] = await Promise.all([
@@ -56331,7 +56412,7 @@ async function doImportXlsx() {
     const existingSnapshotMap = new Map(existingSnapshots.map(row => [`${row.location_id}|${row.item_id}`,row]));
     const fileHistoricalRestoreRows = [];
     const snapshotsToUpsert = safeSnapList;
-    const locationCodeById = new Map(mergeScope.locationCodeById || []);
+    const locationCodeById = new Map();
     (dbLocs || []).forEach(row => locationCodeById.set(row.id,row.code || row.id));
     const itemCodeById = new Map(existingSnapshots.map(row => [
       row.item_id,
@@ -56349,18 +56430,8 @@ async function doImportXlsx() {
       + completedCountOhRepairResult.saved;
     let unchangedSnapshotCount = 0;
     const snapshotChanges = [];
-    [...approvalOhRepairs,...detailOhRepairs,...completedCountOhRepairs]
-      .filter(repair => repair.snapshot?._historicalOhRecovered)
-      .forEach(repair => snapshotChanges.push({
-        type:'updated',
-        location:locationCodeById.get(repair.locationId) || repair.locationId,
-        item:itemCodeById.get(repair.itemId) || repair.itemId,
-        oldOH:displayQty(repair.oldOh),
-        newOH:displayQty(repair.onhandQty),
-        oldAL:displayQty(repair.alQty),
-        newAL:displayQty(repair.alQty),
-        alChanged:false,
-      }));
+    // Historical OH repair is reported separately. It must not be mixed into
+    // the three business-change Types shown for this WMS file.
     safeSnapList.forEach(expected => {
       const snapshotKey = `${expected.location_id}|${expected.item_id}`;
       const current = existingSnapshotMap.get(snapshotKey);
@@ -56561,6 +56632,16 @@ async function doImportXlsx() {
 
     const metrics = analysis.metrics;
     const importedRowsForLayoutCheck = parsedRows.map(row => ({locCode:row.locCode}));
+    const importResultGroups = wmsImportCombinedChangeGroups(snapshotChanges,detailChanges);
+    const importTypeGroups = type => importResultGroups.filter(group => group.type === type);
+    const importTypePartCount = (type,part,predicate=() => true) => importTypeGroups(type)
+      .reduce((sum,group) => sum + (group[part] || []).filter(predicate).length,0);
+    const newTypeSnapshotCount = importTypePartCount('new','snapshots',change => change.type === 'new');
+    const newTypeDetailCount = importTypePartCount('new','details',change => change.type === 'new');
+    const updatedTypeSnapshotCount = importTypePartCount('updated','snapshots');
+    const updatedTypeDetailCount = importTypePartCount('updated','details');
+    const exitTypeSnapshotCount = importTypePartCount('exit','snapshots');
+    const exitTypeDetailCount = importTypePartCount('exit','details',change => change.type === 'removed');
     al.innerHTML = `<div class="alert alert-green" style="line-height:1.55;padding:16px">
       <strong style="display:block;font-size:16px">✅ Import / Update WMS สำเร็จ</strong>
       <div style="margin-top:5px;font-size:12px;font-weight:700">อัปเดต Full WMS Snapshot แล้ว · รายการที่หายถูกตั้ง OH เป็น 0 · ประวัติ Count/DIFF ไม่เปลี่ยน</div>
@@ -56578,14 +56659,14 @@ async function doImportXlsx() {
         {group:'overview',label:'แถวที่อ่านจากไฟล์',value:metrics.rows.toLocaleString(uiLocale())},
         {group:'overview',label:'Location ในไฟล์',value:metrics.locations.toLocaleString(uiLocale())},
         {group:'overview',label:'SUM OH ในไฟล์',value:Number(metrics.sumOH).toLocaleString(uiLocale(),{maximumFractionDigits:2})},
-        {group:'new',label:'Snapshot ใหม่',value:newSnapshotCount.toLocaleString(uiLocale()),rawValue:newSnapshotCount},
-        {group:'new',label:'LPN/Lot ใหม่',value:newDetailCount.toLocaleString(uiLocale()),rawValue:newDetailCount},
-        {group:'updated',label:'OH/AL อัปเดต',value:updatedSnapshotCount.toLocaleString(uiLocale()),rawValue:updatedSnapshotCount},
-        {group:'updated',label:'LPN/Lot อัปเดต',value:updatedDetailCount.toLocaleString(uiLocale()),rawValue:updatedDetailCount},
-        {group:'updated',label:'กู้ OH ประวัติเดิม',value:recoveredHistoricalSnapshotCount.toLocaleString(uiLocale()),rawValue:recoveredHistoricalSnapshotCount},
-        {group:'updated',label:'รายการหายที่ตั้ง OH = 0',value:zeroedSnapshotKeys.size.toLocaleString(uiLocale()),rawValue:zeroedSnapshotKeys.size},
-        {group:'updated',label:'LPN/Lot ที่นำออก',value:preservedDetailCount.toLocaleString(uiLocale()),rawValue:preservedDetailCount},
-        {group:'updated',label:'เก็บ OH ตอนเริ่มนับ',value:baselineAuditRows.length.toLocaleString(uiLocale()),rawValue:baselineAuditRows.length},
+        {group:'new',label:'Snapshot ใหม่',value:newTypeSnapshotCount.toLocaleString(uiLocale()),rawValue:newTypeSnapshotCount},
+        {group:'new',label:'LPN/Lot ใหม่',value:newTypeDetailCount.toLocaleString(uiLocale()),rawValue:newTypeDetailCount},
+        {group:'updated',label:'Snapshot ที่อัปเดต',value:updatedTypeSnapshotCount.toLocaleString(uiLocale()),rawValue:updatedTypeSnapshotCount},
+        {group:'updated',label:'LPN/Lot ที่อัปเดต',value:updatedTypeDetailCount.toLocaleString(uiLocale()),rawValue:updatedTypeDetailCount},
+        {group:'exit',label:'Snapshot ที่ตั้ง OH = 0',value:exitTypeSnapshotCount.toLocaleString(uiLocale()),rawValue:exitTypeSnapshotCount},
+        {group:'exit',label:'LPN/Lot ที่นำออก',value:exitTypeDetailCount.toLocaleString(uiLocale()),rawValue:exitTypeDetailCount},
+        {group:'history',label:'กู้ OH ประวัติเดิม',value:recoveredHistoricalSnapshotCount.toLocaleString(uiLocale()),rawValue:recoveredHistoricalSnapshotCount},
+        {group:'history',label:'เก็บ OH ตอนเริ่มนับ',value:baselineAuditRows.length.toLocaleString(uiLocale()),rawValue:baselineAuditRows.length},
         ...(suppressedHistoricalSnapshotCount ? [{label:'แถว Location ว่างเดิมที่ไม่นำมาคำนวณ',value:suppressedHistoricalSnapshotCount.toLocaleString(uiLocale())}] : []),
         {label:'ไม่เปลี่ยน',value:(unchangedSnapshotCount+unchangedDetailCount).toLocaleString(uiLocale())},
         {label:'งานที่รักษาประวัติ Count',value:`${countedProtectedLocationIds.size.toLocaleString(uiLocale())} Location`},
@@ -60369,7 +60450,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.148" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.150" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
@@ -61293,7 +61374,7 @@ window.addEventListener('DOMContentLoaded', () => {
 if ('serviceWorker' in navigator && ['https:','http:'].includes(location.protocol)) {
   window.addEventListener('load', async () => {
     try {
-      const registration = await navigator.serviceWorker.register('./sw.js?v=148', { scope:'./' });
+      const registration = await navigator.serviceWorker.register('./sw.js?v=150', { scope:'./' });
       registration.update().catch(() => {});
       document.documentElement.dataset.pwaReady = 'true';
     } catch (error) {
