@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V1.151: Compare each WMS Import with the immediately previous committed Snapshot, never the original historical OH (verified). -->
 <!-- V1.150: Remove the optional Location Filter; every Import is authoritative only for Locations present in the file (verified). -->
 <!-- V1.149: Split Import results into New, OH/AL Updated, and Left Location Types with filters (verified). -->
 <!-- V1.147: Import scope is authoritative only for Locations present in the file (verified). -->
@@ -25,14 +26,14 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.150</title>
+<title>Cycle Count V1.151</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
 if (['http:','https:'].includes(location.protocol)) {
   const manifestLink = document.createElement('link');
   manifestLink.rel = 'manifest';
-  manifestLink.href = './manifest.webmanifest?v=150';
+  manifestLink.href = './manifest.webmanifest?v=151';
   document.head.appendChild(manifestLink);
 }
 </script>
@@ -41,8 +42,8 @@ if (['http:','https:'].includes(location.protocol)) {
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Cycle Count">
-<link rel="apple-touch-icon" href="./icons/icon-192.png?v=150">
-<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=150">
+<link rel="apple-touch-icon" href="./icons/icon-192.png?v=151">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=151">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -67,6 +68,7 @@ if (['http:','https:'].includes(location.protocol)) {
 <!-- V1.116: ทุกปุ่มบันทึก Count ตรวจ DIFF ทันที และเปิด Count รอบถัดไปของ Item เดิมโดยไม่รอครบ Location -->
 <!-- V1.141: Import WMS แบบ Merge ไม่ตั้ง OH/AL ที่หายเป็น 0 และไม่แก้ Snapshot ของงานที่เริ่มนับแล้ว -->
 <!-- V1.142: ผังคลังยึดประวัติ completed เป็นสีเขียว และกู้ OH จาก Count ที่จบแล้วก่อนคำนวณสถานะ -->
+<!-- V1.151: ผล Import แต่ละรอบเทียบ Snapshot ล่าสุดก่อน Import รอบนั้น ไม่ย้อนกลับไปเทียบ OH ประวัติรอบแรก -->
 <!-- V1.150: เอา Location Filter ออกจาก Import และใช้เฉพาะ Location ที่มีจริงในไฟล์เป็นขอบเขตเสมอ -->
 <!-- V1.149: ผล Import แยก 3 Type และกรองรายละเอียดได้ โดยยังรวม Snapshot กับ LPN/Lot ต่อ Location + Item -->
 <!-- V1.147: Import อัปเดตเฉพาะ Location ที่มีในไฟล์ ไม่ตั้ง OH=0 ให้ Location อื่นใน Session -->
@@ -22869,13 +22871,13 @@ body.count-page-active #app .count-handheld-page .citem-wrap {
 }
 </style>
 </head>
-<body data-build="v1-150">
+<body data-build="v1-151">
 <div id="app"></div>
 
 <script>
-// V1.150: one authoritative application version for the browser title,
+// V1.151: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '1.150';
+const APP_VERSION = '1.151';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -24396,7 +24398,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.150':'e.g. Warehouse V1.150',
+  'เช่น Warehouse V1.151':'e.g. Warehouse V1.151',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -29904,7 +29906,7 @@ function renderWmsImportResultSummary() {
   const title = Q('wms-import-result-title');
   const subtitle = Q('wms-import-result-subtitle');
   if (title) title.textContent = state.title;
-  if (subtitle) subtitle.textContent = 'สรุปผลการนำเข้าและตรวจสอบข้อมูล';
+  if (subtitle) subtitle.textContent = 'สรุปผลรอบล่าสุด · เปรียบเทียบกับ Snapshot ก่อน Import รอบนี้';
   body.scrollTop = 0;
 }
 
@@ -56013,7 +56015,9 @@ function wmsImportBuildMergeSnapshots(sessionId,incomingSnapshots,existingSnapsh
       onhand_qty:0,
       al_qty:0,
     });
-    zeroedKeys.add(key);
+    if (!wmsImportQtyEqual(row.onhand_qty,0) || !wmsImportQtyEqual(row.al_qty,0)) {
+      zeroedKeys.add(key);
+    }
   });
   return { rows:[...expectedMap.values()],zeroedKeys,suppressedHistoricalRows };
 }
@@ -56257,6 +56261,13 @@ async function doImportXlsx() {
       fetchImportedScopeRows('assignments',['id','session_id','location_id','status'],sid,importScopeLocationIds),
       fetchImportedScopeRows('annual_count_job_items',['job_id','location_id'],sid,importScopeLocationIds),
     ]);
+    // Freeze the live Snapshot exactly as it existed before this Import.
+    // Historical repair below may mutate existingSnapshots in memory, but the
+    // Import result must always compare round N with the committed round N-1.
+    const preImportSnapshots = existingSnapshots.map(row => ({
+      ...row,
+      items:row.items && typeof row.items === 'object' ? { ...row.items } : row.items,
+    }));
     const assignmentIds = existingAssignments.map(row => row.id).filter(Boolean);
     const annualJobIds = [...new Set(existingAnnualItems.map(row => row.job_id).filter(Boolean))];
     const [countResult,approvalResult,annualJobResult,importAuditResult,importRules] = await Promise.all([
@@ -56331,7 +56342,7 @@ async function doImportXlsx() {
 
     const baselineAuditRows = buildWmsCountBaselineAuditRows({
       sessionId:sid,
-      existingSnapshots,
+      existingSnapshots:preImportSnapshots,
       incomingSnapshots:snapList,
       assignments:existingAssignments,
       protectedLocationIds,
@@ -56395,7 +56406,7 @@ async function doImportXlsx() {
     const mergedSnapshots = wmsImportBuildMergeSnapshots(
       sid,
       snapList,
-      existingSnapshots,
+      preImportSnapshots,
       safeLocationIds,
     );
     const safeSnapList = mergedSnapshots.rows;
@@ -56409,12 +56420,12 @@ async function doImportXlsx() {
       annualProtectedLocationIds.has(locIdMap.get(importCodeKey(row.locCode)))
     ).length;
 
-    const existingSnapshotMap = new Map(existingSnapshots.map(row => [`${row.location_id}|${row.item_id}`,row]));
+    const existingSnapshotMap = new Map(preImportSnapshots.map(row => [`${row.location_id}|${row.item_id}`,row]));
     const fileHistoricalRestoreRows = [];
     const snapshotsToUpsert = safeSnapList;
     const locationCodeById = new Map();
     (dbLocs || []).forEach(row => locationCodeById.set(row.id,row.code || row.id));
-    const itemCodeById = new Map(existingSnapshots.map(row => [
+    const itemCodeById = new Map(preImportSnapshots.map(row => [
       row.item_id,
       row.items?.code || row.item_id,
     ]));
@@ -56424,10 +56435,6 @@ async function doImportXlsx() {
       : Number(value).toLocaleString(uiLocale(),{maximumFractionDigits:2});
     let newSnapshotCount = 0;
     let updatedSnapshotCount = 0;
-    let recoveredHistoricalSnapshotCount = approvalOhRepairResult.saved
-      + auditOhRepairResult.saved
-      + detailOhRepairResult.saved
-      + completedCountOhRepairResult.saved;
     let unchangedSnapshotCount = 0;
     const snapshotChanges = [];
     // Historical OH repair is reported separately. It must not be mixed into
@@ -56468,7 +56475,6 @@ async function doImportXlsx() {
       }
     });
     fileHistoricalRestoreRows.forEach(expected => {
-      recoveredHistoricalSnapshotCount++;
       const current = existingSnapshotMap.get(`${expected.location_id}|${expected.item_id}`);
       snapshotChanges.push({
         type:'updated',
@@ -56654,7 +56660,7 @@ async function doImportXlsx() {
     </div>`;
     showWmsImportResult({
       title:'Import / Update WMS สำเร็จ',
-      message:'Full WMS Snapshot สำเร็จ · รายการที่หายในขอบเขตถูกตั้ง OH เป็น 0 โดย Count, DIFF และสถานะย้อนหลังไม่เปลี่ยน',
+      message:'Full WMS Snapshot สำเร็จ · ผลด้านล่างเปรียบเทียบกับ Snapshot ล่าสุดก่อน Import รอบนี้ โดย Count, DIFF และสถานะย้อนหลังไม่เปลี่ยน',
       facts:[
         {group:'overview',label:'แถวที่อ่านจากไฟล์',value:metrics.rows.toLocaleString(uiLocale())},
         {group:'overview',label:'Location ในไฟล์',value:metrics.locations.toLocaleString(uiLocale())},
@@ -56665,7 +56671,6 @@ async function doImportXlsx() {
         {group:'updated',label:'LPN/Lot ที่อัปเดต',value:updatedTypeDetailCount.toLocaleString(uiLocale()),rawValue:updatedTypeDetailCount},
         {group:'exit',label:'Snapshot ที่ตั้ง OH = 0',value:exitTypeSnapshotCount.toLocaleString(uiLocale()),rawValue:exitTypeSnapshotCount},
         {group:'exit',label:'LPN/Lot ที่นำออก',value:exitTypeDetailCount.toLocaleString(uiLocale()),rawValue:exitTypeDetailCount},
-        {group:'history',label:'กู้ OH ประวัติเดิม',value:recoveredHistoricalSnapshotCount.toLocaleString(uiLocale()),rawValue:recoveredHistoricalSnapshotCount},
         {group:'history',label:'เก็บ OH ตอนเริ่มนับ',value:baselineAuditRows.length.toLocaleString(uiLocale()),rawValue:baselineAuditRows.length},
         ...(suppressedHistoricalSnapshotCount ? [{label:'แถว Location ว่างเดิมที่ไม่นำมาคำนวณ',value:suppressedHistoricalSnapshotCount.toLocaleString(uiLocale())}] : []),
         {label:'ไม่เปลี่ยน',value:(unchangedSnapshotCount+unchangedDetailCount).toLocaleString(uiLocale())},
@@ -60450,7 +60455,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.150" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.151" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
@@ -61374,7 +61379,7 @@ window.addEventListener('DOMContentLoaded', () => {
 if ('serviceWorker' in navigator && ['https:','http:'].includes(location.protocol)) {
   window.addEventListener('load', async () => {
     try {
-      const registration = await navigator.serviceWorker.register('./sw.js?v=150', { scope:'./' });
+      const registration = await navigator.serviceWorker.register('./sw.js?v=151', { scope:'./' });
       registration.update().catch(() => {});
       document.documentElement.dataset.pwaReady = 'true';
     } catch (error) {
