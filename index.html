@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V1.159: Hide Locations submitted for Supervisor review from the assignment workspace (verified). -->
+<!-- V1.158: Restore each visible assignment status badge to the right side of the simplified Location card (verified). -->
+<!-- V1.157: Simplify assignment Location cards and omit completed/approved Locations from the assignment workspace (verified). -->
+<!-- V1.156: Reassigned Count work starts with an empty physical-counter picker while preserving prior counter history (verified). -->
+<!-- V1.155: Portal WMS Remark menus and reusable multi-select filters above clipping card shells (verified). -->
 <!-- V1.154: Refine the WMS closure summary labels, sizing, and spacing (verified). -->
 <!-- V1.152: Add the live closed-Location summary inside the right side of the WMS Review Completed card (verified). -->
 <!-- V1.151: Compare each WMS Import with the immediately previous committed Snapshot, never the original historical OH (verified). -->
@@ -28,14 +33,14 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.154</title>
+<title>Cycle Count V1.159</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
 if (['http:','https:'].includes(location.protocol)) {
   const manifestLink = document.createElement('link');
   manifestLink.rel = 'manifest';
-  manifestLink.href = './manifest.webmanifest?v=154';
+  manifestLink.href = './manifest.webmanifest?v=159';
   document.head.appendChild(manifestLink);
 }
 </script>
@@ -44,8 +49,8 @@ if (['http:','https:'].includes(location.protocol)) {
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Cycle Count">
-<link rel="apple-touch-icon" href="./icons/icon-192.png?v=154">
-<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=154">
+<link rel="apple-touch-icon" href="./icons/icon-192.png?v=159">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=159">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -1004,11 +1009,12 @@ select { appearance: none; background-image: url('data:image/svg+xml;charset=US-
 }
 .wms-note-menu.is-viewport-menu {
   position:fixed !important;
-  z-index:3600 !important;
+  z-index:10040 !important;
   right:auto !important;
   margin:0 !important;
   overflow-y:auto;
   overscroll-behavior:contain;
+  pointer-events:auto;
 }
 .wms-note-menu[hidden] { display: none; }
 .wms-note-menu-title {
@@ -13730,6 +13736,15 @@ body .tag.tag-gray{
   color:var(--theme-body-text-color);background:var(--theme-card-bg);
   box-shadow:0 16px 36px rgba(36,47,50,.22);
 }
+.multi-filter-panel.is-viewport-panel{
+  position:fixed !important;
+  z-index:10030 !important;
+  min-width:0 !important;
+  margin:0 !important;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  pointer-events:auto;
+}
 .multi-filter-panel[hidden]{display:none !important}
 .multi-filter-options{max-height:230px;overflow:auto;display:grid;gap:4px;padding:2px}
 .multi-filter-option{display:flex;align-items:center;gap:9px;padding:8px 9px;border-radius:10px;cursor:pointer;font-size:12px;font-weight:650}
@@ -22959,15 +22974,51 @@ body.count-page-active #app .count-handheld-page .citem-wrap {
 @media(prefers-reduced-motion:reduce){
   .cat-loader-orbit{animation:catLoaderOrbit 8s linear infinite!important}
 }
+
+/* V1.157 — Assignment cards show only the selectable Location and its current User. */
+#app .assign-bento-shell .normal-free-row {
+  grid-template-columns:auto minmax(0,1fr) auto !important;
+  grid-template-rows:auto !important;
+  min-height:78px !important;
+  gap:12px !important;
+  padding:14px 16px !important;
+}
+#app .assign-bento-shell .assign-bento-tile-copy {
+  display:grid;
+  min-width:0;
+  gap:4px;
+  align-content:center;
+}
+#app .assign-bento-shell .normal-free-code {
+  font-size:16px !important;
+  line-height:1.25 !important;
+  font-weight:850 !important;
+}
+#app .assign-bento-shell .normal-free-user {
+  color:var(--theme-muted-text-color);
+  font-size:13px !important;
+  line-height:1.35 !important;
+  font-weight:700 !important;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+#app .assign-bento-shell .assign-bento-tile-state {
+  justify-self:end;
+  align-self:center;
+  max-width:150px;
+  text-align:center;
+  white-space:normal;
+}
 </style>
 </head>
-<body data-build="v1-154">
+<body data-build="v1-159">
 <div id="app"></div>
 
 <script>
-// V1.154: one authoritative application version for the browser title,
+// V1.159: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '1.154';
+const APP_VERSION = '1.159';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -24488,7 +24539,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.154':'e.g. Warehouse V1.154',
+  'เช่น Warehouse V1.159':'e.g. Warehouse V1.159',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -29389,7 +29440,7 @@ function multiFilterFieldHtml(id,label) {
   return `<div class="fg multi-filter-field">
     <label style="font-size:11px">${escapeWmsText(label)}</label>
     <div class="multi-filter" id="${id}-multi">
-      <button class="multi-filter-trigger" type="button" aria-haspopup="listbox" aria-expanded="false"
+      <button class="multi-filter-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="${id}-panel"
         onclick="event.stopPropagation();toggleMultiFilter('${id}')">
         <span class="multi-filter-trigger-copy" id="${id}-summary">${uiCopy('ทั้งหมด','All')}</span>
         <span class="multi-filter-chevron" aria-hidden="true">⌄</span>
@@ -29471,6 +29522,84 @@ function selectAllMultiFilter(id) {
   commitMultiFilter(id);
 }
 
+function multiFilterPanelAnchor(id) {
+  const panel = Q(`${id}-panel`);
+  const savedAnchor = panel?._multiFilterAnchor;
+  if (savedAnchor?.isConnected) return savedAnchor;
+  return Q(`${id}-multi`)?.querySelector('.multi-filter-trigger') || null;
+}
+
+function mountMultiFilterPanel(id) {
+  const panel = Q(`${id}-panel`);
+  const root = Q(`${id}-multi`);
+  const anchor = root?.querySelector('.multi-filter-trigger');
+  if (!panel || !root || !anchor) return false;
+  if (!panel._multiFilterHome) {
+    panel._multiFilterHome = panel.parentNode;
+    panel._multiFilterNext = panel.nextSibling;
+  }
+  panel._multiFilterAnchor = anchor;
+  const overlayRoot = Q('app') || document.body;
+  if (panel.parentNode !== overlayRoot) overlayRoot.appendChild(panel);
+  panel.classList.add('is-viewport-panel');
+  return true;
+}
+
+function restoreMultiFilterPanel(id) {
+  const panel = Q(`${id}-panel`);
+  if (!panel) return;
+  panel.classList.remove('is-viewport-panel');
+  ['position','z-index','left','right','top','bottom','width','max-height'].forEach(property => panel.style.removeProperty(property));
+  const home = panel._multiFilterHome;
+  const next = panel._multiFilterNext;
+  if (home?.isConnected) {
+    if (next?.parentNode === home) home.insertBefore(panel,next);
+    else home.appendChild(panel);
+  } else if (panel.parentNode === (Q('app') || document.body)) {
+    panel.remove();
+  }
+  delete panel._multiFilterHome;
+  delete panel._multiFilterNext;
+  delete panel._multiFilterAnchor;
+}
+
+function positionMultiFilterPanel(id) {
+  const panel = Q(`${id}-panel`);
+  const anchor = multiFilterPanelAnchor(id);
+  if (!panel || panel.hidden || !anchor) return;
+  const viewportWidth = Math.max(280,window.innerWidth || document.documentElement.clientWidth || 0);
+  const viewportHeight = Math.max(320,window.innerHeight || document.documentElement.clientHeight || 0);
+  const margin = viewportWidth <= 700 ? 12 : 14;
+  const gap = 8;
+  const anchorRect = anchor.getBoundingClientRect();
+  const width = viewportWidth <= 700
+    ? viewportWidth - (margin * 2)
+    : Math.min(380,Math.max(260,anchorRect.width),viewportWidth - (margin * 2));
+  const left = viewportWidth <= 700
+    ? margin
+    : Math.max(margin,Math.min(anchorRect.left,viewportWidth - width - margin));
+
+  panel.style.setProperty('position','fixed','important');
+  panel.style.setProperty('z-index','10030','important');
+  panel.style.setProperty('width',`${width}px`,'important');
+  panel.style.setProperty('left',`${left}px`,'important');
+  panel.style.setProperty('right','auto','important');
+  panel.style.setProperty('top','auto','important');
+  panel.style.setProperty('bottom','auto','important');
+  panel.style.setProperty('max-height',`${Math.max(200,viewportHeight - (margin * 2))}px`,'important');
+
+  const naturalHeight = Math.min(panel.scrollHeight || 320,viewportHeight - (margin * 2));
+  const spaceBelow = viewportHeight - anchorRect.bottom - margin;
+  const spaceAbove = anchorRect.top - margin;
+  if (spaceBelow >= Math.min(naturalHeight,280) || spaceBelow >= spaceAbove) {
+    panel.style.setProperty('top',`${Math.max(margin,anchorRect.bottom + gap)}px`,'important');
+    panel.style.setProperty('max-height',`${Math.max(180,spaceBelow - gap)}px`,'important');
+  } else {
+    panel.style.setProperty('bottom',`${Math.max(margin,viewportHeight - anchorRect.top + gap)}px`,'important');
+    panel.style.setProperty('max-height',`${Math.max(180,spaceAbove - gap)}px`,'important');
+  }
+}
+
 function closeMultiFilter(id) {
   const root = Q(`${id}-multi`);
   const panel = Q(`${id}-panel`);
@@ -29478,6 +29607,7 @@ function closeMultiFilter(id) {
   root?.classList.remove('open');
   if (panel) panel.hidden = true;
   trigger?.setAttribute('aria-expanded','false');
+  restoreMultiFilterPanel(id);
   trigger?.focus();
 }
 
@@ -29490,6 +29620,15 @@ function closeAllMultiFilters(exceptId='') {
     const trigger = element.querySelector('.multi-filter-trigger');
     if (panel) panel.hidden = true;
     trigger?.setAttribute('aria-expanded','false');
+    restoreMultiFilterPanel(id);
+  });
+  document.querySelectorAll('.multi-filter-panel.is-viewport-panel').forEach(panel => {
+    const id = panel.id.replace(/-panel$/,'');
+    if (exceptId && id === exceptId) return;
+    const root = Q(`${id}-multi`);
+    if (root?.classList.contains('open')) return;
+    panel.hidden = true;
+    restoreMultiFilterPanel(id);
   });
 }
 
@@ -29498,15 +29637,37 @@ function toggleMultiFilter(id) {
   const panel = Q(`${id}-panel`);
   if (!root || !panel) return;
   const willOpen = panel.hidden;
+  if (!willOpen) {
+    closeMultiFilter(id);
+    return;
+  }
   closeAllMultiFilters(id);
-  panel.hidden = !willOpen;
-  root.classList.toggle('open',willOpen);
-  root.querySelector('.multi-filter-trigger')?.setAttribute('aria-expanded',String(willOpen));
+  if (!mountMultiFilterPanel(id)) return;
+  panel.hidden = false;
+  root.classList.add('open');
+  root.querySelector('.multi-filter-trigger')?.setAttribute('aria-expanded','true');
+  positionMultiFilterPanel(id);
+  requestAnimationFrame(() => positionMultiFilterPanel(id));
 }
 
 document.addEventListener('click',event => {
   if (!event.target.closest('.multi-filter')) closeAllMultiFilters();
 });
+document.addEventListener('keydown',event => {
+  if (event.key === 'Escape' && document.querySelector('.multi-filter.open')) closeAllMultiFilters();
+});
+let _multiFilterPositionFrame = 0;
+function scheduleOpenMultiFilterPosition() {
+  if (_multiFilterPositionFrame) return;
+  _multiFilterPositionFrame = requestAnimationFrame(() => {
+    _multiFilterPositionFrame = 0;
+    const root = document.querySelector('.multi-filter.open');
+    const id = root?.id?.replace(/-multi$/,'');
+    if (id) positionMultiFilterPanel(id);
+  });
+}
+window.addEventListener('resize',scheduleOpenMultiFilterPosition);
+document.addEventListener('scroll',scheduleOpenMultiFilterPosition,true);
 
 const SUCCESS_FEEDBACK_POLICY = Object.freeze({
   major: 'modal',
@@ -30324,6 +30485,26 @@ function actualCounterNamesFromRecords(records=[]) {
   return [...new Set(
     (records || []).flatMap(record => splitActualCounterNames(record?.actual_counter_name))
   )];
+}
+
+function countRecordsInCurrentAssignmentCycle(records=[],assignedAt='') {
+  const assignedTime = Date.parse(assignedAt || '');
+  if (!Number.isFinite(assignedTime)) return records || [];
+  return (records || []).filter(record => {
+    const countedTime = Date.parse(record?.counted_at || '');
+    return Number.isFinite(countedTime) && countedTime >= assignedTime;
+  });
+}
+
+function assignmentHasEarlierCounterHistory(records=[],assignedAt='') {
+  const assignedTime = Date.parse(assignedAt || '');
+  if (!Number.isFinite(assignedTime)) return false;
+  return (records || []).some(record => {
+    const countedTime = Date.parse(record?.counted_at || '');
+    return Number.isFinite(countedTime)
+      && countedTime < assignedTime
+      && splitActualCounterNames(record?.actual_counter_name).length > 0;
+  });
 }
 
 function actualCounterLabel(records=[]) {
@@ -36093,7 +36274,7 @@ async function loadCCount() {
   let annualMode = Boolean(jid && jitemid);
 
   const assignmentResult = await sb.from('assignments')
-    .select('id,status,location_id,session_id,locations(code,zone,area,row_no,level),count_sessions(name)')
+    .select('id,status,location_id,session_id,assigned_at,locations(code,zone,area,row_no,level),count_sessions(name)')
     .eq('id', aid).single();
   let asgn = assignmentResult.data;
   if (!asgn) {
@@ -36195,7 +36376,7 @@ async function loadCCount() {
     sb.from('remark_options').select('id,label').eq('context','count').eq('active',true).order('label'),
     getSessionRules(asgn.session_id),
     sb.from('count_records')
-      .select('item_id,round,count_qty,actual_counter_name,remark,photo_url,type_issue')
+      .select('item_id,round,count_qty,actual_counter_name,remark,photo_url,type_issue,counted_at')
       .eq('assignment_id',aid)
       .order('round'),
     sb.from('audit_log')
@@ -36749,11 +36930,18 @@ async function loadCCount() {
   </div>`;
 
   const activeCounterNameSet = new Set((window._counterNames || []).map(counter => counter.name));
-  const savedCounterNames = actualCounterNamesFromRecords(scopedCountRows)
+  const currentCycleCounterRows = countRecordsInCurrentAssignmentCycle(scopedCountRows,asgn.assigned_at);
+  const assignmentWasReissued = assignmentHasEarlierCounterHistory(scopedCountRows,asgn.assigned_at);
+  const savedCounterNames = actualCounterNamesFromRecords(currentCycleCounterRows)
     .filter(name => activeCounterNameSet.has(name));
   const preferredCounterNames = savedCounterNames.length
     ? savedCounterNames
-    : (window._lastPickedCounterNames || []).filter(name => activeCounterNameSet.has(name));
+    : assignmentWasReissued
+      ? []
+      : (window._lastPickedCounterNames || []).filter(name => activeCounterNameSet.has(name));
+  if (assignmentWasReissued && !savedCounterNames.length) {
+    window._lastPickedCounterNames = [];
+  }
   window._selectedCounters = new Set(preferredCounterNames);
   renderCounterPicker();
   refreshCountEntrySummary();
@@ -48262,18 +48450,46 @@ const WMS_NOTE_PRESETS = [
 function closeWmsNoteMenus(exceptKey='') {
   document.querySelectorAll('.wms-note-menu').forEach(menu => {
     if (!exceptKey || menu.id !== `wms_note_menu_${exceptKey}`) {
+      const anchor = menu._wmsNoteAnchor?.isConnected
+        ? menu._wmsNoteAnchor
+        : document.querySelector(`[aria-controls="${menu.id}"]`);
       menu.hidden = true;
       menu.classList.remove('is-viewport-menu');
       ['left','right','top','bottom','width','max-height'].forEach(property => menu.style.removeProperty(property));
-      menu.closest('.wms-note-control')?.querySelector('.wms-note-btn')?.setAttribute('aria-expanded','false');
+      anchor?.setAttribute('aria-expanded','false');
+      const home = menu._wmsNoteHome;
+      const next = menu._wmsNoteNext;
+      if (home?.isConnected) {
+        if (next?.parentNode === home) home.insertBefore(menu,next);
+        else home.appendChild(menu);
+      } else if (menu.parentNode === (Q('app') || document.body)) {
+        menu.remove();
+      }
+      delete menu._wmsNoteHome;
+      delete menu._wmsNoteNext;
+      delete menu._wmsNoteAnchor;
     }
   });
 }
 
+function mountWmsNoteMenu(menu,anchor) {
+  if (!menu || !anchor) return false;
+  if (!menu._wmsNoteHome) {
+    menu._wmsNoteHome = menu.parentNode;
+    menu._wmsNoteNext = menu.nextSibling;
+  }
+  menu._wmsNoteAnchor = anchor;
+  const overlayRoot = Q('app') || document.body;
+  if (menu.parentNode !== overlayRoot) overlayRoot.appendChild(menu);
+  menu.classList.add('is-viewport-menu');
+  return true;
+}
+
 function positionWmsNoteMenu(key) {
   const menu = Q(`wms_note_menu_${key}`);
-  const control = menu?.closest('.wms-note-control');
-  const anchor = control?.querySelector('.wms-note-btn');
+  const anchor = menu?._wmsNoteAnchor?.isConnected
+    ? menu._wmsNoteAnchor
+    : document.querySelector(`[aria-controls="wms_note_menu_${key}"]`);
   if (!menu || menu.hidden || !anchor) return;
   const viewportWidth = Math.max(280,window.innerWidth || document.documentElement.clientWidth || 0);
   const viewportHeight = Math.max(320,window.innerHeight || document.documentElement.clientHeight || 0);
@@ -48308,13 +48524,15 @@ function toggleWmsNoteMenu(event, key) {
   const menu = Q(`wms_note_menu_${key}`);
   if (!menu) return;
   const willOpen = menu.hidden;
-  closeWmsNoteMenus(key);
-  menu.hidden = !willOpen;
-  menu.closest('.wms-note-control')?.querySelector('.wms-note-btn')?.setAttribute('aria-expanded',String(willOpen));
   if (!willOpen) {
     closeWmsNoteMenus();
     return;
   }
+  closeWmsNoteMenus(key);
+  const anchor = document.querySelector(`[aria-controls="wms_note_menu_${key}"]`);
+  if (!mountWmsNoteMenu(menu,anchor)) return;
+  menu.hidden = false;
+  anchor?.setAttribute('aria-expanded','true');
   if (willOpen) {
     updateWmsNoteSelectionPreview(key);
     positionWmsNoteMenu(key);
@@ -48500,7 +48718,9 @@ document.addEventListener('keydown', event => {
   if (event.key !== 'Escape') return;
   const menu = [...document.querySelectorAll('.wms-note-menu:not([hidden])')][0];
   if (!menu) return;
-  const button = menu.closest('.wms-note-control')?.querySelector('.wms-note-btn');
+  const button = menu._wmsNoteAnchor?.isConnected
+    ? menu._wmsNoteAnchor
+    : document.querySelector(`[aria-controls="${menu.id}"]`);
   closeWmsNoteMenus();
   button?.focus?.();
 });
@@ -49021,6 +49241,7 @@ function mergeLoadedWmsAuditHistory(auditRows,sessionId) {
 }
 
 function renderWmsList() {
+  closeWmsNoteMenus();
   const container = Q('wms-list');
   if (!container) return;
   const wmsRows = (window._wmsRows || []).filter(isWmsQueueRow);
@@ -49885,7 +50106,7 @@ async function doReassignUser(aid, idx, targetRound) {
   if (!uid) return;
   const { data: before } = await sb.from('assignments').select('session_id,location_id,profiles!assigned_to(name)').eq('id', aid).single();
   const statusForTarget = { 2:'round1_done', 3:'round2_done' }[targetRound];
-  const updates = { assigned_to: uid };
+  const updates = { assigned_to: uid, assigned_at:new Date().toISOString() };
   if (statusForTarget) updates.status = statusForTarget;
   await sb.from('assignments').update(updates).eq('id', aid);
   const label = sel.options[sel.selectedIndex]?.textContent || '';
@@ -50494,7 +50715,7 @@ async function reqRecount(aid, targetRound) {
   const sel = Q('recount-user');
   const { data: before } = await sb.from('assignments').select('session_id,location_id,profiles!assigned_to(name)').eq('id', aid).single();
   const statusForTarget = { 2:'round1_done', 3:'round2_done' }[targetRound];
-  const updates = { assigned_to: uid };
+  const updates = { assigned_to: uid, assigned_at:new Date().toISOString() };
   if (statusForTarget) updates.status = statusForTarget;
   await sb.from('assignments').update(updates).eq('id', aid);
   const label = sel.options[sel.selectedIndex]?.textContent || '';
@@ -52816,6 +53037,16 @@ function getNormalLocationRows() {
   return sortRowsByLocation(rows,row => row.location?.code);
 }
 
+const NORMAL_ASSIGNMENT_WORKSPACE_HIDDEN_STATUSES = new Set(['round3_done','completed','approved']);
+
+function normalAssignmentVisibleInWorkspace(assignment) {
+  return !assignment || !NORMAL_ASSIGNMENT_WORKSPACE_HIDDEN_STATUSES.has(String(assignment.status || ''));
+}
+
+function getNormalAssignmentWorkspaceRows() {
+  return getNormalLocationRows().filter(row => normalAssignmentVisibleInWorkspace(row.assignment));
+}
+
 function updateNormalAssignmentStatsFromRows() {
   const rows = getNormalLocationRows();
   const assigned = rows.filter(row => Boolean(row.assignment?.assigned_to)).length;
@@ -52906,7 +53137,7 @@ function handleNormalFreeMultiFilterChange(key,values) {
 }
 
 function refreshNormalFreeDependentFilters() {
-  const sourceRows = getNormalLocationRows();
+  const sourceRows = getNormalAssignmentWorkspaceRows();
   const search = String(Q('normal-free-search')?.value || '').trim().toLowerCase();
   const facetRows = (excludeKey='') => sourceRows.filter(entry => {
     const location = entry.location || {};
@@ -52988,7 +53219,7 @@ function setNormalFreeReassignMode(forceValue) {
 function renderNormalFreeLocationList() {
   const list = Q('normal-free-location-list');
   if (!list) return;
-  const rows = getNormalLocationRows();
+  const rows = getNormalAssignmentWorkspaceRows();
   const availableIds = new Set(
     rows.filter(row => !row.assignment).map(row => row.location.id)
   );
@@ -53034,7 +53265,7 @@ function renderNormalFreeLocationList() {
   _normalFreeFilteredLocationCount = filtered.length;
   _normalFreeVisibleLocationIds = displayed.map(entry => entry.location.id);
   if (!filtered.length) {
-    list.innerHTML = `<div class="annual-empty">${rows.length ? 'ไม่พบ Location ที่ตรงกับตัวกรองหรือสถานะงาน' : 'Session นี้ยังไม่มี Location'}</div>`;
+    list.innerHTML = `<div class="annual-empty">${rows.length ? 'ไม่พบ Location ที่ตรงกับตัวกรองหรือสถานะงาน' : 'ไม่มี Location ที่ต้องมอบหมายใน Session นี้'}</div>`;
     syncNormalFreeSelection();
     return;
   }
@@ -53056,28 +53287,13 @@ function renderNormalFreeLocationList() {
       : available ? _normalFreeSelectedLocationIds : _normalFreeSelectedPrintLocationIds;
     const selectionValue = expired ? assignment.id : location.id;
     const checked = selectedSet.has(selectionValue) ? 'checked' : '';
-    const detail = [
-      location.zone,location.area,
-      location.row_no ? `Row ${location.row_no}` : '',
-      location.level ? `Level ${location.level}` : '',
-    ].filter(Boolean).join(' · ');
     const status = expired
       ? { cls:'tag-amber',lbl:'งานหมดเวลา รอจ่ายใหม่' }
       : available
       ? { cls:'tag-gray',lbl:'ยังไม่จ่ายงาน' }
       : tagInfo(assignment.status);
     const checkboxDisabled = !expired && _normalFreeReassignMode && !reassignable ? 'disabled' : '';
-    const assignmentMeta = expired
-      ? `ผู้รับเดิม: ${assignment.expired_profiles?.name || 'ไม่ระบุ'} · เลือกเพื่อจ่ายคนเดิมหรือเปลี่ยนคน`
-      : _normalFreeReassignMode
-      ? (reassignable
-          ? `User เดิม: ${assignment.profiles?.name || 'ไม่ระบุ'} · เลือกเพื่อจ่ายงานซ้ำ`
-          : available
-            ? 'ยังไม่เคยจ่ายงาน · ปิดโหมดจ่ายงานซ้ำเพื่อเลือก'
-            : `User: ${assignment.profiles?.name || 'ไม่ระบุ'} · สถานะนี้ให้ใช้เมนูจ่ายงานรอบ 2/3`)
-      : available
-        ? 'เลือกอิสระ · ไม่จำกัดจำนวน'
-        : `User: ${assignment.profiles?.name || 'ไม่ระบุ'} · เลือกเพื่อพิมพ์`;
+    const assignedUserName = assignment?.profiles?.name || 'ยังไม่จ่ายงาน';
     const ariaAction = expired ? 'งานหมดเวลา รอจ่ายใหม่' : selectionMode === 'reassign' ? 'เลือกเพื่อจ่ายงานซ้ำ' : available ? 'เลือกเพื่อจ่ายงาน' : 'เลือกเพื่อพิมพ์';
     return `<label class="normal-free-row ${available?'':'is-assigned'} ${expired?'is-expired':''}">
       <input class="normal-free-checkbox ${expired?'expired-work-check':''}" type="checkbox" value="${selectionValue}" ${checked} ${checkboxDisabled}
@@ -53085,10 +53301,9 @@ function renderNormalFreeLocationList() {
         onchange="toggleNormalFreeLocation('${selectionValue}',this.checked,'${selectionMode}')">
       <span class="assign-bento-tile-copy">
         <span class="normal-free-code">${escapeWmsText(location.code || '?')}</span>
-        <span class="normal-free-meta" style="display:block;margin-top:3px">${escapeWmsText(detail || 'ไม่ระบุรายละเอียด')}</span>
+        <span class="normal-free-user">User: ${escapeWmsText(assignedUserName)}</span>
       </span>
       <span class="assign-bento-tile-state tag ${status.cls}">${escapeWmsText(status.lbl)}</span>
-      <span class="assign-bento-tile-note">${escapeWmsText(assignmentMeta)}</span>
     </label>`;
   }).join('');
   syncNormalFreeSelection();
@@ -53108,7 +53323,7 @@ function toggleNormalFreeLocation(locationId,checked,mode='assign') {
 function selectNormalFreeLocations(mode) {
   if (mode === 'visible') {
     if (_normalFreeReassignMode) {
-      const reassignableIds = new Set(getNormalLocationRows()
+      const reassignableIds = new Set(getNormalAssignmentWorkspaceRows()
         .filter(entry => isNormalFreeReassignableAssignment(entry.assignment))
         .map(entry => entry.location.id));
       _normalFreeVisibleLocationIds.forEach(id => {
@@ -53116,12 +53331,13 @@ function selectNormalFreeLocations(mode) {
       });
     } else {
       const assignedIds = new Set(getAssignedNormalRoundOneLocationIds());
-      const expiredIds = new Set(getNormalLocationRows()
+      const expiredRows = getNormalAssignmentWorkspaceRows();
+      const expiredIds = new Set(expiredRows
         .filter(entry => isExpiredWaitingAssignment(entry.assignment))
         .map(entry => entry.location.id));
       _normalFreeVisibleLocationIds.forEach(id => {
         if (expiredIds.has(id)) {
-          const expiredAssignment = getNormalLocationRows().find(entry => entry.location.id === id)?.assignment;
+          const expiredAssignment = expiredRows.find(entry => entry.location.id === id)?.assignment;
           if (expiredAssignment?.id) _expiredSelectedAssignmentIds.add(expiredAssignment.id);
           return;
         }
@@ -53171,7 +53387,7 @@ function syncNormalFreeSelection() {
 function getAssignedNormalRoundOneLocationIds() {
   return [...new Set(
     (window._bulkAssignments || [])
-      .filter(assignment => !isExpiredWaitingAssignment(assignment))
+      .filter(assignment => !isExpiredWaitingAssignment(assignment) && normalAssignmentVisibleInWorkspace(assignment))
       .map(assignment => assignment?.location_id)
       .filter(Boolean)
   )];
@@ -53316,7 +53532,7 @@ function assignSelectedNormalLocations() {
   const userId = userSelect?.value;
   const isReassign = _normalFreeReassignMode;
   const availableIds = new Set(getBulkAvailableLocations().map(location => location.id));
-  const reassignableIds = new Set(getNormalLocationRows()
+  const reassignableIds = new Set(getNormalAssignmentWorkspaceRows()
     .filter(entry => isNormalFreeReassignableAssignment(entry.assignment))
     .map(entry => entry.location.id));
   const selectedIds = isReassign
@@ -60588,7 +60804,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.154" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.159" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
@@ -61512,7 +61728,7 @@ window.addEventListener('DOMContentLoaded', () => {
 if ('serviceWorker' in navigator && ['https:','http:'].includes(location.protocol)) {
   window.addEventListener('load', async () => {
     try {
-      const registration = await navigator.serviceWorker.register('./sw.js?v=154', { scope:'./' });
+      const registration = await navigator.serviceWorker.register('./sw.js?v=159', { scope:'./' });
       registration.update().catch(() => {});
       document.documentElement.dataset.pwaReady = 'true';
     } catch (error) {
