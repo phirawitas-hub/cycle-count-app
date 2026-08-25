@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V1.170: Auto-save WMS Remark selections and flush every pending Remark before closing its WMS Location (verified). -->
+<!-- V1.169: Persist typed WMS Remarks without requiring the plus button, normalize removals, and verify the saved Audit state before reporting success (verified). -->
+<!-- V1.168: Make the loading canvas cover the complete content viewport and clear the Location/Item search after closing WMS work (verified). -->
+<!-- V1.167: Keep confirmation and WMS review in the same Session + Location flow, with explicit continue-to-WMS and exit-for-later choices (verified). -->
+<!-- V1.166: Merge confirmation progress and WMS adjustment into one operational workspace; preserve pending confirmation, found-item review, WMS checks, notes, and location closing (verified). -->
 <!-- V1.165: Separate Zone labels from WMS prefixes, generate Longspan as B-E*/B-F*, repair legacy Zone-name prefixes, preview sample codes, and block unresolved/invalid future layout prefixes (verified). -->
 <!-- V1.164: Recognize both RGB and Excel Theme/Indexed fill colours so green usable cells are imported exactly as displayed in Excel (verified). -->
 <!-- V1.163: Make Excel cell colour the import contract: green usable, black aisle, blue pillar, red disabled, uncoloured ignored (verified). -->
@@ -39,14 +44,14 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.165</title>
+<title>Cycle Count V1.170</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
 if (['http:','https:'].includes(location.protocol)) {
   const manifestLink = document.createElement('link');
   manifestLink.rel = 'manifest';
-  manifestLink.href = './manifest.webmanifest?v=165';
+  manifestLink.href = './manifest.webmanifest?v=170';
   document.head.appendChild(manifestLink);
 }
 </script>
@@ -55,8 +60,8 @@ if (['http:','https:'].includes(location.protocol)) {
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Cycle Count">
-<link rel="apple-touch-icon" href="./icons/icon-192.png?v=165">
-<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=165">
+<link rel="apple-touch-icon" href="./icons/icon-192.png?v=170">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=170">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -19252,6 +19257,12 @@ body.expired-session-modal-open { overflow:hidden; }
   border:1px solid color-mix(in srgb,var(--theme-primary-color) 18%,transparent);
   background:color-mix(in srgb,var(--theme-primary-color) 4%,var(--theme-card-bg));
 }
+#app .variance-location-close-actions {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,.72fr);
+  gap:10px;
+}
+#app .variance-location-close-actions .btn { width:100%; }
 #app .variance-location-close small {
   color:var(--theme-muted-text-color);
   font-size:10px;
@@ -19265,6 +19276,7 @@ body.expired-session-modal-open { overflow:hidden; }
   color:var(--theme-heading-color) !important;
 }
 @media (max-width:760px) {
+  #app .variance-location-close-actions { grid-template-columns:1fr; }
   #app .variance-location-progress { grid-template-columns:1fr; }
   #app .variance-location-progress-stats { grid-template-columns:repeat(3,minmax(0,1fr)); }
   #app .variance-review-toolbar { position:static;align-items:stretch;flex-direction:column; }
@@ -21172,6 +21184,17 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
 .wms-location-group.is-pending {
   border-color:color-mix(in srgb,var(--theme-warning-color) 45%,var(--theme-border-color));
 }
+.wms-location-group.is-flow-focus {
+  scroll-margin-top:120px;
+  border-color:var(--theme-primary-color);
+  box-shadow:0 0 0 4px color-mix(in srgb,var(--theme-primary-color) 16%,transparent),0 18px 42px color-mix(in srgb,var(--theme-primary-color) 18%,transparent);
+  animation:wmsFlowFocusPulse 1.1s ease-out 1;
+}
+@keyframes wmsFlowFocusPulse {
+  0% { transform:translateY(5px); }
+  55% { transform:translateY(0); }
+  100% { transform:none; }
+}
 .wms-location-head {
   padding:16px 18px;
   display:grid;
@@ -22819,12 +22842,18 @@ body.count-page-active #app .count-handheld-page .citem-wrap {
   color-scheme:only light;
 }
 .page-loading-overlay{
-  position:absolute!important;
+  position:fixed!important;
   z-index:190!important;
-  inset:0!important;
+  inset:auto!important;
+  top:var(--page-loader-top,0px)!important;
+  right:var(--page-loader-right,0px)!important;
+  bottom:var(--page-loader-bottom,0px)!important;
+  left:var(--page-loader-left,0px)!important;
   display:grid!important;
   place-items:center!important;
-  min-height:100%!important;
+  width:auto!important;
+  height:auto!important;
+  min-height:0!important;
   padding:0!important;
   overflow:hidden!important;
   background:#fff!important;
@@ -22837,6 +22866,10 @@ body.count-page-active #app .count-handheld-page .citem-wrap {
   -webkit-backdrop-filter:none!important;
   opacity:1;
   transition:opacity .28s ease!important;
+}
+body.page-loading-active,
+body.page-loading-active .main-wrapper{
+  overflow:hidden!important;
 }
 .page-loading-overlay::before{display:none!important}
 .vespa-loader-card{
@@ -23018,13 +23051,13 @@ body.count-page-active #app .count-handheld-page .citem-wrap {
 }
 </style>
 </head>
-<body data-build="v1-165">
+<body data-build="v1-170">
 <div id="app"></div>
 
 <script>
-// V1.165: one authoritative application version for the browser title,
+// V1.170: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '1.165';
+const APP_VERSION = '1.170';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -24545,7 +24578,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.165':'e.g. Warehouse V1.165',
+  'เช่น Warehouse V1.170':'e.g. Warehouse V1.170',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -26242,8 +26275,8 @@ const DASHBOARD_TAB_TITLES = {
   executive:{ th:'สรุปผู้บริหาร', en:'Executive Summary' },
   tracker:  { th:'ติดตามงานทั้งหมด', en:'All Work Tracking' },
   layout:   { th:'ผังคลังสินค้า', en:'Warehouse Layout' },
-  variance: { th:'ผลต่างสินค้าคงคลัง', en:'Inventory Variance' },
-  wms:      { th:'ปรับปรุงยอด WMS', en:'WMS Inventory Adjustment' },
+  variance: { th:'ยืนยันผลและปรับปรุงยอด WMS', en:'Confirmation & WMS Adjustment' },
+  wms:      { th:'ยืนยันผลและปรับปรุงยอด WMS', en:'Confirmation & WMS Adjustment' },
   log:      { th:'รายงานผลต่างล่าสุด', en:'Latest Inventory Variance Report' },
   team:     { th:'ความคืบหน้าการทำงานของทีม', en:'Team Progress' },
 };
@@ -26262,7 +26295,9 @@ function localizedNavigationTitle(entry) {
 
 function currentPageTitle(page,currentRole=prof?.role || 'counter') {
   if (page === 'sv-dash') {
-    return localizedNavigationTitle(DASHBOARD_TAB_TITLES[S._dashTab || _dashTab || 'summary']);
+    const requestedTab = S._dashTab || _dashTab || 'summary';
+    const tab = requestedTab === 'variance' ? 'wms' : requestedTab;
+    return localizedNavigationTitle(DASHBOARD_TAB_TITLES[tab]);
   }
   if (page === 'ad-manage') {
     const tab = S._manageTab || _manageTab || 'sessions';
@@ -27382,8 +27417,9 @@ document.addEventListener('keydown', event => {
 });
 
 function updateDashboardNavigationUi(tab) {
+  tab = tab === 'variance' ? 'wms' : tab;
   const dashboardTab = ['summary','executive','tracker','layout','log','team'].includes(tab);
-  const myWorkTab = ['variance','wms'].includes(tab);
+  const myWorkTab = tab === 'wms';
   const activeNavId = dashboardTab ? `dash-${tab}` : myWorkTab ? `my-${tab}` : '';
   const activeGroup = dashboardTab ? 'dashboard' : myWorkTab ? 'my-work' : '';
 
@@ -27393,10 +27429,10 @@ function updateDashboardNavigationUi(tab) {
       button.classList.toggle('active', navId === activeNavId);
     }
   });
-  const supervisorActiveId = ['summary','executive','variance','wms'].includes(tab) ? `supervisor-${tab}` : '';
+  const supervisorActiveId = ['summary','executive','wms'].includes(tab) ? `supervisor-${tab}` : '';
   document.querySelectorAll('.nav-item[data-nav-id^="supervisor-"]').forEach(button => {
     const navId = button.dataset.navId || '';
-    if (['supervisor-summary','supervisor-executive','supervisor-variance','supervisor-wms'].includes(navId)) {
+    if (['supervisor-summary','supervisor-executive','supervisor-wms'].includes(navId)) {
       button.classList.toggle('active',navId === supervisorActiveId);
     }
   });
@@ -27443,6 +27479,7 @@ function paintDashboardView(tab, cache = _dashboardViewCache) {
     if (Q('wms-row')) Q('wms-row').value = S._wmsRow || '';
     if (Q('wms-level')) Q('wms-level').value = S._wmsLevel || '';
     if (Q('wms-user')) Q('wms-user').value = S._wmsUser || '';
+    if (Q('wms-counter')) Q('wms-counter').value = S._wmsCounter || '';
     if (Q('wms-status')) Q('wms-status').value = S._wmsFilter || 'all';
     if (Q('wms-loc-search')) Q('wms-loc-search').value = S._wmsLocSearch || '';
     refreshWmsDependentFilters();
@@ -27679,19 +27716,40 @@ function setPageLoadingProgress(value, token = _pageLoadingVisualToken) {
   progressbar?.setAttribute('aria-valuenow',String(displayValue));
 }
 
+function syncPageLoadingOverlayBounds(overlay = Q('page-loading-overlay')) {
+  if (!overlay) return;
+  const wrapper = document.querySelector('.main-wrapper');
+  if (!wrapper) {
+    overlay.style.setProperty('--page-loader-top','0px');
+    overlay.style.setProperty('--page-loader-right','0px');
+    overlay.style.setProperty('--page-loader-bottom','0px');
+    overlay.style.setProperty('--page-loader-left','0px');
+    return;
+  }
+  const rect = wrapper.getBoundingClientRect();
+  const viewportWidth = window.innerWidth || document.documentElement.clientWidth || rect.right;
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || rect.bottom;
+  overlay.style.setProperty('--page-loader-top',`${Math.max(0,rect.top)}px`);
+  overlay.style.setProperty('--page-loader-right',`${Math.max(0,viewportWidth - rect.right)}px`);
+  overlay.style.setProperty('--page-loader-bottom',`${Math.max(0,viewportHeight - rect.bottom)}px`);
+  overlay.style.setProperty('--page-loader-left',`${Math.max(0,rect.left)}px`);
+}
+
+window.addEventListener('resize',() => syncPageLoadingOverlayBounds(),{ passive:true });
+
 function startPageLoadingVisual(options = {}) {
   const config = typeof options === 'string' ? { title:options } : (options || {});
   const token = ++_pageLoadingVisualToken;
   clearInterval(_pageLoadingVisualTimer);
   let overlay = Q('page-loading-overlay');
   if (!overlay) {
-    const wrapper = document.querySelector('.main-wrapper');
-    if (wrapper) {
-      wrapper.insertAdjacentHTML('beforeend',pageLoadingOverlayHtml());
-      overlay = Q('page-loading-overlay');
-    }
+    document.body.insertAdjacentHTML('beforeend',pageLoadingOverlayHtml());
+    overlay = Q('page-loading-overlay');
   }
   if (!overlay) return token;
+  if (overlay.parentElement !== document.body) document.body.appendChild(overlay);
+  document.body.classList.add('page-loading-active');
+  syncPageLoadingOverlayBounds(overlay);
   overlay.classList.remove('is-complete','is-error','is-leaving');
   startUnifiedCatLoader(overlay);
   const title = Q('vespa-loader-title');
@@ -27726,7 +27784,10 @@ function finishPageLoadingVisual(token = _pageLoadingVisualToken) {
   clearInterval(_pageLoadingVisualTimer);
   _pageLoadingVisualTimer = null;
   const overlay = Q('page-loading-overlay');
-  if (!overlay) return;
+  if (!overlay) {
+    document.body.classList.remove('page-loading-active');
+    return;
+  }
   setPageLoadingProgress(100,token);
   overlay.classList.add('is-complete');
   const title = Q('vespa-loader-title');
@@ -27741,7 +27802,10 @@ function finishPageLoadingVisual(token = _pageLoadingVisualToken) {
     if (token !== _pageLoadingVisualToken || !overlay.isConnected) return;
     overlay.classList.add('is-leaving');
     setTimeout(() => {
-      if (token === _pageLoadingVisualToken && overlay.isConnected) overlay.remove();
+      if (token === _pageLoadingVisualToken) {
+        if (overlay.isConnected) overlay.remove();
+        document.body.classList.remove('page-loading-active');
+      }
     },300);
   });
 }
@@ -27751,7 +27815,10 @@ function failPageLoadingVisual(token = _pageLoadingVisualToken) {
   clearInterval(_pageLoadingVisualTimer);
   _pageLoadingVisualTimer = null;
   const overlay = Q('page-loading-overlay');
-  if (!overlay) return;
+  if (!overlay) {
+    document.body.classList.remove('page-loading-active');
+    return;
+  }
   overlay.classList.add('is-complete','is-error');
   const title = Q('vespa-loader-title');
   const subtitle = Q('vespa-loader-subtitle');
@@ -27763,7 +27830,10 @@ function failPageLoadingVisual(token = _pageLoadingVisualToken) {
     if (token !== _pageLoadingVisualToken || !overlay.isConnected) return;
     overlay.classList.add('is-leaving');
     setTimeout(() => {
-      if (token === _pageLoadingVisualToken && overlay.isConnected) overlay.remove();
+      if (token === _pageLoadingVisualToken) {
+        if (overlay.isConnected) overlay.remove();
+        document.body.classList.remove('page-loading-active');
+      }
     },280);
   },720);
 }
@@ -28404,7 +28474,7 @@ function goBack() {
   if (currentPage === 'sv-detail') return go('sv-list', {}, { replace:true });
   if (currentPage === 'sv-found') return go('sv-list', {}, { replace:true });
   if (currentPage === 'sv-list') {
-    return go('sv-dash', { _dashTab:'variance', _dashSid:S._dashSid }, { replace:true });
+    return go('sv-dash', { _dashTab:'wms', _dashSid:S._dashSid }, { replace:true });
   }
   if (currentPage === 'ad-txlog') return go('ad-history', {}, { replace:true });
   if (currentPage === 'ad-new') {
@@ -29056,8 +29126,7 @@ function render() {
       { id:'supervisor-summary', name:uiCopy('สรุป','Summary'), icon:navIconSvg('summary'), action:"openDashboardMenu('summary')", matchPage:'sv-dash', matchTab:'summary' },
       { id:'supervisor-executive', name:uiCopy('สรุปผู้บริหาร','Executive Summary'), icon:navIconSvg('log'), action:"openDashboardMenu('executive')", matchPage:'sv-dash', matchTab:'executive' },
       { id:'supervisor-tasks', name:uiCopy('งานที่ได้รับมอบหมาย','Assigned Work'), icon:navIconSvg('tasks'), action:"goPrimary('c-tasks')", matchPages:['c-tasks','c-count','c-found'] },
-      { id:'supervisor-variance', name:uiCopy('ผลต่างสินค้าคงคลัง','Inventory Variance'), icon:navIconSvg('variance'), action:"openDashboardMenu('variance')", matchPages:['sv-dash','sv-list','sv-detail','sv-found'], matchTab:'variance' },
-      { id:'supervisor-wms', name:uiCopy('ปรับปรุงยอด WMS','WMS Inventory Adjustment'), icon:navIconSvg('wms'), action:"openDashboardMenu('wms')", matchPage:'sv-dash', matchTab:'wms' },
+      { id:'supervisor-wms', name:localizedNavigationTitle(DASHBOARD_TAB_TITLES.wms), icon:navIconSvg('wms'), action:"openDashboardMenu('wms')", matchPages:['sv-dash','sv-list','sv-detail','sv-found'], matchTab:'wms' },
       { id:'supervisor-assign', name:uiCopy('มอบหมายงานตรวจนับ','Count Work Assignment'), icon:navIconSvg('assign'), action:"openManageMenu('assign')", matchPage:'ad-manage', matchTab:'assign' },
       { id:'supervisor-import', name:uiCopy('นำเข้าข้อมูล WMS','Import WMS Data'), icon:navIconSvg('import'), action:"openManageMenu('import')", matchPage:'ad-manage', matchTab:'import' }
     ],
@@ -29073,7 +29142,6 @@ function render() {
       { group:'my-work', name:'งานของฉัน', icon:navIconSvg('tasks'), children:[
         { id:'my-tasks', name:uiCopy('รายการงานตรวจนับที่ได้รับมอบหมาย','Assigned Cycle Count Tasks'), icon:navIconSvg('tasks'), action:"goPrimary('c-tasks')" },
         { id:'my-form-count', name:uiCopy('กรอกผลจากใบ Form Count','Count Form Quick Entry'), icon:navIconSvg('jobs'), action:"goPrimary('ad-form-count')" },
-        { id:'my-variance', name:localizedNavigationTitle(DASHBOARD_TAB_TITLES.variance), icon:navIconSvg('variance'), action:"openDashboardMenu('variance')" },
         { id:'my-wms', name:localizedNavigationTitle(DASHBOARD_TAB_TITLES.wms), icon:navIconSvg('wms'), action:"openDashboardMenu('wms')" }
       ]},
       { group: 'manage', name: 'บริหารงานตรวจนับ', icon: navIconSvg('manage'), children: [
@@ -29123,11 +29191,10 @@ function render() {
           childActive =
             (child.id === 'my-tasks' && page === 'c-tasks') ||
             (child.id === 'my-form-count' && page === 'ad-form-count') ||
-            (child.id === 'my-variance' && (
+            (child.id === 'my-wms' && (
               ['sv-list','sv-detail','sv-found'].includes(page) ||
-              (page === 'sv-dash' && activeDashTab === 'variance')
-            )) ||
-            (child.id === 'my-wms' && page === 'sv-dash' && activeDashTab === 'wms');
+              (page === 'sv-dash' && ['variance','wms'].includes(activeDashTab))
+            ));
         }
         if (item.group === 'manage') childActive = child.id === 'manage-' + (_manageTab || 'sessions');
         if (item.group === 'system') childActive =
@@ -29374,6 +29441,9 @@ function toggleNavGroup(group) {
   document.querySelectorAll('.nav-group').forEach(el => el.classList.toggle('open', el.dataset.group === window._openNavGroup));
 }
 function openDashboardMenu(tab) {
+  // V1.166: old buttons, saved state and bookmarks that still request the
+  // former Variance tab must open the single combined operational workspace.
+  if (tab === 'variance') tab = 'wms';
   if (['executive','variance','wms'].includes(tab) && !['admin','supervisor'].includes(prof?.role)) {
     alert('เมนูนี้ใช้ได้เฉพาะหัวหน้างานและ Admin เท่านั้น');
     return;
@@ -29386,7 +29456,7 @@ function openDashboardMenu(tab) {
   if (tab !== 'layout') stopWarehouseLayoutLiveSync();
   _navStack = [];
   _dashTab = tab;
-  window._openNavGroup = ['variance','wms'].includes(tab) ? 'my-work' : 'dashboard';
+  window._openNavGroup = tab === 'wms' ? 'my-work' : 'dashboard';
   S = { ...S, page:'sv-dash', _dashTab:tab, _dashSid:S._dashSid };
   if (alreadyOnDashboard) {
     updateDashboardNavigationUi(tab);
@@ -35758,10 +35828,10 @@ function navigateAfterFoundWorkSaved(sessionId) {
   }
   selectedDateFrom = '';
   selectedDateTo = '';
-  _dashTab = 'variance';
+  _dashTab = 'wms';
   window._openNavGroup = 'my-work';
   go('sv-dash',{
-    _dashTab:'variance',
+    _dashTab:'wms',
     _dashSid:String(sessionId || ''),
   }, {
     replace:true,
@@ -46499,7 +46569,9 @@ async function loadSvDash() {
     loadScope !== _activePageRequestController ||
     loadScope?.signal?.aborted ||
     S?.page !== 'sv-dash';
-  const tab = S._dashTab || _dashTab || 'summary';
+  const requestedTab = S._dashTab || _dashTab || 'summary';
+  const tab = requestedTab === 'variance' ? 'wms' : requestedTab;
+  S._dashTab = tab;
   _dashTab = tab;
 
   // A previous Layout runtime must not be repainted while the fresh database
@@ -46597,7 +46669,7 @@ async function loadSvDash() {
     tab === 'wms'
       ? sb.from('remark_options').select('id,label').eq('context','wms').eq('active',true).order('label')
       : Promise.resolve({ data:[],error:null }),
-    ['summary','executive','variance'].includes(tab)
+    ['summary','executive','variance','wms'].includes(tab)
       ? sb.from('found_items')
           .select('id,session_id,status,source_type,location_code,license_plate,lot,inventory_status,item_code,description,uom,qty,actual_counter_name,discovered_at,profiles!found_items_discovered_by_fkey(name)')
           .eq('session_id',curSid)
@@ -48150,7 +48222,7 @@ async function loadSvDash() {
     <div>
       <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap">
         <div style="font-size:18px;font-weight:800;color:var(--text-main)">📋 รายงานผลต่างล่าสุด (Variance Log)</div>
-        <button class="btn btn-blue btn-sm" onclick="openDashboardMenu('variance')">เปิดหน้าตรวจสอบ Variance</button>
+        <button class="btn btn-blue btn-sm" onclick="openDashboardMenu('wms')">เปิดหน้ายืนยันผลและปรับปรุงยอด WMS</button>
       </div>
       <div class="card card-flush" data-location-sort-group style="margin-bottom:0;box-shadow:inset 4px 4px 8px var(--neu-shadow-dark),inset -4px -4px 8px var(--neu-shadow-light);border-radius:20px">
         ${varianceReportRows}
@@ -48223,9 +48295,11 @@ async function loadSvDash() {
   const wmsRow = S._wmsRow || '';
   const wmsLevel = S._wmsLevel || '';
   const wmsUser = S._wmsUser || '';
+  const wmsCounter = S._wmsCounter || '';
   const wmsLocSearch = S._wmsLocSearch || '';
 
   const wmsZones = new Set(), wmsRowsNo = new Set(), wmsLevels = new Set();
+  const wmsCounters = new Set();
   const wmsUsersMap = {};
   wmsWorkspaceRows.forEach(v => {
     const loc = asgnInfoMap[v.assignment_id]?.locations || {};
@@ -48235,6 +48309,10 @@ async function loadSvDash() {
     if (locationMeta.level) wmsLevels.add(locationMeta.level);
     if (v.approved_by) wmsUsersMap[v.approved_by] = v.profiles?.name || '?';
     else if (v._isPending) wmsUsersMap['_pending'] = '(รอคอนเฟิร์ม)';
+    (actualCountersByAssignment[v.assignment_id] || []).forEach(name => {
+      const normalizedName = String(name || '').trim();
+      if (normalizedName) wmsCounters.add(normalizedName);
+    });
   });
 
   const wmsTotalCount = wmsWorkspaceRows.length;
@@ -48265,8 +48343,8 @@ async function loadSvDash() {
           <div class="wms-overview-title">
             <div class="wms-overview-icon">${wmsIconSvg('reviewed',25)}</div>
             <div class="wms-overview-copy">
-              <strong>ศูนย์ควบคุมการปรับยอด WMS</strong>
-              <span>แยกงานรอคอนเฟิร์มออกจากงานที่พร้อมตรวจสอบแล้ว</span>
+              <strong>ศูนย์ยืนยันผลและปรับปรุงยอด WMS</strong>
+              <span>ยืนยันผล DIFF ตรวจสอบรายการ และปิดงาน WMS ได้ในหน้าเดียว</span>
             </div>
           </div>
           <div class="wms-overview-total">
@@ -48302,6 +48380,8 @@ async function loadSvDash() {
         </div>
       </section>
 
+      ${pendingFoundVarianceHtml(visiblePendingFoundRows)}
+
       <section class="wms-filter-panel">
         <div class="wms-filter-heading">
           <strong>ตัวกรองรายการ</strong>
@@ -48331,6 +48411,12 @@ async function loadSvDash() {
               <option value="">ทั้งหมด</option>
               <option value="_pending" ${wmsUser==='_pending'?'selected':''}>รอคอนเฟิร์ม</option>
               ${Object.entries(wmsUsersMap).filter(([k]) => k !== '_pending').sort((a,b)=>a[1].localeCompare(b[1])).map(([id,name])=>`<option value="${id}" ${wmsUser===id?'selected':''}>${name}</option>`).join('')}
+            </select>
+          </div>
+          <div class="wms-filter-field"><label>ผู้ตรวจนับ</label>
+            <select id="wms-counter" onchange="updateWmsFilter('Counter',this.value)">
+              <option value="">ทั้งหมด</option>
+              ${[...wmsCounters].sort((a,b)=>a.localeCompare(b,'th')).map(name=>`<option value="${escapeWmsText(name)}" ${wmsCounter===name?'selected':''}>${escapeWmsText(name)}</option>`).join('')}
             </select>
           </div>
           <div class="wms-filter-field"><label>สถานะ</label>
@@ -48699,6 +48785,39 @@ const WMS_NOTE_PRESETS = [
   'ส่งแก้ไขยอด WMS',
 ];
 
+const _wmsNoteAutoSaveTimers = new Map();
+
+function wmsNoteMenuHasUnsavedChanges(menu,key='') {
+  if (!menu) return false;
+  const changedCheckbox = [...menu.querySelectorAll('.wms-note-option input[type="checkbox"]')]
+    .some(box => box.checked !== (box.dataset.saved === 'true'));
+  const typedNote = String(Q(`wms_note_custom_${key}`)?.value || '').trim();
+  return changedCheckbox || Boolean(typedNote);
+}
+
+function clearWmsNoteAutoSave(key) {
+  const timer = _wmsNoteAutoSaveTimers.get(String(key || ''));
+  if (timer) clearTimeout(timer);
+  _wmsNoteAutoSaveTimers.delete(String(key || ''));
+}
+
+function scheduleWmsNoteAutoSave(key,delay=650) {
+  const safeKey = String(key || '');
+  clearWmsNoteAutoSave(safeKey);
+  const menu = Q(`wms_note_menu_${safeKey}`);
+  if (!menu || !wmsNoteMenuHasUnsavedChanges(menu,safeKey)) return;
+  const assignmentId = String(menu.dataset.assignmentId || '');
+  const itemId = String(menu.dataset.itemId || '');
+  if (!assignmentId || !itemId) return;
+  const timer = setTimeout(() => {
+    _wmsNoteAutoSaveTimers.delete(safeKey);
+    const activeMenu = Q(`wms_note_menu_${safeKey}`);
+    if (!activeMenu || !wmsNoteMenuHasUnsavedChanges(activeMenu,safeKey)) return;
+    saveWmsNotes(assignmentId,itemId,safeKey,{ automatic:true });
+  },Math.max(0,Number(delay) || 0));
+  _wmsNoteAutoSaveTimers.set(safeKey,timer);
+}
+
 function closeWmsNoteMenus(exceptKey='') {
   document.querySelectorAll('.wms-note-menu').forEach(menu => {
     if (!exceptKey || menu.id !== `wms_note_menu_${exceptKey}`) {
@@ -48797,17 +48916,27 @@ function toggleWmsNoteMenu(event, key) {
   }
 }
 
-function updateWmsNoteSelectionPreview(key) {
+function updateWmsNoteSelectionPreview(key,autoSave=true) {
   const menu = Q(`wms_note_menu_${key}`);
   const preview = Q(`wms_note_selection_${key}`);
   const draftInline = Q(`wms_note_draft_${key}`);
   const inlineStack = Q(`wms_note_inline_${key}`);
   if (!menu || !preview) return;
   const options = [...menu.querySelectorAll('.wms-note-option input[type="checkbox"]')];
-  const added = options
+  const addedMap = new Map(options
     .filter(box => box.checked && box.dataset.saved !== 'true')
     .map(box => box.value.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .map(note => [note.toLocaleLowerCase('th'),note]));
+  const savedKeys = new Set(options
+    .filter(box => box.checked && box.dataset.saved === 'true')
+    .map(box => box.value.trim().toLocaleLowerCase('th'))
+    .filter(Boolean));
+  const typedNote = String(Q(`wms_note_custom_${key}`)?.value || '').trim();
+  if (typedNote && !savedKeys.has(typedNote.toLocaleLowerCase('th'))) {
+    addedMap.set(typedNote.toLocaleLowerCase('th'),typedNote);
+  }
+  const added = [...addedMap.values()];
   const removed = options
     .filter(box => !box.checked && box.dataset.saved === 'true')
     .map(box => box.value.trim())
@@ -48837,6 +48966,7 @@ function updateWmsNoteSelectionPreview(key) {
     );
     inlineStack.hidden = !hasSavedValue && changes.length === 0;
   }
+  if (autoSave) scheduleWmsNoteAutoSave(key);
 }
 
 async function addCustomWmsNoteOption(event, key) {
@@ -48882,24 +49012,32 @@ async function addCustomWmsNoteOption(event, key) {
   }
 }
 
-async function saveWmsNotes(assignmentId, itemId, key) {
+async function saveWmsNotes(assignmentId, itemId, key, saveOptions={}) {
+  clearWmsNoteAutoSave(key);
+  const shouldRender = saveOptions.render !== false;
+  const shouldCloseMenu = saveOptions.closeMenu !== false;
+  const shouldShowFeedback = saveOptions.feedback !== false;
   const menu = Q(`wms_note_menu_${key}`);
   const saveBtn = Q(`wms_note_save_${key}`);
-  if (!menu) return;
+  if (!menu) return false;
   const selectedNoteMap = new Map();
   [...menu.querySelectorAll('.wms-note-option input[type="checkbox"]')]
     .filter(box => box.checked)
     .map(box => box.value.trim())
     .filter(Boolean)
     .forEach(note => selectedNoteMap.set(note.toLocaleLowerCase('th'),note));
+  // A typed Remark is valid input even when the User does not press the small
+  // plus button first. The plus button only adds a reusable master option.
+  const typedNote = String(Q(`wms_note_custom_${key}`)?.value || '').trim();
+  if (typedNote) selectedNoteMap.set(typedNote.toLocaleLowerCase('th'),typedNote);
   const notes = [...selectedNoteMap.values()];
   const assignment = window._wmsAsgnInfoMap?.[assignmentId];
   const target = (window._wmsRows || [])
     .find(v => String(v.assignment_id || '') === String(assignmentId || '')
       && String(v.item_id || '') === String(itemId || ''));
   if (!assignment || !target) {
-    showWmsFeedback('ไม่พบรายการที่ต้องบันทึก กรุณารีเฟรชหน้าแล้วลองใหม่','error');
-    return;
+    if (shouldShowFeedback) showWmsFeedback('ไม่พบรายการที่ต้องบันทึก กรุณารีเฟรชหน้าแล้วลองใหม่','error');
+    return false;
   }
   const noteKey = text => String(text || '').trim().toLocaleLowerCase('th');
   const existingByKey = new Map(
@@ -48913,11 +49051,12 @@ async function saveWmsNotes(assignmentId, itemId, key) {
   const newNotes = notes.filter(note => !existingByKey.has(noteKey(note)));
   const removedNotes = [...existingByKey.entries()]
     .filter(([key]) => !selectedByKey.has(key))
-    .map(([,note]) => note);
+    .map(([,note]) => String(note?.text || note?.new_value || note || '').trim())
+    .filter(Boolean);
   if (!newNotes.length && !removedNotes.length) {
-    showWmsFeedback('Remark WMS ไม่มีการเปลี่ยนแปลง');
-    renderWmsList();
-    return;
+    if (shouldShowFeedback && !saveOptions.automatic) showWmsFeedback('Remark WMS ไม่มีการเปลี่ยนแปลง');
+    if (shouldRender) renderWmsList();
+    return true;
   }
 
   try {
@@ -48945,26 +49084,60 @@ async function saveWmsNotes(assignmentId, itemId, key) {
       })).filter(note => note.text);
       target.wms_notes = [...countNotes,...activeWmsNotes];
     }
-    closeWmsNoteMenus();
-    renderWmsList();
+    if (shouldCloseMenu) closeWmsNoteMenus();
+    if (shouldRender) renderWmsList();
     const summary = [
       newNotes.length ? `เพิ่ม ${newNotes.length}` : '',
       removedNotes.length ? `ยกเลิก ${removedNotes.length}` : '',
     ].filter(Boolean).join(' · ');
-    showWmsFeedback(`อัปเดต Remark WMS แล้ว${summary ? ` · ${summary}` : ''}`);
+    if (shouldShowFeedback) showWmsFeedback(`บันทึก Remark WMS แล้ว${summary ? ` · ${summary}` : ''}`);
     invalidateWmsFastCacheV179();
+    return true;
   } catch (error) {
     console.error(error);
-    showWmsFeedback('บันทึกหมายเหตุไม่สำเร็จ: ' + (error.message || error), 'error');
+    if (shouldShowFeedback) showWmsFeedback('บันทึกหมายเหตุไม่สำเร็จ: ' + (error.message || error), 'error');
     if (saveBtn) {
       saveBtn.disabled = false;
       saveBtn.innerHTML = `${wmsIconSvg('reviewed', 17)} บันทึกหมายเหตุ`;
     }
+    return false;
   }
 }
 
+async function flushPendingWmsNotesForAssignment(assignmentId) {
+  const drafts = [...document.querySelectorAll('.wms-note-menu')]
+    .filter(menu => String(menu.dataset.assignmentId || '') === String(assignmentId || ''))
+    .map(menu => ({
+      key:String(menu.id || '').replace(/^wms_note_menu_/,''),
+      itemId:String(menu.dataset.itemId || ''),
+      menu,
+    }))
+    .filter(draft => draft.key && draft.itemId && wmsNoteMenuHasUnsavedChanges(draft.menu,draft.key));
+  if (!drafts.length) return 0;
+  for (const draft of drafts) {
+    clearWmsNoteAutoSave(draft.key);
+    const saved = await saveWmsNotes(assignmentId,draft.itemId,draft.key,{
+      render:false,
+      closeMenu:false,
+      feedback:false,
+    });
+    if (!saved) {
+      const error = new Error('ยังบันทึก Remark WMS ไม่สำเร็จ จึงยังไม่ปิด Location เพื่อป้องกันหมายเหตุสูญหาย');
+      error.code = 'WMS_NOTE_SAVE_FAILED';
+      throw error;
+    }
+  }
+  closeWmsNoteMenus();
+  renderWmsList();
+  showWmsFeedback(`บันทึก Remark WMS ที่ค้างอยู่แล้ว ${drafts.length.toLocaleString(uiLocale())} Item`);
+  return drafts.length;
+}
+
 document.addEventListener('click', event => {
-  if (!event.target.closest('.wms-note-control')) closeWmsNoteMenus();
+  // The menu is mounted at the app root so it can float above every card.
+  // Treat the mounted panel itself as an inside click; otherwise checking one
+  // Remark immediately closes the panel before a second option can be chosen.
+  if (!event.target.closest('.wms-note-control,.wms-note-menu')) closeWmsNoteMenus();
 });
 document.addEventListener('keydown', event => {
   if (event.key !== 'Escape') return;
@@ -49020,6 +49193,46 @@ function wmsRemarkSaveError(error) {
   return error instanceof Error ? error : new Error(message);
 }
 
+function wmsRemarkText(value) {
+  return String(value?.text || value?.new_value || value || '').trim();
+}
+
+function wmsRemarkSelectionKey(values=[]) {
+  return [...new Set((values || [])
+    .map(wmsRemarkText)
+    .filter(Boolean)
+    .map(text => text.toLocaleLowerCase('th')))]
+    .sort()
+    .join('|');
+}
+
+async function readPersistedWmsRemarks(assignmentId,itemId) {
+  const { data:auditRows,error } = await fetchPagedSupabaseRows(
+    'audit_log',
+    'id,session_id,assignment_id,item_id,action,old_value,new_value,created_at',
+    query => query
+      .eq('assignment_id',assignmentId)
+      .in('action',['wms_note','wms_note_removed'])
+      .order('created_at',{ ascending:true })
+      .order('id',{ ascending:true }),
+  );
+  if (error) throw wmsRemarkSaveError(error);
+  const activeState = reduceActiveWmsRemarkAudit(auditRows || []);
+  const itemKey = `${assignmentId || ''}|${itemId || ''}`;
+  const suppressed = activeState.suppressedByItem.get(itemKey) || new Set();
+  const combined = [
+    ...(activeState.byItem.get(itemKey) || []),
+    ...(activeState.byAssignment.get(String(assignmentId || '')) || []).filter(note =>
+      !suppressed.has(wmsRemarkText(note).toLocaleLowerCase('th'))),
+  ];
+  const unique = new Map();
+  combined.forEach(note => {
+    const text = wmsRemarkText(note);
+    if (text) unique.set(text.toLocaleLowerCase('th'),{ ...note,text,source:'wms' });
+  });
+  return [...unique.values()];
+}
+
 async function syncWmsRemarks({ assignment, assignmentId, itemId, selectedNotes, newNotes, removedNotes }) {
   const sessionId = S._dashSid || assignment?.session_id || null;
   const locationId = assignment?.location_id || null;
@@ -49033,8 +49246,18 @@ async function syncWmsRemarks({ assignment, assignmentId, itemId, selectedNotes,
     throw new Error('ข้อมูล Session / Location / Item ไม่ครบ กรุณารีเฟรชหน้าแล้วลองใหม่');
   }
 
-  // Preferred path: save atomically and require the database to return the
-  // rows it actually persisted. This prevents false success under Audit RLS.
+  const expectedSelectionKey = wmsRemarkSelectionKey(noteTexts);
+  const verifyPersistedSelection = async () => {
+    const persistedRows = await readPersistedWmsRemarks(assignmentId,itemId);
+    if (wmsRemarkSelectionKey(persistedRows) !== expectedSelectionKey) {
+      throw new Error('ฐานข้อมูลยังบันทึก Remark WMS ไม่ครบ กรุณาลองใหม่');
+    }
+    return persistedRows;
+  };
+
+  // Preferred path: save atomically, then read the Audit state back. RPC return
+  // shapes can differ between database revisions, so the persisted data—not
+  // only the response payload—is the source of truth.
   const rpcResult = await sb.rpc('set_wms_remarks_v177', {
     p_session_id:sessionId,
     p_assignment_id:assignmentId,
@@ -49043,23 +49266,25 @@ async function syncWmsRemarks({ assignment, assignmentId, itemId, selectedNotes,
     p_notes:noteTexts,
   });
   if (!rpcResult.error) {
-    const savedRows = Array.isArray(rpcResult.data?.notes) ? rpcResult.data.notes : [];
-    if (savedRows.length !== noteTexts.length) {
-      throw new Error('Remark WMS ที่ฐานข้อมูลบันทึกกลับมาไม่ตรงกับรายการที่เลือก กรุณาลองใหม่');
+    try {
+      return await verifyPersistedSelection();
+    } catch (verifyError) {
+      console.warn('RPC Remark WMS ยังยืนยันผลไม่ได้ กำลังใช้ Audit fallback:',verifyError);
     }
-    return savedRows;
   }
-  if (!isMissingWmsRemarkRpc(rpcResult.error)) throw wmsRemarkSaveError(rpcResult.error);
+  if (rpcResult.error && !isMissingWmsRemarkRpc(rpcResult.error)) {
+    console.warn('RPC Remark WMS ใช้งานไม่ได้ กำลังใช้ Audit fallback:',rpcResult.error);
+  }
 
   // Compatibility fallback: append both add/remove events. We never delete
   // Audit history, so a removed Remark can still be inspected later.
   const eventRows = [
-    ...(newNotes || []).map(note => ({
+    ...(newNotes || []).map(wmsRemarkText).filter(Boolean).map(note => ({
       session_id:sessionId,location_id:locationId,item_id:itemId,
       assignment_id:assignmentId,action:'wms_note',old_value:null,
       new_value:note,performed_by:me?.id || null,
     })),
-    ...(removedNotes || []).map(note => ({
+    ...(removedNotes || []).map(wmsRemarkText).filter(Boolean).map(note => ({
       session_id:sessionId,location_id:locationId,item_id:itemId,
       assignment_id:assignmentId,action:'wms_note_removed',old_value:note,
       new_value:'ยกเลิก Remark WMS',performed_by:me?.id || null,
@@ -49072,9 +49297,7 @@ async function syncWmsRemarks({ assignment, assignmentId, itemId, selectedNotes,
   if (!Array.isArray(directResult.data) || directResult.data.length !== eventRows.length) {
     throw new Error('ตรวจสอบการแก้ไข Remark WMS ไม่สำเร็จ กรุณารันไฟล์ Cycle_Count_v177_WMS_Remark.sql ใน Supabase SQL Editor 1 ครั้ง');
   }
-  return noteTexts.map((text,index) => ({
-    id:`active_${Date.now()}_${index}`,new_value:text,created_at:new Date().toISOString(),
-  }));
+  return verifyPersistedSelection();
 }
 
 async function closeWmsLocation(assignmentId,button) {
@@ -49090,6 +49313,10 @@ async function closeWmsLocation(assignmentId,button) {
       button.classList.add('is-saving');
       button.querySelector('span')?.replaceChildren(document.createTextNode('กำลังปิดงาน...'));
     }
+    // A selected/typed Remark must be committed before this Location can be
+    // closed. This removes the old failure mode where the orange "ยังไม่บันทึก"
+    // draft disappeared as soon as closing re-rendered the row.
+    await flushPendingWmsNotesForAssignment(assignmentId);
     const localRows = (window._wmsRows || []).filter(row =>
       row.assignment_id === assignmentId && isWmsQueueRow(row));
     if (!localRows.length) throw new Error('Location นี้ไม่มี Item ที่ต้องตรวจสอบ WMS');
@@ -49139,6 +49366,12 @@ async function closeWmsLocation(assignmentId,button) {
       'ปิดงาน WMS Location แล้ว',
       assignmentId,
     );
+    // Closing a Location finishes the focused workflow. Do not leave its code
+    // in the shared Location / Item filter when the next task is displayed.
+    S._wmsLocSearch = '';
+    S._wmsFocusAssignment = '';
+    const locationSearchInput = Q('wms-loc-search');
+    if (locationSearchInput) locationSearchInput.value = '';
     renderWmsList();
     showWmsFeedback(`ปิดงาน ${locationCode} แล้ว · ตรวจครบ ${serverRows.length.toLocaleString(uiLocale())}/${serverRows.length.toLocaleString(uiLocale())} Item`);
     invalidateWmsFastCacheV179();
@@ -49146,7 +49379,15 @@ async function closeWmsLocation(assignmentId,button) {
     refreshDashboardData();
   } catch (error) {
     console.error(error);
-    renderWmsList();
+    if (error?.code === 'WMS_NOTE_SAVE_FAILED') {
+      if (button?.isConnected) {
+        button.disabled = false;
+        button.classList.remove('is-saving');
+        button.innerHTML = `${wmsIconSvg('reviewed',17)} <span>ปิดงาน WMS Location</span>`;
+      }
+    } else {
+      renderWmsList();
+    }
     showWmsFeedback('ปิดงาน Location ไม่สำเร็จ: ' + (error.message || error),'error');
   }
 }
@@ -49270,12 +49511,14 @@ function refreshWmsDependentFilters() {
   const facetRows = (excludeKey='') => rows.filter(item => {
     const location = asgnInfoMap[item.assignment_id]?.locations || {};
     const userValue = item._isPending ? '_pending' : item.approved_by;
+    const counterValues = window._actualCountersByAssignment?.[item.assignment_id] || [];
     const statusValue = item._isPending ? 'pending' : (item.wms_fixed ? 'fixed' : 'unfixed');
     const search = String(S._wmsLocSearch || '').trim().toLowerCase();
     if (excludeKey !== 'Zone' && S._wmsZone && location.zone !== S._wmsZone) return false;
     if (excludeKey !== 'Row' && S._wmsRow && String(location.row_no ?? '') !== String(S._wmsRow)) return false;
     if (excludeKey !== 'Level' && S._wmsLevel && String(location.level ?? '') !== String(S._wmsLevel)) return false;
     if (excludeKey !== 'User' && S._wmsUser && userValue !== S._wmsUser) return false;
+    if (excludeKey !== 'Counter' && S._wmsCounter && !counterValues.includes(S._wmsCounter)) return false;
     if (excludeKey !== 'Filter' && S._wmsFilter && S._wmsFilter !== 'all' && statusValue !== S._wmsFilter) return false;
     if (search && !String(location.code || '').toLowerCase().includes(search)) return false;
     return true;
@@ -49318,6 +49561,23 @@ function refreshWmsDependentFilters() {
     S._wmsUser,
   );
   S._wmsUser = selectedUser;
+
+  const counterOptions = [];
+  const seenCounters = new Set();
+  facetRows('Counter').forEach(item => {
+    (window._actualCountersByAssignment?.[item.assignment_id] || []).forEach(name => {
+      const value = String(name || '').trim();
+      if (!value || seenCounters.has(value)) return;
+      seenCounters.add(value);
+      counterOptions.push({ value,label:value });
+    });
+  });
+  S._wmsCounter = fillDependentOptionSelect(
+    'wms-counter',
+    counterOptions,
+    'ทั้งหมด',
+    S._wmsCounter,
+  );
 
   const statusSelect = Q('wms-status');
   if (statusSelect) {
@@ -49503,6 +49763,7 @@ function renderWmsList() {
   const filterRow = S._wmsRow || '';
   const filterLevel = S._wmsLevel || '';
   const filterUser = S._wmsUser || '';
+  const filterCounter = S._wmsCounter || '';
   const searchLoc = (S._wmsLocSearch || '').trim().toLowerCase();
 
   const filtered = sortRowsByLocation(wmsRows.filter(v => {
@@ -49514,6 +49775,7 @@ function renderWmsList() {
     if (filterLevel && locationMeta.level !== String(filterLevel)) return false;
     if (filterUser === '_pending' && !v._isPending) return false;
     if (filterUser && filterUser !== '_pending' && v.approved_by !== filterUser) return false;
+    if (filterCounter && !(window._actualCountersByAssignment?.[v.assignment_id] || []).includes(filterCounter)) return false;
     if (searchLoc) {
       const haystack = [loc?.code, v.items?.code, v.items?.description]
         .filter(Boolean).join(' ').toLowerCase();
@@ -49598,13 +49860,24 @@ function renderWmsList() {
     const savedNoteTexts = new Set(notes
       .filter(note => !note.source || note.source === 'wms')
       .map(note => String(note.text || note.new_value || '').trim()));
-    const noteOptions = (window._wmsNoteOptions || []).map(option => `
+    const savedNoteKeys = new Set([...savedNoteTexts].map(label => label.toLocaleLowerCase('th')));
+    const configuredNoteLabels = (window._wmsNoteOptions || [])
+      .map(option => String(option?.label || '').trim())
+      .filter(Boolean);
+    const configuredNoteKeys = new Set(configuredNoteLabels.map(label => label.toLocaleLowerCase('th')));
+    const noteOptionLabels = [
+      ...configuredNoteLabels,
+      // Keep previously typed Remarks selectable even when they were saved as
+      // one-off text instead of being added to the reusable master list.
+      ...[...savedNoteTexts].filter(label => !configuredNoteKeys.has(label.toLocaleLowerCase('th'))),
+    ];
+    const noteOptions = noteOptionLabels.map(label => `
       <label class="wms-note-option">
-        <input type="checkbox" value="${escapeWmsText(option.label)}"
-          data-saved="${savedNoteTexts.has(String(option.label || '').trim()) ? 'true' : 'false'}"
-          ${savedNoteTexts.has(String(option.label || '').trim()) ? 'checked' : ''}
+        <input type="checkbox" value="${escapeWmsText(label)}"
+          data-saved="${savedNoteKeys.has(label.toLocaleLowerCase('th')) ? 'true' : 'false'}"
+          ${savedNoteKeys.has(label.toLocaleLowerCase('th')) ? 'checked' : ''}
           onchange="updateWmsNoteSelectionPreview('${noteKey}')">
-        <span data-i18n-skip>${escapeWmsText(option.label)}</span>
+        <span data-i18n-skip>${escapeWmsText(label)}</span>
       </label>`).join('');
     const noteButton = `
       <div class="wms-note-control">
@@ -49616,7 +49889,10 @@ function renderWmsList() {
           <span>${notes.length ? `หมายเหตุ ${notes.length}` : historyLoading ? 'กำลังโหลด Remark เดิม...' : 'เพิ่มหมายเหตุ'}</span>
           ${notes.length ? `<span class="wms-note-count">${notes.length}</span>` : ''}
         </button>
-        <div class="wms-note-menu" id="wms_note_menu_${noteKey}" hidden onclick="event.stopPropagation()">
+        <div class="wms-note-menu" id="wms_note_menu_${noteKey}"
+          data-assignment-id="${escapeWmsText(String(v.assignment_id || ''))}"
+          data-item-id="${escapeWmsText(String(v.item_id || ''))}"
+          hidden onclick="event.stopPropagation()">
           <div class="wms-note-menu-title">
             <span>เลือกได้หลายข้อ</span>
             <button type="button" class="btn btn-ghost" style="width:32px;height:32px;padding:0;border-radius:10px"
@@ -49629,6 +49905,8 @@ function renderWmsList() {
           ${prof?.role === 'admin' ? `<div class="wms-note-add-row">
             <input id="wms_note_custom_${noteKey}" type="text" maxlength="120"
               placeholder="พิมพ์หมายเหตุใหม่..."
+              oninput="updateWmsNoteSelectionPreview('${noteKey}',false)"
+              onchange="scheduleWmsNoteAutoSave('${noteKey}',0)"
               onkeydown="if(event.key==='Enter'){addCustomWmsNoteOption(event,'${noteKey}')}">
             <button type="button" class="btn btn-blue wms-note-plus"
               onclick="addCustomWmsNoteOption(event,'${noteKey}')" aria-label="เพิ่มหมายเหตุใหม่">+</button>
@@ -49722,6 +50000,17 @@ function renderWmsList() {
       <div class="wms-location-items">${itemsHtml}</div>
     </section>`;
   }).join('');
+
+  const focusAssignmentId = String(S._wmsFocusAssignment || '');
+  if (focusAssignmentId) {
+    const focusTarget = [...container.querySelectorAll('[data-assignment-id]')]
+      .find(node => String(node.dataset.assignmentId || '') === focusAssignmentId);
+    if (focusTarget) {
+      focusTarget.classList.add('is-flow-focus');
+      requestAnimationFrame(() => focusTarget.scrollIntoView({ behavior:'smooth',block:'start' }));
+    }
+    S._wmsFocusAssignment = '';
+  }
 }
 
 function setWarehouseLayoutViewMode(mode) {
@@ -49888,16 +50177,71 @@ function varianceReviewToolbarHtml({ aid,total,confirmed,mode='detail',inlineInd
 function varianceLocationCloseHtml({ aid,total,confirmed,mode='detail',inlineIndex='' }) {
   const ready = confirmed === total;
   const args = [aid,mode,String(inlineIndex ?? '')].map(value => JSON.stringify(String(value || ''))).join(',');
+  const exitArgs = [aid,mode,String(inlineIndex ?? '')].map(value => JSON.stringify(String(value || ''))).join(',');
   return `<div class="variance-location-close">
-    <button class="btn btn-green" type="button" onclick='finalizeVarianceLocation(${args},this)' ${ready?'':'disabled'}>
-      ${ready
-        ? (total ? '✓ ตรวจครบแล้ว · ส่งต่อ WMS' : '✓ จบ Location · ไม่พบ DIFF')
-        : `เหลืออีก ${(total-confirmed).toLocaleString(uiLocale())} Item`}
-    </button>
+    <div class="variance-location-close-actions">
+      <button class="btn btn-green" type="button" onclick='finalizeVarianceLocation(${args},"continue",this)' ${ready?'':'disabled'}>
+        ${ready
+          ? (total ? '✓ ตรวจสอบ WMS ต่อ' : '✓ จบ Location · ไม่พบ DIFF')
+          : `เหลืออีก ${(total-confirmed).toLocaleString(uiLocale())} Item`}
+      </button>
+      ${ready && total
+        ? `<button class="btn btn-ghost" type="button" onclick='finalizeVarianceLocation(${args},"exit",this)'>ยืนยันผลอย่างเดียว · ออก</button>`
+        : `<button class="btn btn-ghost" type="button" onclick='exitVarianceLocationWork(${exitArgs},this)'>ออกจากงานนี้</button>`}
+    </div>
     <small>${ready
-      ? (total ? 'ยืนยันครบทุก Item แล้ว สามารถส่งงาน Location นี้ไปขั้นตอน WMS ได้' : 'ยอดตรงหลังตรวจสอบหรือแก้ OH จึงไม่มีรายการส่งไป WMS')
-      : 'ตรวจและยืนยันทีละ Item ได้ ระบบเก็บความคืบหน้าให้อัตโนมัติ'}</small>
+      ? (total ? 'ไปตรวจสอบต่อได้ทันทีใน Session และ Location เดิม หรือออกไว้ตรวจภายหลัง' : 'ยอดตรงหลังตรวจสอบหรือแก้ OH จึงไม่มีรายการส่งไป WMS')
+      : 'ระบบบันทึก Item ที่ยืนยันแล้วไว้ สามารถออกและกลับมาทำ Location นี้ต่อภายหลังได้'}</small>
   </div>`;
+}
+
+function openCombinedWmsLocationFlow({ aid,sessionId,locationCode,focus=true }={}) {
+  const safeSessionId = String(sessionId || '');
+  const safeAssignmentId = String(aid || '');
+  const safeLocationCode = String(locationCode || '').trim();
+  if (!safeSessionId) {
+    showActionSuccessToast('ไม่พบ Session ของงาน กรุณากลับเข้าเมนูใหม่',{ title:'เปิดงานต่อไม่ได้' });
+    return;
+  }
+  selectedDateFrom = '';
+  selectedDateTo = '';
+  _dashTab = 'wms';
+  rememberDashboardSession(safeSessionId);
+  window._openNavGroup = 'my-work';
+  go('sv-dash',{
+    _dashTab:'wms',
+    _dashSid:safeSessionId,
+    _wmsFilter:'all',
+    _wmsZone:'',
+    _wmsRow:'',
+    _wmsLevel:'',
+    _wmsUser:'',
+    _wmsCounter:'',
+    _wmsLocSearch:focus ? safeLocationCode : '',
+    _wmsFocusAssignment:focus ? safeAssignmentId : '',
+  },{
+    replace:true,
+    resetHistory:true,
+  });
+}
+
+async function exitVarianceLocationWork(aid,mode,inlineIndex,button) {
+  if (button) button.disabled = true;
+  const alertBox = varianceReviewAlertElement(mode,inlineIndex);
+  try {
+    const { data:assignment,error } = await sb.from('assignments')
+      .select('id,session_id,locations(code)').eq('id',aid).maybeSingle();
+    if (error || !assignment) throw (error || new Error('ไม่พบ Assignment'));
+    openCombinedWmsLocationFlow({
+      aid,
+      sessionId:assignment.session_id,
+      locationCode:assignment.locations?.code,
+      focus:false,
+    });
+  } catch (error) {
+    if (alertBox) alertBox.innerHTML = `<div class="alert alert-red">❌ ${escapeWmsText(error.message || error)}</div>`;
+    if (button) button.disabled = false;
+  }
 }
 
 async function toggleVarianceDetail(aid, idx, targetItemId='') {
@@ -50279,7 +50623,7 @@ async function reopenVarianceReviewItem(aid,itemId,mode,inlineIndex,button) {
 
 async function loadVarianceLocationReviewState(aid) {
   const { data:assignment,error:assignmentError } = await sb.from('assignments')
-    .select('id,session_id,location_id,status').eq('id',aid).maybeSingle();
+    .select('id,session_id,location_id,status,locations(code)').eq('id',aid).maybeSingle();
   if (assignmentError || !assignment) throw (assignmentError || new Error('ไม่พบ Assignment'));
   const [snapshotResult,countResult,approvalResult] = await Promise.all([
     sb.from('stock_snapshot').select('item_id,onhand_qty')
@@ -50306,10 +50650,10 @@ async function loadVarianceLocationReviewState(aid) {
   return { assignment,requiredItemIds,missingItemIds };
 }
 
-async function finalizeVarianceLocation(aid,mode,inlineIndex,button) {
+async function finalizeVarianceLocation(aid,mode,inlineIndex,nextAction='continue',button) {
   const alertBox = varianceReviewAlertElement(mode,inlineIndex);
   if (button) button.disabled = true;
-  if (alertBox) alertBox.innerHTML = '<div class="alert alert-blue">⏳ กำลังตรวจสอบและปิดงาน Location...</div>';
+  if (alertBox) alertBox.innerHTML = '<div class="alert alert-blue">⏳ กำลังยืนยันผล Location...</div>';
   try {
     const state = await loadVarianceLocationReviewState(aid);
     if (state.missingItemIds.length) {
@@ -50339,13 +50683,18 @@ async function finalizeVarianceLocation(aid,mode,inlineIndex,button) {
     );
     invalidateDashboardCache();
     showActionSuccess(state.requiredItemIds.length
-      ? 'ยืนยันครบและส่งงานไปขั้นตอนปรับยอด WMS แล้ว'
+      ? 'ยืนยันผลครบแล้ว พร้อมตรวจสอบ WMS ของ Location นี้'
       : 'ปิดงาน Location แล้ว ไม่มียอดผลต่างที่ต้องส่งไป WMS', {
-      title:'ปิดงาน Location สำเร็จ',
+      title:state.requiredItemIds.length ? 'ยืนยันผล Location สำเร็จ' : 'ปิดงาน Location สำเร็จ',
       facts:[{ label:'Item ที่ตรวจครบ',value:state.requiredItemIds.length.toLocaleString(uiLocale()) }],
     });
-    if (mode === 'inline') await refreshDashboardData();
-    else setTimeout(() => go('sv-list'),500);
+    const shouldContinueWms = state.requiredItemIds.length > 0 && nextAction !== 'exit';
+    setTimeout(() => openCombinedWmsLocationFlow({
+      aid,
+      sessionId:state.assignment.session_id,
+      locationCode:state.assignment.locations?.code,
+      focus:shouldContinueWms,
+    }),350);
   } catch (error) {
     if (alertBox) alertBox.innerHTML = `<div class="alert alert-red">❌ ${escapeWmsText(error.message || error)}</div>`;
     if (button) button.disabled = false;
@@ -50374,12 +50723,18 @@ async function doReassignUser(aid, idx, targetRound) {
 }
 
 async function loadSvList() {
+  const requestedSessionId = String(S._dashSid || '').trim();
+  let activeSessionQuery = sb.from('count_sessions').select('id').eq('status','active');
+  let pendingFoundQuery = sb.from('found_items')
+    .select('id,status,source_type,location_code,license_plate,lot,inventory_status,item_code,description,uom,qty,actual_counter_name,discovered_at,count_sessions(name),profiles!found_items_discovered_by_fkey(name)')
+    .eq('status','pending_review');
+  if (requestedSessionId) {
+    activeSessionQuery = activeSessionQuery.eq('id',requestedSessionId);
+    pendingFoundQuery = pendingFoundQuery.eq('session_id',requestedSessionId);
+  }
   const [sessionResult,foundResult] = await Promise.all([
-    sb.from('count_sessions').select('id').eq('status','active'),
-    sb.from('found_items')
-      .select('id,status,source_type,location_code,license_plate,lot,inventory_status,item_code,description,uom,qty,actual_counter_name,discovered_at,count_sessions(name),profiles!found_items_discovered_by_fkey(name)')
-      .eq('status','pending_review')
-      .order('discovered_at',{ ascending:true }),
+    activeSessionQuery,
+    pendingFoundQuery.order('discovered_at',{ ascending:true }),
   ]);
   if (sessionResult.error || foundResult.error) {
     cnt().innerHTML = errBox((sessionResult.error || foundResult.error).message);
@@ -50538,6 +50893,8 @@ async function loadSvFound() {
     return;
   }
   const row = foundResult.data;
+  S._dashSid = String(row.session_id || S._dashSid || '');
+  if (S._dashSid) rememberDashboardSession(S._dashSid);
   window._foundReviewRemark = row.remark || '';
   window._foundReviewPhotoUrl = row.photo_url || '';
   const info = await findDataInfo(row.item_code);
@@ -50702,7 +51059,14 @@ async function approveFoundWork(foundId) {
       title:'อนุมัติสำเร็จ',
       facts:[{label:'Variance',value:Number(data.variance || 0).toLocaleString(uiLocale())}],
     });
-    setTimeout(() => go('sv-list'),1100);
+    const { data:flowContext } = await sb.from('found_items')
+      .select('session_id,assignment_id,location_code').eq('id',foundId).maybeSingle();
+    setTimeout(() => openCombinedWmsLocationFlow({
+      aid:flowContext?.assignment_id || auditContext.assignment_id,
+      sessionId:flowContext?.session_id || auditContext.session_id,
+      locationCode:flowContext?.location_code || locationCode,
+      focus:Boolean(flowContext?.assignment_id || auditContext.assignment_id),
+    }),650);
   } catch (error) {
     alertBox.innerHTML = errBox(error.message || error);
     approveButton.disabled = false;
@@ -50751,7 +51115,10 @@ async function rejectFoundWork(foundId) {
     showActionSuccess('บันทึกเหตุผลและปิดงานพบเพิ่มรายการนี้แล้ว', {
       title:'บันทึกผลไม่อนุมัติสำเร็จ',
     });
-    setTimeout(() => go('sv-list'),900);
+    setTimeout(() => openCombinedWmsLocationFlow({
+      sessionId:auditContext.session_id,
+      focus:false,
+    }),500);
   } catch (error) {
     alertBox.innerHTML = errBox(error.message || error);
     Q('found_approve_btn').disabled = false;
@@ -50791,6 +51158,10 @@ async function loadSvDetail() {
   const { aid } = S;
   const { data: asgn } = await sb.from('assignments').select('id,status,location_id,session_id,assigned_to,locations(code,zone,area)').eq('id', aid).single();
   if (!asgn) { go('sv-list'); return; }
+  // The assignment is authoritative. Never inherit a previously viewed
+  // Dashboard Session while this Location is being confirmed.
+  S._dashSid = String(asgn.session_id || '');
+  if (S._dashSid) rememberDashboardSession(S._dashSid);
 
   const l = asgn.locations;
   const isAdminOrSup = ['admin','supervisor'].includes(prof?.role);
@@ -61056,7 +61427,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.165" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.170" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
@@ -61980,7 +62351,7 @@ window.addEventListener('DOMContentLoaded', () => {
 if ('serviceWorker' in navigator && ['https:','http:'].includes(location.protocol)) {
   window.addEventListener('load', async () => {
     try {
-      const registration = await navigator.serviceWorker.register('./sw.js?v=165', { scope:'./' });
+      const registration = await navigator.serviceWorker.register('./sw.js?v=170', { scope:'./' });
       registration.update().catch(() => {});
       document.documentElement.dataset.pwaReady = 'true';
     } catch (error) {
