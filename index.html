@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- V1.179: Match the Count frame to the OH border and keep Location visible while Count is focused on Handheld. -->
+<!-- V1.180: Open Handheld Count work at the Location banner instead of the page header. -->
 <!-- V1.175: Focus the active Count field on every device and keep the handheld pause action visually distinct (verified). -->
 <!-- V1.174: Redesign per-Zone assignment mode cards with responsive controls and readable Zone names (verified). -->
 <!-- V1.173: Add per-Zone Normal/Annual allocation, cross-mode duplicate guards, and safe cancel/return actions (verified). -->
@@ -50,14 +50,14 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.179</title>
+<title>Cycle Count V1.180</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
 if (['http:','https:'].includes(location.protocol)) {
   const manifestLink = document.createElement('link');
   manifestLink.rel = 'manifest';
-  manifestLink.href = './manifest.webmanifest?v=179';
+  manifestLink.href = './manifest.webmanifest?v=180';
   document.head.appendChild(manifestLink);
 }
 </script>
@@ -66,8 +66,8 @@ if (['http:','https:'].includes(location.protocol)) {
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Cycle Count">
-<link rel="apple-touch-icon" href="./icons/icon-192.png?v=179">
-<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=179">
+<link rel="apple-touch-icon" href="./icons/icon-192.png?v=180">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=180">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -23335,13 +23335,13 @@ body.page-loading-active .main-wrapper{
 }
 </style>
 </head>
-<body data-build="v1-179">
+<body data-build="v1-180">
 <div id="app"></div>
 
 <script>
-// V1.179: one authoritative application version for the browser title,
+// V1.180: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '1.179';
+const APP_VERSION = '1.180';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -24862,7 +24862,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.179':'e.g. Warehouse V1.179',
+  'เช่น Warehouse V1.180':'e.g. Warehouse V1.180',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -34073,14 +34073,22 @@ function scheduleCurrentCountEntryFocus({ preferredInputId='' }={}) {
   prepareCurrentCountEntryFocus({ force:true,preferredInputId });
   requestAnimationFrame(() => {
     if (token !== _handheldCountFocusToken || S?.page !== 'c-count') return;
-    if (!document.activeElement?.classList?.contains('cqty')) {
-      prepareCurrentCountEntryFocus({ preferredInputId });
-    }
+    const activeInput = document.activeElement?.classList?.contains('cqty')
+      ? document.activeElement
+      : null;
+    if (activeInput) scrollCountEntryWithLocation(activeInput,{ behavior:'auto' });
+    else prepareCurrentCountEntryFocus({ preferredInputId });
   });
   [60,180,420,850,1500,2500].forEach(delay => {
     _handheldCountFocusTimers.push(setTimeout(() => {
       if (token !== _handheldCountFocusToken || S?.page !== 'c-count') return;
-      if (document.activeElement?.classList?.contains('cqty')) return;
+      const activeInput = document.activeElement?.classList?.contains('cqty')
+        ? document.activeElement
+        : null;
+      if (activeInput) {
+        scrollCountEntryWithLocation(activeInput,{ behavior:'auto' });
+        return;
+      }
       prepareCurrentCountEntryFocus({ preferredInputId });
     },delay));
   });
@@ -37572,12 +37580,15 @@ function scrollCountEntryWithLocation(target,{ behavior='smooth' }={}) {
     return true;
   }
   const sticky = page.querySelector('.count-sticky-stack');
+  const header = main.querySelector('.topbar');
   const mainRect = main.getBoundingClientRect();
-  const stickyRect = sticky?.getBoundingClientRect();
-  const visibleTop = Math.max(
-    mainRect.top + 8,
-    Number(stickyRect?.bottom || 0) + 8,
-  );
+  const headerHeight = Math.ceil(header?.getBoundingClientRect().height || 0);
+  const stickyHeight = Math.ceil(sticky?.getBoundingClientRect().height || 0);
+  // Calculate from the sticky destination. On the first render the scanner is
+  // still in normal document flow below the page header; using its current
+  // bottom incorrectly keeps scrollTop at zero instead of opening at Location.
+  const stickyTop = mainRect.top + headerHeight + 4;
+  const visibleTop = stickyTop + stickyHeight + 8;
   const delta = card.getBoundingClientRect().top - visibleTop;
   const nextTop = Math.max(0,main.scrollTop + delta);
   if (behavior === 'auto') main.scrollTop = nextTop;
@@ -62620,7 +62631,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.179" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.180" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
@@ -63544,7 +63555,7 @@ window.addEventListener('DOMContentLoaded', () => {
 if ('serviceWorker' in navigator && ['https:','http:'].includes(location.protocol)) {
   window.addEventListener('load', async () => {
     try {
-      const registration = await navigator.serviceWorker.register('./sw.js?v=179', { scope:'./' });
+      const registration = await navigator.serviceWorker.register('./sw.js?v=180', { scope:'./' });
       registration.update().catch(() => {});
       document.documentElement.dataset.pwaReady = 'true';
     } catch (error) {
