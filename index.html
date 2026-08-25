@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V1.172: Build Annual JOBs only from unfinished Locations and add an in-app JOB detail viewer before Print (verified). -->
+<!-- V1.171: Make rejected out-of-plan findings an explicit audited removal from the active queue and block accidental WMS promotion (verified). -->
 <!-- V1.170: Auto-save WMS Remark selections and flush every pending Remark before closing its WMS Location (verified). -->
 <!-- V1.169: Persist typed WMS Remarks without requiring the plus button, normalize removals, and verify the saved Audit state before reporting success (verified). -->
 <!-- V1.168: Make the loading canvas cover the complete content viewport and clear the Location/Item search after closing WMS work (verified). -->
@@ -44,14 +46,14 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.170</title>
+<title>Cycle Count V1.172</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
 if (['http:','https:'].includes(location.protocol)) {
   const manifestLink = document.createElement('link');
   manifestLink.rel = 'manifest';
-  manifestLink.href = './manifest.webmanifest?v=170';
+  manifestLink.href = './manifest.webmanifest?v=172';
   document.head.appendChild(manifestLink);
 }
 </script>
@@ -60,8 +62,8 @@ if (['http:','https:'].includes(location.protocol)) {
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Cycle Count">
-<link rel="apple-touch-icon" href="./icons/icon-192.png?v=170">
-<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=170">
+<link rel="apple-touch-icon" href="./icons/icon-192.png?v=172">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=172">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -9476,7 +9478,7 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
   min-height:68px;
   padding:11px 15px;
   display:grid;
-  grid-template-columns:auto minmax(140px,1fr) minmax(120px,.8fr) auto auto;
+  grid-template-columns:auto minmax(140px,1fr) minmax(120px,.8fr) auto auto auto;
   align-items:center;
   gap:11px;
   border-bottom:1px solid color-mix(in srgb,var(--theme-border-color) 45%,transparent);
@@ -9486,6 +9488,53 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
 .annual-job-meta { margin-top:3px; color:var(--theme-muted-text-color); font-size:9px; font-weight:600; }
 .annual-job-user { color:var(--theme-body-text-color); font-size:10px; font-weight:700; }
 .annual-job-checkbox { width:18px; height:18px; accent-color:var(--theme-primary-color); }
+.annual-job-detail-modal {
+  width:min(920px,100%);
+  max-height:min(780px,calc(100vh - 44px));
+  padding:0;
+  overflow:hidden;
+  text-align:left;
+}
+.annual-job-detail-header {
+  padding:22px 24px 18px;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+  border-bottom:1px solid color-mix(in srgb,var(--theme-border-color) 55%,transparent);
+  background:linear-gradient(110deg,color-mix(in srgb,var(--theme-primary-color) 9%,var(--theme-card-bg)),var(--theme-card-bg));
+}
+.annual-job-detail-header h2 { margin:0;color:var(--theme-heading-color);font-size:22px;font-weight:900; }
+.annual-job-detail-header p { margin:5px 0 0;color:var(--theme-muted-text-color);font-size:10px;font-weight:700; }
+.annual-job-detail-close {
+  width:40px;height:40px;flex:none;border:0;border-radius:13px;cursor:pointer;
+  color:var(--theme-heading-color);background:color-mix(in srgb,var(--theme-danger-color) 10%,var(--theme-card-bg));
+  font:inherit;font-size:22px;font-weight:700;
+}
+.annual-job-detail-body { max-height:calc(min(780px,100vh - 44px) - 100px);padding:18px 24px 24px;overflow:auto; }
+.annual-job-detail-summary { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-bottom:15px; }
+.annual-job-detail-summary > div {
+  min-height:68px;padding:11px 13px;border-radius:14px;
+  background:color-mix(in srgb,var(--theme-primary-color) 7%,var(--theme-card-bg));
+}
+.annual-job-detail-summary span { display:block;color:var(--theme-muted-text-color);font-size:9px;font-weight:800; }
+.annual-job-detail-summary strong { display:block;margin-top:5px;color:var(--theme-primary-color);font-size:21px;font-weight:900; }
+.annual-job-detail-location {
+  margin-top:9px;border:1px solid color-mix(in srgb,var(--theme-border-color) 55%,transparent);
+  border-radius:15px;overflow:hidden;background:var(--theme-card-bg);
+}
+.annual-job-detail-location > header {
+  padding:11px 13px;display:flex;justify-content:space-between;align-items:center;gap:10px;
+  color:var(--theme-heading-color);background:color-mix(in srgb,var(--theme-primary-color) 6%,var(--theme-card-bg));
+}
+.annual-job-detail-location > header strong { font-size:13px;font-weight:900; }
+.annual-job-detail-location > header span { color:var(--theme-muted-text-color);font-size:9px;font-weight:800; }
+.annual-job-detail-item {
+  padding:9px 13px;display:grid;grid-template-columns:minmax(130px,.45fr) minmax(0,1fr);gap:12px;
+  border-top:1px solid color-mix(in srgb,var(--theme-border-color) 40%,transparent);
+}
+.annual-job-detail-item strong { color:var(--theme-heading-color);font-size:10px;font-weight:900;overflow-wrap:anywhere; }
+.annual-job-detail-item span { color:var(--theme-muted-text-color);font-size:9px;font-weight:600; }
 .annual-empty {
   padding:34px 18px;
   color:var(--theme-muted-text-color);
@@ -9641,6 +9690,10 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
   }
   .annual-job-row > .btn,
   .annual-job-row > .tag { grid-column:2; width:100%; }
+  .annual-job-detail-header { padding:18px; }
+  .annual-job-detail-body { padding:14px 18px 20px; }
+  .annual-job-detail-summary { grid-template-columns:1fr; }
+  .annual-job-detail-item { grid-template-columns:1fr;gap:3px; }
   .round1-mode-switch,
   .normal-free-controls,
   .normal-free-filters { grid-template-columns:1fr; }
@@ -23051,13 +23104,13 @@ body.page-loading-active .main-wrapper{
 }
 </style>
 </head>
-<body data-build="v1-170">
+<body data-build="v1-172">
 <div id="app"></div>
 
 <script>
-// V1.170: one authoritative application version for the browser title,
+// V1.172: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '1.170';
+const APP_VERSION = '1.172';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -24578,7 +24631,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.170':'e.g. Warehouse V1.170',
+  'เช่น Warehouse V1.172':'e.g. Warehouse V1.172',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -50908,7 +50961,7 @@ async function loadSvFound() {
           <div class="found-review-source">${row.source_type==='empty_location'?'พบจาก Location ว่าง':'＋ เจองานเพิ่ม'} · <span data-i18n-skip>${escapeWmsText(row.count_sessions?.name || 'ไม่ระบุ Session')}</span></div>
         </div>
         <span class="tag ${pending?'tag-amber':row.status==='approved'?'tag-green':'tag-red'}">${
-          pending?'รอตรวจสอบ':row.status==='approved'?'อนุมัติแล้ว':'ไม่อนุมัติ'
+          pending?'รอตรวจสอบ':row.status==='approved'?'อนุมัติแล้ว':'นำออกแล้ว (ไม่อนุมัติ)'
         }</span>
       </div>
       <div style="margin-top:12px;font-size:12px;color:var(--theme-muted-text-color)">
@@ -50987,7 +51040,10 @@ async function loadSvFound() {
       <div id="found_review_alert" style="margin-top:14px"></div>
       ${pending ? `<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-top:14px">
         <button class="btn btn-green" id="found_approve_btn" type="button" onclick="approveFoundWork('${row.id}')">✅ อนุมัติและส่งต่อ WMS</button>
-        <button class="btn btn-red" id="found_reject_btn" type="button" onclick="rejectFoundWork('${row.id}')">✕ ไม่อนุมัติ</button>
+        <button class="btn btn-red" id="found_reject_btn" type="button" onclick="rejectFoundWork('${row.id}')">✕ ไม่อนุมัติและนำออก</button>
+      </div>
+      <div style="margin-top:9px;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--theme-primary-color) 6%,var(--theme-card-bg));color:var(--theme-muted-text-color);font-size:12px;font-weight:700;line-height:1.55">
+        “ไม่อนุมัติและนำออก” จะตัดรายการออกจากคิวตรวจสอบและไม่ส่งต่อ WMS โดยยังเก็บประวัติการปฏิเสธไว้ตรวจสอบย้อนหลัง
       </div>` : ''}
     </div>`;
 }
@@ -51075,12 +51131,18 @@ async function approveFoundWork(foundId) {
 }
 
 async function rejectFoundWork(foundId) {
-  if (!confirm('ยืนยันไม่อนุมัติงานพบเพิ่มรายการนี้?')) return;
+  if (!['admin','supervisor'].includes(prof?.role)) {
+    alert('ไม่อนุมัติและนำออกรายการได้เฉพาะ Supervisor / Admin');
+    return;
+  }
   const alertBox = Q('found_review_alert');
+  const approveButton = Q('found_approve_btn');
+  const rejectButton = Q('found_reject_btn');
   const note = normalizeImportText(Q('found_review_note')?.value);
   const typeIssue = normalizeImportText(Q('found_review_type_issue')?.value);
   if (!note) {
     alertBox.innerHTML = '<div class="alert alert-red">กรุณาระบุเหตุผลในหมายเหตุ Supervisor ก่อน</div>';
+    Q('found_review_note')?.focus();
     return;
   }
   if ((normalizeImportText(window._foundReviewRemark) || normalizeImportText(window._foundReviewPhotoUrl)) && !typeIssue) {
@@ -51088,8 +51150,10 @@ async function rejectFoundWork(foundId) {
     Q('found_review_type_issue')?.focus();
     return;
   }
-  Q('found_approve_btn').disabled = true;
-  Q('found_reject_btn').disabled = true;
+  if (!confirm('ยืนยัน “ไม่อนุมัติและนำออก” รายการนี้?\n\nรายการจะหายจากคิวตรวจสอบทันทีและจะไม่ถูกส่งต่อ WMS\nระบบยังเก็บประวัติการปฏิเสธไว้ตรวจสอบย้อนหลัง')) return;
+  if (approveButton) approveButton.disabled = true;
+  if (rejectButton) rejectButton.disabled = true;
+  alertBox.innerHTML = '<div class="alert alert-blue">⏳ กำลังนำรายการออกจากคิวตรวจสอบ...</div>';
   try {
     const { data,error } = await sb.from('found_items').update({
       status:'rejected',
@@ -51098,22 +51162,27 @@ async function rejectFoundWork(foundId) {
       reviewed_by:me.id,
       reviewed_at:new Date().toISOString(),
     }).eq('id',foundId).eq('status','pending_review')
-      .select('id,session_id,location_id,assignment_id,item_id,item_code,qty');
+      .is('promoted_assignment_id',null).is('promoted_item_id',null)
+      .select('id,session_id,location_id,assignment_id,item_id,item_code,qty,status,promoted_assignment_id,promoted_item_id');
     if (error) throw error;
     if (!data?.length) throw new Error('รายการถูกตรวจสอบโดยคนอื่นแล้ว กรุณาโหลดใหม่');
     const auditContext = data[0];
+    if (auditContext.status !== 'rejected') throw new Error('ระบบยังไม่นำรายการออก กรุณาลองใหม่');
     await logAudit(
       auditContext.session_id,
       auditContext.location_id,
       auditContext.item_id,
       'found_item_rejected',
       'pending_review',
-      `rejected · ITEM ${auditContext.item_code || '—'} · QTY ${auditContext.qty ?? '—'} · เหตุผล ${note}`,
+      `rejected_and_removed · ITEM ${auditContext.item_code || '—'} · QTY ${auditContext.qty ?? '—'} · ไม่ส่งต่อ WMS · เหตุผล ${note}`,
       auditContext.assignment_id,
     );
-    alertBox.innerHTML = '<div class="alert alert-green">บันทึกผลไม่อนุมัติแล้ว</div>';
-    showActionSuccess('บันทึกเหตุผลและปิดงานพบเพิ่มรายการนี้แล้ว', {
-      title:'บันทึกผลไม่อนุมัติสำเร็จ',
+    invalidateWmsFastCacheV179(auditContext.session_id);
+    invalidateDashboardCache();
+    alertBox.innerHTML = '<div class="alert alert-green">✅ นำรายการออกจากคิวแล้ว และจะไม่ส่งต่อ WMS</div>';
+    showActionSuccess('นำรายการออกจากคิวตรวจสอบแล้ว โดยเก็บประวัติการปฏิเสธไว้', {
+      title:'ไม่อนุมัติและนำออกสำเร็จ',
+      facts:[{label:'Item',value:auditContext.item_code || '—'}],
     });
     setTimeout(() => openCombinedWmsLocationFlow({
       sessionId:auditContext.session_id,
@@ -51121,8 +51190,8 @@ async function rejectFoundWork(foundId) {
     }),500);
   } catch (error) {
     alertBox.innerHTML = errBox(error.message || error);
-    Q('found_approve_btn').disabled = false;
-    Q('found_reject_btn').disabled = false;
+    if (approveButton) approveButton.disabled = false;
+    if (rejectButton) rejectButton.disabled = false;
   }
 }
 
@@ -52409,7 +52478,9 @@ function syncAssignWorkspaceMode(preferredMode) {
   if (Q('annual-build-size')) Q('annual-build-size').value = config.itemsPerJob;
   if (Q('annual-build-prefix')) Q('annual-build-prefix').value = config.prefix;
   updateExpiredAssignmentIndicators(annual
-    ? (_annualWorkspaceJobs || []).filter(job => !job.assigned_to && Boolean(job.expired_at)).length
+    ? (_annualWorkspaceJobs || []).filter(job =>
+        _annualWorkspaceActiveJobIds.has(job.id) && !job.assigned_to && Boolean(job.expired_at)
+      ).length
     : (window._expiredAssignments || []).length);
   return { ...config, round1Mode:mode };
 }
@@ -52475,7 +52546,7 @@ function updateAssignWorkspaceStats(total, assigned, remaining) {
   const assignShell = document.querySelector('.assign-bento-shell');
   const progressTitle = Q('assign-progress-title');
   const annual = currentRound1AssignMode() === 'annual';
-  const progressTotal = annual ? Number((_annualWorkspaceJobs || []).length || 0) : Number(total || 0);
+  const progressTotal = annual ? Number(_annualWorkspaceActiveJobIds.size || 0) : Number(total || 0);
   const progressValue = progressTotal > 0
     ? Math.max(0,Math.min(100,(Number(assigned || 0) / progressTotal) * 100))
     : 0;
@@ -52553,8 +52624,55 @@ async function handleAssignSessionChange() {
   showExpiredAssignmentPrompt(config.sessionId);
 }
 
+function annualLatestAssignmentsByLocation(assignments=[]) {
+  const latest = new Map();
+  (assignments || []).forEach(assignment => {
+    const locationId = String(assignment?.location_id || '');
+    if (!locationId) return;
+    const previous = latest.get(locationId);
+    const currentTime = Date.parse(assignment?.created_at || assignment?.assigned_at || '') || 0;
+    const previousTime = Date.parse(previous?.created_at || previous?.assigned_at || '') || 0;
+    if (!previous || currentTime >= previousTime) latest.set(locationId,assignment);
+  });
+  return latest;
+}
+
+function annualCompletedLocationIds(assignments=[]) {
+  const completed = new Set();
+  annualLatestAssignmentsByLocation(assignments).forEach((assignment,locationId) => {
+    if (assignment?.wms_closed_at || assignmentPhysicalCountFinished(assignment)) completed.add(locationId);
+  });
+  return completed;
+}
+
+function annualUnfinishedSnapshotRows(snapshots=[],assignments=[]) {
+  const completedLocationIds = annualCompletedLocationIds(assignments);
+  return operationalStockSnapshotsByLocation(snapshots).filter(snapshot =>
+    !completedLocationIds.has(String(snapshot?.location_id || ''))
+  );
+}
+
+async function annualUnfinishedJobItemRows(rows=[],sessionId='') {
+  const locationIds = [...new Set((rows || []).map(row => row.location_id).filter(Boolean))];
+  if (!locationIds.length) return [];
+  const assignmentsResult = await fetchSupabaseRowsByValues(
+    'assignments',
+    'id,session_id,location_id,status,assigned_at,created_at,wms_closed_at',
+    'location_id',
+    locationIds,
+  );
+  if (assignmentsResult.error) throw assignmentsResult.error;
+  const completedLocationIds = annualCompletedLocationIds(
+    (assignmentsResult.data || []).filter(assignment =>
+      !sessionId || String(assignment.session_id || '') === String(sessionId)
+    )
+  );
+  return (rows || []).filter(row => !completedLocationIds.has(String(row.location_id || '')));
+}
+
 let _annualWorkspaceJobs = [];
 let _annualWorkspaceItemCounts = {};
+let _annualWorkspaceActiveJobIds = new Set();
 let _normalFreeSelectedLocationIds = new Set();
 let _normalFreeSelectedPrintLocationIds = new Set();
 let _normalFreeSelectedReassignLocationIds = new Set();
@@ -52573,7 +52691,7 @@ async function loadAnnualJobWorkspace() {
   const list = Q('annual-job-list');
   if (!config.sessionId || !list || currentRound1AssignMode() !== 'annual') return;
   list.innerHTML = `<div class="annual-empty">⏳ กำลังโหลด Annual JOB...</div>`;
-  const [jobsResult,itemsResult,snapshotResult] = await Promise.all([
+  const [jobsResult,itemsResult,workspaceResult] = await Promise.all([
     fetchPagedSupabaseRows(
       'annual_count_jobs',
       'id,session_id,job_no,job_code,assigned_to,status,assigned_at,expired_at,expired_from,created_at,profiles!assigned_to(name),expired_profiles:profiles!expired_from(name)',
@@ -52581,27 +52699,40 @@ async function loadAnnualJobWorkspace() {
     ),
     fetchPagedSupabaseRows(
       'annual_count_job_items',
-      'job_id',
+      'job_id,location_id',
       query => query.eq('session_id',config.sessionId),
     ),
-    sb.from('stock_snapshot').select('id',{ count:'exact',head:true }).eq('session_id',config.sessionId),
+    loadAssignmentWorkspaceData(config.sessionId)
+      .then(data => ({ data,error:null }))
+      .catch(error => ({ data:null,error })),
   ]);
   if (selectedAssignSessionConfig().sessionId !== config.sessionId) return;
-  if (jobsResult.error || itemsResult.error || snapshotResult.error) {
-    list.innerHTML = errBox((jobsResult.error || itemsResult.error || snapshotResult.error).message);
+  if (jobsResult.error || itemsResult.error || workspaceResult.error) {
+    list.innerHTML = errBox((jobsResult.error || itemsResult.error || workspaceResult.error).message);
     return;
   }
   _annualWorkspaceJobs = jobsResult.data || [];
   _annualWorkspaceItemCounts = {};
-  (itemsResult.data || []).forEach(row => {
+  const workspace = workspaceResult.data || { snapshots:[],assignments:[] };
+  const completedLocationIds = annualCompletedLocationIds(workspace.assignments || []);
+  const unfinishedJobItems = (itemsResult.data || []).filter(row =>
+    !completedLocationIds.has(String(row.location_id || ''))
+  );
+  unfinishedJobItems.forEach(row => {
     _annualWorkspaceItemCounts[row.job_id] = (_annualWorkspaceItemCounts[row.job_id] || 0) + 1;
   });
-  const totalItems = Number(snapshotResult.count || 0);
-  const assignedJobs = _annualWorkspaceJobs.filter(job => job.assigned_to).length;
-  const expiredJobs = _annualWorkspaceJobs.filter(job => !job.assigned_to && Boolean(job.expired_at)).length;
-  const unassignedJobs = _annualWorkspaceJobs.filter(job => !job.assigned_to && !job.expired_at).length;
+  const activeJobs = _annualWorkspaceJobs.filter(job =>
+    job.status !== 'completed' && Number(_annualWorkspaceItemCounts[job.id] || 0) > 0
+  );
+  _annualWorkspaceActiveJobIds = new Set(activeJobs.map(job => job.id));
+  const totalItems = _annualWorkspaceJobs.length
+    ? unfinishedJobItems.length
+    : annualUnfinishedSnapshotRows(workspace.snapshots || [],workspace.assignments || []).length;
+  const assignedJobs = activeJobs.filter(job => job.assigned_to).length;
+  const expiredJobs = activeJobs.filter(job => !job.assigned_to && Boolean(job.expired_at)).length;
+  const unassignedJobs = activeJobs.filter(job => !job.assigned_to && !job.expired_at).length;
   if (Q('annual-stat-items')) Q('annual-stat-items').textContent = totalItems.toLocaleString(uiLocale());
-  if (Q('annual-stat-jobs')) Q('annual-stat-jobs').textContent = _annualWorkspaceJobs.length.toLocaleString(uiLocale());
+  if (Q('annual-stat-jobs')) Q('annual-stat-jobs').textContent = activeJobs.length.toLocaleString(uiLocale());
   if (Q('annual-stat-assigned')) Q('annual-stat-assigned').textContent = assignedJobs.toLocaleString(uiLocale());
   updateAssignWorkspaceStats(totalItems,assignedJobs,unassignedJobs);
   updateExpiredAssignmentIndicators(expiredJobs);
@@ -52615,7 +52746,8 @@ function renderAnnualJobList() {
     [...document.querySelectorAll('.annual-job-checkbox:checked')].map(input => input.value)
   );
   const filter = Q('annual-job-filter')?.value || 'all';
-  const jobs = (_annualWorkspaceJobs || []).filter(job => {
+  const activeJobs = (_annualWorkspaceJobs || []).filter(job => _annualWorkspaceActiveJobIds.has(job.id));
+  const jobs = activeJobs.filter(job => {
     if (filter === 'unassigned') return !job.assigned_to && !job.expired_at;
     if (filter === 'expired') return !job.assigned_to && Boolean(job.expired_at);
     if (filter === 'assigned') return Boolean(job.assigned_to);
@@ -52625,7 +52757,7 @@ function renderAnnualJobList() {
     return true;
   });
   if (!jobs.length) {
-    list.innerHTML = `<div class="annual-empty">${_annualWorkspaceJobs.length ? 'ไม่มี JOB ในสถานะที่เลือก' : 'ยังไม่มี JOB · กด “สร้าง / แบ่ง Annual JOB” ก่อน'}</div>`;
+    list.innerHTML = `<div class="annual-empty">${activeJobs.length ? 'ไม่มี JOB ในสถานะที่เลือก' : (_annualWorkspaceJobs.length ? 'ไม่มี JOB ที่ยังไม่เสร็จ' : 'ยังไม่มี JOB · กด “สร้าง / แบ่ง Annual JOB” ก่อน')}</div>`;
     syncAnnualJobSelection();
     return;
   }
@@ -52653,11 +52785,94 @@ function renderAnnualJobList() {
           ? `⏰ ผู้รับเดิม: ${escapeWmsText(job.expired_profiles?.name || 'ไม่ระบุ')}`
           : '— ยังไม่จ่ายงาน —'}</div>
       <span class="tag ${status.cls}">${status.label}</span>
+      <button class="btn btn-blue btn-sm" type="button" onclick='openAnnualJobDetails("${job.id}")'>🔎 ดูรายละเอียด</button>
       <button class="btn btn-ghost btn-sm" type="button" onclick='printAnnualJobForms(["${job.id}"])'>🖨️ พิมพ์</button>
     </div>`;
   }).join('');
   syncAnnualJobSelection();
 }
+
+let _annualJobDetailPreviousOverflow = '';
+
+function closeAnnualJobDetails() {
+  Q('annual-job-detail-backdrop')?.remove();
+  document.body.style.overflow = _annualJobDetailPreviousOverflow;
+}
+
+async function openAnnualJobDetails(jobId) {
+  closeAnnualJobDetails();
+  const job = (_annualWorkspaceJobs || []).find(row => row.id === jobId);
+  if (!job) {
+    alert('ไม่พบ Annual JOB นี้ กรุณาโหลดรายการใหม่');
+    return;
+  }
+  _annualJobDetailPreviousOverflow = document.body.style.overflow;
+  document.body.style.overflow = 'hidden';
+  const backdrop = document.createElement('div');
+  backdrop.id = 'annual-job-detail-backdrop';
+  backdrop.className = 'assignment-success-backdrop';
+  backdrop.dataset.jobId = jobId;
+  backdrop.onclick = event => {
+    if (event.target === backdrop) closeAnnualJobDetails();
+  };
+  backdrop.innerHTML = `<section class="assignment-success-modal annual-job-detail-modal" role="dialog" aria-modal="true" aria-labelledby="annual-job-detail-title">
+    <header class="annual-job-detail-header">
+      <div><h2 id="annual-job-detail-title">${escapeWmsText(job.job_code || 'Annual JOB')}</h2><p>รายการ Location และ Item ที่ยังไม่เสร็จใน JOB นี้</p></div>
+      <button class="annual-job-detail-close" type="button" onclick="closeAnnualJobDetails()" aria-label="ปิด">×</button>
+    </header>
+    <div class="annual-job-detail-body" id="annual-job-detail-body"><div class="annual-empty">⏳ กำลังโหลดรายละเอียด JOB...</div></div>
+  </section>`;
+  document.body.appendChild(backdrop);
+  requestAnimationFrame(() => backdrop.querySelector('.annual-job-detail-close')?.focus());
+
+  try {
+    const itemResult = await fetchPagedSupabaseRows(
+      'annual_count_job_items',
+      'id,job_id,session_id,location_id,item_id,sort_order,locations(code,zone,row_no,level),items(code,description)',
+      query => query.eq('job_id',jobId).order('sort_order'),
+    );
+    if (itemResult.error) throw itemResult.error;
+    const unfinishedRows = await annualUnfinishedJobItemRows(itemResult.data || [],job.session_id);
+    const currentBackdrop = Q('annual-job-detail-backdrop');
+    const body = Q('annual-job-detail-body');
+    if (!currentBackdrop || currentBackdrop.dataset.jobId !== jobId || !body) return;
+
+    const grouped = new Map();
+    unfinishedRows.forEach(row => {
+      const code = String(row.locations?.code || 'ไม่ระบุ Location');
+      if (!grouped.has(code)) grouped.set(code,[]);
+      grouped.get(code).push(row);
+    });
+    const locationCodes = [...grouped.keys()].sort((left,right) => compareLocationCodes(left,right,'asc'));
+    const itemCount = unfinishedRows.length;
+    body.innerHTML = `<div class="annual-job-detail-summary">
+      <div><span>JOB</span><strong>${escapeWmsText(job.job_code || '—')}</strong></div>
+      <div><span>Location ที่ยังไม่เสร็จ</span><strong>${locationCodes.length.toLocaleString(uiLocale())}</strong></div>
+      <div><span>Location + Item</span><strong>${itemCount.toLocaleString(uiLocale())}</strong></div>
+    </div>
+    ${locationCodes.length ? locationCodes.map(code => {
+      const rows = (grouped.get(code) || []).sort((left,right) =>
+        Number(left.sort_order || 0)-Number(right.sort_order || 0)
+        || String(left.items?.code || '').localeCompare(String(right.items?.code || ''),'en',{numeric:true})
+      );
+      return `<section class="annual-job-detail-location">
+        <header><strong>${escapeWmsText(code)}</strong><span>${rows.length.toLocaleString(uiLocale())} Item</span></header>
+        ${rows.map(row => `<div class="annual-job-detail-item">
+          <strong>${escapeWmsText(row.items?.code || '—')}</strong>
+          <span>${escapeWmsText(row.items?.description || 'ไม่ระบุ Description')}</span>
+        </div>`).join('')}
+      </section>`;
+    }).join('') : '<div class="annual-empty">JOB นี้ไม่มี Location ที่ยังไม่เสร็จ</div>'}`;
+  } catch (error) {
+    const currentBackdrop = Q('annual-job-detail-backdrop');
+    const body = Q('annual-job-detail-body');
+    if (currentBackdrop?.dataset.jobId === jobId && body) body.innerHTML = errBox(error.message || error);
+  }
+}
+
+document.addEventListener('keydown',event => {
+  if (event.key === 'Escape' && Q('annual-job-detail-backdrop')) closeAnnualJobDetails();
+});
 
 function selectedAnnualJobIds() {
   return [...document.querySelectorAll('.annual-job-checkbox:checked')].map(input => input.value).filter(Boolean);
@@ -52713,16 +52928,29 @@ async function writeAnnualJobGenerationRows(table,rows) {
   throw error;
 }
 
-async function generateAnnualJobsClientSide({ sessionId,size,prefix,alertBox }) {
-  setAnnualJobGenerationProgress(alertBox,'กำลังอ่านและเรียง Stock Snapshot...');
-  const snapshotResult = await fetchPagedSupabaseRows(
-    'stock_snapshot',
-    'id,location_id,item_id,locations(code),items(code)',
-    query => query.eq('session_id',sessionId).order('id'),
-  );
-  if (snapshotResult.error) throw snapshotResult.error;
-  const snapshots = operationalStockSnapshotsByLocation(snapshotResult.data || []);
-  if (!snapshots.length) throw new Error('Session นี้ยังไม่มี Stock Snapshot สำหรับสร้าง JOB');
+async function generateAnnualJobsClientSide({ sessionId,size,prefix,alertBox,permissionFallback=false }) {
+  setAnnualJobGenerationProgress(alertBox,'กำลังอ่านสถานะงานและเรียง Stock Snapshot...');
+  const [snapshotResult,assignmentResult] = await Promise.all([
+    fetchPagedSupabaseRows(
+      'stock_snapshot',
+      'id,location_id,item_id,locations(code),items(code)',
+      query => query.eq('session_id',sessionId).order('id'),
+    ),
+    fetchPagedSupabaseRows(
+      'assignments',
+      'id,session_id,location_id,status,assigned_at,created_at,wms_closed_at',
+      query => query.eq('session_id',sessionId).order('created_at'),
+    ),
+  ]);
+  if (snapshotResult.error || assignmentResult.error) throw (snapshotResult.error || assignmentResult.error);
+  const operationalSnapshots = operationalStockSnapshotsByLocation(snapshotResult.data || []);
+  const snapshots = annualUnfinishedSnapshotRows(operationalSnapshots,assignmentResult.data || []);
+  const excludedCompleted = Math.max(0,operationalSnapshots.length-snapshots.length);
+  if (!snapshots.length) {
+    throw new Error(excludedCompleted
+      ? `ไม่มีงานที่ยังไม่เสร็จสำหรับสร้าง Annual JOB · ตัดงานที่เสร็จแล้ว ${excludedCompleted.toLocaleString(uiLocale())} รายการ`
+      : 'Session นี้ยังไม่มี Stock Snapshot สำหรับสร้าง JOB');
+  }
 
   const collator = new Intl.Collator('en',{ numeric:true,sensitivity:'base' });
   snapshots.sort((left,right) =>
@@ -52779,7 +53007,13 @@ async function generateAnnualJobsClientSide({ sessionId,size,prefix,alertBox }) 
     }
     await writeAnnualJobGenerationRows('annual_count_job_items',itemRows.slice(start,start+writeBatchSize));
   }
-  return { job_count:jobRows.length,item_count:itemRows.length,permission_fallback:true };
+  return {
+    job_count:jobRows.length,
+    item_count:itemRows.length,
+    excluded_completed:excludedCompleted,
+    client_filtered:true,
+    permission_fallback:Boolean(permissionFallback),
+  };
 }
 
 async function generateAnnualJobs() {
@@ -52797,23 +53031,37 @@ async function generateAnnualJobs() {
   setAnnualJobGenerationProgress(alertBox,'กำลังเรียงและแบ่ง Stock Snapshot เป็น JOB...');
   try {
     let summary;
-    const hygieneResult = await fetchPagedSupabaseRows(
-      'stock_snapshot','id,session_id,location_id,item_id,items(code)',
-      query => query.eq('session_id',config.sessionId).order('id'),
-    );
-    if (hygieneResult.error) throw hygieneResult.error;
+    const [hygieneResult,assignmentResult] = await Promise.all([
+      fetchPagedSupabaseRows(
+        'stock_snapshot','id,session_id,location_id,item_id,items(code)',
+        query => query.eq('session_id',config.sessionId).order('id'),
+      ),
+      fetchPagedSupabaseRows(
+        'assignments','id,session_id,location_id,status,assigned_at,created_at,wms_closed_at',
+        query => query.eq('session_id',config.sessionId).order('created_at'),
+      ),
+    ]);
+    if (hygieneResult.error || assignmentResult.error) throw (hygieneResult.error || assignmentResult.error);
     const rawJobSnapshots = hygieneResult.data || [];
     const operationalJobSnapshots = operationalStockSnapshotsByLocation(rawJobSnapshots);
-    const requiresHygieneFilter = operationalJobSnapshots.length !== rawJobSnapshots.length;
-    const rpcResult = requiresHygieneFilter
+    const unfinishedJobSnapshots = annualUnfinishedSnapshotRows(
+      operationalJobSnapshots,
+      assignmentResult.data || [],
+    );
+    const excludedCompleted = Math.max(0,operationalJobSnapshots.length-unfinishedJobSnapshots.length);
+    const requiresClientFilter = unfinishedJobSnapshots.length !== rawJobSnapshots.length;
+    const rpcResult = requiresClientFilter
       ? { data:null,error:null,_skippedForHygiene:true }
       : await sb.rpc('generate_annual_count_jobs',{
           p_session_id:config.sessionId,
           p_items_per_job:size,
           p_prefix:prefix,
         });
-    if (requiresHygieneFilter) {
-      setAnnualJobGenerationProgress(alertBox,'พบ Item ว่างซ้ำ/กำพร้า · กำลังสร้าง JOB จากรายการที่ใช้งานจริงเท่านั้น...');
+    if (requiresClientFilter) {
+      const filterMessages = [];
+      if (operationalJobSnapshots.length !== rawJobSnapshots.length) filterMessages.push('Item ว่างซ้ำ/กำพร้า');
+      if (excludedCompleted) filterMessages.push(`งานที่เสร็จแล้ว ${excludedCompleted.toLocaleString(uiLocale())} รายการ`);
+      setAnnualJobGenerationProgress(alertBox,`กำลังตัด ${filterMessages.join(' และ ')} แล้วสร้าง JOB จากงานที่ยังไม่เสร็จเท่านั้น...`);
       summary = await generateAnnualJobsClientSide({
         sessionId:config.sessionId,
         size,
@@ -52829,6 +53077,7 @@ async function generateAnnualJobs() {
         size,
         prefix,
         alertBox,
+        permissionFallback:true,
       });
     } else {
       summary = Array.isArray(rpcResult.data) ? rpcResult.data[0] : rpcResult.data;
@@ -52841,14 +53090,18 @@ async function generateAnnualJobs() {
       option.dataset.annualPrefix = prefix;
     }
     if (alertBox) {
+      const filteredNote = Number(summary?.excluded_completed || 0)
+        ? `<br><span style="font-size:10px">ตัดงานที่เสร็จแล้ว ${Number(summary.excluded_completed).toLocaleString(uiLocale())} รายการออกจากการคำนวณ</span>`
+        : '';
       const fallbackNote = summary?.permission_fallback ? '<br><span style="font-size:10px">ใช้โหมดสำรองโดยไม่แก้ตาราง Session</span>' : '';
-      alertBox.innerHTML = `<div class="alert alert-green" style="margin-top:12px">✅ สร้าง ${Number(summary?.job_count||0).toLocaleString(uiLocale())} JOB จาก ${Number(summary?.item_count||0).toLocaleString(uiLocale())} รายการแล้ว${fallbackNote}</div>`;
+      alertBox.innerHTML = `<div class="alert alert-green" style="margin-top:12px">✅ สร้าง ${Number(summary?.job_count||0).toLocaleString(uiLocale())} JOB จากงานที่ยังไม่เสร็จ ${Number(summary?.item_count||0).toLocaleString(uiLocale())} รายการแล้ว${filteredNote}${fallbackNote}</div>`;
     }
     showActionSuccess('สร้าง Annual Count JOB เรียบร้อยแล้ว', {
       title:'สร้าง JOB สำเร็จ',
       facts:[
         {label:'จำนวน JOB',value:Number(summary?.job_count || 0).toLocaleString(uiLocale())},
-        {label:'จำนวน Item',value:Number(summary?.item_count || 0).toLocaleString(uiLocale())},
+        {label:'งานที่ยังไม่เสร็จ',value:Number(summary?.item_count || 0).toLocaleString(uiLocale())},
+        ...(Number(summary?.excluded_completed || 0) ? [{label:'ตัดงานเสร็จแล้ว',value:Number(summary.excluded_completed).toLocaleString(uiLocale())}] : []),
       ],
     });
     await loadAnnualJobWorkspace();
@@ -55384,7 +55637,9 @@ async function printAnnualJobForms(jobIds) {
     if (!jobs.length) throw new Error('ไม่พบ Annual JOB ที่เลือก');
     const sessionId = jobs[0].session_id;
     const validJobIds = new Set(jobs.filter(job => job.session_id === sessionId).map(job => job.id));
-    const itemRows = (itemsResult.data || []).filter(row => validJobIds.has(row.job_id));
+    const allItemRows = (itemsResult.data || []).filter(row => validJobIds.has(row.job_id));
+    const itemRows = await annualUnfinishedJobItemRows(allItemRows,sessionId);
+    if (!itemRows.length) throw new Error('JOB ที่เลือกไม่มีงานที่ยังไม่เสร็จสำหรับพิมพ์');
     const locationIds = [...new Set(itemRows.map(row => row.location_id).filter(Boolean))];
     const [detailRows,snapshotRows] = await Promise.all([
       fetchPrintSourceRows(
@@ -55945,7 +56200,7 @@ async function loadAdTxLog() {
     wms_return_review:{ icon:'↩️',label:'ส่งจาก WMS กลับตรวจใหม่' },
     found_item_recorded:{ icon:'➕',label:'บันทึกงานพบเพิ่ม' },
     found_item_approved:{ icon:'✅',label:'อนุมัติงานพบเพิ่ม' },
-    found_item_rejected:{ icon:'✕',label:'ไม่อนุมัติงานพบเพิ่ม' },
+    found_item_rejected:{ icon:'✕',label:'ไม่อนุมัติและนำงานพบเพิ่มออก' },
     count_type_issue_updated:{ icon:'🏷️',label:'แก้ไข Type Issue งานนับ' },
     count_issue_evidence_updated:{ icon:'📷',label:'แก้ไข Type Issue / Remark / รูปถ่ายจากหน้าผลต่าง' },
     found_type_issue_updated:{ icon:'🏷️',label:'แก้ไข Type Issue งานพบเพิ่ม' },
@@ -61427,7 +61682,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.170" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.172" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
@@ -62351,7 +62606,7 @@ window.addEventListener('DOMContentLoaded', () => {
 if ('serviceWorker' in navigator && ['https:','http:'].includes(location.protocol)) {
   window.addEventListener('load', async () => {
     try {
-      const registration = await navigator.serviceWorker.register('./sw.js?v=170', { scope:'./' });
+      const registration = await navigator.serviceWorker.register('./sw.js?v=172', { scope:'./' });
       registration.update().catch(() => {});
       document.documentElement.dataset.pwaReady = 'true';
     } catch (error) {
