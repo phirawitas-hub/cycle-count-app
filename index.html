@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- V1.180: Open Handheld Count work at the Location banner instead of the page header. -->
+<!-- V1.181: Stabilize the Handheld counter picker for uninterrupted multi-selection. -->
 <!-- V1.175: Focus the active Count field on every device and keep the handheld pause action visually distinct (verified). -->
 <!-- V1.174: Redesign per-Zone assignment mode cards with responsive controls and readable Zone names (verified). -->
 <!-- V1.173: Add per-Zone Normal/Annual allocation, cross-mode duplicate guards, and safe cancel/return actions (verified). -->
@@ -50,14 +50,14 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.180</title>
+<title>Cycle Count V1.181</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
 if (['http:','https:'].includes(location.protocol)) {
   const manifestLink = document.createElement('link');
   manifestLink.rel = 'manifest';
-  manifestLink.href = './manifest.webmanifest?v=180';
+  manifestLink.href = './manifest.webmanifest?v=181';
   document.head.appendChild(manifestLink);
 }
 </script>
@@ -66,8 +66,8 @@ if (['http:','https:'].includes(location.protocol)) {
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Cycle Count">
-<link rel="apple-touch-icon" href="./icons/icon-192.png?v=180">
-<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=180">
+<link rel="apple-touch-icon" href="./icons/icon-192.png?v=181">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=181">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -770,6 +770,28 @@ select { appearance: none; background-image: url('data:image/svg+xml;charset=US-
 }
 .counter-option.sel { background:#e2f3f1; color:#006d77; }
 .counter-option.sel .counter-option-mark { border-color:#006d77; background:#006d77; }
+.counter-picker-actions {
+  position:sticky;
+  bottom:-1px;
+  z-index:2;
+  margin-top:10px;
+  padding-top:10px;
+  background:linear-gradient(180deg,rgba(255,255,255,0),#fff 24%);
+}
+.counter-picker-done {
+  width:100%;
+  min-height:44px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:0;
+  border-radius:13px;
+  color:#fff;
+  background:var(--theme-primary-color,#006d77);
+  font:800 13px 'Mitr','Sarabun',sans-serif;
+  cursor:pointer;
+  touch-action:manipulation;
+}
 .counter-add-row { display:grid; grid-template-columns:minmax(0,1fr) 44px; gap:8px; margin-top:12px; padding-top:12px; border-top:1px solid #e5eeee; }
 .counter-add-row input { min-width:0; min-height:44px; padding:9px 12px; background:#f7fbfb; }
 .counter-add-row button { width:44px; min-height:44px; padding:0; border-radius:13px; font-size:21px; }
@@ -15012,10 +15034,13 @@ margin-top:8px;
     bottom:calc(8px + env(safe-area-inset-bottom)) !important;
     max-height:min(72dvh,520px);
     overflow-y:auto;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
     padding:12px;
     border-radius:18px;
   }
-  .counter-option { min-height:46px; }
+  .counter-option { min-height:46px; touch-action:manipulation; }
+  .counter-picker-done { min-height:48px; font-size:14px; }
   /* Product header + count controls stay visible; LP details become full-width cards. */
   .count-items-card { gap:10px !important; margin-bottom:0 !important; }
   .citem-wrap { border-radius:17px; }
@@ -23335,13 +23360,13 @@ body.page-loading-active .main-wrapper{
 }
 </style>
 </head>
-<body data-build="v1-180">
+<body data-build="v1-181">
 <div id="app"></div>
 
 <script>
-// V1.180: one authoritative application version for the browser title,
+// V1.181: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '1.180';
+const APP_VERSION = '1.181';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -24862,7 +24887,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.180':'e.g. Warehouse V1.180',
+  'เช่น Warehouse V1.181':'e.g. Warehouse V1.181',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -34073,6 +34098,7 @@ function scheduleCurrentCountEntryFocus({ preferredInputId='' }={}) {
   prepareCurrentCountEntryFocus({ force:true,preferredInputId });
   requestAnimationFrame(() => {
     if (token !== _handheldCountFocusToken || S?.page !== 'c-count') return;
+    if (countEntryAutofocusBlocked()) return;
     const activeInput = document.activeElement?.classList?.contains('cqty')
       ? document.activeElement
       : null;
@@ -34082,6 +34108,7 @@ function scheduleCurrentCountEntryFocus({ preferredInputId='' }={}) {
   [60,180,420,850,1500,2500].forEach(delay => {
     _handheldCountFocusTimers.push(setTimeout(() => {
       if (token !== _handheldCountFocusToken || S?.page !== 'c-count') return;
+      if (countEntryAutofocusBlocked()) return;
       const activeInput = document.activeElement?.classList?.contains('cqty')
         ? document.activeElement
         : null;
@@ -36255,6 +36282,10 @@ async function loadCFound() {
             <div class="counter-picker-menu" id="counterPickerMenu" hidden onclick="event.stopPropagation()">
               <div class="counter-picker-title">รายชื่อผู้ตรวจนับ <span>แตะเพื่อเลือก / ยกเลิก</span></div>
               <div id="counterNameOptions" class="counter-option-list"></div>
+              <div class="counter-picker-actions">
+                <button type="button" class="counter-picker-done"
+                  onclick="event.preventDefault();event.stopPropagation();closeCounterDropdown({ resumeCount:true })">✓ เสร็จ</button>
+              </div>
             </div>
           </div>
           <div id="counterSelectedChips" class="counter-selected-chips"></div>
@@ -37284,6 +37315,10 @@ async function loadCCount() {
             </div>
             <button type="button" class="btn btn-ghost btn-sm" style="width:100%;margin-top:8px"
               onclick="go('ad-users')">⚙️ แก้ไข / ลบรายชื่อผู้ตรวจนับ</button>` : ''}
+            <div class="counter-picker-actions">
+              <button type="button" class="counter-picker-done"
+                onclick="event.preventDefault();event.stopPropagation();closeCounterDropdown({ resumeCount:true })">${uiCopy('✓ เสร็จ','✓ Done')}</button>
+            </div>
           </div>
         </div>
         <div id="counterSelectedChips" class="counter-selected-chips"></div>
@@ -37601,6 +37636,7 @@ function scrollCountEntryWithLocation(target,{ behavior='smooth' }={}) {
 
 function keepFocusedCountLocationVisible(input,{ behavior='auto' }={}) {
   if (!input?.classList?.contains('cqty')) return false;
+  if (countEntryAutofocusBlocked()) return false;
   requestAnimationFrame(() => scrollCountEntryWithLocation(input,{ behavior }));
   return true;
 }
@@ -38123,7 +38159,7 @@ function renderCounterPicker() {
   }
   wrap.innerHTML = names.map((c, index) => {
     const sel = window._selectedCounters.has(c.name);
-    return `<button type="button" class="counter-option ${sel?'sel':''}" onclick="toggleCounterByIndex(${index})">
+    return `<button type="button" class="counter-option ${sel?'sel':''}" onclick="event.preventDefault();event.stopPropagation();toggleCounterByIndex(${index})">
       <span class="counter-option-mark">${sel?'✓':''}</span>
       <span>${escapeWmsText(c.name)}</span>
     </button>`;
@@ -38131,28 +38167,50 @@ function renderCounterPicker() {
 }
 
 function toggleCounterDropdown(event) {
+  event?.preventDefault();
   event?.stopPropagation();
   const menu = Q('counterPickerMenu');
   const trigger = Q('counterPickerTrigger');
   if (!menu || !trigger) return;
   const willOpen = menu.hidden;
+  if (willOpen) {
+    clearHandheldCountFocusTimers();
+    if (S?.page === 'c-count') {
+      closeCountNumericKeypad({ blur:true });
+      const active = document.activeElement;
+      if (active?.classList?.contains('cqty')) active.blur();
+    }
+  }
   menu.hidden = !willOpen;
   trigger.setAttribute('aria-expanded', String(willOpen));
   document.body.classList.toggle('counter-picker-open',willOpen);
+  if (!willOpen && S?.page === 'c-count') {
+    setTimeout(() => scheduleCurrentCountEntryFocus(),80);
+  }
 }
 
-function closeCounterDropdown() {
+function closeCounterDropdown({ resumeCount=false }={}) {
   const menu = Q('counterPickerMenu');
   const trigger = Q('counterPickerTrigger');
   if (menu) menu.hidden = true;
   if (trigger) trigger.setAttribute('aria-expanded', 'false');
   document.body.classList.remove('counter-picker-open');
+  if (resumeCount && S?.page === 'c-count') {
+    setTimeout(() => scheduleCurrentCountEntryFocus(),80);
+  }
 }
 
 document.addEventListener('click', event => {
   const picker = Q('counterPicker');
-  if (picker && !picker.contains(event.target)) closeCounterDropdown();
-  if (!event.target.closest('.count-remark-picker')) closeCountRemarkDropdowns();
+  const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
+  const insidePicker = picker && (path.includes(picker) || picker.contains(event.target));
+  if (picker && !insidePicker) closeCounterDropdown();
+  if (!event.target?.closest?.('.count-remark-picker')) closeCountRemarkDropdowns();
+});
+
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Escape' || Q('counterPickerMenu')?.hidden) return;
+  closeCounterDropdown({ resumeCount:S?.page === 'c-count' });
 });
 
 function toggleCounterByIndex(index) {
@@ -62631,7 +62689,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.180" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.181" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
@@ -63555,7 +63613,7 @@ window.addEventListener('DOMContentLoaded', () => {
 if ('serviceWorker' in navigator && ['https:','http:'].includes(location.protocol)) {
   window.addEventListener('load', async () => {
     try {
-      const registration = await navigator.serviceWorker.register('./sw.js?v=180', { scope:'./' });
+      const registration = await navigator.serviceWorker.register('./sw.js?v=181', { scope:'./' });
       registration.update().catch(() => {});
       document.documentElement.dataset.pwaReady = 'true';
     } catch (error) {
