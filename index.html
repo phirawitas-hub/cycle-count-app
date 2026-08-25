@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- V1.177: Render the Handheld Count field inside a real black frame so WebView input styling cannot hide it. -->
+<!-- V1.178: Remove the long pending-count sentence above the Handheld scanner. -->
 <!-- V1.175: Focus the active Count field on every device and keep the handheld pause action visually distinct (verified). -->
 <!-- V1.174: Redesign per-Zone assignment mode cards with responsive controls and readable Zone names (verified). -->
 <!-- V1.173: Add per-Zone Normal/Annual allocation, cross-mode duplicate guards, and safe cancel/return actions (verified). -->
@@ -50,14 +50,14 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.177</title>
+<title>Cycle Count V1.178</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
 if (['http:','https:'].includes(location.protocol)) {
   const manifestLink = document.createElement('link');
   manifestLink.rel = 'manifest';
-  manifestLink.href = './manifest.webmanifest?v=177';
+  manifestLink.href = './manifest.webmanifest?v=178';
   document.head.appendChild(manifestLink);
 }
 </script>
@@ -66,8 +66,8 @@ if (['http:','https:'].includes(location.protocol)) {
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Cycle Count">
-<link rel="apple-touch-icon" href="./icons/icon-192.png?v=177">
-<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=177">
+<link rel="apple-touch-icon" href="./icons/icon-192.png?v=178">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=178">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -15016,12 +15016,6 @@ margin-top:8px;
     border-radius:18px;
   }
   .counter-option { min-height:46px; }
-  .count-items-summary {
-    margin:8px 2px !important;
-    font-size:11px !important;
-    line-height:1.35;
-  }
-
   /* Product header + count controls stay visible; LP details become full-width cards. */
   .count-items-card { gap:10px !important; margin-bottom:0 !important; }
   .citem-wrap { border-radius:17px; }
@@ -17826,7 +17820,7 @@ body.login-page-active .lcard {
     inset 2px 2px 5px var(--neu-shadow-dark) !important;
 }
 
-/* V1.177 — A physical wrapper supplies the black Count frame. Some rugged
+/* Rugged Handheld Count frame — A physical wrapper supplies the black frame. Some rugged
    Android WebViews paint native text inputs above their CSS border; the
    wrapper remains visible regardless of that native input rendering. */
 #app .count-handheld-page .count-input-frame {
@@ -23338,13 +23332,13 @@ body.page-loading-active .main-wrapper{
 }
 </style>
 </head>
-<body data-build="v1-177">
+<body data-build="v1-178">
 <div id="app"></div>
 
 <script>
-// V1.177: one authoritative application version for the browser title,
+// V1.178: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '1.177';
+const APP_VERSION = '1.178';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -24865,7 +24859,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.177':'e.g. Warehouse V1.177',
+  'เช่น Warehouse V1.178':'e.g. Warehouse V1.178',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -37284,7 +37278,6 @@ async function loadCCount() {
         <div id="counterSelectedChips" class="counter-selected-chips"></div>
       </div>
     </div>
-      <div class="sec count-items-summary">📦 รอนับ ${activeCountRows.length} รายการ · นับซ้ำ ${recountPendingCount} รายการ · ผ่านแล้ว ${window._countEntryResolvedMatchCount} รายการ — เลือก Item ลำดับใดก็ได้ ระบบบันทึกตาม COUNT R ของแต่ละ Item</div>
       <div class="count-sticky-stack" aria-label="เครื่องมือค้นหาและสรุปผลการนับ">
         ${hardwareLaserCaptureHtml(
           'count_hardware_scan',
@@ -62580,7 +62573,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.177" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.178" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
@@ -63504,7 +63497,7 @@ window.addEventListener('DOMContentLoaded', () => {
 if ('serviceWorker' in navigator && ['https:','http:'].includes(location.protocol)) {
   window.addEventListener('load', async () => {
     try {
-      const registration = await navigator.serviceWorker.register('./sw.js?v=177', { scope:'./' });
+      const registration = await navigator.serviceWorker.register('./sw.js?v=178', { scope:'./' });
       registration.update().catch(() => {});
       document.documentElement.dataset.pwaReady = 'true';
     } catch (error) {
