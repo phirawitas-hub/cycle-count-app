@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V1.165: Separate Zone labels from WMS prefixes, generate Longspan as B-E*/B-F*, repair legacy Zone-name prefixes, preview sample codes, and block unresolved/invalid future layout prefixes (verified). -->
+<!-- V1.164: Recognize both RGB and Excel Theme/Indexed fill colours so green usable cells are imported exactly as displayed in Excel (verified). -->
 <!-- V1.163: Make Excel cell colour the import contract: green usable, black aisle, blue pillar, red disabled, uncoloured ignored (verified). -->
 <!-- V1.162: Detect explicit blank Excel cells even when the browser omits border metadata, preserving every rack's exact Bay range (verified). -->
 <!-- V1.161: Read each Excel rack from its real bordered cells, so header-only Bay numbers never create phantom Locations (verified). -->
@@ -37,14 +39,14 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.163</title>
+<title>Cycle Count V1.165</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
 if (['http:','https:'].includes(location.protocol)) {
   const manifestLink = document.createElement('link');
   manifestLink.rel = 'manifest';
-  manifestLink.href = './manifest.webmanifest?v=163';
+  manifestLink.href = './manifest.webmanifest?v=165';
   document.head.appendChild(manifestLink);
 }
 </script>
@@ -53,8 +55,8 @@ if (['http:','https:'].includes(location.protocol)) {
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Cycle Count">
-<link rel="apple-touch-icon" href="./icons/icon-192.png?v=163">
-<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=163">
+<link rel="apple-touch-icon" href="./icons/icon-192.png?v=165">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=165">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -23016,13 +23018,13 @@ body.count-page-active #app .count-handheld-page .citem-wrap {
 }
 </style>
 </head>
-<body data-build="v1-163">
+<body data-build="v1-165">
 <div id="app"></div>
 
 <script>
-// V1.163: one authoritative application version for the browser title,
+// V1.165: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '1.163';
+const APP_VERSION = '1.165';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -24543,7 +24545,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.163':'e.g. Warehouse V1.163',
+  'เช่น Warehouse V1.165':'e.g. Warehouse V1.165',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -41839,20 +41841,44 @@ function createWarehouseLayoutFromSessionData(sessionData=window._warehouseLayou
   });
 }
 
+function warehouseExcelCellFillColor(workbook,cell) {
+  const direct = cell?.s?.fill?.fgColor || cell?.s?.fgColor || cell?.fill?.fgColor;
+  if (direct && typeof direct === 'object') return direct;
+  const styleIndex = Number.isInteger(cell?.s) ? cell.s : null;
+  const fillId = styleIndex === null ? null : workbook?.Styles?.CellXf?.[styleIndex]?.fillId;
+  const fill = Number.isInteger(fillId) ? workbook?.Styles?.Fills?.[fillId] : null;
+  return fill?.fgColor && typeof fill.fgColor === 'object' ? fill.fgColor : {};
+}
+
 function warehouseExcelCellRgb(workbook,cell) {
-  const direct = cell?.s?.fill?.fgColor?.rgb || cell?.s?.fgColor?.rgb || cell?.fill?.fgColor?.rgb || '';
+  const colour = warehouseExcelCellFillColor(workbook,cell);
+  const direct = colour?.rgb || '';
   if (direct) {
     const rgb = String(direct).toUpperCase();
     return rgb.length === 8 && rgb.startsWith('FF') ? rgb.slice(2) : rgb;
   }
-  const styleIndex = Number.isInteger(cell?.s) ? cell.s : null;
-  const fillId = styleIndex === null ? null : workbook?.Styles?.CellXf?.[styleIndex]?.fillId;
-  const fill = Number.isInteger(fillId) ? workbook?.Styles?.Fills?.[fillId] : null;
-  const rgb = String(fill?.fgColor?.rgb || '').toUpperCase();
-  return rgb.length === 8 && rgb.startsWith('FF') ? rgb.slice(2) : rgb;
+  return '';
 }
 
 function warehouseExcelBlockedTone(workbook,cell) {
+  const colour = warehouseExcelCellFillColor(workbook,cell);
+  const theme = Number(colour?.theme);
+  if (Number.isInteger(theme)) {
+    // OOXML theme slots: dark1/dark2, accent1, accent2 and accent4.
+    // The uploaded Longspan workbook stores its visible green as theme 7
+    // (accent4), so resolve the semantic colour before falling back to RGB.
+    if (theme === 0 || theme === 2) return 'black';
+    if (theme === 4) return 'blue';
+    if (theme === 5) return 'red';
+    if (theme === 7) return 'green';
+  }
+  const indexed = Number(colour?.indexed);
+  if (Number.isInteger(indexed)) {
+    if ([0,8].includes(indexed)) return 'black';
+    if ([2,10].includes(indexed)) return 'red';
+    if ([3,11].includes(indexed)) return 'green';
+    if ([4,12].includes(indexed)) return 'blue';
+  }
   const rgb = warehouseExcelCellRgb(workbook,cell);
   if (!/^[0-9A-F]{6}$/.test(rgb)) return '';
   const red = Number.parseInt(rgb.slice(0,2),16);
@@ -41895,10 +41921,16 @@ function warehouseExcelZonePrefix(sheetName,title,rackCode='') {
   if (/MICRO\s*RACK|MICRORACK/i.test(text)) return 'Microrack';
   const tailLetter = text.match(/(?:^|\s)([A-Z])\s*$/);
   if (tailLetter) return tailLetter[1];
-  const rack = String(rackCode || '').toUpperCase().replace(/\s+/g,'');
-  const rackMatch = rack.match(/^([A-Z]+)-([A-Z0-9]+)$/);
-  if (rackMatch) return rackMatch[1];
-  return rack.charAt(0) || 'ZONE';
+  return warehouseLayoutString(title || sheetName,'Zone',60);
+}
+
+function warehouseDefaultLocationPrefix(zoneName) {
+  const zoneKey = warehouseZoneIdentityKey(zoneName);
+  // Business Zone names are labels, never WMS Location prefixes. Keep known
+  // mappings here so every future Excel layout follows the same rule.
+  if (['LONGSPANE','LONGSPANF','COOLROOM','MICRORACK','SELECTIVE','SELECTIVEA','CONSUMABLERACK'].includes(zoneKey)) return 'B';
+  if (zoneKey === 'COOLROOMFLOOR') return 'C';
+  return '';
 }
 
 function warehouseExcelRackIdentity(rawRack,sheetName,title) {
@@ -42030,7 +42062,14 @@ function parseWarehouseLayoutExcelSheet(workbook,worksheet,sheetName) {
   if (!colouredRacks.length) {
     throw new Error(`ชีต ${sheetName}: ไม่พบช่องสีเขียว/ดำ/น้ำเงิน/แดง กรุณาระบายสีช่องก่อนนำเข้า`);
   }
-  const prefix = colouredRacks[0].identity.prefix || warehouseExcelZonePrefix(sheetName,title);
+  const zoneName = warehouseExcelZonePrefix(sheetName,title,colouredRacks[0].identity.rackCode);
+  const defaultLocationPrefix = warehouseDefaultLocationPrefix(zoneName);
+  const racksMissingPrefix = colouredRacks.filter(rack => !rack.identity.prefix && !defaultLocationPrefix);
+  if (racksMissingPrefix.length) {
+    const labels = racksMissingPrefix.slice(0,8).map(rack => rack.identity.rackCode).join(', ');
+    const more = racksMissingPrefix.length > 8 ? ` และอีก ${racksMissingPrefix.length-8} Row` : '';
+    throw new Error(`ชีต ${sheetName}: ยังไม่ทราบ Prefix ของ Row ${labels}${more} กรุณาใส่ชื่อ Row แบบ Prefix-Row เช่น B-EA เพื่อป้องกันการสร้างรหัส Location ผิด`);
+  }
   let cursorY = 50;
   const elements = [];
   colouredRacks.forEach((rack,index) => {
@@ -42058,7 +42097,7 @@ function parseWarehouseLayoutExcelSheet(workbook,worksheet,sheetName) {
     const rackWidth = Math.max(700,150+(bayCount*27));
     elements.push(normalizeWarehouseLayoutElement({
       id:warehouseLayoutUid('rack'),type:'rack',label:rack.identity.rackCode,rackCode:rack.identity.rackCode,
-      row:rack.identity.row,locationPrefix:rack.identity.prefix || '',x:60,y:cursorY,width:rackWidth,height:rackHeight,
+      row:rack.identity.row,locationPrefix:rack.identity.prefix || defaultLocationPrefix,x:60,y:cursorY,width:rackWidth,height:rackHeight,
       bayStart,bayCount,bayPad:Math.max(3,String(bayEnd).length),levels,skipBays,
       excludedCells:rack.excludedCells,codePattern:'{prefix}-{row}-{bay}-{level}',direction:'ltr',
     },index));
@@ -42066,7 +42105,7 @@ function parseWarehouseLayoutExcelSheet(workbook,worksheet,sheetName) {
   });
   const canvasWidth = Math.max(1100,...elements.map(item => item.width+120));
   const zone = {
-    id:warehouseLayoutUid('zone'),name:prefix,canvasWidth,canvasHeight:Math.max(650,cursorY+40),elements,
+    id:warehouseLayoutUid('zone'),name:zoneName,canvasWidth,canvasHeight:Math.max(650,cursorY+40),elements,
   };
   const blocked = colouredRacks.reduce((sum,rack) => sum+rack.excludedCells.length,0);
   const greenCells = colouredRacks.reduce((sum,rack) => sum+rack.greenCells,0);
@@ -42099,6 +42138,16 @@ function parseWarehouseLayoutExcelWorkbook(workbook,fileName='') {
     sourceType:'excel',sourceName:fileName,updatedAt:new Date().toISOString(),updatedBy:prof?.name || '',
     zones:parsedSheets.map(item => item.zone),
   });
+  const generated = generateWarehouseLayoutLocations(config,{snapshots:[]});
+  const invalidCodes = generated.locations.filter(location => {
+    const code = warehouseLocationKey(location.code || '');
+    const zoneName = warehouseLocationKey(location.zone || '');
+    return !code || /\s/.test(code) || (zoneName.length > 1 && code.startsWith(`${zoneName}-`));
+  });
+  if (invalidCodes.length) {
+    const examples = invalidCodes.slice(0,5).map(location => location.code || 'ว่าง').join(', ');
+    throw new Error(`ตรวจพบรหัส Location ที่ไม่ถูกต้อง: ${examples} · ชื่อ Zone ห้ามใช้แทน Prefix`);
+  }
   return {
     config,parsedSheets,errors,fileName,
     zones:config.zones.length,
@@ -42109,7 +42158,8 @@ function parseWarehouseLayoutExcelWorkbook(workbook,fileName='') {
     blueCells:parsedSheets.reduce((sum,item) => sum+item.blueCells,0),
     blackCells:parsedSheets.reduce((sum,item) => sum+item.blackCells,0),
     ignoredCells:parsedSheets.reduce((sum,item) => sum+item.ignoredCells,0),
-    locations:generateWarehouseLayoutLocations(config,{snapshots:[]}).locations.length,
+    locations:generated.locations.length,
+    codeSamples:generated.locations.slice(0,5).map(location => location.code),
   };
 }
 
@@ -42142,6 +42192,7 @@ function warehouseLayoutExcelPreviewHtml(preview) {
     <span class="disabled"><i></i>สีแดง · ปิดใช้งาน ${preview.redCells.toLocaleString(uiLocale())}</span>
     ${preview.ignoredCells ? `<span><i></i>ไม่มีสีภายในช่วง · ไม่นำเข้า ${preview.ignoredCells.toLocaleString(uiLocale())}</span>` : ''}
   </div>
+  <div class="warehouse-layout-source-note"><span>✓</span><span>ตัวอย่างรหัส Location ที่จะสร้าง: <strong>${(preview.codeSamples || []).map(escapeWmsText).join(' · ') || '—'}</strong></span></div>
   <div class="warehouse-layout-source-note"><span>ⓘ</span><span>นำเข้าแบบ “เพิ่ม/อัปเดต Zone” จะเปลี่ยนเฉพาะ Zone ชื่อเดียวกับไฟล์ และคง Zone อื่นในผังเดิมไว้</span></div>
   ${preview.errors.length ? `<div class="alert alert-orange" style="margin-top:12px">ข้ามชีตที่อ่านไม่ได้: ${preview.errors.map(escapeWmsText).join(' · ')}</div>` : ''}
   <div class="warehouse-layout-dialog-actions">
@@ -42316,7 +42367,7 @@ function formatWarehouseLocationCode(pattern,context) {
   Object.entries(replacements).forEach(([key,value]) => {
     code = code.replace(new RegExp(`\\{${key}\\}`,'gi'),String(value ?? ''));
   });
-  return warehouseLocationKey(code);
+  return warehouseLocationKey(code).replace(/^-+|-+$/g,'').replace(/-{2,}/g,'-');
 }
 
 function warehouseLocationPrefixIndex(sessionData={}) {
@@ -42343,6 +42394,12 @@ function warehouseRackLocationIdentity(rack,zone,prefixIndex) {
   const storedRow = warehouseLocationKey(rack.row);
   const storedPrefix = warehouseLocationKey(rack.locationPrefix);
   const rackCode = warehouseLocationKey(rack.rackCode);
+  const defaultLocationPrefix = warehouseDefaultLocationPrefix(zone.name);
+  const storedPrefixIsZoneName = Boolean(
+    storedPrefix
+    && warehouseLocationKey(zone.name).length > 1
+    && warehouseZoneIdentityKey(storedPrefix) === warehouseZoneIdentityKey(zone.name)
+  );
   let rowKey = storedRow;
 
   // Repair legacy layouts in memory. Example: CR was previously split into
@@ -42360,14 +42417,24 @@ function warehouseRackLocationIdentity(rack,zone,prefixIndex) {
   // Outside the proven legacy case, an explicitly configured prefix remains
   // authoritative and must not be replaced by another row that happens to use
   // the same number elsewhere in the warehouse.
-  if (rowKey === storedRow && storedPrefix) return {row:storedRow,prefix:storedPrefix,repaired:false};
+  if (rowKey === storedRow && storedPrefix && !storedPrefixIsZoneName) {
+    return {row:storedRow,prefix:storedPrefix,repaired:false};
+  }
 
   const zoneKey = warehouseZoneIdentityKey(zone.name);
   const zoned = prefixIndex.byZoneRow.get(`${zoneKey}|${rowKey}`);
   if (zoned?.size === 1) return {row:rowKey,prefix:[...zoned][0],repaired:rowKey !== storedRow};
   const byRow = prefixIndex.byRow.get(rowKey);
   if (byRow?.size === 1) return {row:rowKey,prefix:[...byRow][0],repaired:rowKey !== storedRow};
-  return {row:rowKey,prefix:storedPrefix || warehouseLocationKey(zone.name),repaired:rowKey !== storedRow};
+  // Never fall back to the visible Zone name. Unknown future Zones either use
+  // a prefix resolved from live WMS rows, an explicitly configured prefix, or
+  // no prefix. This prevents codes such as LONGSPAN E-EA-001-D.
+  const fallbackPrefix = defaultLocationPrefix || (storedPrefixIsZoneName ? '' : storedPrefix);
+  return {
+    row:rowKey,
+    prefix:fallbackPrefix,
+    repaired:rowKey !== storedRow || storedPrefixIsZoneName || Boolean(defaultLocationPrefix && storedPrefix !== defaultLocationPrefix),
+  };
 }
 
 function warehouseRackLocationPrefix(rack,zone,prefixIndex) {
@@ -60989,7 +61056,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.163" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.165" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
@@ -61913,7 +61980,7 @@ window.addEventListener('DOMContentLoaded', () => {
 if ('serviceWorker' in navigator && ['https:','http:'].includes(location.protocol)) {
   window.addEventListener('load', async () => {
     try {
-      const registration = await navigator.serviceWorker.register('./sw.js?v=163', { scope:'./' });
+      const registration = await navigator.serviceWorker.register('./sw.js?v=165', { scope:'./' });
       registration.update().catch(() => {});
       document.documentElement.dataset.pwaReady = 'true';
     } catch (error) {
