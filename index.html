@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- V1.178: Remove the long pending-count sentence above the Handheld scanner. -->
+<!-- V1.179: Match the Count frame to the OH border and keep Location visible while Count is focused on Handheld. -->
 <!-- V1.175: Focus the active Count field on every device and keep the handheld pause action visually distinct (verified). -->
 <!-- V1.174: Redesign per-Zone assignment mode cards with responsive controls and readable Zone names (verified). -->
 <!-- V1.173: Add per-Zone Normal/Annual allocation, cross-mode duplicate guards, and safe cancel/return actions (verified). -->
@@ -50,14 +50,14 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.178</title>
+<title>Cycle Count V1.179</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
 if (['http:','https:'].includes(location.protocol)) {
   const manifestLink = document.createElement('link');
   manifestLink.rel = 'manifest';
-  manifestLink.href = './manifest.webmanifest?v=178';
+  manifestLink.href = './manifest.webmanifest?v=179';
   document.head.appendChild(manifestLink);
 }
 </script>
@@ -66,8 +66,8 @@ if (['http:','https:'].includes(location.protocol)) {
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Cycle Count">
-<link rel="apple-touch-icon" href="./icons/icon-192.png?v=178">
-<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=178">
+<link rel="apple-touch-icon" href="./icons/icon-192.png?v=179">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=179">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -17828,11 +17828,11 @@ body.login-page-active .lcard {
   width:100% !important;
   min-width:0 !important;
   box-sizing:border-box !important;
-  padding:3px !important;
+  padding:1px !important;
   border:0 !important;
-  border-radius:18px !important;
+  border-radius:15px !important;
   background:#080808 !important;
-  box-shadow:0 0 0 1px #080808,0 4px 10px rgba(0,0,0,.22) !important;
+  box-shadow:none !important;
   overflow:hidden !important;
 }
 #app .count-handheld-page .count-input-frame > input.cqty,
@@ -17844,7 +17844,7 @@ body.login-page-active .lcard {
   margin:0 !important;
   border:0 !important;
   outline:0 !important;
-  border-radius:15px !important;
+  border-radius:14px !important;
   background:#fff !important;
   color:var(--theme-heading-color) !important;
   -webkit-appearance:none !important;
@@ -17855,15 +17855,15 @@ body.login-page-active .lcard {
 #app .count-handheld-page .count-input-frame:focus-within,
 #app .count-handheld-page .count-input-frame.is-focused {
   background:#000 !important;
-  box-shadow:0 0 0 2px #000,0 0 0 6px rgba(0,109,119,.28) !important;
+  box-shadow:0 0 0 2px rgba(0,109,119,.30) !important;
 }
 @media (max-width:760px) {
   #app .count-handheld-page .count-input-frame {
-    border-radius:17px !important;
+    border-radius:15px !important;
   }
   #app .count-handheld-page .count-input-frame > input.cqty {
-    height:46px !important;
-    min-height:46px !important;
+    height:50px !important;
+    min-height:50px !important;
     border-radius:14px !important;
   }
 }
@@ -18060,6 +18060,9 @@ body.login-page-active .lcard {
   font-weight:700;
   line-height:1.35;
   overflow-wrap:anywhere;
+}
+body.count-page-active #app .count-handheld-page .citem-wrap {
+  scroll-margin-top:calc(var(--count-sticky-header-height, 58px) + var(--count-sticky-stack-height, 156px) + 16px);
 }
 .count-item-identity {
   padding-bottom:10px;
@@ -23332,13 +23335,13 @@ body.page-loading-active .main-wrapper{
 }
 </style>
 </head>
-<body data-build="v1-178">
+<body data-build="v1-179">
 <div id="app"></div>
 
 <script>
-// V1.178: one authoritative application version for the browser title,
+// V1.179: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '1.178';
+const APP_VERSION = '1.179';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -24859,7 +24862,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.178':'e.g. Warehouse V1.178',
+  'เช่น Warehouse V1.179':'e.g. Warehouse V1.179',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -34056,7 +34059,7 @@ function prepareCurrentCountEntryFocus({ force=false,preferredInputId='' }={}) {
     firstInput.setSelectionRange?.(0,String(firstInput.value || '').length);
   } catch (_) {}
   if (countNumericKeypadEnabled()) openCountNumericKeypad(firstInput);
-  firstInput.scrollIntoView({ block:'center',behavior:'auto' });
+  scrollCountEntryWithLocation(firstInput,{ behavior:'auto' });
   return document.activeElement === firstInput;
 }
 
@@ -34445,7 +34448,7 @@ function handleCountHardwareScan(value,target=null) {
   setTimeout(() => match.classList.remove('handheld-scan-match'),1800);
   const itemId = match.dataset.hwItemId || '';
   if (resolvedMatch) {
-    match.scrollIntoView({ block:'center',behavior:'smooth' });
+    scrollCountEntryWithLocation(match,{ behavior:'smooth' });
     const nextRound = Number(match.dataset.countNextRound || 0);
     if (nextRound) {
       handheldScanFeedback(
@@ -34479,7 +34482,7 @@ function handleCountHardwareScan(value,target=null) {
   }
   const qtyInput = Q(`q_${itemId}`);
   window._hardwareScanReturnInputId = qtyInput?.id || '';
-  match.scrollIntoView({ block:'center',behavior:'smooth' });
+  scrollCountEntryWithLocation(qtyInput || match,{ behavior:'smooth' });
   setTimeout(() => focusHardwareScanTarget(qtyInput),170);
   const matchedAs = candidateKeys.has(hardwareScanCompareKey(match.dataset.hwItemCode || '')) ? 'Item' : 'LPN';
   handheldScanFeedback('success',`${matchedAs} ${uiCopy('ตรงกับรายการ','Matched')}`,scanValue,uiCopy('กรอกจำนวนที่นับได้ แล้วกด Enter / OK','Enter the counted quantity, then press Enter / OK'));
@@ -37134,7 +37137,7 @@ async function loadCCount() {
                <div class="count-item-result is-${countEntryRow.inactiveState}" data-count-result-state="${countEntryRow.inactiveState}">${countEntryRow.inactiveText}</div>`
             : `<span class="count-qty-label">COUNT R${itemInputRound}</span>
                <div class="count-input-frame" data-count-input-frame="true"
-                 style="display:block;width:100%;box-sizing:border-box;padding:3px;border-radius:18px;background:#080808;overflow:hidden">
+                 style="display:block;width:100%;box-sizing:border-box;padding:1px;border-radius:15px;background:#080808;overflow:hidden">
                  <input type="text" class="cqty ${v !== undefined ? 'ok' : ''}"
                    id="q_${it.id}" inputmode="decimal" enterkeyhint="next"
                    data-item-id="${it.id}"
@@ -37554,6 +37557,50 @@ function updateCountNumericKeypadDisplay() {
   if (value) value.textContent = input.value === '' ? '—' : input.value;
 }
 
+function scrollCountEntryWithLocation(target,{ behavior='smooth' }={}) {
+  const element = typeof target === 'string' ? Q(target) : target;
+  if (!element) return false;
+  const card = element.matches?.('.citem-wrap') ? element : element.closest?.('.citem-wrap');
+  if (!card || !isNarrowHandheldTerminal()) {
+    element.scrollIntoView?.({ block:'center',behavior });
+    return Boolean(card || element);
+  }
+  const page = card.closest('.count-handheld-page');
+  const main = card.closest('.main-wrapper');
+  if (!page || !main) {
+    card.scrollIntoView?.({ block:'start',behavior });
+    return true;
+  }
+  const sticky = page.querySelector('.count-sticky-stack');
+  const mainRect = main.getBoundingClientRect();
+  const stickyRect = sticky?.getBoundingClientRect();
+  const visibleTop = Math.max(
+    mainRect.top + 8,
+    Number(stickyRect?.bottom || 0) + 8,
+  );
+  const delta = card.getBoundingClientRect().top - visibleTop;
+  const nextTop = Math.max(0,main.scrollTop + delta);
+  if (behavior === 'auto') main.scrollTop = nextTop;
+  else {
+    try { main.scrollTo({ top:nextTop,behavior }); }
+    catch (_) { main.scrollTop = nextTop; }
+  }
+  return true;
+}
+
+function keepFocusedCountLocationVisible(input,{ behavior='auto' }={}) {
+  if (!input?.classList?.contains('cqty')) return false;
+  requestAnimationFrame(() => scrollCountEntryWithLocation(input,{ behavior }));
+  return true;
+}
+
+window.visualViewport?.addEventListener('resize',() => {
+  if (S?.page !== 'c-count') return;
+  const input = document.activeElement;
+  if (!input?.classList?.contains('cqty')) return;
+  keepFocusedCountLocationVisible(input,{ behavior:'auto' });
+},{ passive:true });
+
 function openCountNumericKeypad(input) {
   if (!countNumericKeypadEnabled() || !input?.classList?.contains('cqty')) return false;
   input.readOnly = countNumericKeypadNeedsReadOnly();
@@ -37566,7 +37613,7 @@ function openCountNumericKeypad(input) {
   keypad.classList.add('is-open');
   document.body.classList.add('count-keypad-open');
   updateCountNumericKeypadDisplay();
-  requestAnimationFrame(() => input.scrollIntoView({ block:'center', behavior:'smooth' }));
+  keepFocusedCountLocationVisible(input,{ behavior:'smooth' });
   return true;
 }
 
@@ -37602,7 +37649,7 @@ function focusCountInputForEntry(input) {
   if (!input) return false;
   if (countNumericKeypadEnabled()) return openCountNumericKeypad(input);
   focusHardwareScanTarget(input);
-  input.scrollIntoView({ block:'center',behavior:'smooth' });
+  scrollCountEntryWithLocation(input,{ behavior:'smooth' });
   return true;
 }
 
@@ -38021,7 +38068,7 @@ function focusNextCountField(currentInput) {
     }
     nextInput.focus({ preventScroll:true });
     nextInput.select?.();
-    nextInput.scrollIntoView({ block:'center', behavior:'smooth' });
+    scrollCountEntryWithLocation(nextInput,{ behavior:'smooth' });
     return;
   }
   closeCountNumericKeypad();
@@ -62573,7 +62620,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.178" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.179" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
@@ -63497,7 +63544,7 @@ window.addEventListener('DOMContentLoaded', () => {
 if ('serviceWorker' in navigator && ['https:','http:'].includes(location.protocol)) {
   window.addEventListener('load', async () => {
     try {
-      const registration = await navigator.serviceWorker.register('./sw.js?v=178', { scope:'./' });
+      const registration = await navigator.serviceWorker.register('./sw.js?v=179', { scope:'./' });
       registration.update().catch(() => {});
       document.documentElement.dataset.pwaReady = 'true';
     } catch (error) {
