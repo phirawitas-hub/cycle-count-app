@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V1.163: Make Excel cell colour the import contract: green usable, black aisle, blue pillar, red disabled, uncoloured ignored (verified). -->
+<!-- V1.162: Detect explicit blank Excel cells even when the browser omits border metadata, preserving every rack's exact Bay range (verified). -->
+<!-- V1.161: Read each Excel rack from its real bordered cells, so header-only Bay numbers never create phantom Locations (verified). -->
+<!-- V1.160: Scope every Warehouse Layout KPI, status, match report, audit and Plan metric to the selected Zone (verified). -->
 <!-- V1.159: Hide Locations submitted for Supervisor review from the assignment workspace (verified). -->
 <!-- V1.158: Restore each visible assignment status badge to the right side of the simplified Location card (verified). -->
 <!-- V1.157: Simplify assignment Location cards and omit completed/approved Locations from the assignment workspace (verified). -->
@@ -33,14 +37,14 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.159</title>
+<title>Cycle Count V1.163</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
 if (['http:','https:'].includes(location.protocol)) {
   const manifestLink = document.createElement('link');
   manifestLink.rel = 'manifest';
-  manifestLink.href = './manifest.webmanifest?v=159';
+  manifestLink.href = './manifest.webmanifest?v=163';
   document.head.appendChild(manifestLink);
 }
 </script>
@@ -49,8 +53,8 @@ if (['http:','https:'].includes(location.protocol)) {
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Cycle Count">
-<link rel="apple-touch-icon" href="./icons/icon-192.png?v=159">
-<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=159">
+<link rel="apple-touch-icon" href="./icons/icon-192.png?v=163">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=163">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -11938,7 +11942,7 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
 .warehouse-cell-type-legend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:7px}
 .warehouse-cell-type-legend span{display:flex;align-items:center;gap:7px;padding:7px 8px;border-radius:9px;background:#f7fbfa;color:#4a6668;font-size:9px;font-weight:700}
 .warehouse-cell-type-legend i{width:17px;height:17px;border-radius:5px;flex:none;border:1px solid rgba(20,66,69,.16)}
-.warehouse-cell-type-legend .location i{background:#dfb679}.warehouse-cell-type-legend .pillar i{background:#247cbf}.warehouse-cell-type-legend .aisle i{background:#202829}.warehouse-cell-type-legend .disabled i{background:#d74337}
+.warehouse-cell-type-legend .location i{background:#dfb679}.warehouse-cell-type-legend .usable i{background:#18a957}.warehouse-cell-type-legend .pillar i{background:#247cbf}.warehouse-cell-type-legend .aisle i{background:#202829}.warehouse-cell-type-legend .disabled i{background:#d74337}
 .warehouse-cell-type-backdrop{position:fixed;inset:0;z-index:7200;background:rgba(10,33,36,.12)}
 .warehouse-cell-type-popover{position:fixed;width:min(340px,calc(100vw - 28px));padding:14px;border:1px solid rgba(0,120,128,.18);border-radius:17px;background:#fff;box-shadow:0 18px 46px rgba(15,49,53,.28)}
 .warehouse-cell-type-popover-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:11px}
@@ -23012,13 +23016,13 @@ body.count-page-active #app .count-handheld-page .citem-wrap {
 }
 </style>
 </head>
-<body data-build="v1-159">
+<body data-build="v1-163">
 <div id="app"></div>
 
 <script>
-// V1.159: one authoritative application version for the browser title,
+// V1.163: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '1.159';
+const APP_VERSION = '1.163';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -24539,7 +24543,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.159':'e.g. Warehouse V1.159',
+  'เช่น Warehouse V1.163':'e.g. Warehouse V1.163',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -30644,8 +30648,8 @@ function computeZone(locCode, desc) {
   if (left(A,2)==='C-') return 'Cool Room Floor';
   if (left(A,2)==='DM') return 'DAMAGE';
   if (left(A,2)==='IS') return 'ISSUE';
-  if (left(A,3)==='B-E') return 'Longspand E';
-  if (left(A,3)==='B-F') return 'Longspand F';
+  if (left(A,3)==='B-E') return 'Longspan E';
+  if (left(A,3)==='B-F') return 'Longspan F';
   if (left(A,3)==='B-C') return 'Cool Room';
   if (left(A,3)==='B-G') return 'Microrack';
   if (left(A,3)==='B-3') return 'Consumable Rack';
@@ -40885,6 +40889,13 @@ function warehouseLocationKey(value) {
   return importCodeKey(value).replace(/\s*-\s*/g,'-').replace(/\s+/g,' ').trim();
 }
 
+function warehouseZoneIdentityKey(value) {
+  return warehouseLocationKey(value)
+    .replace(/\s+/g,'')
+    .replace(/LONGSPAND/g,'LONGSPAN')
+    .toUpperCase();
+}
+
 function warehouseLocationCodeParts(value) {
   const code = warehouseLocationKey(value);
   const parts = code.split('-').map(part => part.trim()).filter(Boolean);
@@ -41573,7 +41584,7 @@ async function loadPlanLocationConfig(force=false,strict=false) {
 }
 
 function planLocationKey(value) {
-  return warehouseLocationKey(value).replace(/\s+/g,'').toUpperCase();
+  return warehouseZoneIdentityKey(value);
 }
 
 function planLocationForZone(zoneName,config=_planLocationConfig) {
@@ -41849,14 +41860,39 @@ function warehouseExcelBlockedTone(workbook,cell) {
   const blue = Number.parseInt(rgb.slice(4,6),16);
   if (red >= 170 && green <= 105 && blue <= 105) return 'red';
   if (blue >= 105 && blue > red*1.2 && blue > green*1.08) return 'blue';
+  if (green >= 90 && green >= red+18 && green >= blue+18) return 'green';
   if ((red+green+blue)/3 <= 48) return 'black';
   return '';
 }
 
+function warehouseExcelCellBorder(workbook,cell) {
+  const direct = cell?.s?.border || cell?.border;
+  if (direct && typeof direct === 'object') return direct;
+  const styleIndex = Number.isInteger(cell?.s) ? cell.s : null;
+  const cellXf = styleIndex === null ? null : workbook?.Styles?.CellXf?.[styleIndex];
+  const borderId = Number.isInteger(cell?.s?.borderId)
+    ? cell.s.borderId
+    : (Number.isInteger(cellXf?.borderId) ? cellXf.borderId : null);
+  return borderId === null ? null : workbook?.Styles?.Borders?.[borderId] || null;
+}
+
+function warehouseExcelCellHasLayoutBorder(workbook,cell) {
+  if (!cell) return false;
+  const border = warehouseExcelCellBorder(workbook,cell);
+  if (!border) return false;
+  return ['left','right','top','bottom'].some(side => {
+    const edge = border?.[side];
+    return typeof edge === 'string' ? Boolean(edge.trim()) : Boolean(edge?.style);
+  });
+}
+
 function warehouseExcelZonePrefix(sheetName,title,rackCode='') {
   const text = `${sheetName || ''} ${title || ''}`.toUpperCase().trim();
-  const longSpanMatch = text.match(/(?:LONG\s*SPAN|LONGSPAN|ZONE)\s*[-:]?\s*([A-Z0-9]+)/i);
-  if (longSpanMatch) return longSpanMatch[1].toUpperCase();
+  const longSpanMatch = text.match(/LONG\s*SPAN(?:D)?\s*[-:]?\s*([A-Z0-9]+)/i);
+  if (longSpanMatch) return `Longspan ${longSpanMatch[1].toUpperCase()}`;
+  if (/COOL\s*ROOM\s*FLOOR/i.test(text)) return 'Cool Room Floor';
+  if (/COOL\s*ROOM/i.test(text)) return 'Cool Room';
+  if (/MICRO\s*RACK|MICRORACK/i.test(text)) return 'Microrack';
   const tailLetter = text.match(/(?:^|\s)([A-Z])\s*$/);
   if (tailLetter) return tailLetter[1];
   const rack = String(rackCode || '').toUpperCase().replace(/\s+/g,'');
@@ -41913,7 +41949,15 @@ function parseWarehouseLayoutExcelSheet(workbook,worksheet,sheetName) {
     const identity = warehouseExcelRackIdentity(rawRack,sheetName,title);
     const existing = racks.find(item => item.identity.rackCode === identity.rackCode);
     if (existing) return existing;
-    const rack = {identity,levels:[],excludedCells:[],redCells:0,blueCells:0,blackCells:0};
+    const rack = {
+      identity,
+      candidateLevels:[],
+      levels:[],
+      activeBays:new Set(),
+      activeCells:new Set(),
+      excludedCells:[],
+      greenCells:0,redCells:0,blueCells:0,blackCells:0,ignoredCells:0,
+    };
     racks.push(rack);
     return rack;
   };
@@ -41943,11 +41987,30 @@ function parseWarehouseLayoutExcelSheet(workbook,worksheet,sheetName) {
     }
     if (rackLabel) currentRack = ensureRack(rackLabel);
     if (!level || !currentRack || !/^[A-Z0-9]{1,3}$/.test(level)) continue;
-    if (!currentRack.levels.includes(level)) currentRack.levels.push(level);
-    bayColumns.forEach(bayHeader => {
+    if (!currentRack.candidateLevels.includes(level)) currentRack.candidateLevels.push(level);
+    const layoutCells = bayColumns.map(bayHeader => {
       const address = XLSX.utils.encode_cell({r:row,c:bayHeader.col});
-      const tone = warehouseExcelBlockedTone(workbook,worksheet[address]);
-      if (!tone) return;
+      const cell = worksheet[address];
+      const tone = warehouseExcelBlockedTone(workbook,cell);
+      return {
+        bayHeader,
+        tone,
+        // Colour is the complete import contract: green is usable; black,
+        // blue and red are excluded cell types; no colour is ignored.
+        isLayoutCell:Boolean(tone),
+      };
+    }).filter(item => item.isLayoutCell);
+    // The header can continue beyond the rack. Header text, borders and blank
+    // cells never create a Location unless the cell has a recognised colour.
+    if (!layoutCells.length) continue;
+    if (!currentRack.levels.includes(level)) currentRack.levels.push(level);
+    layoutCells.forEach(({bayHeader,tone}) => {
+      currentRack.activeBays.add(bayHeader.bay);
+      currentRack.activeCells.add(`${level}|${bayHeader.bay}`);
+      if (tone === 'green') {
+        currentRack.greenCells++;
+        return;
+      }
       const toneInfo = {
         red:{cellType:'disabled',label:'แดง'},
         blue:{cellType:'pillar',label:'น้ำเงิน'},
@@ -41957,20 +42020,46 @@ function parseWarehouseLayoutExcelSheet(workbook,worksheet,sheetName) {
       currentRack[`${tone}Cells`]++;
     });
   }
-  if (!racks.length) throw new Error(`ชีต ${sheetName}: ไม่พบ Rack และ Level`);
-  const bayStart = Math.min(...bayColumns.map(item => item.bay));
-  const bayEnd = Math.max(...bayColumns.map(item => item.bay));
-  const bayCount = bayEnd-bayStart+1;
-  const prefix = racks[0].identity.prefix || warehouseExcelZonePrefix(sheetName,title);
+  const racksWithoutGreen = racks.filter(rack => rack.candidateLevels.length && rack.greenCells === 0);
+  if (racksWithoutGreen.length) {
+    const labels = racksWithoutGreen.slice(0,8).map(rack => rack.identity.rackCode).join(', ');
+    const more = racksWithoutGreen.length > 8 ? ` และอีก ${racksWithoutGreen.length-8} Row` : '';
+    throw new Error(`ชีต ${sheetName}: Row ${labels}${more} ไม่มีช่องสีเขียว กรุณาระบายสีเขียวช่องใช้งานให้ครบ`);
+  }
+  const colouredRacks = racks.filter(rack => rack.levels.length && rack.activeBays.size && rack.greenCells > 0);
+  if (!colouredRacks.length) {
+    throw new Error(`ชีต ${sheetName}: ไม่พบช่องสีเขียว/ดำ/น้ำเงิน/แดง กรุณาระบายสีช่องก่อนนำเข้า`);
+  }
+  const prefix = colouredRacks[0].identity.prefix || warehouseExcelZonePrefix(sheetName,title);
   let cursorY = 50;
   const elements = [];
-  racks.forEach((rack,index) => {
-    const rackHeight = Math.max(116,48+(rack.levels.length*28));
+  colouredRacks.forEach((rack,index) => {
+    // Each rack has its own real Bay range. Do not reuse the widest header
+    // range for every rack in the sheet.
+    const activeBays = [...rack.activeBays].sort((a,b) => a-b);
+    const levels = rack.levels;
+    const bayStart = Math.min(...activeBays);
+    const bayEnd = Math.max(...activeBays);
+    const bayCount = bayEnd-bayStart+1;
+    const activeBaySet = new Set(activeBays);
+    const skipBays = Array.from({length:bayCount},(_,offset) => bayStart+offset)
+      .filter(bay => !activeBaySet.has(bay));
+    const excludedKeys = new Set(rack.excludedCells.map(cell => `${cell.level}|${cell.bay}`));
+    // An uncoloured hole inside a coloured rack is retained only as a blocked
+    // visual cell. It never becomes a Location and is not counted as red.
+    levels.forEach(level => activeBays.forEach(bay => {
+      const key = `${level}|${bay}`;
+      if (rack.activeCells.has(key) || excludedKeys.has(key)) return;
+      rack.excludedCells.push({bay,level,cellType:'disabled',note:'Excel: ไม่มีสี · ไม่นำเข้า'});
+      rack.ignoredCells++;
+      excludedKeys.add(key);
+    }));
+    const rackHeight = Math.max(116,48+(levels.length*28));
     const rackWidth = Math.max(700,150+(bayCount*27));
     elements.push(normalizeWarehouseLayoutElement({
       id:warehouseLayoutUid('rack'),type:'rack',label:rack.identity.rackCode,rackCode:rack.identity.rackCode,
       row:rack.identity.row,locationPrefix:rack.identity.prefix || '',x:60,y:cursorY,width:rackWidth,height:rackHeight,
-      bayStart,bayCount,bayPad:Math.max(3,String(bayEnd).length),levels:rack.levels,skipBays:[],
+      bayStart,bayCount,bayPad:Math.max(3,String(bayEnd).length),levels,skipBays,
       excludedCells:rack.excludedCells,codePattern:'{prefix}-{row}-{bay}-{level}',direction:'ltr',
     },index));
     cursorY += rackHeight+55;
@@ -41979,19 +42068,30 @@ function parseWarehouseLayoutExcelSheet(workbook,worksheet,sheetName) {
   const zone = {
     id:warehouseLayoutUid('zone'),name:prefix,canvasWidth,canvasHeight:Math.max(650,cursorY+40),elements,
   };
-  const blocked = racks.reduce((sum,rack) => sum+rack.excludedCells.length,0);
-  const redCells = racks.reduce((sum,rack) => sum+rack.redCells,0);
-  const blueCells = racks.reduce((sum,rack) => sum+rack.blueCells,0);
-  const blackCells = racks.reduce((sum,rack) => sum+rack.blackCells,0);
-  const possible = racks.reduce((sum,rack) => sum+(rack.levels.length*bayCount),0);
-  return {zone,title,sheetName,racks:racks.length,blocked,redCells,blueCells,blackCells,locations:Math.max(0,possible-blocked)};
+  const blocked = colouredRacks.reduce((sum,rack) => sum+rack.excludedCells.length,0);
+  const greenCells = colouredRacks.reduce((sum,rack) => sum+rack.greenCells,0);
+  const redCells = colouredRacks.reduce((sum,rack) => sum+rack.redCells,0);
+  const blueCells = colouredRacks.reduce((sum,rack) => sum+rack.blueCells,0);
+  const blackCells = colouredRacks.reduce((sum,rack) => sum+rack.blackCells,0);
+  const ignoredCells = colouredRacks.reduce((sum,rack) => sum+rack.ignoredCells,0);
+  const possible = elements.reduce((sum,rack) => {
+    const usableBays = Math.max(0,rack.bayCount-(rack.skipBays || []).length);
+    return sum+((rack.levels || []).length*usableBays);
+  },0);
+  return {
+    zone,title,sheetName,racks:colouredRacks.length,blocked,
+    greenCells,redCells,blueCells,blackCells,ignoredCells,
+    locations:Math.max(0,possible-blocked),
+  };
 }
 
 function parseWarehouseLayoutExcelWorkbook(workbook,fileName='') {
   const parsedSheets = [];
   const errors = [];
   (workbook.SheetNames || []).forEach(sheetName => {
-    try { parsedSheets.push(parseWarehouseLayoutExcelSheet(workbook,workbook.Sheets[sheetName],sheetName)); }
+    try {
+      parsedSheets.push(parseWarehouseLayoutExcelSheet(workbook,workbook.Sheets[sheetName],sheetName));
+    }
     catch (error) { errors.push(error.message || String(error)); }
   });
   if (!parsedSheets.length) throw new Error(errors[0] || 'ไม่พบผังคลังสินค้าที่อ่านได้');
@@ -42004,9 +42104,11 @@ function parseWarehouseLayoutExcelWorkbook(workbook,fileName='') {
     zones:config.zones.length,
     racks:parsedSheets.reduce((sum,item) => sum+item.racks,0),
     blocked:parsedSheets.reduce((sum,item) => sum+item.blocked,0),
+    greenCells:parsedSheets.reduce((sum,item) => sum+item.greenCells,0),
     redCells:parsedSheets.reduce((sum,item) => sum+item.redCells,0),
     blueCells:parsedSheets.reduce((sum,item) => sum+item.blueCells,0),
     blackCells:parsedSheets.reduce((sum,item) => sum+item.blackCells,0),
+    ignoredCells:parsedSheets.reduce((sum,item) => sum+item.ignoredCells,0),
     locations:generateWarehouseLayoutLocations(config,{snapshots:[]}).locations.length,
   };
 }
@@ -42014,18 +42116,18 @@ function parseWarehouseLayoutExcelWorkbook(workbook,fileName='') {
 function mergeWarehouseLayoutConfigs(baseConfig,importedConfig) {
   const base = normalizeWarehouseLayoutConfig(baseConfig || {zones:[]});
   const imported = normalizeWarehouseLayoutConfig(importedConfig || {zones:[]});
-  const importedNames = new Set(imported.zones.map(zone => warehouseLocationKey(zone.name)));
+  const importedNames = new Set(imported.zones.map(zone => warehouseZoneIdentityKey(zone.name)));
   return normalizeWarehouseLayoutConfig({
     ...base,sourceType:'excel',sourceName:imported.sourceName || base.sourceName,
     updatedAt:new Date().toISOString(),updatedBy:prof?.name || '',
-    zones:[...base.zones.filter(zone => !importedNames.has(warehouseLocationKey(zone.name))),...imported.zones],
+    zones:[...base.zones.filter(zone => !importedNames.has(warehouseZoneIdentityKey(zone.name))),...imported.zones],
   });
 }
 
 function warehouseLayoutExcelPreviewHtml(preview) {
   return `<div class="warehouse-layout-import-card">
     <h4>อ่านผังจาก ${escapeWmsText(preview.fileName || 'Excel')} สำเร็จ</h4>
-    <p>ระบบอ่านหัว Bay, Rack และ Level อัตโนมัติ: สีดำ = ทางเดิน · สีน้ำเงิน = เสา · สีแดง = ปิดใช้งาน และยังไม่เปลี่ยนผังแม่จนกว่าจะกด “ใช้เป็นผังแม่”</p>
+    <p>ระบบอ่านเฉพาะช่องที่ระบายสี: สีเขียว = ใช้งาน (แนะนำ Excel Green #00B050) · สีดำ = ทางเดิน · สีน้ำเงิน = เสา · สีแดง = ปิดใช้งาน · ไม่มีสี = ไม่นำเข้า และยังไม่เปลี่ยนผังแม่จนกว่าจะกด “ใช้เป็นผังแม่”</p>
   </div>
   <div class="warehouse-layout-import-summary">
     <div><strong>${preview.zones.toLocaleString(uiLocale())}</strong><span>ZONE</span></div>
@@ -42034,9 +42136,11 @@ function warehouseLayoutExcelPreviewHtml(preview) {
     <div><strong>${preview.blocked.toLocaleString(uiLocale())}</strong><span>ทางเดิน / เสา / ปิดใช้</span></div>
   </div>
   <div class="warehouse-cell-type-legend">
+    <span class="usable"><i></i>สีเขียว · ใช้งาน ${preview.greenCells.toLocaleString(uiLocale())}</span>
     <span class="aisle"><i></i>สีดำ · ทางเดิน ${preview.blackCells.toLocaleString(uiLocale())}</span>
     <span class="pillar"><i></i>สีน้ำเงิน · เสา ${preview.blueCells.toLocaleString(uiLocale())}</span>
     <span class="disabled"><i></i>สีแดง · ปิดใช้งาน ${preview.redCells.toLocaleString(uiLocale())}</span>
+    ${preview.ignoredCells ? `<span><i></i>ไม่มีสีภายในช่วง · ไม่นำเข้า ${preview.ignoredCells.toLocaleString(uiLocale())}</span>` : ''}
   </div>
   <div class="warehouse-layout-source-note"><span>ⓘ</span><span>นำเข้าแบบ “เพิ่ม/อัปเดต Zone” จะเปลี่ยนเฉพาะ Zone ชื่อเดียวกับไฟล์ และคง Zone อื่นในผังเดิมไว้</span></div>
   ${preview.errors.length ? `<div class="alert alert-orange" style="margin-top:12px">ข้ามชีตที่อ่านไม่ได้: ${preview.errors.map(escapeWmsText).join(' · ')}</div>` : ''}
@@ -42062,7 +42166,10 @@ async function importWarehouseLayoutExcel(event) {
   const reader = new FileReader();
   reader.onload = evt => {
     try {
-      const workbook = XLSX.read(new Uint8Array(evt.target.result),{type:'array',cellDates:false,cellStyles:true});
+      const bytes = new Uint8Array(evt.target.result);
+      const workbook = XLSX.read(bytes,{
+        type:'array',cellDates:false,cellStyles:true,sheetStubs:true,
+      });
       _warehouseLayoutExcelPreview = parseWarehouseLayoutExcelWorkbook(workbook,file.name);
       openWarehouseLayoutDialog('นำเข้าผังคลังสินค้าจาก Excel',warehouseLayoutExcelPreviewHtml(_warehouseLayoutExcelPreview));
     } catch (error) {
@@ -42110,8 +42217,11 @@ function addWarehouseMissingCodesToConfig(baseConfig,codes=[]) {
     const row = warehouseLayoutString(parts.row,'01',40).toUpperCase();
     const level = parts.hasLevel === false ? WAREHOUSE_NO_LEVEL : warehouseLayoutString(parts.level,'A',12).toUpperCase();
     if (!Number.isInteger(bay) || !row || !level) return;
-    const zoneName = prefix || row;
-    let zone = config.zones.find(item => warehouseLocationKey(item.name) === warehouseLocationKey(zoneName));
+    // Missing imported Locations must return to their own business Zone.
+    // Using the warehouse prefix alone grouped every B-* code into one "B"
+    // Zone and could mix Cool Room with Longspan in the draft Layout.
+    const zoneName = computeZone(code,'') || prefix || row;
+    let zone = config.zones.find(item => warehouseZoneIdentityKey(item.name) === warehouseZoneIdentityKey(zoneName));
     if (!zone) {
       zone = {id:warehouseLayoutUid('zone'),name:zoneName,canvasWidth:1200,canvasHeight:720,elements:[]};
       config.zones.push(zone);
@@ -42222,7 +42332,7 @@ function warehouseLocationPrefixIndex(sessionData={}) {
     const parsed = parseWarehouseLocationMeta(location);
     if (!parsed.prefix || !parsed.row) return;
     const rowKey = warehouseLocationKey(parsed.row);
-    const zoneKey = warehouseLocationKey(location.zone || '');
+    const zoneKey = warehouseZoneIdentityKey(location.zone || '');
     add(byRow,rowKey,parsed.prefix);
     if (zoneKey) add(byZoneRow,`${zoneKey}|${rowKey}`,parsed.prefix);
   });
@@ -42252,7 +42362,7 @@ function warehouseRackLocationIdentity(rack,zone,prefixIndex) {
   // the same number elsewhere in the warehouse.
   if (rowKey === storedRow && storedPrefix) return {row:storedRow,prefix:storedPrefix,repaired:false};
 
-  const zoneKey = warehouseLocationKey(zone.name);
+  const zoneKey = warehouseZoneIdentityKey(zone.name);
   const zoned = prefixIndex.byZoneRow.get(`${zoneKey}|${rowKey}`);
   if (zoned?.size === 1) return {row:rowKey,prefix:[...zoned][0],repaired:rowKey !== storedRow};
   const byRow = prefixIndex.byRow.get(rowKey);
@@ -42609,6 +42719,74 @@ function buildWarehouseLayoutRuntime(config=_warehouseLayoutConfig,sessionData=w
   };
 }
 
+function warehouseLayoutAuditRowLocationCode(row={}) {
+  return warehouseLocationKey(row.locationCode || row._locationCode || row.locations?.code || '');
+}
+
+function warehouseLayoutAuditRowLocationId(row={}) {
+  return String(row.locationId || row.location_id || row.locations?.id || '');
+}
+
+function warehouseLayoutAuditForZone(audit={},locationCodes=new Set(),locationIds=new Set()) {
+  const inZone = row => locationCodes.has(warehouseLayoutAuditRowLocationCode(row))
+    || locationIds.has(warehouseLayoutAuditRowLocationId(row));
+  return {
+    issues:(audit.issues || []).filter(inZone),
+    mixedEmptyRows:(audit.mixedEmptyRows || []).filter(inZone),
+    orphanRows:(audit.orphanRows || []).filter(inZone),
+    emptyOnlyLocations:(audit.emptyOnlyLocations || []).filter(inZone),
+  };
+}
+
+function warehouseLayoutRuntimeForZone(runtime,zone) {
+  if (!runtime || !zone) return runtime;
+  const zoneId = String(zone.id || '');
+  const zoneKey = warehouseZoneIdentityKey(zone.name);
+  const zoneDetails = [...(runtime.detailsByCode?.values?.() || [])]
+    .filter(detail => String(detail.zoneId || '') === zoneId);
+  const layoutCodes = new Set(zoneDetails.map(detail => warehouseLocationKey(detail.code)).filter(Boolean));
+  const importedRows = [...(runtime.importedByCode?.values?.() || [])].filter(location => {
+    const code = warehouseLocationKey(location.code || '');
+    // Location code is the source of truth for the business Zone. Older rows
+    // may still carry a stale Zone label (for example Cool Room on B-E*), so
+    // preferring that label would leak imported/status totals across Zones.
+    const importedZone = warehouseZoneIdentityKey(computeZone(code,'') || location.zone || '');
+    return layoutCodes.has(code) || Boolean(zoneKey && importedZone === zoneKey);
+  });
+  const importedLocationIds = new Set(importedRows.map(location => String(location.id || '')).filter(Boolean));
+  const statusCounts = {not_imported:0,imported:0,counting:0,variance:0,wms_pending:0,completed:0};
+  zoneDetails.forEach(detail => {
+    const status = statusCounts[detail.status] === undefined ? 'imported' : detail.status;
+    statusCounts[status] += 1;
+    if (detail.imported?.id) importedLocationIds.add(String(detail.imported.id));
+  });
+  const missingImport = zoneDetails
+    .filter(detail => detail.status === 'not_imported')
+    .sort((left,right) => left.code.localeCompare(right.code,undefined,{numeric:true}));
+  const unmatchedImported = importedRows
+    .filter(location => !layoutCodes.has(warehouseLocationKey(location.code || '')))
+    .sort((left,right) => left.code.localeCompare(right.code,undefined,{numeric:true}));
+  const matched = zoneDetails.filter(detail => Boolean(detail.imported)).length;
+  const totalLayout = zoneDetails.length;
+  const zoneDuplicates = (runtime.duplicates || []).filter(duplicate =>
+    (duplicate.sources || []).some(source => String(source.zoneId || '') === zoneId)
+  );
+  return {
+    ...runtime,
+    selectedZoneId:zoneId,
+    selectedZoneName:zone.name,
+    totalLayout,
+    totalImported:importedRows.length,
+    matched,
+    completeness:totalLayout ? (matched/totalLayout)*100 : 0,
+    unmatchedImported,
+    missingImport,
+    statusCounts,
+    duplicates:zoneDuplicates,
+    snapshotAudit:warehouseLayoutAuditForZone(runtime.snapshotAudit || {},layoutCodes,importedLocationIds),
+  };
+}
+
 function refreshWarehouseLayoutRuntime() {
   window._warehouseLayoutRuntime = buildWarehouseLayoutRuntime(
     _warehouseLayoutConfig,
@@ -42813,7 +42991,7 @@ function warehouseLayoutEmptyHtml() {
   </div>`;
 }
 
-function warehouseLayoutSnapshotAuditAlertHtml(runtime) {
+function warehouseLayoutSnapshotAuditAlertHtml(runtime,zoneId='') {
   const audit = runtime?.snapshotAudit || {};
   const mixedCount = (audit.mixedEmptyRows || []).length;
   const orphanCount = (audit.orphanRows || []).length;
@@ -42821,19 +42999,21 @@ function warehouseLayoutSnapshotAuditAlertHtml(runtime) {
   return `<div class="alert alert-amber" style="margin:0 0 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
     <div><strong>⚠️ ตรวจพบข้อมูล Item ผิดปกติ ${Number(mixedCount + orphanCount).toLocaleString(uiLocale())} แถว</strong><br>
     <span style="font-size:10px">ระบบไม่นำแถว Location ว่างที่ซ้ำกับ Item จริงมาคำนวณงานแล้ว · Item ว่างซ้ำ ${mixedCount.toLocaleString(uiLocale())} · Item Master ไม่พบ ${orphanCount.toLocaleString(uiLocale())}</span></div>
-    <button class="btn btn-ghost btn-sm" type="button" onclick="showWarehouseSnapshotAuditReport()">ตรวจทุก Location</button>
+    <button class="btn btn-ghost btn-sm" type="button" onclick="showWarehouseSnapshotAuditReport('${escapeWmsText(zoneId)}')">ตรวจ Zone นี้</button>
   </div>`;
 }
 
-function showWarehouseSnapshotAuditReport() {
-  const runtime = window._warehouseLayoutRuntime || refreshWarehouseLayoutRuntime();
+function showWarehouseSnapshotAuditReport(zoneId='') {
+  const fullRuntime = window._warehouseLayoutRuntime || refreshWarehouseLayoutRuntime();
+  const zone = fullRuntime.config?.zones?.find(item => String(item.id) === String(zoneId));
+  const runtime = zone ? warehouseLayoutRuntimeForZone(fullRuntime,zone) : fullRuntime;
   const audit = runtime.snapshotAudit || { issues:[],mixedEmptyRows:[],orphanRows:[],emptyOnlyLocations:[] };
   const cleanupCandidateCount = (audit.mixedEmptyRows || []).length
     + (audit.orphanRows || []).filter(row => row._hasRealItem).length;
   const issueRows = (audit.issues || []).map(issue => `<div class="warehouse-match-list" style="margin-bottom:8px">
     <div><strong>${escapeWmsText(issue.locationCode)}</strong> · ${escapeWmsText(issue.message)}</div>
   </div>`).join('');
-  openWarehouseLayoutDialog('ตรวจข้อมูล Item ทุก Location',`
+  openWarehouseLayoutDialog(zone ? `ตรวจข้อมูล Item · Zone ${zone.name}` : 'ตรวจข้อมูล Item ทุก Location',`
     <div class="alert ${audit.issues?.length ? 'alert-amber' : 'alert-green'}" style="margin-bottom:13px">
       <strong>${audit.issues?.length ? `พบ ${audit.issues.length.toLocaleString(uiLocale())} Location ที่ต้องตรวจ` : '✓ ไม่พบ Item ว่างซ้ำหรือ Item Master กำพร้า'}</strong><br>
       ระบบตรวจ Stock Snapshot ทั้ง Session และแยก Location ว่างจริงออกจากแถวว่างที่ค้างหลังมี Item จริง
@@ -42847,15 +43027,17 @@ function showWarehouseSnapshotAuditReport() {
     <div class="alert alert-blue" style="margin-top:13px;font-size:10px;line-height:1.6">
       Location ว่างจริงจะยังเก็บไว้เป็น 1 งานและแสดงชื่อ “Location ว่าง” · การล้างจะลบเฉพาะ Stock Snapshot OH/AL = 0 ที่มี Item จริงใน Location เดียวกัน และไม่มี Count, Variance, LPN/Lot หรือ Annual JOB อ้างอิง
     </div>
-    ${prof?.role === 'admin' && cleanupCandidateCount ? `<div class="warehouse-layout-dialog-actions"><button class="btn btn-red" type="button" onclick="cleanupWarehouseSnapshotIssues()">ตรวจอ้างอิงและล้างแถวที่ปลอดภัย</button></div>` : ''}
+    ${prof?.role === 'admin' && cleanupCandidateCount ? `<div class="warehouse-layout-dialog-actions"><button class="btn btn-red" type="button" onclick="cleanupWarehouseSnapshotIssues('${escapeWmsText(zoneId)}')">ตรวจอ้างอิงและล้างแถวที่ปลอดภัย</button></div>` : ''}
   `,{ wide:true });
 }
 
-async function cleanupWarehouseSnapshotIssues() {
+async function cleanupWarehouseSnapshotIssues(zoneId='') {
   if (prof?.role !== 'admin') { adminOnlyMessage(); return; }
   const sessionData = window._warehouseLayoutSessionData || {};
   const sessionId = String(sessionData.sessionId || '');
-  const runtime = window._warehouseLayoutRuntime || refreshWarehouseLayoutRuntime();
+  const fullRuntime = window._warehouseLayoutRuntime || refreshWarehouseLayoutRuntime();
+  const zone = fullRuntime.config?.zones?.find(item => String(item.id) === String(zoneId));
+  const runtime = zone ? warehouseLayoutRuntimeForZone(fullRuntime,zone) : fullRuntime;
   const audit = runtime.snapshotAudit || {};
   if (!sessionId) return alert('กรุณาเลือก Session ก่อน');
   const rawCandidates = [
@@ -42981,7 +43163,8 @@ function warehouseLayoutViewHtml(runtime) {
   S._layoutZoom = zoom;
   const viewMode = 'matrix';
   S._layoutViewMode = 'matrix';
-  const completenessText = runtime.completeness.toLocaleString(uiLocale(),{minimumFractionDigits:1,maximumFractionDigits:1});
+  const zoneRuntime = zone ? warehouseLayoutRuntimeForZone(runtime,zone) : runtime;
+  const completenessText = zoneRuntime.completeness.toLocaleString(uiLocale(),{minimumFractionDigits:1,maximumFractionDigits:1});
   const hero = `<div class="warehouse-layout-hero">
     <div class="warehouse-layout-title">
       <div class="warehouse-layout-title-icon">${navIconSvg('warehouse',28)}</div>
@@ -42996,7 +43179,7 @@ function warehouseLayoutViewHtml(runtime) {
       </select></label>` : ''}
       ${zones.length ? `<label class="warehouse-layout-control"><span>ค้นหา LOCATION</span><input value="${escapeWmsText(S._layoutSearch || '')}" placeholder="เช่น B-02-015-D" oninput="updateWarehouseLayoutSearch(this.value)"></label>` : ''}
       ${prof?.role === 'admin' ? `<button class="btn btn-ghost" type="button" onclick="openWarehouseLayoutEditor()">${navIconSvg('manage',17)} ตั้งค่าผังแม่</button>` : ''}
-      ${zones.length ? `<button class="btn btn-blue" type="button" onclick="showWarehouseLayoutMatchReport()">ตรวจสอบและจับคู่</button>` : ''}
+      ${zones.length ? `<button class="btn btn-blue" type="button" onclick="showWarehouseLayoutMatchReport(false,'${escapeWmsText(currentZoneId)}')">ตรวจสอบและจับคู่</button>` : ''}
     </div>
   </div>`;
   if (!zones.length || !zone) return `<div class="warehouse-layout-shell">${hero}${warehouseLayoutEmptyHtml()}</div>`;
@@ -43006,19 +43189,19 @@ function warehouseLayoutViewHtml(runtime) {
       ? warehouseLayoutRackHtml(element,zone,runtime,statusFilter,search)
       : warehouseLayoutObjectHtml(element,zone)
   ).join('');
-  const missingOutside = runtime.unmatchedImported;
-  const statusCounts = runtime.statusCounts;
+  const missingOutside = zoneRuntime.unmatchedImported;
+  const statusCounts = zoneRuntime.statusCounts;
   const planMetrics = planLocationMetrics(runtime,zone);
   const planPercentText = planMetrics.countPercent.toLocaleString(uiLocale(),{minimumFractionDigits:1,maximumFractionDigits:1});
   return `<div class="warehouse-layout-shell">
     ${hero}
-    ${warehouseLayoutSnapshotAuditAlertHtml(runtime)}
+    ${warehouseLayoutSnapshotAuditAlertHtml(zoneRuntime,currentZoneId)}
     <section class="warehouse-layout-metric-section master">
       <div class="warehouse-layout-metric-heading"><span>ข้อมูลผังแม่</span><small>จำนวนช่องตามโครงสร้าง Layout</small></div>
       <div class="warehouse-layout-kpis">
-        ${warehouseLayoutKpiHtml('Location ใน Layout',runtime.totalLayout.toLocaleString(uiLocale()),'','all',statusFilter)}
+        ${warehouseLayoutKpiHtml('Location ใน Layout',zoneRuntime.totalLayout.toLocaleString(uiLocale()),'','all',statusFilter)}
         ${warehouseLayoutKpiHtml('Plan Location · '+zone.name,planMetrics.plan ? planMetrics.plan.toLocaleString(uiLocale()) : 'ยังไม่ตั้ง','plan','none',statusFilter)}
-        ${warehouseLayoutKpiHtml('Import ตรง Layout',runtime.matched.toLocaleString(uiLocale()),'matched','none',statusFilter)}
+        ${warehouseLayoutKpiHtml('Import ตรง Layout',zoneRuntime.matched.toLocaleString(uiLocale()),'matched','none',statusFilter)}
         ${warehouseLayoutKpiHtml('ความครบถ้วน',completenessText,'completeness','none',statusFilter,'%')}
       </div>
     </section>
@@ -43063,15 +43246,15 @@ function warehouseLayoutViewHtml(runtime) {
         </div>
         <div class="warehouse-layout-progress">
           <h3>ความครบถ้วนการ Import</h3>
-          <div class="warehouse-layout-donut" style="--value:${Math.max(0,Math.min(100,runtime.completeness)).toFixed(2)}">
+          <div class="warehouse-layout-donut" style="--value:${Math.max(0,Math.min(100,zoneRuntime.completeness)).toFixed(2)}">
             <strong>${completenessText}<small>%</small></strong>
           </div>
-          <div style="font-size:10px;color:var(--text-muted);font-weight:700">${runtime.matched.toLocaleString(uiLocale())} / ${runtime.totalLayout.toLocaleString(uiLocale())} Location</div>
+          <div style="font-size:10px;color:var(--text-muted);font-weight:700">${zoneRuntime.matched.toLocaleString(uiLocale())} / ${zoneRuntime.totalLayout.toLocaleString(uiLocale())} Location</div>
         </div>
         <div class="warehouse-layout-side-summary">
           <div class="warehouse-layout-side-row"><span>Import แล้ว ยังไม่จ่าย</span><strong>${statusCounts.imported.toLocaleString(uiLocale())}</strong></div>
-          <div class="warehouse-layout-side-row"><span>Layout แต่ยังไม่ Import</span><strong>${runtime.missingImport.length.toLocaleString(uiLocale())}</strong></div>
-          <div class="warehouse-layout-side-row"><span>Import ทั้งหมดใน Session</span><strong>${runtime.totalImported.toLocaleString(uiLocale())}</strong></div>
+          <div class="warehouse-layout-side-row"><span>Layout แต่ยังไม่ Import</span><strong>${zoneRuntime.missingImport.length.toLocaleString(uiLocale())}</strong></div>
+          <div class="warehouse-layout-side-row"><span>Import ทั้งหมดใน Zone</span><strong>${zoneRuntime.totalImported.toLocaleString(uiLocale())}</strong></div>
         </div>
         <div class="warehouse-layout-alert">
           <div class="warehouse-layout-alert-head"><span>ไม่พบใน Layout</span><strong>${missingOutside.length.toLocaleString(uiLocale())}</strong></div>
@@ -43079,7 +43262,7 @@ function warehouseLayoutViewHtml(runtime) {
             ${missingOutside.slice(0,5).map(item => `<div class="warehouse-layout-alert-item">${escapeWmsText(item.code)}</div>`).join('')
               || `<div style="padding:13px 0;text-align:center;color:var(--theme-success-color);font-size:10px;font-weight:800">✓ ไม่พบปัญหา</div>`}
           </div>
-          ${missingOutside.length ? `<button class="btn btn-ghost btn-sm" style="width:calc(100% - 20px);margin:5px 10px 11px" onclick="showWarehouseLayoutMatchReport()">ดูทั้งหมด</button>` : ''}
+          ${missingOutside.length ? `<button class="btn btn-ghost btn-sm" style="width:calc(100% - 20px);margin:5px 10px 11px" onclick="showWarehouseLayoutMatchReport(false,'${escapeWmsText(currentZoneId)}')">ดูทั้งหมด</button>` : ''}
         </div>
       </aside>
     </div>
@@ -43427,14 +43610,16 @@ function focusWarehouseDuplicateSource(button) {
   },80);
 }
 
-function showWarehouseLayoutMatchReport(useDraft=false) {
-  const runtime = useDraft && _warehouseLayoutDraft
+function showWarehouseLayoutMatchReport(useDraft=false,zoneId='') {
+  const fullRuntime = useDraft && _warehouseLayoutDraft
     ? buildWarehouseLayoutRuntime(_warehouseLayoutDraft,window._warehouseLayoutSessionData || {})
     : (window._warehouseLayoutRuntime || refreshWarehouseLayoutRuntime());
+  const zone = fullRuntime.config?.zones?.find(item => String(item.id) === String(zoneId));
+  const runtime = zone ? warehouseLayoutRuntimeForZone(fullRuntime,zone) : fullRuntime;
   window._warehouseLayoutPendingMissingCodes = runtime.unmatchedImported.map(item => item.code).filter(Boolean);
   window._warehouseLayoutPendingMissingUseDraft = Boolean(useDraft && _warehouseLayoutDraft);
   window._warehouseLayoutDuplicateUseDraft = Boolean(useDraft && _warehouseLayoutDraft);
-  openWarehouseLayoutDialog('ผลตรวจสอบและจับคู่ Location',`
+  openWarehouseLayoutDialog(zone ? `ผลตรวจสอบและจับคู่ · Zone ${zone.name}` : 'ผลตรวจสอบและจับคู่ Location',`
     <div class="alert alert-blue" style="margin-bottom:14px">
       ตรงกัน ${runtime.matched.toLocaleString(uiLocale())} จาก Layout ${runtime.totalLayout.toLocaleString(uiLocale())} Location · ความครบถ้วน ${runtime.completeness.toLocaleString(uiLocale(),{minimumFractionDigits:1,maximumFractionDigits:1})}%
     </div>
@@ -60804,7 +60989,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.159" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.163" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
@@ -61728,7 +61913,7 @@ window.addEventListener('DOMContentLoaded', () => {
 if ('serviceWorker' in navigator && ['https:','http:'].includes(location.protocol)) {
   window.addEventListener('load', async () => {
     try {
-      const registration = await navigator.serviceWorker.register('./sw.js?v=159', { scope:'./' });
+      const registration = await navigator.serviceWorker.register('./sw.js?v=163', { scope:'./' });
       registration.update().catch(() => {});
       document.documentElement.dataset.pwaReady = 'true';
     } catch (error) {
