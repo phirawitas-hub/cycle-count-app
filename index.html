@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V1.176: Force a high-contrast black Count border without relying on Handheld detection (verified). -->
 <!-- V1.175: Focus the active Count field on every device and keep the handheld pause action visually distinct (verified). -->
 <!-- V1.174: Redesign per-Zone assignment mode cards with responsive controls and readable Zone names (verified). -->
 <!-- V1.173: Add per-Zone Normal/Annual allocation, cross-mode duplicate guards, and safe cancel/return actions (verified). -->
@@ -49,14 +50,14 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.175</title>
+<title>Cycle Count V1.176</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
 if (['http:','https:'].includes(location.protocol)) {
   const manifestLink = document.createElement('link');
   manifestLink.rel = 'manifest';
-  manifestLink.href = './manifest.webmanifest?v=175';
+  manifestLink.href = './manifest.webmanifest?v=176';
   document.head.appendChild(manifestLink);
 }
 </script>
@@ -65,8 +66,8 @@ if (['http:','https:'].includes(location.protocol)) {
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Cycle Count">
-<link rel="apple-touch-icon" href="./icons/icon-192.png?v=175">
-<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=175">
+<link rel="apple-touch-icon" href="./icons/icon-192.png?v=176">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=176">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -17802,15 +17803,26 @@ body.login-page-active .lcard {
     box-shadow:0 0 0 4px color-mix(in srgb,var(--theme-primary-color) 18%,transparent) !important;
   }
 }
-.count-handheld-page .cqty[data-handheld-count-entry="true"],
-.count-handheld-page .cqty[data-handheld-count-entry="true"]:focus,
-.count-handheld-page .cqty[data-handheld-count-entry="true"].custom-keypad-active {
-  border:2px solid #111 !important;
+#app .count-handheld-page input.cqty,
+#app .count-handheld-page input.cqty.ok,
+#app .count-handheld-page input.cqty[data-handheld-count-entry="true"] {
+  border:3px solid #0b0b0b !important;
+  outline:1px solid #0b0b0b !important;
+  outline-offset:-5px !important;
+  background:#fff !important;
+  background-clip:padding-box !important;
+  box-shadow:0 0 0 1px #0b0b0b,
+    inset 3px 3px 7px var(--neu-shadow-dark),
+    inset -3px -3px 7px var(--neu-shadow-light) !important;
 }
-.count-handheld-page .cqty[data-handheld-count-entry="true"]:focus,
-.count-handheld-page .cqty[data-handheld-count-entry="true"].custom-keypad-active {
-  outline:none;
-  box-shadow:0 0 0 4px color-mix(in srgb,var(--theme-primary-color) 22%,transparent),
+#app .count-handheld-page input.cqty:focus,
+#app .count-handheld-page input.cqty.custom-keypad-active,
+#app .count-handheld-page input.cqty[data-handheld-count-entry="true"]:focus {
+  border:3px solid #0b0b0b !important;
+  outline:1px solid #0b0b0b !important;
+  outline-offset:-5px !important;
+  box-shadow:0 0 0 2px #0b0b0b,
+    0 0 0 6px color-mix(in srgb,var(--theme-primary-color) 34%,transparent),
     inset 2px 2px 5px var(--neu-shadow-dark) !important;
 }
 
@@ -23278,13 +23290,13 @@ body.page-loading-active .main-wrapper{
 }
 </style>
 </head>
-<body data-build="v1-175">
+<body data-build="v1-176">
 <div id="app"></div>
 
 <script>
-// V1.175: one authoritative application version for the browser title,
+// V1.176: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '1.175';
+const APP_VERSION = '1.176';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -24805,7 +24817,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.175':'e.g. Warehouse V1.175',
+  'เช่น Warehouse V1.176':'e.g. Warehouse V1.176',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -62514,7 +62526,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.175" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.176" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
@@ -63438,7 +63450,7 @@ window.addEventListener('DOMContentLoaded', () => {
 if ('serviceWorker' in navigator && ['https:','http:'].includes(location.protocol)) {
   window.addEventListener('load', async () => {
     try {
-      const registration = await navigator.serviceWorker.register('./sw.js?v=175', { scope:'./' });
+      const registration = await navigator.serviceWorker.register('./sw.js?v=176', { scope:'./' });
       registration.update().catch(() => {});
       document.documentElement.dataset.pwaReady = 'true';
     } catch (error) {
