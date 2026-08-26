@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V1.191: Prevent recurring stuck loaders with a dual watchdog, visible slow-load retry, and non-blocking optional UI synchronization. -->
 <!-- V1.190: Set the desktop gap between Sidebar and workspace to 15px. -->
 <!-- V1.189: Prevent stuck page loaders and set the desktop Sidebar to 280px while keeping every navigation label on one line. -->
 <!-- V1.188: Widen Sidebar by reclaiming the shell gap and keep every Thai navigation label on one line. -->
@@ -52,14 +53,14 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.190</title>
+<title>Cycle Count V1.191</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
 if (['http:','https:'].includes(location.protocol)) {
   const manifestLink = document.createElement('link');
   manifestLink.rel = 'manifest';
-  manifestLink.href = './manifest.webmanifest?v=190';
+  manifestLink.href = './manifest.webmanifest?v=191';
   document.head.appendChild(manifestLink);
 }
 </script>
@@ -68,8 +69,8 @@ if (['http:','https:'].includes(location.protocol)) {
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Cycle Count">
-<link rel="apple-touch-icon" href="./icons/icon-192.png?v=190">
-<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=190">
+<link rel="apple-touch-icon" href="./icons/icon-192.png?v=191">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=191">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -23346,6 +23347,43 @@ body.page-loading-active .main-wrapper{
   white-space:nowrap!important;
   border:0!important;
 }
+.cat-loader-recovery{
+  position:absolute;
+  z-index:3;
+  left:50%;
+  bottom:5%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:8px;
+  width:min(270px,82vw);
+  color:#5f6368!important;
+  font-family:'Sarabun',Arial,sans-serif;
+  font-size:13px;
+  font-weight:600;
+  opacity:0;
+  visibility:hidden;
+  transform:translate(-50%,8px);
+  transition:opacity .2s ease,transform .2s ease,visibility .2s ease;
+}
+.page-loading-overlay.is-slow .cat-loader-recovery{
+  opacity:1;
+  visibility:visible;
+  transform:translate(-50%,0);
+}
+.cat-loader-retry{
+  min-height:36px;
+  padding:7px 18px;
+  border:1px solid #d7e6e5;
+  border-radius:999px;
+  color:#006d77!important;
+  background:#fff!important;
+  box-shadow:0 5px 14px rgba(0,109,119,.12);
+  font:700 13px/1 'Sarabun',Arial,sans-serif;
+  cursor:pointer;
+}
+.cat-loader-retry:hover{background:#eef8f7!important}
+.cat-loader-retry:focus-visible{outline:3px solid rgba(0,109,119,.22);outline-offset:2px}
 .vespa-loader-complete{display:none!important}
 .page-loading-overlay.is-complete .cat-loader-orbit{animation-play-state:paused}
 .page-loading-overlay.is-error{background:#fff!important}
@@ -23478,7 +23516,7 @@ body.page-loading-active .main-wrapper{
 <script>
 // V1.190: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '1.190';
+const APP_VERSION = '1.191';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -23902,6 +23940,7 @@ const LOGIN_SESSION_TOKEN_STORAGE_KEY = 'cycle_count_login_token_v1';
 const LOGIN_HEARTBEAT_INTERVAL_MS = 45000;
 const LOGIN_SESSION_TTL_SECONDS = 300;
 const SUPABASE_REQUEST_TIMEOUT_MS = 15000;
+const PAGE_LOAD_SLOW_NOTICE_MS = 6500;
 // Large Sessions can legitimately need more than 22 seconds on a slow VPN.
 // Individual database requests still stop after 15 seconds, while this outer
 // guard only prevents the complete page workflow from running forever.
@@ -24999,7 +25038,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.190':'e.g. Warehouse V1.190',
+  'เช่น Warehouse V1.191':'e.g. Warehouse V1.191',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -26604,16 +26643,22 @@ async function loadPublicBrandingSettings(options = {}) {
 
 async function syncUiSettingsAfterLogin() {
   await loadPublicBrandingSettings({ syncToCentral:prof?.role === 'admin' });
-  if (prof?.role === 'admin') await loadThemeSets(true);
-  if (prof?.role === 'admin' && S._activeThemeSetId) {
-    const activeExists = (_themeSetsConfig.sets || []).some(set => set.id === S._activeThemeSetId);
-    if (!activeExists) S._activeThemeSetId = '';
-  }
+  // Theme Set management is loaded lazily only when Admin opens its settings
+  // page. It is not required for normal work and must not issue a second
+  // app_settings request during every login.
   /* V1.19: the master warehouse layout is shared state. Load the central copy
      after authentication and keep this device subscribed to future changes. */
   await Promise.all([loadWarehouseLayoutConfig(true),loadPlanLocationConfig(true)]);
   startWarehouseLayoutRealtimeSync();
   return { branding:{ ...uiBranding },themeSets:_themeSetsConfig };
+}
+
+function scheduleUiSettingsSyncAfterLogin(delayMs = 800) {
+  setTimeout(() => {
+    syncUiSettingsAfterLogin().catch(error => {
+      if (!isAbortLikeError(error)) console.warn('ซิงก์ค่าหน้าจอเบื้องหลังไม่สำเร็จ:',error);
+    });
+  },Math.max(0,Number(delayMs) || 0));
 }
 
 function brandLogoHtml(context = 'sidebar') {
@@ -27961,6 +28006,8 @@ function paintCachedDashboardView(tab) {
 let _pageLoadingVisualToken = 0;
 let _pageLoadingVisualTimer = null;
 let _pageLoadingSafetyTimer = null;
+let _pageLoadingSafetyDeadline = 0;
+let _pageLoadingSafetyTriggeredToken = 0;
 let _pageLoadingVisualStartedAt = 0;
 let _catLoaderShapeRaf = 0;
 
@@ -27984,7 +28031,27 @@ function removePageLoadingVisualImmediately(token = _pageLoadingVisualToken) {
   cancelAnimationFrame(_catLoaderShapeRaf);
   _catLoaderShapeRaf = 0;
   Q('page-loading-overlay')?.remove();
+  _pageLoadingSafetyDeadline = 0;
   document.body.classList.remove('page-loading-active');
+}
+
+function expirePageLoadingVisual(token,safetyMs) {
+  if (token !== _pageLoadingVisualToken || _pageLoadingSafetyTriggeredToken === token) return;
+  const overlay = Q('page-loading-overlay');
+  if (!overlay || overlay.classList.contains('is-leaving')) return;
+  _pageLoadingSafetyTriggeredToken = token;
+  const seconds = Math.round((Number(safetyMs) || pageLoadTimeoutForCurrentRoute()) / 1000);
+  const error = new Error(`หน้าใช้เวลาโหลดเกิน ${seconds} วินาที กรุณาลองใหม่`);
+  error.code = 'PAGE_LOADING_STUCK';
+  if (_activePageRequestController) {
+    _activePageRequestController._pageLoadingSafetyTriggered = true;
+    try { _activePageRequestController.abort(); } catch (_) {}
+  }
+  // Paint the recovery screen first, then remove the blocking canvas at once.
+  // This path must not depend on another animation timer because throttled or
+  // backgrounded browsers are exactly where the old loader could remain stuck.
+  renderPageLoadError(error);
+  removePageLoadingVisualImmediately(token);
 }
 
 function armPageLoadingSafetyTimer(token,options = {}) {
@@ -27993,19 +28060,9 @@ function armPageLoadingSafetyTimer(token,options = {}) {
     5000,
     Number(options?.safetyMs) || (pageLoadTimeoutForCurrentRoute() + 2500)
   );
+  _pageLoadingSafetyDeadline = Date.now() + safetyMs;
   _pageLoadingSafetyTimer = setTimeout(() => {
-    if (token !== _pageLoadingVisualToken) return;
-    const overlay = Q('page-loading-overlay');
-    if (!overlay || overlay.classList.contains('is-leaving')) return;
-    const seconds = Math.round(safetyMs / 1000);
-    const error = new Error(`หน้าใช้เวลาโหลดเกิน ${seconds} วินาที กรุณาลองใหม่`);
-    error.code = 'PAGE_LOADING_STUCK';
-    if (_activePageRequestController) {
-      _activePageRequestController._pageLoadingSafetyTriggered = true;
-      try { _activePageRequestController.abort(); } catch (_) {}
-    }
-    renderPageLoadError(error);
-    failPageLoadingVisual(token);
+    expirePageLoadingVisual(token,safetyMs);
   },safetyMs);
 }
 
@@ -28171,6 +28228,10 @@ function pageLoadingOverlayHtml() {
         </svg>
         <div class="cat-loader-word">Loading</div>
         <div class="cat-loader-sr-only"><h2 id="vespa-loader-title">${uiCopy('กำลังโหลดข้อมูล...','Loading data...')}</h2><p id="vespa-loader-subtitle">${uiCopy('กำลังเตรียมหน้าจอให้พร้อมใช้งาน','Preparing your workspace')}</p></div>
+        <div class="cat-loader-recovery" id="page-loading-recovery">
+          <span>${uiCopy('กำลังใช้เวลานานกว่าปกติ','This is taking longer than usual')}</span>
+          <button class="cat-loader-retry" type="button" onclick="retryCurrentPageLoad()">${uiCopy('หยุดแล้วลองใหม่','Stop and retry')}</button>
+        </div>
         <div class="vespa-loader-complete" id="vespa-loader-complete">${uiCopy('✓ พร้อมใช้งาน','✓ Ready')}</div>
       </div>
     </div>
@@ -28226,7 +28287,7 @@ function startPageLoadingVisual(options = {}) {
   if (overlay.parentElement !== document.body) document.body.appendChild(overlay);
   document.body.classList.add('page-loading-active');
   syncPageLoadingOverlayBounds(overlay);
-  overlay.classList.remove('is-complete','is-error','is-leaving');
+  overlay.classList.remove('is-complete','is-error','is-leaving','is-slow');
   startUnifiedCatLoader(overlay);
   const title = Q('vespa-loader-title');
   const subtitle = Q('vespa-loader-subtitle');
@@ -28242,6 +28303,13 @@ function startPageLoadingVisual(options = {}) {
       return;
     }
     const elapsed = Date.now() - _pageLoadingVisualStartedAt;
+    if (elapsed >= PAGE_LOAD_SLOW_NOTICE_MS) overlay.classList.add('is-slow');
+    // A second wall-clock guard runs inside the animation pulse. It remains
+    // effective even if another code path accidentally clears the timeout id.
+    if (_pageLoadingSafetyDeadline && Date.now() >= _pageLoadingSafetyDeadline) {
+      expirePageLoadingVisual(token,Date.now() - _pageLoadingVisualStartedAt);
+      return;
+    }
     let progress;
     if (elapsed < 1800) progress = 4 + (elapsed / 1800) * 36;
     else if (elapsed < 5200) progress = 40 + ((elapsed - 1800) / 3400) * 30;
@@ -28256,11 +28324,19 @@ function startPageLoadingVisual(options = {}) {
   return token;
 }
 
+function retryCurrentPageLoad() {
+  const token = _pageLoadingVisualToken;
+  try { _activePageRequestController?.abort(); } catch (_) {}
+  removePageLoadingVisualImmediately(token);
+  setTimeout(() => render(),0);
+}
+
 function finishPageLoadingVisual(token = _pageLoadingVisualToken) {
   if (token !== _pageLoadingVisualToken) return;
   clearInterval(_pageLoadingVisualTimer);
   _pageLoadingVisualTimer = null;
   clearPageLoadingSafetyTimer();
+  _pageLoadingSafetyDeadline = 0;
   const overlay = Q('page-loading-overlay');
   if (!overlay) {
     document.body.classList.remove('page-loading-active');
@@ -28293,6 +28369,7 @@ function failPageLoadingVisual(token = _pageLoadingVisualToken) {
   clearInterval(_pageLoadingVisualTimer);
   _pageLoadingVisualTimer = null;
   clearPageLoadingSafetyTimer();
+  _pageLoadingSafetyDeadline = 0;
   const overlay = Q('page-loading-overlay');
   if (!overlay) {
     document.body.classList.remove('page-loading-active');
@@ -28325,7 +28402,7 @@ function renderPageLoadError(error) {
   if (error?.name === 'AbortError') return;
   console.error('Page Load Error:', error);
   const message = String(error?.message || error || 'ไม่ทราบสาเหตุ');
-  const networkProblem = /failed to fetch|network|name_not_resolved|เกิน (?:15|22) วินาที|เชื่อมต่อ/i.test(message);
+  const networkProblem = /failed to fetch|network|name_not_resolved|เกิน \d+ วินาที|เชื่อมต่อ/i.test(message);
   const friendly = networkProblem
     ? 'เชื่อมต่อฐานข้อมูลไม่สำเร็จ กรุณาตรวจอินเทอร์เน็ตหรือ VPN แล้วลองใหม่'
     : `เกิดข้อผิดพลาดในการโหลดข้อมูล: ${escapeWmsText(message)}`;
@@ -28785,8 +28862,11 @@ async function boot() {
       }
       me = verified.data.user;
       await loadProf();
-      await syncUiSettingsAfterLogin();
+      // Authentication and the user's work page are the critical path.
+      // Theme/Layout synchronization is optional shared setup; a denied
+      // app_settings request (403) must never delay opening work.
       go(home());
+      scheduleUiSettingsSyncAfterLogin();
     } else {
       go('login');
     }
@@ -32633,8 +32713,8 @@ async function doResetPassword() {
   showActionSuccessToast('ตั้งรหัสผ่านใหม่แล้ว กำลังเข้าสู่ระบบ', { title:'อัปเดตรหัสผ่านสำเร็จ' });
   setTimeout(async () => {
     await loadProf();
-    await syncUiSettingsAfterLogin();
     go(home());
+    scheduleUiSettingsSyncAfterLogin();
   }, 1200);
 }
 
@@ -32703,9 +32783,9 @@ async function doLogin() {
     rememberLoginSessionToken(loginSessionToken);
     me = (await sb.auth.getUser()).data.user;
     await loadProf();
-    await syncUiSettingsAfterLogin();
     startLoginSessionGuard(loginSessionToken);
     go(home());
+    scheduleUiSettingsSyncAfterLogin();
   }
 }
 
@@ -63282,7 +63362,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.190" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.191" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
@@ -64206,7 +64286,7 @@ window.addEventListener('DOMContentLoaded', () => {
 if ('serviceWorker' in navigator && ['https:','http:'].includes(location.protocol)) {
   window.addEventListener('load', async () => {
     try {
-      const registration = await navigator.serviceWorker.register('./sw.js?v=190', { scope:'./' });
+      const registration = await navigator.serviceWorker.register('./sw.js?v=191', { scope:'./' });
       registration.update().catch(() => {});
       document.documentElement.dataset.pwaReady = 'true';
     } catch (error) {
