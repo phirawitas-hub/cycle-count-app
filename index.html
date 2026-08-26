@@ -3,10 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- V1.191: Prevent recurring stuck loaders with a dual watchdog, visible slow-load retry, and non-blocking optional UI synchronization. -->
-<!-- V1.190: Set the desktop gap between Sidebar and workspace to 15px. -->
-<!-- V1.189: Prevent stuck page loaders and set the desktop Sidebar to 280px while keeping every navigation label on one line. -->
-<!-- V1.188: Widen Sidebar by reclaiming the shell gap and keep every Thai navigation label on one line. -->
+<!-- V1.186: Use SUM OH as Pcs and make every Work Tracker KPI follow active filters. -->
 <!-- V1.175: Focus the active Count field on every device and keep the handheld pause action visually distinct (verified). -->
 <!-- V1.174: Redesign per-Zone assignment mode cards with responsive controls and readable Zone names (verified). -->
 <!-- V1.173: Add per-Zone Normal/Annual allocation, cross-mode duplicate guards, and safe cancel/return actions (verified). -->
@@ -53,14 +50,14 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.191</title>
+<title>Cycle Count V1.186</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
 if (['http:','https:'].includes(location.protocol)) {
   const manifestLink = document.createElement('link');
   manifestLink.rel = 'manifest';
-  manifestLink.href = './manifest.webmanifest?v=191';
+  manifestLink.href = './manifest.webmanifest?v=186';
   document.head.appendChild(manifestLink);
 }
 </script>
@@ -69,8 +66,8 @@ if (['http:','https:'].includes(location.protocol)) {
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Cycle Count">
-<link rel="apple-touch-icon" href="./icons/icon-192.png?v=191">
-<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=191">
+<link rel="apple-touch-icon" href="./icons/icon-192.png?v=186">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=186">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -23347,43 +23344,6 @@ body.page-loading-active .main-wrapper{
   white-space:nowrap!important;
   border:0!important;
 }
-.cat-loader-recovery{
-  position:absolute;
-  z-index:3;
-  left:50%;
-  bottom:5%;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:8px;
-  width:min(270px,82vw);
-  color:#5f6368!important;
-  font-family:'Sarabun',Arial,sans-serif;
-  font-size:13px;
-  font-weight:600;
-  opacity:0;
-  visibility:hidden;
-  transform:translate(-50%,8px);
-  transition:opacity .2s ease,transform .2s ease,visibility .2s ease;
-}
-.page-loading-overlay.is-slow .cat-loader-recovery{
-  opacity:1;
-  visibility:visible;
-  transform:translate(-50%,0);
-}
-.cat-loader-retry{
-  min-height:36px;
-  padding:7px 18px;
-  border:1px solid #d7e6e5;
-  border-radius:999px;
-  color:#006d77!important;
-  background:#fff!important;
-  box-shadow:0 5px 14px rgba(0,109,119,.12);
-  font:700 13px/1 'Sarabun',Arial,sans-serif;
-  cursor:pointer;
-}
-.cat-loader-retry:hover{background:#eef8f7!important}
-.cat-loader-retry:focus-visible{outline:3px solid rgba(0,109,119,.22);outline-offset:2px}
 .vespa-loader-complete{display:none!important}
 .page-loading-overlay.is-complete .cat-loader-orbit{animation-play-state:paused}
 .page-loading-overlay.is-error{background:#fff!important}
@@ -23450,73 +23410,15 @@ body.page-loading-active .main-wrapper{
   text-align:center;
   white-space:normal;
 }
-
-/* V1.190 — 280px Sidebar, 15px workspace gap and one-line labels. */
-.sidebar .nav-subitem {
-  gap:8px;
-  padding-left:10px;
-  padding-right:8px;
-}
-.sidebar :is(.nav-item,.nav-subitem) > span:not(.nav-icon):not(.nav-chevron) {
-  min-width:0;
-  flex:1 1 auto;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  letter-spacing:-.01em;
-}
-.sidebar .nav-item > span:not(.nav-icon):not(.nav-chevron) {
-  font-size:12px;
-}
-.sidebar .nav-subitem > span:not(.nav-icon):not(.nav-chevron) {
-  font-size:11.5px;
-}
-.sidebar .nav-submenu {
-  margin-left:10px !important;
-  padding-left:6px !important;
-}
-.sidebar :is(.nav-item,.nav-subitem)[title="ยืนยันผลและปรับสต๊อกสินค้า"] > span:not(.nav-icon):not(.nav-chevron),
-.sidebar :is(.nav-item,.nav-subitem)[title="ความคืบหน้างานตรวจนับ"] > span:not(.nav-icon):not(.nav-chevron) {
-  font-size:11px;
-}
-@media (min-width:901px) {
-  :root { --sidebar-width:280px; }
-  .app-container {
-    gap:15px !important;
-  }
-  .sidebar:not(.collapsed) {
-    width:var(--sidebar-width) !important;
-    min-width:var(--sidebar-width) !important;
-    flex:0 0 var(--sidebar-width) !important;
-  }
-  .sidebar.collapsed {
-    width:86px !important;
-    min-width:86px !important;
-    flex:0 0 86px !important;
-  }
-  .main-wrapper .page-content,
-  .main-wrapper.summary-view .page-content {
-    padding-left:12px !important;
-  }
-  .sidebar-collapse-fab,
-  .sidebar.collapsed .sidebar-collapse-fab {
-    right:-5px !important;
-  }
-}
-@media (max-width:900px) {
-  .sidebar :is(.nav-item,.nav-subitem) > span:not(.nav-icon):not(.nav-chevron) {
-    font-size:11px;
-  }
-}
 </style>
 </head>
-<body data-build="v1-190">
+<body data-build="v1-186">
 <div id="app"></div>
 
 <script>
-// V1.190: one authoritative application version for the browser title,
+// V1.186: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '1.191';
+const APP_VERSION = '1.186';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -23940,7 +23842,6 @@ const LOGIN_SESSION_TOKEN_STORAGE_KEY = 'cycle_count_login_token_v1';
 const LOGIN_HEARTBEAT_INTERVAL_MS = 45000;
 const LOGIN_SESSION_TTL_SECONDS = 300;
 const SUPABASE_REQUEST_TIMEOUT_MS = 15000;
-const PAGE_LOAD_SLOW_NOTICE_MS = 6500;
 // Large Sessions can legitimately need more than 22 seconds on a slow VPN.
 // Individual database requests still stop after 15 seconds, while this outer
 // guard only prevents the complete page workflow from running forever.
@@ -24331,20 +24232,20 @@ let _uiTranslationQueued = false;
 
 const UI_TH_FORMAL_EXACT = Object.freeze({
   'งานของฉัน':'งานที่ได้รับมอบหมาย',
-  'รายการงานของฉัน':'งานตรวจนับ',
+  'รายการงานของฉัน':'รายการงานตรวจนับที่ได้รับมอบหมาย',
   'บันทึกการนับ':'บันทึกผลการตรวจนับจริง',
   'เจองานเพิ่ม':'บันทึกรายการสินค้านอกแผน',
   'สรุปภาพรวมระบบ':'ศูนย์ควบคุมงานตรวจนับสินค้าคงคลัง',
-  'ติดตามงานทั้งหมด':'งานตรวจนับทั้งหมด',
+  'ติดตามงานทั้งหมด':'ติดตามสถานะงานตรวจนับทั้งหมด',
   'รายการผันผวน':'รายการผลต่างสินค้าคงคลัง',
   'ตรวจสอบ Variance':'ตรวจสอบผลต่างสินค้าคงคลัง',
   'ตรวจสอบงานพบเพิ่ม':'ตรวจสอบรายการสินค้านอกแผน',
   'จัดการงาน / Sessions':'บริหารงานตรวจนับ',
   'บริหารงานตรวจนับ / Sessions':'บริหารงานตรวจนับ',
   'สร้างรายการนับ':'สร้างรอบการตรวจนับ',
-  'จ่ายงาน':'มอบหมายงาน',
+  'จ่ายงาน':'มอบหมายงานตรวจนับ',
   'ปรับยอด WMS':'ปรับปรุงยอด WMS',
-  'ประวัติการนับ':'ประวัติการตรวจนับ',
+  'ประวัติการนับ':'ประวัติการตรวจนับสินค้าคงคลัง',
   'รอคอนเฟิร์ม':'รอยืนยันผล',
   'ยังไม่ได้ตรวจสอบ':'รอตรวจสอบ',
   'ตรวจสอบแล้ว':'ตรวจสอบเสร็จสิ้น',
@@ -25038,7 +24939,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.191':'e.g. Warehouse V1.191',
+  'เช่น Warehouse V1.186':'e.g. Warehouse V1.186',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -25111,16 +25012,6 @@ const UI_EN_EXACT = Object.freeze({
   'ภาษา':'Language',
   'รายงานผลต่างล่าสุด':'Latest Inventory Variance Report',
   'ความคืบหน้าการทำงานของทีม':'Team Progress',
-  'แดชบอร์ด':'Summary',
-  'แดชบอร์ด V.2':'Executive Summary',
-  'งานตรวจนับทั้งหมด':'All Work Tracking',
-  'รายงานผลต่าง':'Latest Inventory Variance Report',
-  'ความคืบหน้างานตรวจนับ':'Team Progress',
-  'กรอกผลจากเอกสาร':'Count Form Quick Entry',
-  'ยืนยันผลและปรับสต๊อกสินค้า':'Confirmation & WMS Adjustment',
-  'มอบหมายงาน':'Count Work Assignment',
-  'นำเข้าข้อมูล':'Import WMS Data',
-  'ประวัติการตรวจนับ':'Count History',
   'การเรียงข้อมูล':'Sort Order',
   'ตำแหน่งจัดเก็บ A → Z':'Storage Location A → Z',
   'สินค้า':'Item',
@@ -25197,8 +25088,8 @@ const UI_TH_SYSTEM_EXACT = Object.freeze({
   'Session':'รอบการตรวจนับ',
   'Sessions':'รอบการตรวจนับ',
   'Count Sessions':'รอบการตรวจนับ',
-  'Import WMS':'นำเข้าข้อมูล',
-  'Import WMS Data':'นำเข้าข้อมูล',
+  'Import WMS':'นำเข้าข้อมูล WMS',
+  'Import WMS Data':'นำเข้าข้อมูล WMS',
   'Item Master':'ข้อมูลหลักสินค้า',
   'Backup / Restore':'สำรอง / กู้คืนข้อมูล',
   'Layout':'ผังคลังสินค้า',
@@ -26643,22 +26534,16 @@ async function loadPublicBrandingSettings(options = {}) {
 
 async function syncUiSettingsAfterLogin() {
   await loadPublicBrandingSettings({ syncToCentral:prof?.role === 'admin' });
-  // Theme Set management is loaded lazily only when Admin opens its settings
-  // page. It is not required for normal work and must not issue a second
-  // app_settings request during every login.
+  if (prof?.role === 'admin') await loadThemeSets(true);
+  if (prof?.role === 'admin' && S._activeThemeSetId) {
+    const activeExists = (_themeSetsConfig.sets || []).some(set => set.id === S._activeThemeSetId);
+    if (!activeExists) S._activeThemeSetId = '';
+  }
   /* V1.19: the master warehouse layout is shared state. Load the central copy
      after authentication and keep this device subscribed to future changes. */
   await Promise.all([loadWarehouseLayoutConfig(true),loadPlanLocationConfig(true)]);
   startWarehouseLayoutRealtimeSync();
   return { branding:{ ...uiBranding },themeSets:_themeSetsConfig };
-}
-
-function scheduleUiSettingsSyncAfterLogin(delayMs = 800) {
-  setTimeout(() => {
-    syncUiSettingsAfterLogin().catch(error => {
-      if (!isAbortLikeError(error)) console.warn('ซิงก์ค่าหน้าจอเบื้องหลังไม่สำเร็จ:',error);
-    });
-  },Math.max(0,Number(delayMs) || 0));
 }
 
 function brandLogoHtml(context = 'sidebar') {
@@ -26747,19 +26632,19 @@ let _planLocationLoaded = false;
 const NAV_DETAIL_PAGES = new Set(['c-count','c-found','sv-detail','sv-found','ad-txlog','ad-new']);
 const BACK_BUTTON_PAGES = new Set(['c-count','c-found','sv-detail','sv-found','sv-list','ad-txlog','ad-new']);
 const DASHBOARD_TAB_TITLES = {
-  summary:  { th:'แดชบอร์ด', en:'Summary' },
-  executive:{ th:'แดชบอร์ด V.2', en:'Executive Summary' },
-  tracker:  { th:'งานตรวจนับทั้งหมด', en:'All Work Tracking' },
+  summary:  { th:'สรุป', en:'Summary' },
+  executive:{ th:'สรุปผู้บริหาร', en:'Executive Summary' },
+  tracker:  { th:'ติดตามงานทั้งหมด', en:'All Work Tracking' },
   layout:   { th:'ผังคลังสินค้า', en:'Warehouse Layout' },
-  variance: { th:'ยืนยันผลและปรับสต๊อกสินค้า', en:'Confirmation & WMS Adjustment' },
-  wms:      { th:'ยืนยันผลและปรับสต๊อกสินค้า', en:'Confirmation & WMS Adjustment' },
-  log:      { th:'รายงานผลต่าง', en:'Latest Inventory Variance Report' },
-  team:     { th:'ความคืบหน้างานตรวจนับ', en:'Team Progress' },
+  variance: { th:'ยืนยันผลและปรับปรุงยอด WMS', en:'Confirmation & WMS Adjustment' },
+  wms:      { th:'ยืนยันผลและปรับปรุงยอด WMS', en:'Confirmation & WMS Adjustment' },
+  log:      { th:'รายงานผลต่างล่าสุด', en:'Latest Inventory Variance Report' },
+  team:     { th:'ความคืบหน้าการทำงานของทีม', en:'Team Progress' },
 };
 const MANAGE_TAB_TITLES = {
   sessions: { th:'รอบการตรวจนับ', en:'Count Sessions' },
-  assign:   { th:'มอบหมายงาน', en:'Count Work Assignment' },
-  import:   { th:'นำเข้าข้อมูล', en:'Import WMS Data' },
+  assign:   { th:'จ่ายงาน', en:'Count Work Assignment' },
+  import:   { th:'นำเข้าข้อมูล WMS', en:'Import WMS Data' },
   info:     { th:'ข้อมูลหลักสินค้า', en:'Item Master' },
   backup:   { th:'สำรอง / กู้คืนข้อมูล', en:'Backup / Restore' },
 };
@@ -26778,7 +26663,7 @@ function currentPageTitle(page,currentRole=prof?.role || 'counter') {
   if (page === 'ad-manage') {
     const tab = S._manageTab || _manageTab || 'sessions';
     if (tab === 'assign' && currentRole === 'supervisor') {
-      return uiCopy('มอบหมายงาน','Count Work Assignment');
+      return uiCopy('มอบหมายงานตรวจนับ','Count Work Assignment');
     }
     return localizedNavigationTitle(MANAGE_TAB_TITLES[tab]);
   }
@@ -27925,7 +27810,7 @@ function updateDashboardNavigationUi(tab) {
   const title = document.querySelector('.topbar-title');
   if (title) {
     title.textContent = localizedNavigationTitle(DASHBOARD_TAB_TITLES[tab])
-      || uiCopy('แดชบอร์ด','Summary');
+      || uiCopy('สรุป','Summary');
   }
 }
 
@@ -28005,66 +27890,8 @@ function paintCachedDashboardView(tab) {
 
 let _pageLoadingVisualToken = 0;
 let _pageLoadingVisualTimer = null;
-let _pageLoadingSafetyTimer = null;
-let _pageLoadingSafetyDeadline = 0;
-let _pageLoadingSafetyTriggeredToken = 0;
 let _pageLoadingVisualStartedAt = 0;
 let _catLoaderShapeRaf = 0;
-
-function pageLoadTimeoutForCurrentRoute() {
-  const activeDashboardTab = S?._dashTab || _dashTab || 'summary';
-  if (S?.page === 'sv-dash' && activeDashboardTab === 'layout') return 120000;
-  if (S?.page === 'c-tasks') return 20000;
-  return PAGE_LOAD_TIMEOUT_MS;
-}
-
-function clearPageLoadingSafetyTimer() {
-  if (_pageLoadingSafetyTimer) clearTimeout(_pageLoadingSafetyTimer);
-  _pageLoadingSafetyTimer = null;
-}
-
-function removePageLoadingVisualImmediately(token = _pageLoadingVisualToken) {
-  if (token && token !== _pageLoadingVisualToken) return;
-  clearInterval(_pageLoadingVisualTimer);
-  _pageLoadingVisualTimer = null;
-  clearPageLoadingSafetyTimer();
-  cancelAnimationFrame(_catLoaderShapeRaf);
-  _catLoaderShapeRaf = 0;
-  Q('page-loading-overlay')?.remove();
-  _pageLoadingSafetyDeadline = 0;
-  document.body.classList.remove('page-loading-active');
-}
-
-function expirePageLoadingVisual(token,safetyMs) {
-  if (token !== _pageLoadingVisualToken || _pageLoadingSafetyTriggeredToken === token) return;
-  const overlay = Q('page-loading-overlay');
-  if (!overlay || overlay.classList.contains('is-leaving')) return;
-  _pageLoadingSafetyTriggeredToken = token;
-  const seconds = Math.round((Number(safetyMs) || pageLoadTimeoutForCurrentRoute()) / 1000);
-  const error = new Error(`หน้าใช้เวลาโหลดเกิน ${seconds} วินาที กรุณาลองใหม่`);
-  error.code = 'PAGE_LOADING_STUCK';
-  if (_activePageRequestController) {
-    _activePageRequestController._pageLoadingSafetyTriggered = true;
-    try { _activePageRequestController.abort(); } catch (_) {}
-  }
-  // Paint the recovery screen first, then remove the blocking canvas at once.
-  // This path must not depend on another animation timer because throttled or
-  // backgrounded browsers are exactly where the old loader could remain stuck.
-  renderPageLoadError(error);
-  removePageLoadingVisualImmediately(token);
-}
-
-function armPageLoadingSafetyTimer(token,options = {}) {
-  clearPageLoadingSafetyTimer();
-  const safetyMs = Math.max(
-    5000,
-    Number(options?.safetyMs) || (pageLoadTimeoutForCurrentRoute() + 2500)
-  );
-  _pageLoadingSafetyDeadline = Date.now() + safetyMs;
-  _pageLoadingSafetyTimer = setTimeout(() => {
-    expirePageLoadingVisual(token,safetyMs);
-  },safetyMs);
-}
 
 const CAT_LOADER_SHAPE_KEYS = Object.freeze([
   [0,62],
@@ -28228,10 +28055,6 @@ function pageLoadingOverlayHtml() {
         </svg>
         <div class="cat-loader-word">Loading</div>
         <div class="cat-loader-sr-only"><h2 id="vespa-loader-title">${uiCopy('กำลังโหลดข้อมูล...','Loading data...')}</h2><p id="vespa-loader-subtitle">${uiCopy('กำลังเตรียมหน้าจอให้พร้อมใช้งาน','Preparing your workspace')}</p></div>
-        <div class="cat-loader-recovery" id="page-loading-recovery">
-          <span>${uiCopy('กำลังใช้เวลานานกว่าปกติ','This is taking longer than usual')}</span>
-          <button class="cat-loader-retry" type="button" onclick="retryCurrentPageLoad()">${uiCopy('หยุดแล้วลองใหม่','Stop and retry')}</button>
-        </div>
         <div class="vespa-loader-complete" id="vespa-loader-complete">${uiCopy('✓ พร้อมใช้งาน','✓ Ready')}</div>
       </div>
     </div>
@@ -28287,7 +28110,7 @@ function startPageLoadingVisual(options = {}) {
   if (overlay.parentElement !== document.body) document.body.appendChild(overlay);
   document.body.classList.add('page-loading-active');
   syncPageLoadingOverlayBounds(overlay);
-  overlay.classList.remove('is-complete','is-error','is-leaving','is-slow');
+  overlay.classList.remove('is-complete','is-error','is-leaving');
   startUnifiedCatLoader(overlay);
   const title = Q('vespa-loader-title');
   const subtitle = Q('vespa-loader-subtitle');
@@ -28303,13 +28126,6 @@ function startPageLoadingVisual(options = {}) {
       return;
     }
     const elapsed = Date.now() - _pageLoadingVisualStartedAt;
-    if (elapsed >= PAGE_LOAD_SLOW_NOTICE_MS) overlay.classList.add('is-slow');
-    // A second wall-clock guard runs inside the animation pulse. It remains
-    // effective even if another code path accidentally clears the timeout id.
-    if (_pageLoadingSafetyDeadline && Date.now() >= _pageLoadingSafetyDeadline) {
-      expirePageLoadingVisual(token,Date.now() - _pageLoadingVisualStartedAt);
-      return;
-    }
     let progress;
     if (elapsed < 1800) progress = 4 + (elapsed / 1800) * 36;
     else if (elapsed < 5200) progress = 40 + ((elapsed - 1800) / 3400) * 30;
@@ -28320,23 +28136,13 @@ function startPageLoadingVisual(options = {}) {
   };
   tick();
   _pageLoadingVisualTimer = setInterval(tick,120);
-  armPageLoadingSafetyTimer(token,config);
   return token;
-}
-
-function retryCurrentPageLoad() {
-  const token = _pageLoadingVisualToken;
-  try { _activePageRequestController?.abort(); } catch (_) {}
-  removePageLoadingVisualImmediately(token);
-  setTimeout(() => render(),0);
 }
 
 function finishPageLoadingVisual(token = _pageLoadingVisualToken) {
   if (token !== _pageLoadingVisualToken) return;
   clearInterval(_pageLoadingVisualTimer);
   _pageLoadingVisualTimer = null;
-  clearPageLoadingSafetyTimer();
-  _pageLoadingSafetyDeadline = 0;
   const overlay = Q('page-loading-overlay');
   if (!overlay) {
     document.body.classList.remove('page-loading-active');
@@ -28368,8 +28174,6 @@ function failPageLoadingVisual(token = _pageLoadingVisualToken) {
   if (token !== _pageLoadingVisualToken) return;
   clearInterval(_pageLoadingVisualTimer);
   _pageLoadingVisualTimer = null;
-  clearPageLoadingSafetyTimer();
-  _pageLoadingSafetyDeadline = 0;
   const overlay = Q('page-loading-overlay');
   if (!overlay) {
     document.body.classList.remove('page-loading-active');
@@ -28402,7 +28206,7 @@ function renderPageLoadError(error) {
   if (error?.name === 'AbortError') return;
   console.error('Page Load Error:', error);
   const message = String(error?.message || error || 'ไม่ทราบสาเหตุ');
-  const networkProblem = /failed to fetch|network|name_not_resolved|เกิน \d+ วินาที|เชื่อมต่อ/i.test(message);
+  const networkProblem = /failed to fetch|network|name_not_resolved|เกิน (?:15|22) วินาที|เชื่อมต่อ/i.test(message);
   const friendly = networkProblem
     ? 'เชื่อมต่อฐานข้อมูลไม่สำเร็จ กรุณาตรวจอินเทอร์เน็ตหรือ VPN แล้วลองใหม่'
     : `เกิดข้อผิดพลาดในการโหลดข้อมูล: ${escapeWmsText(message)}`;
@@ -28415,27 +28219,13 @@ function renderPageLoadError(error) {
   }
 }
 
-function recoverPageLoadingFromUnhandledFailure(error) {
-  const overlay = Q('page-loading-overlay');
-  if (!overlay || overlay.classList.contains('is-complete') || overlay.classList.contains('is-leaving')) return;
-  const failure = error instanceof Error ? error : new Error(String(error || 'เกิดข้อผิดพลาดระหว่างโหลดหน้า'));
-  failure.code = failure.code || 'PAGE_LOAD_UNHANDLED';
-  renderPageLoadError(failure);
-  failPageLoadingVisual();
-}
-
-window.addEventListener('error',event => {
-  // Ignore ordinary image/font/resource failures. Recover only from a real
-  // JavaScript exception while a page-loading overlay is active.
-  if (!event?.error && !event?.message) return;
-  recoverPageLoadingFromUnhandledFailure(event.error || event.message);
-},true);
-window.addEventListener('unhandledrejection',event => {
-  recoverPageLoadingFromUnhandledFailure(event?.reason);
-});
-
 async function runPageLoaderWithTimeout(loader,pageRequestScope) {
-  const pageLoadTimeoutMs = pageLoadTimeoutForCurrentRoute();
+  const activeDashboardTab = S?._dashTab || _dashTab || 'summary';
+  const pageLoadTimeoutMs = S?.page === 'sv-dash' && activeDashboardTab === 'layout'
+    ? 120000
+    : S?.page === 'c-tasks'
+      ? 20000
+      : PAGE_LOAD_TIMEOUT_MS;
   let timeoutId;
   const timeout = new Promise((_,reject) => {
     timeoutId = setTimeout(() => {
@@ -28862,11 +28652,8 @@ async function boot() {
       }
       me = verified.data.user;
       await loadProf();
-      // Authentication and the user's work page are the critical path.
-      // Theme/Layout synchronization is optional shared setup; a denied
-      // app_settings request (403) must never delay opening work.
+      await syncUiSettingsAfterLogin();
       go(home());
-      scheduleUiSettingsSyncAfterLogin();
     } else {
       go('login');
     }
@@ -29676,28 +29463,28 @@ function render() {
     'c-tasks':    uiCopy('งานที่ได้รับมอบหมาย','Assigned Work'),
     'c-count':    uiCopy('บันทึกการนับ','Record Physical Count'),
     'c-found':    uiCopy('เจองานเพิ่ม','Record Additional Item'),
-    'sv-dash':    uiCopy('แดชบอร์ด','Summary'),
+    'sv-dash':    uiCopy('สรุป','Summary'),
     'sv-list':    uiCopy('ผลต่างสินค้าคงคลัง','Inventory Variance'),
     'sv-detail':  uiCopy('ตรวจสอบผลต่างสินค้าคงคลัง','Inventory Variance Review'),
     'sv-found':   uiCopy('ตรวจสอบงานพบเพิ่ม','Additional Item Review'),
     'ad-manage':  uiCopy('บริหารงานตรวจนับ','Cycle Count Administration'),
     'ad-sessions':uiCopy('รอบการตรวจนับ','Count Sessions'),
     'ad-new':     uiCopy('สร้างรายการนับ','Create Count Session'),
-    'ad-assign':  uiCopy('มอบหมายงาน','Count Work Assignment'),
-    'ad-import':  uiCopy('นำเข้าข้อมูล','Import WMS Data'),
-    'ad-history': uiCopy('ประวัติการตรวจนับ','Count History'),
+    'ad-assign':  uiCopy('จ่ายงาน','Count Work Assignment'),
+    'ad-import':  uiCopy('นำเข้าข้อมูล WMS','Import WMS Data'),
+    'ad-history': uiCopy('ประวัติการนับ','Count History'),
     'ad-txlog':   uiCopy('บันทึกธุรกรรม','Transaction Log'),
     'ad-users':   uiCopy('ผู้ใช้งานและข้อมูลระบบ','Users and System Data'),
     'ad-language':uiCopy('ภาษา','Language'),
     'ad-branding':uiCopy('ธีมและโลโก้','Theme and Logo'),
     'ad-paper':   uiCopy('แบบฟอร์มและกระดาษ','Forms and Paper'),
-    'ad-form-count':uiCopy('กรอกผลจากเอกสาร','Count Form Quick Entry'),
+    'ad-form-count':uiCopy('กรอกผลจากใบ Form Count','Count Form Quick Entry'),
     'ad-plan-location':uiCopy('Plan Location','Plan Location'),
   };
 
   const currentRole = prof?.role || 'counter';
   const assignedWorkTitle = currentRole === 'admin'
-    ? uiCopy('งานตรวจนับ','Assigned Cycle Count Tasks')
+    ? uiCopy('รายการงานตรวจนับที่ได้รับมอบหมาย','Assigned Cycle Count Tasks')
     : uiCopy('งานที่ได้รับมอบหมาย','Assigned Work');
   const pageTitle = page === 'c-tasks'
     ? assignedWorkTitle
@@ -29708,12 +29495,12 @@ function render() {
       { id:'c-tasks', name:uiCopy('งานที่ได้รับมอบหมาย','Assigned Work'), icon:navIconSvg('tasks') }
     ],
     supervisor: [
-      { id:'supervisor-summary', name:localizedNavigationTitle(DASHBOARD_TAB_TITLES.summary), icon:navIconSvg('summary'), action:"openDashboardMenu('summary')", matchPage:'sv-dash', matchTab:'summary' },
-      { id:'supervisor-executive', name:localizedNavigationTitle(DASHBOARD_TAB_TITLES.executive), icon:navIconSvg('log'), action:"openDashboardMenu('executive')", matchPage:'sv-dash', matchTab:'executive' },
+      { id:'supervisor-summary', name:uiCopy('สรุป','Summary'), icon:navIconSvg('summary'), action:"openDashboardMenu('summary')", matchPage:'sv-dash', matchTab:'summary' },
+      { id:'supervisor-executive', name:uiCopy('สรุปผู้บริหาร','Executive Summary'), icon:navIconSvg('log'), action:"openDashboardMenu('executive')", matchPage:'sv-dash', matchTab:'executive' },
       { id:'supervisor-tasks', name:uiCopy('งานที่ได้รับมอบหมาย','Assigned Work'), icon:navIconSvg('tasks'), action:"goPrimary('c-tasks')", matchPages:['c-tasks','c-count','c-found'] },
       { id:'supervisor-wms', name:localizedNavigationTitle(DASHBOARD_TAB_TITLES.wms), icon:navIconSvg('wms'), action:"openDashboardMenu('wms')", matchPages:['sv-dash','sv-list','sv-detail','sv-found'], matchTab:'wms' },
-      { id:'supervisor-assign', name:localizedNavigationTitle(MANAGE_TAB_TITLES.assign), icon:navIconSvg('assign'), action:"openManageMenu('assign')", matchPage:'ad-manage', matchTab:'assign' },
-      { id:'supervisor-import', name:localizedNavigationTitle(MANAGE_TAB_TITLES.import), icon:navIconSvg('import'), action:"openManageMenu('import')", matchPage:'ad-manage', matchTab:'import' }
+      { id:'supervisor-assign', name:uiCopy('มอบหมายงานตรวจนับ','Count Work Assignment'), icon:navIconSvg('assign'), action:"openManageMenu('assign')", matchPage:'ad-manage', matchTab:'assign' },
+      { id:'supervisor-import', name:uiCopy('นำเข้าข้อมูล WMS','Import WMS Data'), icon:navIconSvg('import'), action:"openManageMenu('import')", matchPage:'ad-manage', matchTab:'import' }
     ],
     admin: [
       { group: 'dashboard', name: 'สรุปภาพรวม', icon: navIconSvg('summary'), children: [
@@ -29725,8 +29512,8 @@ function render() {
         { id:'dash-team', name:localizedNavigationTitle(DASHBOARD_TAB_TITLES.team), icon:navIconSvg('team'), action:"openDashboardMenu('team')" }
       ]},
       { group:'my-work', name:'งานของฉัน', icon:navIconSvg('tasks'), children:[
-        { id:'my-tasks', name:uiCopy('งานตรวจนับ','Assigned Cycle Count Tasks'), icon:navIconSvg('tasks'), action:"goPrimary('c-tasks')" },
-        { id:'my-form-count', name:uiCopy('กรอกผลจากเอกสาร','Count Form Quick Entry'), icon:navIconSvg('jobs'), action:"goPrimary('ad-form-count')" },
+        { id:'my-tasks', name:uiCopy('รายการงานตรวจนับที่ได้รับมอบหมาย','Assigned Cycle Count Tasks'), icon:navIconSvg('tasks'), action:"goPrimary('c-tasks')" },
+        { id:'my-form-count', name:uiCopy('กรอกผลจากใบ Form Count','Count Form Quick Entry'), icon:navIconSvg('jobs'), action:"goPrimary('ad-form-count')" },
         { id:'my-wms', name:localizedNavigationTitle(DASHBOARD_TAB_TITLES.wms), icon:navIconSvg('wms'), action:"openDashboardMenu('wms')" }
       ]},
       { group: 'manage', name: 'บริหารงานตรวจนับ', icon: navIconSvg('manage'), children: [
@@ -29736,7 +29523,7 @@ function render() {
         { id:'manage-info', name:localizedNavigationTitle(MANAGE_TAB_TITLES.info), icon:navIconSvg('items'), action:"openManageMenu('info')" },
         { id:'manage-backup', name:localizedNavigationTitle(MANAGE_TAB_TITLES.backup), icon:navIconSvg('backup'), action:"openManageMenu('backup')" }
       ]},
-      { id: 'ad-history', name: uiCopy('ประวัติการตรวจนับ','Count History'), icon: navIconSvg('history') },
+      { id: 'ad-history', name: 'ประวัติการนับ', icon: navIconSvg('history') },
       { group: 'system', name: 'ตั้งค่าระบบ', icon: navIconSvg('theme'), children: [
         { id:'system-language', name:'ภาษา', icon:navIconSvg('log'), action:"goPrimary('ad-language')" },
         { id:'system-branding', name:'ธีมและโลโก้', icon:navIconSvg('theme'), action:"goPrimary('ad-branding')" },
@@ -29902,26 +29689,11 @@ function render() {
       </div>
     </div>`;
 
-  if (window.__CYCLE_COUNT_PREVIEW__) {
-    startCountStickyHeaderTracking();
-    scheduleTabletViewportLayout(false);
-    renderResponsivePreviewContent();
-    return;
-  }
+  startCountStickyHeaderTracking();
+  scheduleTabletViewportLayout(false);
 
-  // Arm the visual and its watchdog before any page setup code can throw.
-  // Previously the overlay already existed at this point but the watchdog did
-  // not, so a synchronous failure left the cat loader on screen forever.
-  try {
-    pageRequestScope._loadingVisualToken = startPageLoadingVisual({
-      title:uiCopy('กำลังโหลดข้อมูล...','Loading data...'),
-      subtitle:uiCopy('กำลังเตรียมหน้าจอให้พร้อมใช้งาน','Preparing the page for use'),
-    });
-    startCountStickyHeaderTracking();
-    scheduleTabletViewportLayout(false);
-  } catch (error) {
-    renderPageLoadError(error);
-    failPageLoadingVisual(pageRequestScope._loadingVisualToken);
+  if (window.__CYCLE_COUNT_PREVIEW__) {
+    renderResponsivePreviewContent();
     return;
   }
 
@@ -29955,7 +29727,7 @@ function render() {
     && paintCachedDashboardView(S._dashTab || _dashTab || 'summary');
   const pageCachePainted = !dashboardCachePainted && restoreCachedPageView();
   if (dashboardCachePainted || pageCachePainted) {
-    removePageLoadingVisualImmediately(pageRequestScope._loadingVisualToken);
+    Q('page-loading-overlay')?.remove();
     setTimeout(() => {
       if (
         renderRequestId !== _renderRequestSerial ||
@@ -29979,6 +29751,11 @@ function render() {
     return;
   }
 
+  pageRequestScope._loadingVisualToken = startPageLoadingVisual({
+    title:uiCopy('กำลังโหลดข้อมูล...','Loading data...'),
+    subtitle:uiCopy('กำลังเตรียมหน้าจอให้พร้อมใช้งาน','Preparing the page for use'),
+  });
+  
   if (L[page]) {
      const pending = runPageLoaderWithTimeout(L[page],pageRequestScope);
      if (page === 'sv-dash') _dashboardLoadInFlight = pending;
@@ -29990,7 +29767,6 @@ function render() {
            S?.page !== page
          ) return;
          if (err?.code === 'AUTH_SESSION_INVALID') return;
-         if (pageRequestScope?._pageLoadingSafetyTriggered) return;
          if (err?.name === 'AbortError') {
            const interrupted = new Error('การโหลดถูกยกเลิกก่อนข้อมูลพร้อม กรุณากดลองโหลดอีกครั้ง');
            interrupted.code = 'REQUEST_ABORTED';
@@ -32713,8 +32489,8 @@ async function doResetPassword() {
   showActionSuccessToast('ตั้งรหัสผ่านใหม่แล้ว กำลังเข้าสู่ระบบ', { title:'อัปเดตรหัสผ่านสำเร็จ' });
   setTimeout(async () => {
     await loadProf();
+    await syncUiSettingsAfterLogin();
     go(home());
-    scheduleUiSettingsSyncAfterLogin();
   }, 1200);
 }
 
@@ -32783,9 +32559,9 @@ async function doLogin() {
     rememberLoginSessionToken(loginSessionToken);
     me = (await sb.auth.getUser()).data.user;
     await loadProf();
+    await syncUiSettingsAfterLogin();
     startLoginSessionGuard(loginSessionToken);
     go(home());
-    scheduleUiSettingsSyncAfterLogin();
   }
 }
 
@@ -39652,7 +39428,7 @@ function renderAdminFormCountShell() {
   cnt().innerHTML = `<section class="afc-page">
     <header class="afc-hero">
       <div>
-        <h2>${uiCopy('กรอกผลจากเอกสาร','Count Form Quick Entry')}</h2>
+        <h2>${uiCopy('กรอกผลจากใบ Form Count','Count Form Quick Entry')}</h2>
         <p>${uiCopy('เลือก Session และ Location แล้วกรอกผลนับตามลำดับเดียวกับใบพิมพ์ ระบบจะคำนวณรอบ Count 1–3 และส่งผลต่างเข้าสู่ Variance ตาม Flow เดิม','Select a Session and Location, then enter quantities in the same order as the printed form. Existing Count 1–3 and Variance rules remain unchanged.')}</p>
       </div>
       <span class="afc-admin-badge">🔒 ${uiCopy('เฉพาะ Admin','Admin Only')}</span>
@@ -40190,10 +39966,7 @@ async function saveAdminFormCountAssignment() {
    V1.18 · Admin-only Paper Form Count workspace.
    Paper results are deliberately isolated from operational count_records.
    -------------------------------------------------------------------------- */
-// Keep the historical source key unchanged for existing records, but show the
-// shorter menu name everywhere in the interface.
 const PAPER_FORM_SOURCE_LABEL = 'กรอกผลจากใบ Form Count';
-const PAPER_FORM_SOURCE_DISPLAY_LABEL = 'กรอกผลจากเอกสาร';
 const PAPER_FORM_PAGE_SIZE = 200;
 const PAPER_FORM_SOLUTION_OPTIONS = ['', 'ยังไม่ได้แก้', 'กลับไปนับใหม่', 'สินค้าเกิน', 'สินค้าขาด', 'ปรับข้อมูลใบ', 'แก้ไขแล้ว', 'อื่นๆ'];
 let _paperFormState = {
@@ -40430,7 +40203,7 @@ function renderPaperFormShell() {
   ).join('');
   cnt().innerHTML = `<section class="afc-page">
     <header class="afc-hero">
-      <div><h2>กรอกผลจากเอกสาร</h2><p>ตารางสำหรับลงข้อมูลจากใบนับโดยเฉพาะ ข้อมูลชุดนี้แยกจากผลนับผ่านระบบ และใช้เทียบกันใน Backup ได้โดยไม่เปลี่ยน Stock Snapshot หรือ Workflow เดิม</p></div>
+      <div><h2>กรอกผลจากใบ Form Count</h2><p>ตารางสำหรับลงข้อมูลจากใบนับโดยเฉพาะ ข้อมูลชุดนี้แยกจากผลนับผ่านระบบ และใช้เทียบกันใน Backup ได้โดยไม่เปลี่ยน Stock Snapshot หรือ Workflow เดิม</p></div>
       <span class="afc-admin-badge">🔒 เฉพาะ Admin</span>
     </header>
     <section class="afc-v11-filters">
@@ -40453,7 +40226,7 @@ function paperFormCounterBarHtml() {
     id:`afc-counter-${round}`,selected:_paperFormState.selectedCounters[round],options:names,
     onchange:`paperFormCounterChanged.bind(null,${round})`,placeholder:'เลือกผู้ตรวจนับได้หลายคน',
   })}<small>ใช้กับแถวที่แก้ Count ${round} ในครั้งนี้</small></div>`).join('') +
-  `<div class="fg"><label>ผู้กรอกเข้าระบบ</label><input value="${escapeWmsText(prof?.name || me?.email || 'Admin')}" disabled><small>Source: ${PAPER_FORM_SOURCE_DISPLAY_LABEL}</small></div>`;
+  `<div class="fg"><label>ผู้กรอกเข้าระบบ</label><input value="${escapeWmsText(prof?.name || me?.email || 'Admin')}" disabled><small>Source: ${PAPER_FORM_SOURCE_LABEL}</small></div>`;
 }
 
 function refreshPaperFormCounterBar() {
@@ -40875,10 +40648,7 @@ async function openPaperHistoryModal() {
     const snapshot = history.new_value && typeof history.new_value === 'object' ? history.new_value : {};
     const userName = _paperFormState.counters.find(row => String(row.id) === `profile:${history.performed_by}`)?.name || history.performed_by || 'Admin';
     const time = history.created_at ? new Date(history.created_at).toLocaleString(uiLocale()) : '';
-    const sourceDisplay = history.source_label === PAPER_FORM_SOURCE_LABEL
-      ? PAPER_FORM_SOURCE_DISPLAY_LABEL
-      : (history.source_label || PAPER_FORM_SOURCE_DISPLAY_LABEL);
-    return `<div class="row" style="cursor:default"><div class="row-body"><div class="row-title" data-i18n-skip>${escapeWmsText(snapshot.location_code || '—')} · ${escapeWmsText(snapshot.item_code || '—')}</div><div class="row-sub">${escapeWmsText(sourceDisplay)} · ${escapeWmsText(userName)}</div><div class="row-sub">${escapeWmsText(time)}</div></div><span class="tag tag-blue">${escapeWmsText(history.action || '')}</span></div>`;
+    return `<div class="row" style="cursor:default"><div class="row-body"><div class="row-title" data-i18n-skip>${escapeWmsText(snapshot.location_code || '—')} · ${escapeWmsText(snapshot.item_code || '—')}</div><div class="row-sub">${escapeWmsText(history.source_label || PAPER_FORM_SOURCE_LABEL)} · ${escapeWmsText(userName)}</div><div class="row-sub">${escapeWmsText(time)}</div></div><span class="tag tag-blue">${escapeWmsText(history.action || '')}</span></div>`;
   }).join('') : '<div class="afc-queue-empty">ยังไม่มี Transaction History</div>';
 }
 
@@ -41981,7 +41751,7 @@ function workTrackerViewHtml() {
     return `<div class="work-tracker-filter-field"><label>${t(config.labelTh,config.labelEn)}</label><select id="tracker-${key}" onchange="updateWorkTrackerFilter('${key}',this.value)"><option value="">${t('ทั้งหมด','All')}</option></select></div>`;
   };
   return `<div class="work-tracker-workspace">
-    <div class="work-tracker-heading"><div><h2>${t('งานตรวจนับทั้งหมด','Cycle Count Work Tracking')}</h2><p>${t('ติดตามงานที่นำเข้าตั้งแต่การมอบหมายงาน การตรวจนับแต่ละรอบ การตรวจสอบผลต่างสินค้าคงคลัง จนถึงการปรับปรุงยอด WMS','Track imported work from assignment through each Count Round, Inventory Variance review, and WMS adjustment.')}</p></div></div>
+    <div class="work-tracker-heading"><div><h2>${t('ติดตามสถานะงานตรวจนับทั้งหมด','Cycle Count Work Tracking')}</h2><p>${t('ติดตามงานที่นำเข้าตั้งแต่การมอบหมายงาน การตรวจนับแต่ละรอบ การตรวจสอบผลต่างสินค้าคงคลัง จนถึงการปรับปรุงยอด WMS','Track imported work from assignment through each Count Round, Inventory Variance review, and WMS adjustment.')}</p></div></div>
     <div class="work-tracker-kpis">
       <div class="work-tracker-kpi"><span>${t('งานที่นำเข้าทั้งหมด','Total Imported Work')}</span><strong id="tracker-kpi-total">0</strong></div>
       <div class="work-tracker-kpi"><span>${t('ยังไม่ได้มอบหมายงาน','Not Assigned')}</span><strong id="tracker-kpi-unassigned">0</strong></div>
@@ -46461,7 +46231,7 @@ function renderExecutiveDashboard() {
   const dataset = window._executiveDataset;
   if (!root) return;
   if (!dataset) {
-    root.innerHTML = `<div class="exec-empty">ไม่พบชุดข้อมูลแดชบอร์ด V.2 กรุณาลองโหลดใหม่</div>`;
+    root.innerHTML = `<div class="exec-empty">ไม่พบชุดข้อมูลสรุปผู้บริหาร กรุณาลองโหลดใหม่</div>`;
     return;
   }
   const allRows = dataset.rows || [];
@@ -46794,7 +46564,7 @@ function renderExecutiveDashboard() {
   const dataset = window._executiveDataset;
   if (!root) return;
   if (!dataset) {
-    root.innerHTML = `<div class="exec-empty">ไม่พบชุดข้อมูลแดชบอร์ด V.2 กรุณาลองโหลดใหม่</div>`;
+    root.innerHTML = `<div class="exec-empty">ไม่พบชุดข้อมูลสรุปผู้บริหาร กรุณาลองโหลดใหม่</div>`;
     return;
   }
   const allRows = dataset.rows || [];
@@ -46877,7 +46647,7 @@ function renderExecutiveDashboard() {
   const dataset = window._executiveDataset;
   if (!root) return;
   if (!dataset) {
-    root.innerHTML = `<div class="exec-empty">ไม่พบชุดข้อมูลแดชบอร์ด V.2 กรุณาลองโหลดใหม่</div>`;
+    root.innerHTML = `<div class="exec-empty">ไม่พบชุดข้อมูลสรุปผู้บริหาร กรุณาลองโหลดใหม่</div>`;
     return;
   }
   const allRows = dataset.rows || [];
@@ -47017,7 +46787,7 @@ function renderExecutiveDashboard() {
   const root = Q('executive-dashboard-root');
   const dataset = window._executiveDataset;
   if (!root) return;
-  if (!dataset) { root.innerHTML = `<div class="exec-empty">ไม่พบชุดข้อมูลแดชบอร์ด V.2 กรุณาลองโหลดใหม่</div>`;return; }
+  if (!dataset) { root.innerHTML = `<div class="exec-empty">ไม่พบชุดข้อมูลสรุปผู้บริหาร กรุณาลองโหลดใหม่</div>`;return; }
   // Zone/Category are now local to the performance card. Never let the
   // removed page-level controls leave an invisible filter behind.
   _executiveFilters.zone = '';
@@ -47239,7 +47009,7 @@ async function exportExecutivePowerPoint() {
     const safeSession = String(dataset.sessionName || 'Session').replace(/[\\/:*?"<>|]+/g,'_').slice(0,48);
     const stamp = new Date().toISOString().slice(0,10).replace(/-/g,'');
     await pptx.writeFile({ fileName:`Executive_CycleCount_${safeSession}_${stamp}.pptx` });
-    if (typeof showActionSuccessToast === 'function') showActionSuccessToast('สร้าง PowerPoint จากแดชบอร์ด V.2 แล้ว',{ title:'ดาวน์โหลดสำเร็จ' });
+    if (typeof showActionSuccessToast === 'function') showActionSuccessToast('สร้าง PowerPoint สรุปผู้บริหารแล้ว',{ title:'ดาวน์โหลดสำเร็จ' });
   } catch (error) {
     console.error('Executive PowerPoint export failed:',error);
     alert(`สร้าง PowerPoint ไม่สำเร็จ: ${error.message || error}`);
@@ -47873,7 +47643,7 @@ async function loadSvDash() {
     cnt().innerHTML = errBox((countResult.error || snapshotResult.error || detailResult.error || annualJobsResult.error || annualJobItemsResult.error).message);
     return;
   }
-  if (paperResult?.error) console.warn('โหลดข้อมูล Form Count สำหรับแดชบอร์ด V.2 ไม่สำเร็จ:',paperResult.error.message);
+  if (paperResult?.error) console.warn('โหลดข้อมูล Form Count สำหรับสรุปผู้บริหารไม่สำเร็จ:',paperResult.error.message);
   const rawCounts = countResult.data || [];
   const activeDateFilter = dashboardDateRange();
   const allCounts = filterRowsByDashboardDate(rawCounts, 'counted_at');
@@ -48011,8 +47781,8 @@ async function loadSvDash() {
       ),
     ]);
     if (isStaleLoad()) return;
-    if (itemMasterResult.error) console.warn('โหลด Category จาก Item Master สำหรับแดชบอร์ด V.2 ไม่สำเร็จ:',itemMasterResult.error.message);
-    if (foundIssueResult.error) console.warn('โหลด Issue งานพบเพิ่มสำหรับแดชบอร์ด V.2 ไม่สำเร็จ:',foundIssueResult.error.message);
+    if (itemMasterResult.error) console.warn('โหลด Category จาก Item Master สำหรับสรุปผู้บริหารไม่สำเร็จ:',itemMasterResult.error.message);
+    if (foundIssueResult.error) console.warn('โหลด Issue งานพบเพิ่มสำหรับสรุปผู้บริหารไม่สำเร็จ:',foundIssueResult.error.message);
     executiveItemMasterRows = itemMasterResult.data || [];
     executiveFoundRows = filterRowsByDashboardDate(foundIssueResult.data || [],'discovered_at');
     const loadedMasterCodes = new Set(executiveItemMasterRows.map(row => String(row.item_code || '').trim().toLocaleUpperCase('en-US')));
@@ -49325,8 +49095,8 @@ async function loadSvDash() {
   const varianceLogTabHtml = `
     <div>
       <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap">
-        <div style="font-size:18px;font-weight:800;color:var(--text-main)">📋 รายงานผลต่าง (Variance Log)</div>
-        <button class="btn btn-blue btn-sm" onclick="openDashboardMenu('wms')">เปิดหน้ายืนยันผลและปรับสต๊อกสินค้า</button>
+        <div style="font-size:18px;font-weight:800;color:var(--text-main)">📋 รายงานผลต่างล่าสุด (Variance Log)</div>
+        <button class="btn btn-blue btn-sm" onclick="openDashboardMenu('wms')">เปิดหน้ายืนยันผลและปรับปรุงยอด WMS</button>
       </div>
       <div class="card card-flush" data-location-sort-group style="margin-bottom:0;box-shadow:inset 4px 4px 8px var(--neu-shadow-dark),inset -4px -4px 8px var(--neu-shadow-light);border-radius:20px">
         ${varianceReportRows}
@@ -49447,7 +49217,7 @@ async function loadSvDash() {
           <div class="wms-overview-title">
             <div class="wms-overview-icon">${wmsIconSvg('reviewed',25)}</div>
             <div class="wms-overview-copy">
-              <strong>ศูนย์ยืนยันผลและปรับสต๊อกสินค้า</strong>
+              <strong>ศูนย์ยืนยันผลและปรับปรุงยอด WMS</strong>
               <span>ยืนยันผล DIFF ตรวจสอบรายการ และปิดงาน WMS ได้ในหน้าเดียว</span>
             </div>
           </div>
@@ -53389,7 +53159,7 @@ function focusAssignmentStep(stepId, options={}) {
     'assign-step-round23':4,
     'assign-step-review':5,
   };
-  if (bentoTitle) bentoTitle.textContent = stepTitles[stepId] || 'มอบหมายงาน';
+  if (bentoTitle) bentoTitle.textContent = stepTitles[stepId] || 'มอบหมายงานตรวจนับ';
   if (bentoCount) bentoCount.textContent = `ขั้นที่ ${stepPosition[stepId] || 1} / ${advancedOpen ? 5 : 3}`;
   shell.querySelectorAll('.assign-workflow-item[data-step]').forEach(button => {
     const buttonStep = button.dataset.step;
@@ -53446,7 +53216,7 @@ async function renderManageAssign(container) {
               </svg>
             </span>
             <div class="assign-hero-title-copy">
-              <h2>มอบหมายงาน</h2>
+              <h2>มอบหมายงานตรวจนับ</h2>
               <p id="assign-active-session">ยังไม่ได้เลือก Session</p>
             </div>
           </div>
@@ -55185,7 +54955,7 @@ async function renderManageImport(container) {
     <details class="admin-master-group" open>
       <summary>
         <span>${navIconSvg('import',20)}</span>
-        <span class="admin-master-group-title">นำเข้าข้อมูล</span>
+        <span class="admin-master-group-title">Import ข้อมูล WMS</span>
         <span class="admin-master-group-hint">เปิด / ปิด</span>
         <span class="admin-master-group-chevron">⌄</span>
       </summary>
@@ -57580,7 +57350,7 @@ async function loadAdHistory() {
   let status = String(S._histSt || '');
   const searchQ = String(S._histSearch || '');
 
-  cnt().innerHTML = `<div class="card"><div class="load" style="padding:30px;text-align:center">⏳ กำลังโหลดตัวกรองประวัติการตรวจนับ...</div></div>`;
+  cnt().innerHTML = `<div class="card"><div class="load" style="padding:30px;text-align:center">⏳ กำลังโหลดตัวกรองประวัติการนับ...</div></div>`;
   const [sessionResult,assignmentResult] = await Promise.all([
     fetchPagedSupabaseRows(
       'count_sessions',
@@ -63362,7 +63132,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.191" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.186" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
@@ -64286,7 +64056,7 @@ window.addEventListener('DOMContentLoaded', () => {
 if ('serviceWorker' in navigator && ['https:','http:'].includes(location.protocol)) {
   window.addEventListener('load', async () => {
     try {
-      const registration = await navigator.serviceWorker.register('./sw.js?v=191', { scope:'./' });
+      const registration = await navigator.serviceWorker.register('./sw.js?v=186', { scope:'./' });
       registration.update().catch(() => {});
       document.documentElement.dataset.pwaReady = 'true';
     } catch (error) {
