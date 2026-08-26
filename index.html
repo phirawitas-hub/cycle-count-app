@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V1.196: Reconcile newly imported Annual-Zone snapshots into untouched JOBs and explain mode-scoped assignment queues. -->
 <!-- V1.194: Allow untouched Annual JOB Zones to be cancelled safely and returned to normal Location assignment. -->
 <!-- V1.193: Restore Assignment/My Tasks data with validated fast payloads and relation-free compatibility fallbacks. -->
 <!-- V1.192: Move the slow-load recovery message below the cat animation with responsive clearance on short screens. -->
@@ -56,7 +57,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.194</title>
+<title>Cycle Count V1.196</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
@@ -23555,7 +23556,7 @@ body.page-loading-active .main-wrapper{
 <script>
 // V1.190: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '1.194';
+const APP_VERSION = '1.196';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -25077,7 +25078,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.194':'e.g. Warehouse V1.194',
+  'เช่น Warehouse V1.196':'e.g. Warehouse V1.196',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -26681,7 +26682,10 @@ async function loadPublicBrandingSettings(options = {}) {
 }
 
 async function syncUiSettingsAfterLogin() {
-  await loadPublicBrandingSettings({ syncToCentral:prof?.role === 'admin' });
+  // Login/background sync is read-only. Creating or migrating the central
+  // theme belongs to the explicit Theme & Logo save flow; attempting an
+  // automatic upsert here caused a recurring 403 beside ordinary menu loads.
+  await loadPublicBrandingSettings({ syncToCentral:false });
   // Theme Set management is loaded lazily only when Admin opens its settings
   // page. It is not required for normal work and must not issue a second
   // app_settings request during every login.
@@ -52646,14 +52650,32 @@ async function loadAdManage() {
   S._manageTab = tab;
   _manageTab = tab;
   const hostClass = tab === 'assign' ? 'assign-manage-host' : 'card';
-  cnt().innerHTML = `<div class="${hostClass}" id="manage-content"><div class="load" style="text-align:center">⏳ กำลังโหลด...</div></div>`;
+  const assignmentRequestScope = _activePageRequestController;
+  cnt().innerHTML = `<div class="${hostClass}" id="manage-content"><div class="load" style="text-align:center;line-height:1.7">
+    ⏳ ${tab === 'assign' ? 'กำลังเตรียมหน้ามอบหมายงาน...' : 'กำลังโหลด...'}
+    ${tab === 'assign' ? '<br><button class="btn btn-ghost btn-sm" type="button" style="margin-top:12px" onclick="render()">หยุดแล้วลองใหม่</button>' : ''}
+  </div></div>`;
   const mc = Q('manage-content'); if (!mc) return;
+  if (tab === 'assign') {
+    // The Assignment shell is already visible. Release the full-page canvas on
+    // the first paint so a slow/denied bootstrap request can only affect this
+    // inline area, never leave the entire application behind a white loader.
+    requestAnimationFrame(() => {
+      if (
+        assignmentRequestScope === _activePageRequestController
+        && ['ad-manage','ad-assign'].includes(S?.page)
+        && (S?._manageTab || _manageTab) === 'assign'
+      ) {
+        removePageLoadingVisualImmediately(assignmentRequestScope?._loadingVisualToken);
+      }
+    });
+  }
   if (tab === 'sessions') await renderManageSessions(mc);
   else if (tab === 'assign') await renderManageAssign(mc);
   else if (tab === 'info') await renderManageDataInfo(mc);
   else if (tab === 'backup') await renderManageBackup(mc);
   else await renderManageImport(mc);
-  markCurrentPageViewReady();
+  if (mc.dataset.loadFailed !== 'true') markCurrentPageViewReady();
 }
 
 const COUNT_RULE_PRESETS = Object.freeze({
@@ -53712,12 +53734,37 @@ function focusAssignmentStep(stepId, options={}) {
 
 async function renderManageAssign(container) {
   const isAdminOrSup = ['admin','supervisor'].includes(prof?.role);
-  const [sessionsResult,usersResult] = await Promise.all([
-    sb.from('count_sessions').select('id,name,show_oh,count_mode,annual_items_per_job,annual_job_prefix,annual_form_title,annual_form_logo_data_url').eq('status','active'),
-    sb.from('profiles').select('id,name').order('name'),
-  ]);
+  const bootstrapTimeoutMs = 10000;
+  let bootstrapTimer;
+  let sessionsResult;
+  let usersResult;
+  try {
+    [sessionsResult,usersResult] = await Promise.race([
+      Promise.all([
+        sb.from('count_sessions').select('id,name,show_oh,count_mode,annual_items_per_job,annual_job_prefix,annual_form_title,annual_form_logo_data_url').eq('status','active'),
+        sb.from('profiles').select('id,name').order('name'),
+      ]),
+      new Promise((_,reject) => {
+        bootstrapTimer = setTimeout(() => {
+          const error = new Error('โหลด Session และรายชื่อผู้รับงานเกิน 10 วินาที');
+          error.code = 'ASSIGNMENT_BOOTSTRAP_TIMEOUT';
+          reject(error);
+        },bootstrapTimeoutMs);
+      }),
+    ]);
+  } catch (error) {
+    if (container) {
+      container.dataset.loadFailed = 'true';
+      container.innerHTML = `<div class="card"><div class="alert alert-red">โหลดข้อมูลมอบหมายงานไม่สำเร็จ: ${escapeWmsText(error.message || error)}</div>
+        <button class="btn btn-blue" type="button" style="margin-top:14px" onclick="render()">ลองโหลดอีกครั้ง</button></div>`;
+    }
+    return;
+  } finally {
+    clearTimeout(bootstrapTimer);
+  }
   if (sessionsResult.error || usersResult.error) {
     const error = sessionsResult.error || usersResult.error;
+    container.dataset.loadFailed = 'true';
     container.innerHTML = `<div class="alert alert-red">โหลดข้อมูลมอบหมายงานไม่สำเร็จ: ${escapeWmsText(error.message || error)}</div>
       <button class="btn btn-blue" type="button" style="margin-top:14px" onclick="render()">ลองโหลดอีกครั้ง</button>`;
     return;
@@ -54447,7 +54494,7 @@ async function loadAnnualJobWorkspace() {
     ),
     fetchPagedSupabaseRows(
       'annual_count_job_items',
-      'job_id,location_id',
+      'id,job_id,session_id,stock_snapshot_id,location_id,item_id,sort_order',
       query => query.eq('session_id',config.sessionId),
     ),
     loadAssignmentWorkspaceData(config.sessionId)
@@ -54459,12 +54506,41 @@ async function loadAnnualJobWorkspace() {
     list.innerHTML = errBox((jobsResult.error || itemsResult.error || workspaceResult.error).message);
     return;
   }
-  _annualWorkspaceJobs = jobsResult.data || [];
-  _annualWorkspaceItemCounts = {};
+  let annualJobs = jobsResult.data || [];
+  let annualItems = itemsResult.data || [];
   const workspace = workspaceResult.data || { snapshots:[],assignments:[] };
+  try {
+    const syncSummary = await syncImportedAnnualSnapshotsIntoPendingJobs({
+      sessionId:config.sessionId,
+      snapshots:workspace.snapshots || [],
+      assignments:workspace.assignments || [],
+      jobs:annualJobs,
+      items:annualItems,
+      size:config.itemsPerJob,
+      prefix:config.prefix,
+      requireExistingJobs:true,
+    });
+    if (selectedAssignSessionConfig().sessionId !== config.sessionId) return;
+    if (syncSummary.addedItems) {
+      annualJobs = annualJobs.concat(syncSummary.jobs || []);
+      annualItems = annualItems.concat(syncSummary.items || []);
+      const syncAlert = Q('annual-generate-alert');
+      if (syncAlert) syncAlert.innerHTML = `<div class="alert alert-green" style="margin-top:12px">✅ นำงาน Import ใหม่เข้า Annual JOB แล้ว ${syncSummary.addedItems.toLocaleString(uiLocale())} รายการ · สร้างเพิ่ม ${syncSummary.createdJobs.toLocaleString(uiLocale())} JOB</div>`;
+    }
+    if (syncSummary.deferredItems) {
+      const syncAlert = Q('annual-generate-alert');
+      if (syncAlert) syncAlert.innerHTML += `<div class="alert alert-amber" style="margin-top:8px">⚠️ มีงาน Import ใหม่ ${syncSummary.deferredItems.toLocaleString(uiLocale())} รายการที่ยังไม่เติมเข้า JOB เพราะ Location นั้นถูกจ่ายงานหรือเริ่มนับแล้ว</div>`;
+    }
+  } catch (syncError) {
+    console.warn('Annual JOB import reconciliation failed:',syncError);
+    const syncAlert = Q('annual-generate-alert');
+    if (syncAlert) syncAlert.innerHTML = `<div class="alert alert-amber" style="margin-top:12px">⚠️ โหลด JOB เดิมได้ แต่ซิงก์งาน Import ใหม่ไม่สำเร็จ: ${escapeWmsText(syncError.message || syncError)}</div>`;
+  }
+  _annualWorkspaceJobs = annualJobs;
+  _annualWorkspaceItemCounts = {};
   const completedLocationIds = annualCompletedLocationIds(workspace.assignments || []);
-  const reservedAnnualLocationIds = new Set((itemsResult.data || []).map(row => String(row.location_id || '')).filter(Boolean));
-  const unfinishedJobItems = (itemsResult.data || []).filter(row =>
+  const reservedAnnualLocationIds = new Set(annualItems.map(row => String(row.location_id || '')).filter(Boolean));
+  const unfinishedJobItems = annualItems.filter(row =>
     !completedLocationIds.has(String(row.location_id || ''))
     && assignmentLocationMatchesMode(
       config.sessionId,
@@ -54683,6 +54759,212 @@ async function writeAnnualJobGenerationRows(table,rows) {
     return;
   }
   throw error;
+}
+
+function annualSnapshotWorkKey(row={}) {
+  return `${String(row.location_id || '')}|${String(row.item_id || '__empty_location__')}`;
+}
+
+// Import updates Stock Snapshot independently from Annual JOB definitions.
+// Reconcile only into untouched pending JOBs so a new file becomes assignable
+// without changing the scope of work that was already issued or counted.
+async function syncImportedAnnualSnapshotsIntoPendingJobs({
+  sessionId,
+  snapshots=[],
+  assignments=[],
+  jobs=[],
+  items=[],
+  size=20,
+  prefix='JOB',
+  requireExistingJobs=true,
+}={}) {
+  const sid = String(sessionId || '');
+  if (!sid) return { addedItems:0,createdJobs:0,deferredItems:0,jobs:[],items:[] };
+  if (requireExistingJobs && !(jobs || []).length) {
+    return { addedItems:0,createdJobs:0,deferredItems:0,jobs:[],items:[] };
+  }
+  const sessionModes = _assignmentZoneModeConfig?.sessions?.[sid]?.modes || {};
+  if (!Object.values(sessionModes).some(mode => mode === 'annual')) {
+    return { addedItems:0,createdJobs:0,deferredItems:0,jobs:[],items:[] };
+  }
+
+  const jobsById = new Map((jobs || []).map(job => [String(job.id || ''),job]));
+  const activeJobsByLocation = new Map();
+  (items || []).forEach(item => {
+    const job = jobsById.get(String(item.job_id || ''));
+    const locationId = String(item.location_id || '');
+    if (!job || !locationId || job.status === 'completed') return;
+    if (!activeJobsByLocation.has(locationId)) activeJobsByLocation.set(locationId,new Map());
+    activeJobsByLocation.get(locationId).set(String(job.id),job);
+  });
+  const existingKeys = new Set((items || []).map(annualSnapshotWorkKey));
+  const annualSnapshots = annualUnfinishedSnapshotRows(snapshots,assignments).filter(snapshot =>
+    assignmentLocationMatchesMode(sid,snapshot.locations || {},'annual')
+  );
+  const missingSnapshots = annualSnapshots.filter(snapshot => !existingKeys.has(annualSnapshotWorkKey(snapshot)));
+  if (!missingSnapshots.length) {
+    return { addedItems:0,createdJobs:0,deferredItems:0,jobs:[],items:[] };
+  }
+
+  const latestAssignments = annualLatestAssignmentsByLocation(assignments);
+  const appendByJobId = new Map();
+  const freshSnapshots = [];
+  let deferredItems = 0;
+  missingSnapshots.forEach(snapshot => {
+    const locationId = String(snapshot.location_id || '');
+    const relatedJobs = [...(activeJobsByLocation.get(locationId)?.values() || [])];
+    const assignment = latestAssignments.get(locationId);
+    const locationAlreadyIssued = Boolean(
+      assignment?.assigned_to && !assignmentCountingFinished(assignment.status)
+    );
+    if (!relatedJobs.length) {
+      if (locationAlreadyIssued) deferredItems += 1;
+      else freshSnapshots.push(snapshot);
+      return;
+    }
+    const safeJobs = relatedJobs.filter(job =>
+      job.status === 'pending' && !job.assigned_to && !job.expired_at
+    );
+    if (safeJobs.length !== relatedJobs.length || locationAlreadyIssued) {
+      deferredItems += 1;
+      return;
+    }
+    safeJobs.sort((left,right) => Number(left.job_no || 0)-Number(right.job_no || 0));
+    const targetJob = safeJobs[0];
+    if (!appendByJobId.has(targetJob.id)) appendByJobId.set(targetJob.id,[]);
+    appendByJobId.get(targetJob.id).push(snapshot);
+  });
+
+  const collator = new Intl.Collator('en',{ numeric:true,sensitivity:'base' });
+  const sortSnapshots = rows => rows.sort((left,right) =>
+    collator.compare(String(left.locations?.zone || ''),String(right.locations?.zone || ''))
+    || collator.compare(String(left.locations?.code || ''),String(right.locations?.code || ''))
+    || collator.compare(String(left.item_id || ''),String(right.item_id || ''))
+    || collator.compare(String(left.id || ''),String(right.id || ''))
+  );
+  sortSnapshots(freshSnapshots);
+  appendByJobId.forEach(sortSnapshots);
+
+  const normalizedSize = Math.max(1,Math.min(200,Math.floor(Number(size) || 20)));
+  const normalizedPrefix = String(prefix || 'JOB').trim().slice(0,20) || 'JOB';
+  const snapshotsByZone = new Map();
+  freshSnapshots.forEach(snapshot => {
+    const zoneKey = assignmentZoneModeKey(snapshot.locations?.zone || 'ไม่ระบุ Zone');
+    if (!snapshotsByZone.has(zoneKey)) snapshotsByZone.set(zoneKey,[]);
+    snapshotsByZone.get(zoneKey).push(snapshot);
+  });
+  const newJobChunks = [];
+  snapshotsByZone.forEach(zoneRows => {
+    for (let start=0; start<zoneRows.length; start+=normalizedSize) {
+      newJobChunks.push(zoneRows.slice(start,start+normalizedSize));
+    }
+  });
+
+  let nextJobNo = Math.max(0,...(jobs || []).map(job => Number(job.job_no) || 0));
+  const existingCodes = new Set((jobs || []).map(job => String(job.job_code || '').toLowerCase()));
+  const newJobs = newJobChunks.map(() => {
+    let jobCode = '';
+    do {
+      nextJobNo += 1;
+      jobCode = `${normalizedPrefix}-${String(nextJobNo).padStart(4,'0')}`;
+    } while (existingCodes.has(jobCode.toLowerCase()));
+    existingCodes.add(jobCode.toLowerCase());
+    return {
+      id:annualJobUuid(),
+      session_id:sid,
+      job_no:nextJobNo,
+      job_code:jobCode,
+      assigned_to:null,
+      status:'pending',
+      created_by:me?.id || null,
+    };
+  });
+
+  const maxSortOrderByJob = new Map();
+  (items || []).forEach(item => {
+    const jobId = String(item.job_id || '');
+    maxSortOrderByJob.set(jobId,Math.max(maxSortOrderByJob.get(jobId) || 0,Number(item.sort_order) || 0));
+  });
+  const appendedItems = [];
+  appendByJobId.forEach((rows,jobId) => {
+    let sortOrder = maxSortOrderByJob.get(String(jobId)) || 0;
+    rows.forEach(snapshot => appendedItems.push({
+      id:annualJobUuid(),
+      job_id:jobId,
+      session_id:sid,
+      stock_snapshot_id:snapshot.id,
+      location_id:snapshot.location_id,
+      item_id:snapshot.item_id,
+      sort_order:++sortOrder,
+    }));
+  });
+  const newItems = newJobChunks.flatMap((chunk,jobIndex) => chunk.map((snapshot,index) => ({
+    id:annualJobUuid(),
+    job_id:newJobs[jobIndex].id,
+    session_id:sid,
+    stock_snapshot_id:snapshot.id,
+    location_id:snapshot.location_id,
+    item_id:snapshot.item_id,
+    sort_order:index + 1,
+  })));
+  const writtenItems = appendedItems.concat(newItems);
+  const writeBatchSize = 200;
+  for (let start=0; start<newJobs.length; start+=writeBatchSize) {
+    await writeAnnualJobGenerationRows('annual_count_jobs',newJobs.slice(start,start+writeBatchSize));
+  }
+  for (let start=0; start<writtenItems.length; start+=writeBatchSize) {
+    await writeAnnualJobGenerationRows('annual_count_job_items',writtenItems.slice(start,start+writeBatchSize));
+  }
+  return {
+    addedItems:writtenItems.length,
+    createdJobs:newJobs.length,
+    deferredItems,
+    jobs:newJobs,
+    items:writtenItems,
+  };
+}
+
+async function reconcileAnnualJobsAfterWmsImport(sessionId) {
+  const sid = String(sessionId || '');
+  if (!sid) return { addedItems:0,createdJobs:0,deferredItems:0,jobs:[],items:[] };
+  await loadAssignmentZoneModeConfig(true);
+  const sessionModes = _assignmentZoneModeConfig?.sessions?.[sid]?.modes || {};
+  if (!Object.values(sessionModes).some(mode => mode === 'annual')) {
+    return { addedItems:0,createdJobs:0,deferredItems:0,jobs:[],items:[] };
+  }
+  const [workspaceResult,jobsResult,itemsResult,sessionResult] = await Promise.all([
+    loadAssignmentWorkspaceData(sid)
+      .then(data => ({ data,error:null }))
+      .catch(error => ({ data:null,error })),
+    fetchPagedSupabaseRows(
+      'annual_count_jobs',
+      'id,session_id,job_no,job_code,assigned_to,status,expired_at,created_at',
+      query => query.eq('session_id',sid).order('job_no'),
+    ),
+    fetchPagedSupabaseRows(
+      'annual_count_job_items',
+      'id,job_id,session_id,stock_snapshot_id,location_id,item_id,sort_order',
+      query => query.eq('session_id',sid),
+    ),
+    sb.from('count_sessions')
+      .select('annual_items_per_job,annual_job_prefix')
+      .eq('id',sid)
+      .maybeSingle(),
+  ]);
+  if (workspaceResult.error || jobsResult.error || itemsResult.error || sessionResult.error) {
+    throw (workspaceResult.error || jobsResult.error || itemsResult.error || sessionResult.error);
+  }
+  const workspace = workspaceResult.data || { snapshots:[],assignments:[] };
+  return syncImportedAnnualSnapshotsIntoPendingJobs({
+    sessionId:sid,
+    snapshots:workspace.snapshots || [],
+    assignments:workspace.assignments || [],
+    jobs:jobsResult.data || [],
+    items:itemsResult.data || [],
+    size:Number(sessionResult.data?.annual_items_per_job) || 20,
+    prefix:sessionResult.data?.annual_job_prefix || 'JOB',
+    requireExistingJobs:true,
+  });
 }
 
 async function generateAnnualJobsClientSide({ sessionId,size,prefix,alertBox,permissionFallback=false }) {
@@ -56068,7 +56350,22 @@ function renderNormalFreeLocationList() {
   _normalFreeFilteredLocationCount = filtered.length;
   _normalFreeVisibleLocationIds = displayed.map(entry => entry.location.id);
   if (!filtered.length) {
-    list.innerHTML = `<div class="annual-empty">${rows.length ? 'ไม่พบ Location ที่ตรงกับตัวกรองหรือสถานะงาน' : 'ไม่มี Location ที่ต้องมอบหมายใน Session นี้'}</div>`;
+    const sessionId = selectedAssignSessionConfig().sessionId;
+    const annualLocationCount = rows.length ? 0 : new Set(
+      (window._bulkSnaps || [])
+        .filter(snapshot => assignmentLocationMatchesMode(
+          sessionId,
+          window._assignmentLocationById?.get(snapshot.location_id) || snapshot.locations || {},
+          'annual',
+        ))
+        .map(snapshot => snapshot.location_id)
+        .filter(Boolean)
+    ).size;
+    list.innerHTML = rows.length
+      ? '<div class="annual-empty">ไม่พบ Location ที่ตรงกับตัวกรองหรือสถานะงาน</div>'
+      : annualLocationCount
+        ? `<div class="annual-empty"><strong>พบงาน ${annualLocationCount.toLocaleString(uiLocale())} Location ใน Zone แบบ Annual JOB</strong><br>งานเหล่านี้จะไม่แสดงในแท็บแบบปกติ<br><button class="btn btn-blue btn-sm" type="button" style="margin-top:10px" onclick="setRound1AssignMode('annual')">เปิด Annual JOB</button></div>`
+        : '<div class="annual-empty">ไม่มี Location ที่ต้องมอบหมายใน Session นี้</div>';
     syncNormalFreeSelection();
     return;
   }
@@ -59854,6 +60151,17 @@ async function doImportXlsx() {
       throw new Error('ตรวจยอดหลัง Import ไม่ผ่าน: รายละเอียด Location + LPN + Item + Lot ไม่ตรงกับไฟล์ล่าสุด');
     }
 
+    let annualImportSyncSummary = { addedItems:0,createdJobs:0,deferredItems:0 };
+    let annualImportSyncError = '';
+    invalidateAssignmentWorkspaceCache(sid);
+    try {
+      al.innerHTML = `<div class="alert alert-blue">⏳ กำลังนำงาน Import ใหม่เข้าคิวมอบหมายงาน...</div>`;
+      annualImportSyncSummary = await reconcileAnnualJobsAfterWmsImport(sid);
+    } catch (syncError) {
+      annualImportSyncError = String(syncError?.message || syncError || 'ซิงก์ Annual JOB ไม่สำเร็จ');
+      console.warn('Post-import Annual JOB reconciliation failed:',syncError);
+    }
+
     const metrics = analysis.metrics;
     const importedRowsForLayoutCheck = parsedRows.map(row => ({locCode:row.locCode}));
     const importResultGroups = wmsImportCombinedChangeGroups(snapshotChanges,detailChanges);
@@ -59874,11 +60182,14 @@ async function doImportXlsx() {
         <span>${metrics.locations.toLocaleString(uiLocale())} Location</span>
         <span>SUM OH ${Number(metrics.sumOH).toLocaleString(uiLocale(),{maximumFractionDigits:2})}</span>
         <span>ตั้ง OH เป็น 0 ${Number(zeroedSnapshotKeys.size).toLocaleString(uiLocale())} รายการ</span>
+        ${annualImportSyncSummary.addedItems ? `<span>เข้า Annual JOB ${annualImportSyncSummary.addedItems.toLocaleString(uiLocale())} รายการ</span>` : ''}
       </div>
-    </div>`;
+    </div>
+    ${annualImportSyncError ? `<div class="alert alert-amber" style="margin-top:10px">⚠️ Import สำเร็จ แต่ซิงก์งานใหม่เข้า Annual JOB ไม่สำเร็จ: ${escapeWmsText(annualImportSyncError)} · เปิดเมนูมอบหมายงานแล้วเลือก Annual JOB เพื่อลองซิงก์อีกครั้ง</div>` : ''}
+    ${annualImportSyncSummary.deferredItems ? `<div class="alert alert-amber" style="margin-top:10px">⚠️ มี ${annualImportSyncSummary.deferredItems.toLocaleString(uiLocale())} รายการที่ยังไม่เติมเข้า JOB เพราะ Location ถูกจ่ายงานหรือเริ่มนับแล้ว</div>` : ''}`;
     showWmsImportResult({
       title:'Import / Update WMS สำเร็จ',
-      message:'Full WMS Snapshot สำเร็จ · ผลด้านล่างเปรียบเทียบกับ Snapshot ล่าสุดก่อน Import รอบนี้ โดย Count, DIFF และสถานะย้อนหลังไม่เปลี่ยน',
+      message:`Full WMS Snapshot สำเร็จ · งานใหม่พร้อมแสดงตามรูปแบบของ Zone${annualImportSyncError ? ' แต่การซิงก์ Annual JOB บางส่วนต้องลองใหม่จากเมนูมอบหมายงาน' : ''} · Count, DIFF และสถานะย้อนหลังไม่เปลี่ยน`,
       facts:[
         {group:'overview',label:'แถวที่อ่านจากไฟล์',value:metrics.rows.toLocaleString(uiLocale())},
         {group:'overview',label:'Location ในไฟล์',value:metrics.locations.toLocaleString(uiLocale())},
@@ -59895,6 +60206,11 @@ async function doImportXlsx() {
         {label:'งานที่รักษาประวัติ Count',value:`${countedProtectedLocationIds.size.toLocaleString(uiLocale())} Location`},
         {label:'งานคอนเฟิร์มที่รักษาประวัติ',value:`${confirmedProtectedLocationIds.size.toLocaleString(uiLocale())} Location · ${confirmedProtectedImportRows.toLocaleString(uiLocale())} แถว`},
         ...(annualProtectedLocationIds.size ? [{label:'Annual ที่รักษาประวัติ',value:`${annualProtectedLocationIds.size.toLocaleString(uiLocale())} Location · ${annualProtectedImportRows.toLocaleString(uiLocale())} แถว`}] : []),
+        ...(annualImportSyncSummary.addedItems ? [
+          {label:'เพิ่มเข้า Annual JOB',value:`${annualImportSyncSummary.addedItems.toLocaleString(uiLocale())} รายการ`},
+          {label:'Annual JOB ที่สร้างต่อ',value:annualImportSyncSummary.createdJobs.toLocaleString(uiLocale())},
+        ] : []),
+        ...(annualImportSyncSummary.deferredItems ? [{label:'Annual รอตรวจสอบ',value:`${annualImportSyncSummary.deferredItems.toLocaleString(uiLocale())} รายการ`}] : []),
       ],
       snapshotChanges,
       detailChanges,
@@ -63673,7 +63989,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.194" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.196" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
@@ -64593,11 +64909,12 @@ window.addEventListener('DOMContentLoaded', () => {
   boot();
 });
 
-// v233 — PWA: register the repository-root service worker on GitHub Pages.
+// v195 — PWA: bump the worker URL with the application build so browsers do
+// not keep serving a loader implementation from an older cached index.
 if ('serviceWorker' in navigator && ['https:','http:'].includes(location.protocol)) {
   window.addEventListener('load', async () => {
     try {
-      const registration = await navigator.serviceWorker.register('./sw.js?v=193', { scope:'./' });
+      const registration = await navigator.serviceWorker.register(`./sw.js?v=${APP_VERSION.replace(/\./g,'-')}`, { scope:'./' });
       registration.update().catch(() => {});
       document.documentElement.dataset.pwaReady = 'true';
     } catch (error) {
