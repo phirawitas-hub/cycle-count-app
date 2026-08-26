@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V1.197: Allow per-Zone assignment mode switching with confirmation, automatically release the previous mode, and preserve Count history. -->
 <!-- V1.196: Reconcile newly imported Annual-Zone snapshots into untouched JOBs and explain mode-scoped assignment queues. -->
 <!-- V1.194: Allow untouched Annual JOB Zones to be cancelled safely and returned to normal Location assignment. -->
 <!-- V1.193: Restore Assignment/My Tasks data with validated fast payloads and relation-free compatibility fallbacks. -->
@@ -57,7 +58,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.196</title>
+<title>Cycle Count V1.197</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
@@ -9578,7 +9579,7 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
 .assignment-zone-mode-summary > span strong { color:inherit;font-size:10px; }
 .assignment-zone-mode-summary .is-normal { color:var(--theme-primary-color);background:color-mix(in srgb,var(--theme-primary-color) 8%,var(--theme-card-bg)); }
 .assignment-zone-mode-summary .is-annual { color:var(--theme-success-color);background:color-mix(in srgb,var(--theme-success-color) 8%,var(--theme-card-bg)); }
-.assignment-zone-mode-summary .is-locked { color:var(--theme-warning-color);background:color-mix(in srgb,var(--theme-warning-color) 9%,var(--theme-card-bg)); }
+.assignment-zone-mode-summary .has-active-work { color:var(--theme-warning-color);background:color-mix(in srgb,var(--theme-warning-color) 9%,var(--theme-card-bg)); }
 .assignment-zone-mode-grid {
   margin-top:13px;
   display:grid;
@@ -9596,7 +9597,10 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
   border-radius:14px;
   background:var(--theme-card-bg);
 }
-.assignment-zone-mode-row.is-locked { background:color-mix(in srgb,var(--theme-warning-color) 8%,var(--theme-card-bg)); }
+.assignment-zone-mode-row.has-active-work {
+  border-color:color-mix(in srgb,var(--theme-warning-color) 40%,var(--theme-border-color));
+  background:color-mix(in srgb,var(--theme-warning-color) 5%,var(--theme-card-bg));
+}
 .assignment-zone-mode-info { min-width:0; }
 .assignment-zone-mode-name { display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:5px 10px; }
 .assignment-zone-mode-name strong {
@@ -9645,7 +9649,7 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
 .assignment-zone-mode-choice small { min-width:0;color:var(--theme-muted-text-color);font-size:8px;font-weight:700;line-height:1.3;word-break:keep-all;overflow-wrap:break-word; }
 .assignment-zone-mode-choice.is-active.is-normal { border-color:var(--theme-primary-color);background:color-mix(in srgb,var(--theme-primary-color) 10%,var(--theme-card-bg));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--theme-primary-color) 32%,transparent); }
 .assignment-zone-mode-choice.is-active.is-annual { border-color:var(--theme-success-color);background:color-mix(in srgb,var(--theme-success-color) 10%,var(--theme-card-bg));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--theme-success-color) 30%,transparent); }
-.assignment-zone-mode-choice:disabled { opacity:.72;cursor:not-allowed;transform:none; }
+.assignment-zone-mode-choice:disabled { opacity:.72;cursor:wait;transform:none; }
 .assignment-zone-mode-cancel {
   grid-column:1 / -1;
   min-height:34px;
@@ -23556,7 +23560,7 @@ body.page-loading-active .main-wrapper{
 <script>
 // V1.190: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '1.196';
+const APP_VERSION = '1.197';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -25078,7 +25082,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.196':'e.g. Warehouse V1.196',
+  'เช่น Warehouse V1.197':'e.g. Warehouse V1.197',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -53311,40 +53315,38 @@ async function renderAssignmentZoneModeSettings(workspace=null) {
     }
     const normalCount = rows.filter(row => assignmentZoneModeForZone(sid,row.name) === 'normal').length;
     const annualCount = rows.length - normalCount;
-    const lockedCount = rows.filter(row => row.normalActive > 0 || row.annualActive > 0).length;
+    const activeCount = rows.filter(row => row.normalActive > 0 || row.annualActive > 0).length;
     if (summary) summary.innerHTML = `
       <span class="is-normal">📍 แบบปกติ <strong>${normalCount.toLocaleString(uiLocale())}</strong> Zone</span>
       <span class="is-annual">📦 Annual JOB <strong>${annualCount.toLocaleString(uiLocale())}</strong> Zone</span>
-      <span class="is-locked">🔒 ล็อกแล้ว <strong>${lockedCount.toLocaleString(uiLocale())}</strong> Zone</span>`;
+      <span class="has-active-work">↔ สลับได้โดยยืนยัน <strong>${activeCount.toLocaleString(uiLocale())}</strong> Zone</span>`;
     grid.innerHTML = rows.map(row => {
       const mode = assignmentZoneModeForZone(sid,row.name);
-      const locked = row.normalActive > 0 || row.annualActive > 0;
-      const lockText = row.annualActive
-        ? `ล็อกด้วย Annual JOB ${row.annualActive.toLocaleString(uiLocale())} Location · ยกเลิกได้ถ้ายังไม่มีผลนับ`
+      const hasActiveWork = row.normalActive > 0 || row.annualActive > 0;
+      const statusText = row.annualActive
+        ? `กำลังใช้ Annual JOB ${row.annualActive.toLocaleString(uiLocale())} Location · เลือกแบบปกติได้ โดยระบบจะถามก่อนยกเลิกงานเดิม`
         : row.normalActive
-          ? `ล็อกด้วยงานปกติ ${row.normalActive.toLocaleString(uiLocale())} Location`
-          : 'ยังไม่มีงานเริ่ม · เปลี่ยนรูปแบบได้';
-      return `<div class="assignment-zone-mode-row ${locked ? 'is-locked' : ''}">
+          ? `กำลังใช้แบบปกติ ${row.normalActive.toLocaleString(uiLocale())} Location · เลือก Annual JOB ได้ โดยระบบจะถามก่อนยกเลิกงานเดิม`
+          : 'ยังไม่มีงานที่ปล่อย · เลือกหรือเปลี่ยนรูปแบบได้ทันที';
+      return `<div class="assignment-zone-mode-row ${hasActiveWork ? 'has-active-work' : ''}">
         <div class="assignment-zone-mode-info">
           <div class="assignment-zone-mode-name">
             <strong>${escapeWmsText(row.name)}</strong>
             <span>${row.total.toLocaleString(uiLocale())} Location</span>
           </div>
-          <div class="assignment-zone-mode-status">${locked ? '🔒 ' : ''}${escapeWmsText(lockText)}</div>
+          <div class="assignment-zone-mode-status">${hasActiveWork ? '⚠️ ' : ''}${escapeWmsText(statusText)}</div>
         </div>
         <div class="assignment-zone-mode-actions" role="group" aria-label="รูปแบบจ่ายงาน Zone ${escapeWmsText(row.name)}">
           <button type="button" class="assignment-zone-mode-choice is-normal ${mode === 'normal' ? 'is-active' : ''}"
-            aria-pressed="${mode === 'normal'}" ${locked ? 'disabled' : ''}
+            aria-pressed="${mode === 'normal'}"
             onclick='updateAssignmentZoneMode(${JSON.stringify(row.key)},"normal")'>
             <span aria-hidden="true">📍</span><strong>แบบปกติ</strong><small>จ่ายตาม Location</small>
           </button>
           <button type="button" class="assignment-zone-mode-choice is-annual ${mode === 'annual' ? 'is-active' : ''}"
-            aria-pressed="${mode === 'annual'}" ${locked ? 'disabled' : ''}
+            aria-pressed="${mode === 'annual'}"
             onclick='updateAssignmentZoneMode(${JSON.stringify(row.key)},"annual")'>
             <span aria-hidden="true">📦</span><strong>Annual JOB</strong><small>แบ่งเป็นชุด JOB</small>
           </button>
-          ${mode === 'annual' && row.annualPlanned > 0 ? `<button type="button" class="assignment-zone-mode-cancel"
-            onclick='cancelAnnualZoneAndUseNormal(${JSON.stringify(row.key)})'>↩ ยกเลิก Annual JOB และกลับไปจ่ายแบบปกติ</button>` : ''}
         </div>
       </div>`;
     }).join('');
@@ -53381,6 +53383,113 @@ async function pruneUnassignedAnnualZoneItems(sessionId,zoneKey) {
     }
   }
   return removableItemIds.length;
+}
+
+async function releasePreviousAssignmentMode(sessionId,zoneKey,previousMode,runtime=null) {
+  const sid = String(sessionId || '');
+  const key = String(zoneKey || '');
+  const mode = previousMode === 'annual' ? 'annual' : 'normal';
+  const liveRuntime = runtime || await assignmentZoneModeRuntime(sid);
+  const zoneLocations = [...liveRuntime.workspace.locationById.values()].filter(location =>
+    assignmentZoneModeKey(location?.zone || 'ไม่ระบุ Zone') === key
+  );
+  const zoneLocationIds = new Set(zoneLocations.map(location => String(location.id || '')).filter(Boolean));
+  const activeAnnualItems = liveRuntime.items.filter(item => {
+    const job = liveRuntime.jobsById.get(String(item.job_id || ''));
+    return zoneLocationIds.has(String(item.location_id || '')) && job && job.status !== 'completed';
+  });
+  const annualLocationIds = new Set(activeAnnualItems.map(item => String(item.location_id || '')).filter(Boolean));
+  const relevantLocationIds = mode === 'annual'
+    ? annualLocationIds
+    : new Set([...zoneLocationIds].filter(locationId => !liveRuntime.activeAnnualLocationIds.has(locationId)));
+  const assignments = (liveRuntime.workspace.assignments || []).filter(assignment =>
+    String(assignment.session_id || '') === sid
+    && relevantLocationIds.has(String(assignment.location_id || ''))
+    && !assignmentCountingFinished(assignment.status)
+  );
+  const assignmentIds = assignments.map(assignment => assignment.id).filter(Boolean);
+  const [countResult,approvalResult,foundResult] = assignmentIds.length
+    ? await Promise.all([
+        fetchSupabaseRowsByValues('count_records','assignment_id','assignment_id',assignmentIds),
+        fetchSupabaseRowsByValues('variance_approvals','assignment_id','assignment_id',assignmentIds),
+        fetchSupabaseRowsByValues('found_items','assignment_id','assignment_id',assignmentIds),
+      ])
+    : [
+        { data:[],error:null },
+        { data:[],error:null },
+        { data:[],error:null },
+      ];
+  if (countResult.error || approvalResult.error || foundResult.error) {
+    throw (countResult.error || approvalResult.error || foundResult.error);
+  }
+  const evidenceAssignmentIds = new Set([
+    ...(countResult.data || []),
+    ...(approvalResult.data || []),
+    ...(foundResult.data || []),
+  ].map(record => String(record.assignment_id || '')).filter(Boolean));
+  const preservedAssignments = assignments.filter(assignment =>
+    evidenceAssignmentIds.has(String(assignment.id || ''))
+    || String(assignment.status || '') === 'in_progress'
+  );
+  const deletableAssignmentIds = assignments
+    .filter(assignment => !preservedAssignments.includes(assignment))
+    .map(assignment => assignment.id)
+    .filter(Boolean);
+  const now = new Date().toISOString();
+  const preservedByPreviousUser = new Map();
+  preservedAssignments.forEach(assignment => {
+    const previousUser = String(assignment.assigned_to || assignment.expired_from || '');
+    const rows = preservedByPreviousUser.get(previousUser) || [];
+    rows.push(assignment.id);
+    preservedByPreviousUser.set(previousUser,rows);
+  });
+  const batchSize = 200;
+  for (const [previousUser,ids] of preservedByPreviousUser.entries()) {
+    for (let start=0; start<ids.length; start+=batchSize) {
+      const { error } = await sb.from('assignments').update({
+        assigned_to:null,
+        assigned_at:null,
+        expired_at:now,
+        expired_from:previousUser || null,
+      }).in('id',ids.slice(start,start+batchSize));
+      if (error) throw error;
+    }
+  }
+  for (let start=0; start<deletableAssignmentIds.length; start+=batchSize) {
+    const { error } = await sb.from('assignments').delete().in('id',deletableAssignmentIds.slice(start,start+batchSize));
+    if (error) throw error;
+  }
+
+  let removedJobItems = 0;
+  let removedJobs = 0;
+  if (mode === 'annual' && activeAnnualItems.length) {
+    const removableItemIds = activeAnnualItems.map(item => item.id).filter(Boolean);
+    const removableItemIdSet = new Set(removableItemIds.map(String));
+    const affectedJobIds = new Set(activeAnnualItems.map(item => String(item.job_id || '')).filter(Boolean));
+    const remainingJobIds = new Set(liveRuntime.items
+      .filter(item => !removableItemIdSet.has(String(item.id || '')))
+      .map(item => String(item.job_id || ''))
+      .filter(Boolean));
+    const emptyJobIds = [...affectedJobIds].filter(jobId => !remainingJobIds.has(jobId));
+    for (let start=0; start<removableItemIds.length; start+=batchSize) {
+      const { error } = await sb.from('annual_count_job_items').delete().in('id',removableItemIds.slice(start,start+batchSize));
+      if (error) throw error;
+    }
+    for (let start=0; start<emptyJobIds.length; start+=batchSize) {
+      const { error } = await sb.from('annual_count_jobs').delete().in('id',emptyJobIds.slice(start,start+batchSize));
+      if (error) throw error;
+    }
+    removedJobItems = removableItemIds.length;
+    removedJobs = emptyJobIds.length;
+  }
+  return {
+    affectedLocations:relevantLocationIds.size,
+    releasedAssignments:assignments.length,
+    preservedAssignments:preservedAssignments.length,
+    deletedAssignments:deletableAssignmentIds.length,
+    removedJobItems,
+    removedJobs,
+  };
 }
 
 async function cancelAnnualZoneAndUseNormal(zoneKey) {
@@ -53506,44 +53615,73 @@ async function updateAssignmentZoneMode(zoneKey,nextMode) {
   const alertBox = Q('assignment-zone-mode-alert');
   const row = _assignmentZoneModeRows.get(String(zoneKey));
   if (!sid || !row) return;
-  if (row.normalActive || row.annualActive) {
-    await renderAssignmentZoneModeSettings();
-    if (alertBox) alertBox.innerHTML = '<div class="alert alert-amber">Zone นี้มีงานเริ่มแล้ว กรุณายกเลิกหรือคืนงานก่อนเปลี่ยนรูปแบบ</div>';
-    return;
-  }
   const mode = nextMode === 'annual' ? 'annual' : 'normal';
-  const previousMode = assignmentZoneModeForZone(sid,row.name);
-  if (previousMode === mode) return;
-  if (!confirm(`เปลี่ยน Zone “${row.name}” เป็น ${mode === 'annual' ? 'Annual JOB' : 'แบบปกติ · Location'}?`)) {
-    await renderAssignmentZoneModeSettings();
-    return;
-  }
+  const modeLabel = mode === 'annual' ? 'Annual JOB' : 'แบบปกติ · Location';
+  const previousModeLabel = mode === 'annual' ? 'แบบปกติ · Location' : 'Annual JOB';
+  const buttons = [...document.querySelectorAll('.assignment-zone-mode-choice,.assignment-zone-mode-cancel')];
+  buttons.forEach(button => { button.disabled = true; });
+  if (alertBox) alertBox.innerHTML = '<div class="alert alert-blue">⏳ กำลังตรวจงานเดิมของ Zone ก่อนเปลี่ยนรูปแบบ...</div>';
   try {
     await loadAssignmentZoneModeConfig(true);
     const liveRuntime = await assignmentZoneModeRuntime(sid);
-    let liveNormalActive = 0;
-    let liveAnnualActive = 0;
+    if (selectedAssignSessionConfig().sessionId !== sid) return;
+    const zoneLocationIds = new Set([...liveRuntime.workspace.locationById.values()]
+      .filter(location => assignmentZoneModeKey(location?.zone || 'ไม่ระบุ Zone') === String(zoneKey))
+      .map(location => String(location.id || ''))
+      .filter(Boolean));
+    const activeAnnualItems = liveRuntime.items.filter(item => {
+      const job = liveRuntime.jobsById.get(String(item.job_id || ''));
+      return zoneLocationIds.has(String(item.location_id || '')) && job && job.status !== 'completed';
+    });
+    const activeAnnualLocationIds = new Set(activeAnnualItems.map(item => String(item.location_id || '')).filter(Boolean));
+    const activeAnnualJobIds = new Set(activeAnnualItems.map(item => String(item.job_id || '')).filter(Boolean));
+    const normalAssignments = [];
+    const annualReleasedLocationIds = new Set();
     [...liveRuntime.workspace.locationById.values()].forEach(location => {
       if (assignmentZoneModeKey(location?.zone || 'ไม่ระบุ Zone') !== String(zoneKey)) return;
       const locationId = String(location.id || '');
       const assignment = liveRuntime.assignmentsByLocation.get(locationId);
       if (liveRuntime.activeAnnualLocationIds.has(locationId)) {
-        if ((assignment && !assignmentCountingFinished(assignment.status)) || liveRuntime.lockedAnnualLocationIds.has(locationId)) liveAnnualActive += 1;
-      } else if (assignment && !assignmentCountingFinished(assignment.status)) {
-        liveNormalActive += 1;
+        if ((assignment && !assignmentCountingFinished(assignment.status)) || liveRuntime.lockedAnnualLocationIds.has(locationId)) {
+          annualReleasedLocationIds.add(locationId);
+        }
+      } else if (assignment && !assignmentCountingFinished(assignment.status)
+        && (assignment.assigned_to || assignment.assigned_at || assignment.expired_at)) {
+        normalAssignments.push(assignment);
       }
     });
-    if (liveNormalActive || liveAnnualActive) {
-      throw new Error('Zone นี้เพิ่งมีการจ่ายงานจากอุปกรณ์อื่น กรุณายกเลิกหรือคืนงานก่อนเปลี่ยนรูปแบบ');
-    }
     const livePreviousMode = assignmentZoneModeForZone(sid,row.name);
-    if (livePreviousMode === mode) {
+    const conflictingCount = mode === 'annual'
+      ? normalAssignments.length
+      : Math.max(activeAnnualLocationIds.size,annualReleasedLocationIds.size);
+    if (livePreviousMode === mode && conflictingCount === 0) {
       await renderAssignmentZoneModeSettings(liveRuntime.workspace);
       return;
     }
-    if (livePreviousMode === 'annual' && mode === 'normal') {
-      await pruneUnassignedAnnualZoneItems(sid,String(zoneKey));
+    const activeJobCount = activeAnnualJobIds.size;
+    const warningDetail = mode === 'annual'
+      ? `${normalAssignments.length.toLocaleString(uiLocale())} Location ที่เคยปล่อยแบบปกติ`
+      : `${activeAnnualLocationIds.size.toLocaleString(uiLocale())} Location ใน ${activeJobCount.toLocaleString(uiLocale())} Annual JOB`;
+    const confirmationText = conflictingCount > 0
+      ? `Zone “${row.name}” มีงาน ${previousModeLabel} อยู่แล้ว (${warningDetail})\n\n`
+        + `หากดำเนินการต่อ ระบบจะ:\n`
+        + `1. ยกเลิกการปล่อยงาน ${previousModeLabel} เดิม\n`
+        + `2. เก็บผล Count, ผลตรวจสอบ และประวัติเดิมทั้งหมด\n`
+        + `3. เปลี่ยนเป็น ${modeLabel} เพื่อให้ปล่อยงานต่อได้\n\n`
+        + 'ต้องการดำเนินการต่อหรือไม่?'
+      : `เปลี่ยน Zone “${row.name}” เป็น ${modeLabel}?`;
+    if (!confirm(confirmationText)) {
+      await renderAssignmentZoneModeSettings(liveRuntime.workspace);
+      if (alertBox) alertBox.innerHTML = '<div class="alert alert-amber">ยกเลิกการเปลี่ยนรูปแบบแล้ว งานเดิมยังอยู่ครบ</div>';
+      return;
     }
+    if (alertBox) alertBox.innerHTML = `<div class="alert alert-blue">⏳ กำลังยกเลิกงาน ${escapeWmsText(previousModeLabel)} เดิม และเปลี่ยนเป็น ${escapeWmsText(modeLabel)}...</div>`;
+    const releaseSummary = await releasePreviousAssignmentMode(
+      sid,
+      String(zoneKey),
+      mode === 'annual' ? 'normal' : 'annual',
+      liveRuntime,
+    );
     const config = normalizeAssignmentZoneModeConfig(_assignmentZoneModeConfig);
     config.sessions[sid] = config.sessions[sid] || { modes:{},names:{} };
     config.sessions[sid].modes[String(zoneKey)] = mode;
@@ -53553,10 +53691,21 @@ async function updateAssignmentZoneMode(zoneKey,nextMode) {
     await Promise.all([refreshLocs(),refreshBulkFilters()]);
     await loadAnnualJobWorkspace();
     await renderAssignmentZoneModeSettings();
-    if (alertBox) alertBox.innerHTML = `<div class="alert alert-green">✅ ${escapeWmsText(row.name)} ใช้รูปแบบ ${mode === 'annual' ? 'Annual JOB' : 'ปกติ · Location'} แล้ว</div>`;
+    if (alertBox) alertBox.innerHTML = `<div class="alert alert-green">✅ ${escapeWmsText(row.name)} เปลี่ยนเป็น ${escapeWmsText(modeLabel)} แล้ว · ยกเลิกงานเดิม ${releaseSummary.releasedAssignments.toLocaleString(uiLocale())} Assignment · เก็บประวัติ ${releaseSummary.preservedAssignments.toLocaleString(uiLocale())} Assignment</div>`;
+    showActionSuccess('เปลี่ยนรูปแบบจ่ายงานสำเร็จ และยกเลิกการปล่อยงานแบบเดิมแล้ว', {
+      title:'เปลี่ยนรูปแบบจ่ายงานสำเร็จ',
+      facts:[
+        {label:'Zone',value:row.name},
+        {label:'รูปแบบใหม่',value:modeLabel},
+        {label:'งานเดิมที่ยกเลิก',value:releaseSummary.releasedAssignments.toLocaleString(uiLocale())},
+        {label:'ประวัติ Count ที่เก็บไว้',value:releaseSummary.preservedAssignments.toLocaleString(uiLocale())},
+      ],
+    });
   } catch (error) {
     await renderAssignmentZoneModeSettings();
     if (alertBox) alertBox.innerHTML = `<div class="alert alert-red">❌ เปลี่ยนรูปแบบ Zone ไม่สำเร็จ: ${escapeWmsText(error.message || error)}</div>`;
+  } finally {
+    buttons.forEach(button => { button.disabled = false; });
   }
 }
 
@@ -53968,7 +54117,7 @@ async function renderManageAssign(container) {
           <section class="assignment-zone-mode-card" aria-labelledby="assignment-zone-mode-title">
             <div class="assignment-zone-mode-header">
               <strong id="assignment-zone-mode-title">รูปแบบจ่ายงานแยกตาม Zone</strong>
-              <span class="assignment-zone-mode-description">เลือกวิธีจ่ายงานให้แต่ละ Zone ได้โดยตรง · Zone ที่มีงานเริ่มแล้วจะถูกล็อกเพื่อป้องกันการจ่ายซ้ำ</span>
+              <span class="assignment-zone-mode-description">เลือกวิธีจ่ายงานให้แต่ละ Zone ได้อิสระ · หากมีงานอีกแบบอยู่ ระบบจะเตือนและขออนุญาตยกเลิกงานเดิมก่อนสลับรูปแบบ โดยเก็บผล Count และประวัติเดิมไว้</span>
             </div>
             <div class="assignment-zone-mode-summary" id="assignment-zone-mode-summary" aria-live="polite">
               <span>เลือก Session เพื่อดูรูปแบบของแต่ละ Zone</span>
@@ -54438,7 +54587,12 @@ function annualConfiguredSnapshotRows(snapshots=[],assignments=[],sessionId='',r
     if (!assignmentLocationMatchesMode(sid,snapshot?.locations || {},'annual')) return false;
     const locationId = String(snapshot?.location_id || '');
     const assignment = latestAssignments.get(locationId);
-    if (assignment && !assignmentCountingFinished(assignment.status) && !reserved.has(locationId)) return false;
+    // An unassigned/expired Assignment is intentionally reusable when a Zone
+    // switches from normal work to Annual JOB. Only work that is still owned
+    // by a user must block Annual generation; Count history remains attached
+    // to the same Assignment and is restored when the new JOB is assigned.
+    if (assignment && !assignmentCountingFinished(assignment.status)
+      && assignment.assigned_to && !reserved.has(locationId)) return false;
     return true;
   });
 }
@@ -63989,7 +64143,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.196" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.197" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
