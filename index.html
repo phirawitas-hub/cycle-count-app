@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- V1.186: Use SUM OH as Pcs and make every Work Tracker KPI follow active filters. -->
+<!-- V1.182: Prevent stale My Tasks requests and loading overlays from hanging. -->
 <!-- V1.175: Focus the active Count field on every device and keep the handheld pause action visually distinct (verified). -->
 <!-- V1.174: Redesign per-Zone assignment mode cards with responsive controls and readable Zone names (verified). -->
 <!-- V1.173: Add per-Zone Normal/Annual allocation, cross-mode duplicate guards, and safe cancel/return actions (verified). -->
@@ -50,14 +50,14 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.186</title>
+<title>Cycle Count V1.182</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
 if (['http:','https:'].includes(location.protocol)) {
   const manifestLink = document.createElement('link');
   manifestLink.rel = 'manifest';
-  manifestLink.href = './manifest.webmanifest?v=186';
+  manifestLink.href = './manifest.webmanifest?v=182';
   document.head.appendChild(manifestLink);
 }
 </script>
@@ -66,8 +66,8 @@ if (['http:','https:'].includes(location.protocol)) {
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Cycle Count">
-<link rel="apple-touch-icon" href="./icons/icon-192.png?v=186">
-<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=186">
+<link rel="apple-touch-icon" href="./icons/icon-192.png?v=182">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=182">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -11763,23 +11763,13 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
 .work-tracker-kpi.supervisor strong{color:#7756b5}
 .work-tracker-kpi.wms strong{color:#9b6816}
 .work-tracker-kpi.completed strong{color:#258b70}
-.work-tracker-kpi.ok{background:#f1fbf7;border-color:rgba(37,139,112,.22)}
-.work-tracker-kpi.ok strong{color:#258b70}
-.work-tracker-kpi.gain{background:#eefafa;border-color:rgba(0,124,131,.22)}
-.work-tracker-kpi.gain strong{color:#007c83}
-.work-tracker-kpi.lost{background:#fff3f0;border-color:rgba(214,93,72,.22)}
-.work-tracker-kpi.lost strong{color:#d65d48}
-.work-tracker-kpi-breakdown{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:11px}
-.work-tracker-kpi-breakdown>div{min-width:0;border:1px solid rgba(0,120,128,.1);border-radius:12px;background:rgba(255,255,255,.76);padding:9px 10px;text-align:center}
-.work-tracker-kpi-breakdown span{font-size:10px;font-weight:800;white-space:nowrap}
-.work-tracker-kpi-breakdown strong{margin-top:3px;font-size:21px;line-height:1.1}
 .work-tracker-filter-panel{border:1px solid rgba(0,120,128,.14);border-radius:20px;background:rgba(255,255,255,.94);padding:18px}
 .work-tracker-filter-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
 .work-tracker-filter-head strong{color:var(--text-main);font-size:16px}
 .work-tracker-filter-head button{border:0;border-radius:12px;padding:9px 13px;background:#eaf5f6;color:#007780;font-weight:800;cursor:pointer}
-.work-tracker-filter-grid{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:12px}
+.work-tracker-filter-grid{display:grid;grid-template-columns:repeat(6,minmax(135px,1fr));gap:12px}
 .work-tracker-filter-field{display:grid;gap:6px;min-width:0}
-.work-tracker-filter-field.search{grid-column:1/-1}
+.work-tracker-filter-field.search{grid-column:span 2}
 .work-tracker-filter-field label{font-size:11px;font-weight:800;color:var(--text-muted);letter-spacing:.03em}
 .work-tracker-filter-field select,.work-tracker-filter-field input{width:100%;height:44px;border:1px solid rgba(0,120,128,.15);border-radius:13px;background:#f8fcfc;padding:0 12px;color:var(--text-main);font:inherit;font-weight:700;outline:none}
 .work-tracker-filter-field select:focus,.work-tracker-filter-field input:focus{border-color:#159aa1;box-shadow:0 0 0 3px rgba(21,154,161,.12)}
@@ -11787,21 +11777,10 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
 .work-tracker-table-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid rgba(0,120,128,.1)}
 .work-tracker-table-head strong{font-size:17px;color:var(--text-main)}
 .work-tracker-table-head span{font-size:12px;color:var(--text-muted);font-weight:700}
-.work-tracker-table-head-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
-.work-tracker-column-settings-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:38px;border:1px solid rgba(0,120,128,.24);border-radius:12px;background:#f5fbfb;color:#08757d;padding:8px 13px;font:800 12px 'Mitr','Sarabun',sans-serif;cursor:pointer}
-.work-tracker-column-settings-button:hover{background:#e8f5f5}
 .work-tracker-scroll{overflow:auto;max-height:62vh}
-.work-tracker-table{width:max-content;min-width:100%;table-layout:fixed;border-collapse:separate;border-spacing:0;font-size:12px}
-.work-tracker-table th{position:sticky;top:0;z-index:2;background:#eaf5f6;color:#365f66;text-align:left;padding:0;border-bottom:1px solid rgba(0,120,128,.18);white-space:nowrap;user-select:none}
-.work-tracker-table th.is-dragging{opacity:.5}
-.work-tracker-table th.is-drop-target{box-shadow:inset 3px 0 0 #128a92}
-.work-tracker-th-content{position:relative;display:flex;align-items:center;gap:6px;min-height:42px;padding:9px 20px 9px 10px;overflow:hidden}
-.work-tracker-th-label{min-width:0;overflow:hidden;text-overflow:ellipsis}
-.work-tracker-th-gear{flex:0 0 auto;border:0;background:transparent;color:#47777d;padding:2px;line-height:1;cursor:pointer;font-size:13px}
-.work-tracker-column-resizer{position:absolute;z-index:4;top:0;right:-4px;width:9px;height:100%;cursor:col-resize;touch-action:none}
-.work-tracker-column-resizer::after{content:"";position:absolute;top:8px;bottom:8px;left:4px;width:1px;background:rgba(0,120,128,.22)}
-.work-tracker-column-resizer:hover::after,.work-tracker-column-resizer.is-resizing::after{width:3px;left:3px;background:#128a92}
-.work-tracker-table td{padding:11px 10px;border-bottom:1px solid rgba(0,120,128,.09);vertical-align:top;color:var(--text-main);overflow:hidden;overflow-wrap:anywhere}
+.work-tracker-table{width:100%;min-width:2180px;border-collapse:separate;border-spacing:0;font-size:12px}
+.work-tracker-table th{position:sticky;top:0;z-index:2;background:#eaf5f6;color:#365f66;text-align:left;padding:11px 10px;border-bottom:1px solid rgba(0,120,128,.18);white-space:nowrap}
+.work-tracker-table td{padding:11px 10px;border-bottom:1px solid rgba(0,120,128,.09);vertical-align:top;color:var(--text-main)}
 .work-tracker-table tr:hover td{background:#f8fcfc}
 .work-tracker-main{font-weight:800;color:#006f77}
 .work-tracker-sub{margin-top:3px;color:var(--text-muted);font-size:11px;line-height:1.35;max-width:260px}
@@ -11823,31 +11802,6 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
 .work-tracker-variance{font-weight:900;font-size:14px}
 .work-tracker-variance.plus{color:#16806e}
 .work-tracker-variance.minus{color:#d65343}
-.work-tracker-gain-lost{display:inline-flex;align-items:center;justify-content:center;min-width:64px;border-radius:999px;padding:6px 9px;font-size:10px;font-weight:900;white-space:nowrap;background:#edf3f4;color:#5f7074}
-.work-tracker-gain-lost.gain{background:#e3f5ef;color:#14735e}
-.work-tracker-gain-lost.lost{background:#fff0ec;color:#c84b3b}
-.work-tracker-gain-lost.match{background:#eaf5f6;color:#08757d}
-.work-tracker-column-backdrop{position:fixed;z-index:4200;inset:0;display:grid;place-items:center;padding:18px;background:rgba(21,42,44,.46);backdrop-filter:blur(3px)}
-.work-tracker-column-backdrop[hidden]{display:none!important}
-.work-tracker-column-panel{width:min(620px,100%);max-height:min(82vh,760px);display:flex;flex-direction:column;border:1px solid rgba(0,120,128,.2);border-radius:22px;background:#fff;box-shadow:0 28px 80px rgba(19,55,60,.26);overflow:hidden}
-.work-tracker-column-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:18px 20px;border-bottom:1px solid #e3eeee}
-.work-tracker-column-panel-head h3{margin:0;color:var(--text-main);font-size:19px}
-.work-tracker-column-panel-head p{margin:4px 0 0;color:var(--text-muted);font-size:11px;font-weight:600}
-.work-tracker-column-panel-close{width:38px;height:38px;flex:0 0 auto;border:0;border-radius:12px;background:#fff0ef;color:#8f4540;font-size:22px;cursor:pointer}
-.work-tracker-column-list{display:grid;gap:8px;padding:14px 16px;overflow:auto;overscroll-behavior:contain}
-.work-tracker-column-item{display:grid;grid-template-columns:30px minmax(0,1fr) auto;align-items:center;gap:10px;min-height:52px;border:1px solid #dceaea;border-radius:14px;background:#f8fcfc;padding:8px 10px}
-.work-tracker-column-item.is-hidden{background:#f6f6f6;color:#879093}
-.work-tracker-column-item.is-dragging{opacity:.48}
-.work-tracker-column-item.is-drop-target{border-color:#128a92;box-shadow:0 0 0 2px rgba(18,138,146,.12)}
-.work-tracker-column-drag{display:grid;place-items:center;color:#668286;font-size:19px;cursor:grab;touch-action:none}
-.work-tracker-column-toggle{display:flex;align-items:center;gap:10px;min-width:0;font-weight:800;color:var(--text-main)}
-.work-tracker-column-toggle input{width:19px;height:19px;accent-color:#087c83}
-.work-tracker-column-toggle span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.work-tracker-column-move{display:flex;gap:5px}
-.work-tracker-column-move button{width:34px;height:34px;border:1px solid #d6e6e6;border-radius:10px;background:#fff;color:#346a70;font-weight:900;cursor:pointer}
-.work-tracker-column-panel-actions{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:14px 16px;border-top:1px solid #e3eeee;background:#fbfdfd}
-.work-tracker-column-panel-actions button{min-height:40px;border:1px solid #d3e4e4;border-radius:11px;background:#fff;color:#426c71;padding:8px 13px;font-weight:800;cursor:pointer}
-.work-tracker-column-panel-actions .primary{border-color:#087c83;background:#087c83;color:#fff}
 .work-tracker-pagination{display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 18px;flex-wrap:wrap}
 .work-tracker-pagination button{border:0;border-radius:11px;background:#e8f4f5;color:#007780;padding:9px 13px;font-weight:800;cursor:pointer}
 .work-tracker-pagination button:disabled{opacity:.4;cursor:default}
@@ -11869,12 +11823,6 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
   .work-tracker-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
   .work-tracker-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .work-tracker-filter-field.search{grid-column:span 2}
-  .work-tracker-table-head{align-items:flex-start;flex-direction:column}
-  .work-tracker-table-head-actions{width:100%;justify-content:space-between}
-  .work-tracker-column-settings-button{flex:1}
-  .work-tracker-column-backdrop{align-items:end;padding:0}
-  .work-tracker-column-panel{width:100%;max-height:88dvh;border-radius:22px 22px 0 0}
-  .work-tracker-column-item{grid-template-columns:28px minmax(0,1fr) auto}
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -23412,13 +23360,13 @@ body.page-loading-active .main-wrapper{
 }
 </style>
 </head>
-<body data-build="v1-186">
+<body data-build="v1-182">
 <div id="app"></div>
 
 <script>
-// V1.186: one authoritative application version for the browser title,
+// V1.182: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '1.186';
+const APP_VERSION = '1.182';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -24939,7 +24887,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.186':'e.g. Warehouse V1.186',
+  'เช่น Warehouse V1.182':'e.g. Warehouse V1.182',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -27853,6 +27801,7 @@ function paintDashboardView(tab, cache = _dashboardViewCache) {
   }
   if (tab === 'tracker') {
     if (Q('tracker-sort')) Q('tracker-sort').value = S._trackerSort || 'location';
+    if (Q('tracker-page-size')) Q('tracker-page-size').value = String(S._trackerPageSize || 100);
     refreshWorkTrackerFilterOptions();
     renderWorkTrackerList();
   }
@@ -40995,9 +40944,18 @@ const WORK_TRACKER_FILTERS = {
   zone:{ state:'_trackerZone', field:'zone', labelTh:'โซน', labelEn:'Zone' },
   row:{ state:'_trackerRow', field:'row', labelTh:'แถว', labelEn:'Row' },
   level:{ state:'_trackerLevel', field:'level', labelTh:'ระดับ', labelEn:'Level' },
+  location:{ state:'_trackerLocation', field:'location', labelTh:'ตำแหน่งจัดเก็บ', labelEn:'Storage Location' },
   status:{ state:'_trackerStatus', field:'statusKey', labelTh:'สถานะงาน', labelEn:'Work Status' },
+  round:{ state:'_trackerRound', field:'roundCount', labelTh:'รอบการตรวจนับล่าสุด', labelEn:'Latest Count Round' },
+  user:{ state:'_trackerUser', field:'assignedUser', labelTh:'ผู้รับมอบหมายงาน', labelEn:'Assigned User' },
+  counter:{ state:'_trackerCounter', field:'latestCounter', labelTh:'ผู้ตรวจนับ', labelEn:'Physical Counter' },
+  supervisor:{ state:'_trackerSupervisor', field:'supervisorName', labelTh:'ผู้ยืนยันยอด', labelEn:'Confirmed By' },
+  final:{ state:'_trackerFinal', field:'finalStatusKey', labelTh:'สถานะสุดท้าย', labelEn:'Final Status' },
+  wms_user:{ state:'_trackerWmsUser', field:'wmsFixedByName', labelTh:'ผู้ตรวจสอบ WMS', labelEn:'WMS Reviewed By' },
+  category:{ state:'_trackerCategory', field:'category', labelTh:'ประเภทสินค้า', labelEn:'Item Category' },
+  uom:{ state:'_trackerUom', field:'uom', labelTh:'หน่วยนับ (UOM)', labelEn:'Unit of Measure (UOM)' },
   inventory:{ state:'_trackerInventory', field:'inventoryStatus', labelTh:'สถานะสินค้าคงคลัง', labelEn:'Inventory Status' },
-  variance_type:{ state:'_trackerVarianceType', field:'varianceType', labelTh:'Gain / Lost', labelEn:'Gain / Lost' },
+  wms:{ state:'_trackerWms', field:'wmsStatus', labelTh:'สถานะการปรับปรุงยอด WMS', labelEn:'WMS Adjustment Status' },
 };
 let _workTrackerPage = 1;
 let _workTrackerSearchTimer = null;
@@ -41042,13 +41000,6 @@ function workTrackerResolutionLabel(key) {
     ? { ok:'Matched OH', lost:'Confirmed Variance', pending_diff:'Pending Variance', pending_recount:'Pending Recount' }
     : { ok:'ยืนยันยอดตรง OH', lost:'ยืนยันผลต่าง', pending_diff:'รอตรวจผลต่าง', pending_recount:'รอนับซ้ำ' };
   return labels[key] || key || '—';
-}
-
-function workTrackerGainLostLabel(key) {
-  const labels = currentUiLanguage() === 'en'
-    ? { gain:'Gain',lost:'Lost',match:'Matched',pending:'Pending Result' }
-    : { gain:'Gain',lost:'Lost',match:'ยอดตรง',pending:'รอผลตรวจนับ' };
-  return labels[key] || key || uiCopy('รอผลตรวจนับ','Pending Result');
 }
 
 function workTrackerDate(value) {
@@ -41149,13 +41100,6 @@ function buildWorkTrackerRows({ snapshots=[],details=[],assignments=[],counts=[]
     const job = jobByLocationItem[key] || null;
     const assignedUser = assignment?.profiles?.name || job?.profiles?.name || '';
     const latestCounter = workTrackerUniqueNames(latest?.actual_counter_name);
-    const varianceType = finalVariance === null
-      ? 'pending'
-      : finalVariance > 0
-        ? 'gain'
-        : finalVariance < 0
-          ? 'lost'
-          : 'match';
     return {
       id:snapshot.id || key,
       assignmentId:assignment?.id || '',
@@ -41185,7 +41129,6 @@ function buildWorkTrackerRows({ snapshots=[],details=[],assignments=[],counts=[]
       finalQty,
       variance:finalVariance,
       finalVariance,
-      varianceType,
       finalStatusKey,
       finalStatusLabel:workTrackerFinalLabel(finalStatusKey),
       hasApproval:Boolean(approval),
@@ -41254,7 +41197,6 @@ function refreshWorkTrackerFilterOptions() {
       if (key === 'status') label = workTrackerStatusLabel(value);
       if (key === 'wms') label = workTrackerWmsLabel(value);
       if (key === 'final') label = workTrackerFinalLabel(value);
-      if (key === 'variance_type') label = workTrackerGainLostLabel(value);
       if (key === 'round') label = value === '0'
         ? uiCopy('ยังไม่ได้ตรวจนับ','Not Counted')
         : uiCopy(`รอบที่ ${value}`,`Round ${value}`);
@@ -41290,6 +41232,12 @@ function updateWorkTrackerSearch(value) {
 
 function updateWorkTrackerSort(value) {
   S._trackerSort = value || 'location';
+  _workTrackerPage = 1;
+  renderWorkTrackerList();
+}
+
+function updateWorkTrackerPageSize(value) {
+  S._trackerPageSize = Number(value) || 100;
   _workTrackerPage = 1;
   renderWorkTrackerList();
 }
@@ -41362,379 +41310,57 @@ function workTrackerWmsCell(row) {
   </div>`;
 }
 
-const WORK_TRACKER_TABLE_PREF_KEY = 'cycle_count_work_tracker_columns_v1';
-const WORK_TRACKER_COLUMNS = Object.freeze([
-  { key:'job',labelTh:'งาน',labelEn:'Job',width:90,min:70 },
-  { key:'location',labelTh:'ตำแหน่งจัดเก็บ',labelEn:'Storage Location',width:125,min:95 },
-  { key:'item',labelTh:'สินค้า / รายละเอียด',labelEn:'Item / Details',width:240,min:150 },
-  { key:'stock',labelTh:'ยอดคงคลังตามระบบ (OH / AL)',labelEn:'System On-hand (OH / AL)',width:135,min:105 },
-  { key:'lpn',labelTh:'ป้าย LPN / ล็อต',labelEn:'LPN / Lot',width:190,min:130 },
-  { key:'inventory',labelTh:'สถานะสินค้าคงคลัง',labelEn:'Inventory Status',width:140,min:105 },
-  { key:'status',labelTh:'สถานะงาน',labelEn:'Work Status',width:175,min:120 },
-  { key:'round',labelTh:'รอบการตรวจนับล่าสุด',labelEn:'Latest Count Round',width:125,min:100 },
-  { key:'assigned',labelTh:'ผู้รับมอบหมายงาน',labelEn:'Assigned User',width:145,min:110 },
-  { key:'count1',labelTh:'ผลนับรอบที่ 1',labelEn:'Count 1',width:185,min:135 },
-  { key:'count2',labelTh:'ผลนับรอบที่ 2',labelEn:'Count 2',width:185,min:135 },
-  { key:'count3',labelTh:'ผลนับรอบที่ 3',labelEn:'Count 3',width:185,min:135 },
-  { key:'supervisor',labelTh:'ยอดหัวหน้ายืนยัน',labelEn:'Supervisor Confirmed Quantity',width:215,min:155 },
-  { key:'gain_lost',labelTh:'Gain / Lost',labelEn:'Gain / Lost',width:105,min:85 },
-  { key:'variance',labelTh:'ผลต่างสุดท้าย',labelEn:'Final Variance',width:115,min:90 },
-  { key:'final',labelTh:'สรุปสถานะสุดท้าย',labelEn:'Final Status Summary',width:220,min:160 },
-  { key:'wms',labelTh:'สถานะ WMS',labelEn:'WMS Status',width:195,min:145 },
-]);
-const WORK_TRACKER_COLUMN_BY_KEY = Object.freeze(
-  Object.fromEntries(WORK_TRACKER_COLUMNS.map(column => [column.key,column]))
-);
-let _workTrackerColumnPrefs = null;
-let _workTrackerDraggedColumn = '';
-let _workTrackerResizeState = null;
-
-function defaultWorkTrackerColumnPrefs() {
-  return {
-    order:WORK_TRACKER_COLUMNS.map(column => column.key),
-    hidden:[],
-    widths:Object.fromEntries(WORK_TRACKER_COLUMNS.map(column => [column.key,column.width])),
-  };
-}
-
-function sanitizeWorkTrackerColumnPrefs(value) {
-  const defaults = defaultWorkTrackerColumnPrefs();
-  const source = value && typeof value === 'object' ? value : {};
-  const known = new Set(defaults.order);
-  const order = [...new Set(Array.isArray(source.order) ? source.order.filter(key => known.has(key)) : [])];
-  defaults.order.forEach(key => { if (!order.includes(key)) order.push(key); });
-  let hidden = [...new Set(Array.isArray(source.hidden) ? source.hidden.filter(key => known.has(key)) : [])];
-  if (hidden.length >= order.length) hidden = hidden.filter(key => key !== 'location');
-  const widths = {};
-  order.forEach(key => {
-    const column = WORK_TRACKER_COLUMN_BY_KEY[key];
-    const requested = Number(source.widths?.[key]);
-    widths[key] = Number.isFinite(requested)
-      ? Math.max(column.min,Math.min(680,Math.round(requested)))
-      : column.width;
-  });
-  return { order,hidden,widths };
-}
-
-function workTrackerColumnPrefs() {
-  if (_workTrackerColumnPrefs) return _workTrackerColumnPrefs;
-  try {
-    _workTrackerColumnPrefs = sanitizeWorkTrackerColumnPrefs(
-      JSON.parse(localStorage.getItem(WORK_TRACKER_TABLE_PREF_KEY) || 'null')
-    );
-  } catch (_) {
-    _workTrackerColumnPrefs = defaultWorkTrackerColumnPrefs();
-  }
-  return _workTrackerColumnPrefs;
-}
-
-function persistWorkTrackerColumnPrefs() {
-  try {
-    localStorage.setItem(WORK_TRACKER_TABLE_PREF_KEY,JSON.stringify(workTrackerColumnPrefs()));
-  } catch (_) {}
-}
-
-function workTrackerOrderedColumns({ includeHidden=false }={}) {
-  const prefs = workTrackerColumnPrefs();
-  const hidden = new Set(prefs.hidden);
-  return prefs.order
-    .map(key => WORK_TRACKER_COLUMN_BY_KEY[key])
-    .filter(Boolean)
-    .filter(column => includeHidden || !hidden.has(column.key));
-}
-
-function workTrackerColumnLabel(column) {
-  return uiCopy(column.labelTh,column.labelEn);
-}
-
-function workTrackerGainLostCell(row) {
-  const key = row.varianceType || 'pending';
-  return `<span class="work-tracker-gain-lost ${escapeWmsText(key)}">${escapeWmsText(workTrackerGainLostLabel(key))}</span>`;
-}
-
-function workTrackerColumnCellHtml(key,row) {
-  const variance = row.variance;
-  const varianceClass = variance > 0 ? 'plus' : variance < 0 ? 'minus' : '';
-  const varianceText = variance === null ? '—' : `${variance > 0 ? '+' : ''}${Number(variance).toLocaleString(uiLocale())}`;
-  if (key === 'job') return `<div class="work-tracker-main" data-i18n-skip>${escapeWmsText(row.jobCode || '—')}</div>`;
-  if (key === 'location') return `<div class="work-tracker-main mono">${escapeWmsText(row.location || '—')}</div><div class="work-tracker-sub" data-i18n-skip>${[row.zone,row.row && `${uiCopy('แถว','Row')} ${row.row}`,row.level && `${uiCopy('ระดับ','Level')} ${row.level}`].filter(Boolean).map(escapeWmsText).join(' · ') || '—'}</div>`;
-  if (key === 'item') return `<div class="work-tracker-main mono">${escapeWmsText(row.item || '—')}</div><div class="work-tracker-sub" data-i18n-skip>${escapeWmsText(row.description || '')}</div><div class="work-tracker-sub"><span data-i18n-skip>${escapeWmsText(row.category || translateUiText('ไม่ระบุ CATEGORY'))}</span> · <span data-i18n-skip>${escapeWmsText(row.uom || translateUiText('ไม่ระบุ UOM'))}</span></div>`;
-  if (key === 'stock') return `<strong>${row.oh.toLocaleString(uiLocale())}</strong><div class="work-tracker-sub">AL ${row.al.toLocaleString(uiLocale())}</div>`;
-  if (key === 'lpn') return `<div class="work-tracker-main">${row.lpnCount.toLocaleString(uiLocale())} LPN</div><div class="work-tracker-sub" data-i18n-skip title="${escapeWmsText(row.lpnList)}">${escapeWmsText(row.lpnList || '—')}</div><div class="work-tracker-sub">Lot: <span data-i18n-skip>${escapeWmsText(row.lotList || '—')}</span></div>`;
-  if (key === 'inventory') return `<span data-i18n-skip>${escapeWmsText(row.inventoryStatus || '—')}</span>`;
-  if (key === 'status') return `<span class="work-tracker-status ${escapeWmsText(row.statusKey)}">${escapeWmsText(workTrackerStatusLabel(row.statusKey))}</span>`;
-  if (key === 'round') return row.roundCount ? uiCopy(`รอบที่ ${row.roundCount}`,`Round ${row.roundCount}`) : '—';
-  if (key === 'assigned') return `<span data-i18n-skip>${escapeWmsText(row.assignedUser || translateUiText('ยังไม่จ่ายงาน'))}</span>`;
-  if (key === 'count1') return workTrackerCountCell(row.rounds[0],1);
-  if (key === 'count2') return workTrackerCountCell(row.rounds[1],2);
-  if (key === 'count3') return workTrackerCountCell(row.rounds[2],3);
-  if (key === 'supervisor') return workTrackerApprovalCell(row);
-  if (key === 'gain_lost') return workTrackerGainLostCell(row);
-  if (key === 'variance') return `<span class="work-tracker-variance ${varianceClass}">${varianceText}</span>`;
-  if (key === 'final') return workTrackerFinalCell(row);
-  if (key === 'wms') return workTrackerWmsCell(row);
-  return '—';
-}
-
-function applyWorkTrackerColumnWidths() {
-  const table = Q('tracker-table');
-  const colgroup = Q('tracker-table-colgroup');
-  if (!table || !colgroup) return;
-  const prefs = workTrackerColumnPrefs();
-  const columns = workTrackerOrderedColumns();
-  const totalWidth = columns.reduce((sum,column) => sum + Number(prefs.widths[column.key] || column.width),0);
-  table.style.width = `${Math.max(totalWidth,720)}px`;
-  table.style.minWidth = '100%';
-  [...colgroup.children].forEach((col,index) => {
-    const column = columns[index];
-    if (!column) return;
-    col.style.width = `${prefs.widths[column.key] || column.width}px`;
-  });
-}
-
-function renderWorkTrackerTableStructure() {
-  const columns = workTrackerOrderedColumns();
-  const prefs = workTrackerColumnPrefs();
-  const colgroup = Q('tracker-table-colgroup');
-  const head = Q('tracker-table-head-row');
-  if (colgroup) colgroup.innerHTML = columns.map(column => `<col data-column-key="${column.key}" style="width:${prefs.widths[column.key] || column.width}px">`).join('');
-  if (head) {
-    head.innerHTML = columns.map(column => `<th data-column-key="${column.key}" draggable="true"
-      ondragstart="beginWorkTrackerColumnDrag(event,'${column.key}')"
-      ondragover="overWorkTrackerColumnDrag(event,'${column.key}','x')"
-      ondragleave="leaveWorkTrackerColumnDrag(event)"
-      ondrop="dropWorkTrackerColumn(event,'${column.key}','x')"
-      ondragend="endWorkTrackerColumnDrag()">
-      <div class="work-tracker-th-content">
-        <span class="work-tracker-th-label">${escapeWmsText(workTrackerColumnLabel(column))}</span>
-        <button type="button" class="work-tracker-th-gear" draggable="false"
-          onclick="event.stopPropagation();openWorkTrackerColumnSettings(event,'${column.key}')" aria-label="${uiCopy('ตั้งค่าคอลัมน์','Column Settings')}">⚙</button>
-        <span class="work-tracker-column-resizer" draggable="false"
-          onpointerdown="startWorkTrackerColumnResize(event,'${column.key}')" aria-hidden="true"></span>
-      </div>
-    </th>`).join('');
-  }
-  applyWorkTrackerColumnWidths();
-}
-
-function setWorkTrackerColumnVisible(key,visible) {
-  if (!WORK_TRACKER_COLUMN_BY_KEY[key]) return;
-  const prefs = workTrackerColumnPrefs();
-  const hidden = new Set(prefs.hidden);
-  if (visible) hidden.delete(key);
-  else {
-    const visibleCount = prefs.order.filter(columnKey => !hidden.has(columnKey)).length;
-    if (visibleCount <= 1) {
-      alert(uiCopy('ต้องเปิดแสดงอย่างน้อย 1 คอลัมน์','At least one column must remain visible.'));
-      renderWorkTrackerColumnSettings();
-      return;
-    }
-    hidden.add(key);
-  }
-  prefs.hidden = [...hidden];
-  persistWorkTrackerColumnPrefs();
-  renderWorkTrackerList();
-  renderWorkTrackerColumnSettings(key);
-}
-
-function moveWorkTrackerColumn(key,offset) {
-  const prefs = workTrackerColumnPrefs();
-  const from = prefs.order.indexOf(key);
-  const to = Math.max(0,Math.min(prefs.order.length - 1,from + Number(offset || 0)));
-  if (from < 0 || from === to) return;
-  prefs.order.splice(from,1);
-  prefs.order.splice(to,0,key);
-  persistWorkTrackerColumnPrefs();
-  renderWorkTrackerList();
-  renderWorkTrackerColumnSettings(key);
-}
-
-function beginWorkTrackerColumnDrag(event,key) {
-  _workTrackerDraggedColumn = key;
-  event.dataTransfer?.setData('text/work-tracker-column',key);
-  if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
-  event.currentTarget?.classList.add('is-dragging');
-}
-
-function overWorkTrackerColumnDrag(event,targetKey,axis='x') {
-  if (!_workTrackerDraggedColumn || _workTrackerDraggedColumn === targetKey) return;
-  event.preventDefault();
-  if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
-  document.querySelectorAll('.work-tracker-table th.is-drop-target,.work-tracker-column-item.is-drop-target').forEach(node => node.classList.remove('is-drop-target'));
-  event.currentTarget?.classList.add('is-drop-target');
-  event.currentTarget.dataset.dropAfter = String(axis === 'y'
-    ? event.clientY > event.currentTarget.getBoundingClientRect().top + (event.currentTarget.getBoundingClientRect().height / 2)
-    : event.clientX > event.currentTarget.getBoundingClientRect().left + (event.currentTarget.getBoundingClientRect().width / 2));
-}
-
-function leaveWorkTrackerColumnDrag(event) {
-  event.currentTarget?.classList.remove('is-drop-target');
-}
-
-function dropWorkTrackerColumn(event,targetKey) {
-  event.preventDefault();
-  const sourceKey = event.dataTransfer?.getData('text/work-tracker-column') || _workTrackerDraggedColumn;
-  if (!sourceKey || sourceKey === targetKey) return endWorkTrackerColumnDrag();
-  const prefs = workTrackerColumnPrefs();
-  const sourceIndex = prefs.order.indexOf(sourceKey);
-  if (sourceIndex < 0) return endWorkTrackerColumnDrag();
-  prefs.order.splice(sourceIndex,1);
-  let targetIndex = prefs.order.indexOf(targetKey);
-  if (targetIndex < 0) return endWorkTrackerColumnDrag();
-  if (event.currentTarget?.dataset?.dropAfter === 'true') targetIndex += 1;
-  prefs.order.splice(targetIndex,0,sourceKey);
-  persistWorkTrackerColumnPrefs();
-  endWorkTrackerColumnDrag();
-  renderWorkTrackerList();
-  renderWorkTrackerColumnSettings(sourceKey);
-}
-
-function endWorkTrackerColumnDrag() {
-  _workTrackerDraggedColumn = '';
-  document.querySelectorAll('.work-tracker-table th.is-dragging,.work-tracker-table th.is-drop-target,.work-tracker-column-item.is-dragging,.work-tracker-column-item.is-drop-target').forEach(node => node.classList.remove('is-dragging','is-drop-target'));
-}
-
-function startWorkTrackerColumnResize(event,key) {
-  if (!WORK_TRACKER_COLUMN_BY_KEY[key]) return;
-  event.preventDefault();
-  event.stopPropagation();
-  const prefs = workTrackerColumnPrefs();
-  const column = WORK_TRACKER_COLUMN_BY_KEY[key];
-  _workTrackerResizeState = {
-    key,
-    startX:event.clientX,
-    startWidth:Number(prefs.widths[key] || column.width),
-    min:column.min,
-  };
-  event.currentTarget?.classList.add('is-resizing');
-  document.body.style.cursor = 'col-resize';
-  document.body.style.userSelect = 'none';
-  document.addEventListener('pointermove',resizeWorkTrackerColumn);
-  document.addEventListener('pointerup',finishWorkTrackerColumnResize,{ once:true });
-  document.addEventListener('pointercancel',finishWorkTrackerColumnResize,{ once:true });
-}
-
-function resizeWorkTrackerColumn(event) {
-  const state = _workTrackerResizeState;
-  if (!state) return;
-  const prefs = workTrackerColumnPrefs();
-  prefs.widths[state.key] = Math.max(state.min,Math.min(680,Math.round(state.startWidth + event.clientX - state.startX)));
-  applyWorkTrackerColumnWidths();
-}
-
-function finishWorkTrackerColumnResize() {
-  if (!_workTrackerResizeState) return;
-  persistWorkTrackerColumnPrefs();
-  _workTrackerResizeState = null;
-  document.body.style.cursor = '';
-  document.body.style.userSelect = '';
-  document.removeEventListener('pointermove',resizeWorkTrackerColumn);
-  document.removeEventListener('pointerup',finishWorkTrackerColumnResize);
-  document.removeEventListener('pointercancel',finishWorkTrackerColumnResize);
-  document.querySelectorAll('.work-tracker-column-resizer.is-resizing').forEach(node => node.classList.remove('is-resizing'));
-}
-
-function openWorkTrackerColumnSettings(event,focusKey='') {
-  event?.preventDefault();
-  event?.stopPropagation();
-  const backdrop = Q('tracker-column-backdrop');
-  if (!backdrop) return;
-  renderWorkTrackerColumnSettings(focusKey);
-  backdrop.hidden = false;
-  document.body.style.overflow = 'hidden';
-}
-
-function closeWorkTrackerColumnSettings() {
-  const backdrop = Q('tracker-column-backdrop');
-  if (backdrop) backdrop.hidden = true;
-  document.body.style.overflow = '';
-}
-
-function renderWorkTrackerColumnSettings(focusKey='') {
-  const list = Q('tracker-column-list');
-  if (!list) return;
-  const prefs = workTrackerColumnPrefs();
-  const hidden = new Set(prefs.hidden);
-  const columns = workTrackerOrderedColumns({ includeHidden:true });
-  list.innerHTML = columns.map((column,index) => `<div class="work-tracker-column-item ${hidden.has(column.key) ? 'is-hidden' : ''}" data-column-key="${column.key}"
-    draggable="true" ondragstart="beginWorkTrackerColumnDrag(event,'${column.key}')"
-    ondragover="overWorkTrackerColumnDrag(event,'${column.key}','y')"
-    ondragleave="leaveWorkTrackerColumnDrag(event)"
-    ondrop="dropWorkTrackerColumn(event,'${column.key}','y')" ondragend="endWorkTrackerColumnDrag()">
-    <span class="work-tracker-column-drag" title="${uiCopy('ลากเพื่อย้าย','Drag to Move')}">⋮⋮</span>
-    <label class="work-tracker-column-toggle"><input type="checkbox" ${hidden.has(column.key) ? '' : 'checked'}
-      onchange="setWorkTrackerColumnVisible('${column.key}',this.checked)"><span>${escapeWmsText(workTrackerColumnLabel(column))}</span></label>
-    <div class="work-tracker-column-move">
-      <button type="button" onclick="moveWorkTrackerColumn('${column.key}',-1)" ${index === 0 ? 'disabled' : ''} aria-label="${uiCopy('ย้ายไปทางซ้าย','Move Left')}">←</button>
-      <button type="button" onclick="moveWorkTrackerColumn('${column.key}',1)" ${index === columns.length - 1 ? 'disabled' : ''} aria-label="${uiCopy('ย้ายไปทางขวา','Move Right')}">→</button>
-    </div>
-  </div>`).join('');
-  if (focusKey) requestAnimationFrame(() => list.querySelector(`[data-column-key="${focusKey}"]`)?.scrollIntoView({ block:'center' }));
-}
-
-function showAllWorkTrackerColumns() {
-  workTrackerColumnPrefs().hidden = [];
-  persistWorkTrackerColumnPrefs();
-  renderWorkTrackerList();
-  renderWorkTrackerColumnSettings();
-}
-
-function resetWorkTrackerColumnSettings() {
-  _workTrackerColumnPrefs = defaultWorkTrackerColumnPrefs();
-  persistWorkTrackerColumnPrefs();
-  renderWorkTrackerList();
-  renderWorkTrackerColumnSettings();
-}
-
-document.addEventListener('keydown',event => {
-  if (event.key === 'Escape' && !Q('tracker-column-backdrop')?.hidden) closeWorkTrackerColumnSettings();
-});
-
 function renderWorkTrackerList() {
   const rows = getFilteredWorkTrackerRows();
-  const pageSize = 100;
+  const pageSize = Number(S._trackerPageSize || 100);
   const pageCount = Math.max(1,Math.ceil(rows.length / pageSize));
   _workTrackerPage = Math.min(Math.max(1,_workTrackerPage),pageCount);
   const start = (_workTrackerPage - 1) * pageSize;
   const visibleRows = rows.slice(start,start + pageSize);
   const allRows = window._workTrackerRows || [];
-  const resultRows = {
-    ok:rows.filter(row => row.finalVariance !== null && Number(row.finalVariance) === 0),
-    gain:rows.filter(row => row.finalVariance !== null && Number(row.finalVariance) > 0),
-    lost:rows.filter(row => row.finalVariance !== null && Number(row.finalVariance) < 0),
-  };
-  const sumOhPcs = resultTypeRows => resultTypeRows.reduce((sum,row) => sum + Number(row.oh || 0),0);
   const kpiValues = {
-    total:rows.length,
-    unassigned:rows.filter(row => row.statusKey === 'unassigned').length,
-    pending:rows.filter(row => ['pending','in_progress','recount'].includes(row.statusKey)).length,
-    counted:rows.filter(row => row.roundCount > 0).length,
-    variance:rows.filter(row => row.finalVariance !== null && Number(row.finalVariance) !== 0).length,
-    supervisor:rows.filter(row => row.hasApproval).length,
-    wms:rows.filter(row => row.wmsStatus === 'unfixed').length,
-    completed:rows.filter(row => ['count_match','supervisor_match','closed_match','closed_variance'].includes(row.finalStatusKey)).length,
+    total:allRows.length,
+    unassigned:allRows.filter(row => row.statusKey === 'unassigned').length,
+    pending:allRows.filter(row => ['pending','in_progress','recount'].includes(row.statusKey)).length,
+    counted:allRows.filter(row => row.roundCount > 0).length,
+    variance:allRows.filter(row => row.finalVariance !== null && Number(row.finalVariance) !== 0).length,
+    supervisor:allRows.filter(row => row.hasApproval).length,
+    wms:allRows.filter(row => row.wmsStatus === 'unfixed').length,
+    completed:allRows.filter(row => ['count_match','supervisor_match','closed_match','closed_variance'].includes(row.finalStatusKey)).length,
   };
   ['total','unassigned','pending','counted','variance','supervisor','wms','completed'].forEach(key => {
     if (Q(`tracker-kpi-${key}`)) Q(`tracker-kpi-${key}`).textContent = kpiValues[key].toLocaleString(uiLocale());
-  });
-  ['ok','gain','lost'].forEach(key => {
-    if (Q(`tracker-kpi-${key}-items`)) Q(`tracker-kpi-${key}-items`).textContent = resultRows[key].length.toLocaleString(uiLocale());
-    if (Q(`tracker-kpi-${key}-pcs`)) Q(`tracker-kpi-${key}-pcs`).textContent = sumOhPcs(resultRows[key]).toLocaleString(uiLocale());
   });
   if (Q('tracker-result-count')) {
     Q('tracker-result-count').textContent = currentUiLanguage() === 'en'
       ? `Showing ${rows.length.toLocaleString(uiLocale())} of ${allRows.length.toLocaleString(uiLocale())} items`
       : `แสดง ${rows.length.toLocaleString(uiLocale())} จาก ${allRows.length.toLocaleString(uiLocale())} รายการ`;
   }
-  renderWorkTrackerTableStructure();
-  const visibleColumns = workTrackerOrderedColumns();
   const body = Q('tracker-table-body');
   if (body) {
-    body.innerHTML = visibleRows.length
-      ? visibleRows.map(row => `<tr>${visibleColumns.map(column =>
-          `<td data-column-key="${column.key}">${workTrackerColumnCellHtml(column.key,row)}</td>`
-        ).join('')}</tr>`).join('')
-      : `<tr><td colspan="${Math.max(1,visibleColumns.length)}"><div class="work-tracker-empty">${uiCopy('ไม่พบงานที่ตรงกับตัวกรอง','No Work Matches the Selected Filters')}</div></td></tr>`;
+    body.innerHTML = visibleRows.length ? visibleRows.map(row => {
+      const variance = row.variance;
+      const varianceClass = variance > 0 ? 'plus' : variance < 0 ? 'minus' : '';
+      const varianceText = variance === null ? '—' : `${variance > 0 ? '+' : ''}${Number(variance).toLocaleString(uiLocale())}`;
+      return `<tr>
+        <td><div class="work-tracker-main" data-i18n-skip>${escapeWmsText(row.jobCode || '—')}</div></td>
+        <td><div class="work-tracker-main mono">${escapeWmsText(row.location || '—')}</div><div class="work-tracker-sub" data-i18n-skip>${[row.zone,row.row && `${uiCopy('แถว','Row')} ${row.row}`,row.level && `${uiCopy('ระดับ','Level')} ${row.level}`].filter(Boolean).map(escapeWmsText).join(' · ') || '—'}</div></td>
+        <td><div class="work-tracker-main mono">${escapeWmsText(row.item || '—')}</div><div class="work-tracker-sub" data-i18n-skip>${escapeWmsText(row.description || '')}</div><div class="work-tracker-sub"><span data-i18n-skip>${escapeWmsText(row.category || translateUiText('ไม่ระบุ CATEGORY'))}</span> · <span data-i18n-skip>${escapeWmsText(row.uom || translateUiText('ไม่ระบุ UOM'))}</span></div></td>
+        <td><strong>${row.oh.toLocaleString(uiLocale())}</strong><div class="work-tracker-sub">AL ${row.al.toLocaleString(uiLocale())}</div></td>
+        <td><div class="work-tracker-main">${row.lpnCount.toLocaleString(uiLocale())} LPN</div><div class="work-tracker-sub" data-i18n-skip title="${escapeWmsText(row.lpnList)}">${escapeWmsText(row.lpnList || '—')}</div><div class="work-tracker-sub">Lot: <span data-i18n-skip>${escapeWmsText(row.lotList || '—')}</span></div></td>
+        <td><span data-i18n-skip>${escapeWmsText(row.inventoryStatus || '—')}</span></td>
+        <td><span class="work-tracker-status ${row.statusKey}">${escapeWmsText(workTrackerStatusLabel(row.statusKey))}</span></td>
+        <td>${row.roundCount ? uiCopy(`รอบที่ ${row.roundCount}`,`Round ${row.roundCount}`) : '—'}</td>
+        <td><span data-i18n-skip>${escapeWmsText(row.assignedUser || translateUiText('ยังไม่จ่ายงาน'))}</span></td>
+        <td>${workTrackerCountCell(row.rounds[0],1)}</td>
+        <td>${workTrackerCountCell(row.rounds[1],2)}</td>
+        <td>${workTrackerCountCell(row.rounds[2],3)}</td>
+        <td>${workTrackerApprovalCell(row)}</td>
+        <td><span class="work-tracker-variance ${varianceClass}">${varianceText}</span></td>
+        <td>${workTrackerFinalCell(row)}</td>
+        <td>${workTrackerWmsCell(row)}</td>
+      </tr>`;
+    }).join('') : `<tr><td colspan="16"><div class="work-tracker-empty">${uiCopy('ไม่พบงานที่ตรงกับตัวกรอง','No Work Matches the Selected Filters')}</div></td></tr>`;
   }
   const pagination = Q('tracker-pagination');
   if (pagination) {
@@ -41761,50 +41387,24 @@ function workTrackerViewHtml() {
       <div class="work-tracker-kpi supervisor"><span>${t('หัวหน้ายืนยันแล้ว','Supervisor Confirmed')}</span><strong id="tracker-kpi-supervisor">0</strong></div>
       <div class="work-tracker-kpi wms"><span>${t('รอตรวจสอบ WMS','Pending WMS Review')}</span><strong id="tracker-kpi-wms">0</strong></div>
       <div class="work-tracker-kpi completed"><span>${t('เสร็จสิ้น / ตรวจสอบ WMS แล้ว','Completed / WMS Reviewed')}</span><strong id="tracker-kpi-completed">0</strong></div>
-      <div class="work-tracker-kpi ok"><span>OK</span><div class="work-tracker-kpi-breakdown"><div><span>${t('จำนวน ITEM','ITEM Count')}</span><strong id="tracker-kpi-ok-items">0</strong></div><div><span>${t('จำนวนงาน (Pcs)','Pcs (SUM OH)')}</span><strong id="tracker-kpi-ok-pcs">0</strong></div></div></div>
-      <div class="work-tracker-kpi gain"><span>Gain</span><div class="work-tracker-kpi-breakdown"><div><span>${t('จำนวน ITEM','ITEM Count')}</span><strong id="tracker-kpi-gain-items">0</strong></div><div><span>${t('จำนวนงาน (Pcs)','Pcs (SUM OH)')}</span><strong id="tracker-kpi-gain-pcs">0</strong></div></div></div>
-      <div class="work-tracker-kpi lost"><span>Lost</span><div class="work-tracker-kpi-breakdown"><div><span>${t('จำนวน ITEM','ITEM Count')}</span><strong id="tracker-kpi-lost-items">0</strong></div><div><span>${t('จำนวนงาน (Pcs)','Pcs (SUM OH)')}</span><strong id="tracker-kpi-lost-pcs">0</strong></div></div></div>
     </div>
     <section class="work-tracker-filter-panel">
       <div class="work-tracker-filter-head"><strong>${t('ตัวกรองทั้งหมด','All Filters')}</strong><button type="button" onclick="clearWorkTrackerFilters()">${t('ล้างตัวกรอง','Clear Filters')}</button></div>
       <div class="work-tracker-filter-grid">
         ${Object.keys(WORK_TRACKER_FILTERS).map(selectField).join('')}
         <div class="work-tracker-filter-field"><label>${t('การเรียงข้อมูล','Sort Order')}</label><select id="tracker-sort" onchange="updateWorkTrackerSort(this.value)"><option value="location">${t('ตำแหน่งจัดเก็บ A → Z','Storage Location A → Z')}</option><option value="job">${t('งาน','Job')}</option><option value="item">${t('สินค้า','Item')}</option><option value="latest">${t('กิจกรรมล่าสุด','Latest Activity')}</option></select></div>
-        <div class="work-tracker-filter-field search"><label>${t('ค้นหา Location / Item / LPN / ล็อต / งาน','Search Location / Item / LPN / Lot / Job')}</label><input id="tracker-search" value="${escapeWmsText(S._trackerSearch || '')}" placeholder="${t('กรอกคำค้นหา','Enter Search Term')}" oninput="updateWorkTrackerSearch(this.value)"></div>
+        <div class="work-tracker-filter-field"><label>${t('จำนวนรายการต่อหน้า','Items per Page')}</label><select id="tracker-page-size" onchange="updateWorkTrackerPageSize(this.value)"><option value="50">50</option><option value="100" selected>100</option><option value="200">200</option></select></div>
+        <div class="work-tracker-filter-field search"><label>${t('ค้นหา ตำแหน่งจัดเก็บ / สินค้า / LPN / ล็อต / งาน','Search Storage Location / Item / LPN / Lot / Job')}</label><input id="tracker-search" value="${escapeWmsText(S._trackerSearch || '')}" placeholder="${t('กรอกคำค้นหา','Enter Search Term')}" oninput="updateWorkTrackerSearch(this.value)"></div>
       </div>
     </section>
     <section class="work-tracker-table-shell" id="tracker-table-shell">
-      <div class="work-tracker-table-head">
-        <strong>${t('รายการงานทั้งหมด','Total Work Items')}</strong>
-        <div class="work-tracker-table-head-actions">
-          <span id="tracker-result-count">${t('0 รายการ','0 items')}</span>
-          <button type="button" class="work-tracker-column-settings-button" onclick="openWorkTrackerColumnSettings(event)">⚙ ${t('ตั้งค่าช่องแสดงผล','Display Column Settings')}</button>
-        </div>
-      </div>
-      <div class="work-tracker-scroll"><table class="work-tracker-table" id="tracker-table">
-        <colgroup id="tracker-table-colgroup"></colgroup>
-        <thead><tr id="tracker-table-head-row"></tr></thead>
+      <div class="work-tracker-table-head"><strong>${t('รายการงานทั้งหมด','Total Work Items')}</strong><span id="tracker-result-count">${t('0 รายการ','0 items')}</span></div>
+      <div class="work-tracker-scroll"><table class="work-tracker-table">
+        <thead><tr><th>${t('งาน','Job')}</th><th>${t('ตำแหน่งจัดเก็บ','Storage Location')}</th><th>${t('สินค้า / รายละเอียด','Item / Details')}</th><th>${t('ยอดคงคลังตามระบบ (OH / AL)','System On-hand (OH / AL)')}</th><th>${t('ป้าย LPN / ล็อต','LPN / Lot')}</th><th>${t('สถานะสินค้าคงคลัง','Inventory Status')}</th><th>${t('สถานะงาน','Work Status')}</th><th>${t('รอบการตรวจนับล่าสุด','Latest Count Round')}</th><th>${t('ผู้รับมอบหมายงาน','Assigned User')}</th><th>${t('ผลนับรอบที่ 1','Count 1')}</th><th>${t('ผลนับรอบที่ 2','Count 2')}</th><th>${t('ผลนับรอบที่ 3','Count 3')}</th><th>${t('ยอดหัวหน้ายืนยัน','Supervisor Confirmed Quantity')}</th><th>${t('ผลต่างสุดท้าย','Final Variance')}</th><th>${t('สรุปสถานะสุดท้าย','Final Status Summary')}</th><th>${t('สถานะ WMS','WMS Status')}</th></tr></thead>
         <tbody id="tracker-table-body"></tbody>
       </table></div>
       <div class="work-tracker-pagination" id="tracker-pagination"></div>
     </section>
-    <div class="work-tracker-column-backdrop" id="tracker-column-backdrop" hidden onclick="if(event.target===this)closeWorkTrackerColumnSettings()">
-      <section class="work-tracker-column-panel" role="dialog" aria-modal="true" aria-labelledby="tracker-column-title">
-        <div class="work-tracker-column-panel-head">
-          <div>
-            <h3 id="tracker-column-title">${t('ตั้งค่าช่องแสดงผล','Display Column Settings')}</h3>
-            <p>${t('เปิด–ปิด ลากสลับลำดับ หรือปรับความกว้างจากขอบหัวตาราง การตั้งค่านี้บันทึกเฉพาะเครื่องนี้','Show or hide columns, drag to reorder, or resize from the table header. Settings are saved on this device only.')}</p>
-          </div>
-          <button type="button" class="work-tracker-column-panel-close" onclick="closeWorkTrackerColumnSettings()" aria-label="${t('ปิด','Close')}">×</button>
-        </div>
-        <div class="work-tracker-column-list" id="tracker-column-list"></div>
-        <div class="work-tracker-column-panel-actions">
-          <button type="button" onclick="showAllWorkTrackerColumns()">${t('แสดงทั้งหมด','Show All')}</button>
-          <button type="button" onclick="resetWorkTrackerColumnSettings()">${t('คืนค่าเริ่มต้น','Reset Defaults')}</button>
-          <button type="button" class="primary" onclick="closeWorkTrackerColumnSettings()">${t('เสร็จ','Done')}</button>
-        </div>
-      </section>
-    </div>
   </div>`;
 }
 
@@ -63132,7 +62732,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.186" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.182" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
@@ -64056,7 +63656,7 @@ window.addEventListener('DOMContentLoaded', () => {
 if ('serviceWorker' in navigator && ['https:','http:'].includes(location.protocol)) {
   window.addEventListener('load', async () => {
     try {
-      const registration = await navigator.serviceWorker.register('./sw.js?v=186', { scope:'./' });
+      const registration = await navigator.serviceWorker.register('./sw.js?v=182', { scope:'./' });
       registration.update().catch(() => {});
       document.documentElement.dataset.pwaReady = 'true';
     } catch (error) {
