@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V1.212: Allow unfinished Normal assignments to be cancelled when their Location is only planned in an unissued Annual JOB. -->
 <!-- V1.210: Reconcile Annual JOBs with no unfinished items to completed and remove cancel/return actions from completed JOBs. -->
 <!-- V1.209: Build Annual JOBs incrementally from uncounted, unreserved Stock Snapshots; preserve existing JOBs and each User-selected JOB size. -->
 <!-- V1.208: Persist the hidden Count scanner/search state across R1/R2/R3 re-renders until the user explicitly shows it. -->
@@ -71,7 +72,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.210</title>
+<title>Cycle Count V1.212</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
@@ -23789,7 +23790,7 @@ body.page-loading-active .main-wrapper{
 <script>
 // V1.190: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '1.210';
+const APP_VERSION = '1.212';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -25311,7 +25312,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.210':'e.g. Warehouse V1.210',
+  'เช่น Warehouse V1.212':'e.g. Warehouse V1.212',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -54996,6 +54997,80 @@ function selectedAssignSessionConfig() {
   };
 }
 
+const ANNUAL_JOB_BUILD_PREFERENCE_STORAGE_KEY = 'cycle-count-annual-job-build-preferences-v1';
+
+function readAnnualJobBuildPreference(sessionId) {
+  if (!sessionId) return null;
+  try {
+    const all = JSON.parse(localStorage.getItem(ANNUAL_JOB_BUILD_PREFERENCE_STORAGE_KEY) || '{}');
+    const saved = all?.[sessionId];
+    const size = Math.floor(Number(saved?.size));
+    if (!Number.isFinite(size) || size < 1 || size > 200) return null;
+    return {
+      size:String(size),
+      prefix:String(saved?.prefix || 'JOB').trim().slice(0,20) || 'JOB',
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+function cacheAnnualJobBuildPreference(sessionId,size,prefix='JOB') {
+  const normalizedSize = Math.max(1,Math.min(200,Math.floor(Number(size) || 20)));
+  const normalizedPrefix = String(prefix || 'JOB').trim().slice(0,20) || 'JOB';
+  const saved = { size:String(normalizedSize),prefix:normalizedPrefix };
+  S._annualJobBuildDrafts = S._annualJobBuildDrafts || {};
+  S._annualJobBuildDrafts[sessionId] = saved;
+  S._annualJobBuildDraftEdited = S._annualJobBuildDraftEdited || {};
+  S._annualJobBuildDraftEdited[sessionId] = false;
+  try {
+    const all = JSON.parse(localStorage.getItem(ANNUAL_JOB_BUILD_PREFERENCE_STORAGE_KEY) || '{}');
+    all[sessionId] = saved;
+    localStorage.setItem(ANNUAL_JOB_BUILD_PREFERENCE_STORAGE_KEY,JSON.stringify(all));
+  } catch (_) {}
+  return saved;
+}
+
+function latestAnnualJobBuildSize(jobs=[],items=[]) {
+  const itemCounts = {};
+  (items || []).forEach(item => {
+    itemCounts[item.job_id] = (itemCounts[item.job_id] || 0) + 1;
+  });
+  const candidates = (jobs || []).map(job => ({
+    job,
+    itemCount:Number(itemCounts[job.id] || 0),
+    createdAt:Date.parse(job.created_at || '') || 0,
+  })).filter(row => row.itemCount > 0 && row.createdAt > 0)
+    .sort((left,right) => right.createdAt-left.createdAt || Number(right.job?.job_no || 0)-Number(left.job?.job_no || 0));
+  if (!candidates.length) return 0;
+  const latestCreatedAt = candidates[0].createdAt;
+  // All JOB headers from one generation are inserted together. Include the
+  // latest short insertion window and use its largest count so the final
+  // partial JOB cannot replace a requested size such as 60 with 11.
+  const latestBatchCounts = candidates
+    .filter(row => latestCreatedAt-row.createdAt <= 15000)
+    .map(row => row.itemCount);
+  return Math.max(1,Math.min(200,Math.max(...latestBatchCounts)));
+}
+
+function applyLatestAnnualJobBuildPreference(config,jobs=[],items=[]) {
+  const size = latestAnnualJobBuildSize(jobs,items);
+  if (!config?.sessionId || !size) return config?.itemsPerJob || 20;
+  const existingDraft = S._annualJobBuildDrafts?.[config.sessionId];
+  const userEdited = Boolean(S._annualJobBuildDraftEdited?.[config.sessionId]);
+  const prefix = String(existingDraft?.prefix || config.prefix || 'JOB').trim().slice(0,20) || 'JOB';
+  if (!userEdited) cacheAnnualJobBuildPreference(config.sessionId,size,prefix);
+  const effective = userEdited && existingDraft
+    ? Math.max(1,Math.min(200,Math.floor(Number(existingDraft.size) || size)))
+    : size;
+  const select = Q('as-sess');
+  const option = select?.options?.[select.selectedIndex];
+  if (option) option.dataset.annualSize = String(effective);
+  const input = Q('annual-build-size');
+  if (input) input.value = String(effective);
+  return effective;
+}
+
 function rememberAnnualJobBuildDraft() {
   const sessionId = selectedAssignSessionConfig().sessionId;
   if (!sessionId) return;
@@ -55004,11 +55079,18 @@ function rememberAnnualJobBuildDraft() {
     size:String(Q('annual-build-size')?.value ?? ''),
     prefix:String(Q('annual-build-prefix')?.value ?? ''),
   };
+  S._annualJobBuildDraftEdited = S._annualJobBuildDraftEdited || {};
+  S._annualJobBuildDraftEdited[sessionId] = true;
 }
 
 function restoreAnnualJobBuildDraft(config) {
   if (!config?.sessionId) return;
-  const saved = S._annualJobBuildDrafts?.[config.sessionId];
+  const saved = S._annualJobBuildDrafts?.[config.sessionId]
+    || readAnnualJobBuildPreference(config.sessionId);
+  if (saved) {
+    S._annualJobBuildDrafts = S._annualJobBuildDrafts || {};
+    S._annualJobBuildDrafts[config.sessionId] = saved;
+  }
   const sizeInput = Q('annual-build-size');
   const prefixInput = Q('annual-build-prefix');
   if (sizeInput) sizeInput.value = saved ? saved.size : String(config.itemsPerJob);
@@ -55025,6 +55107,22 @@ async function persistAnnualJobBuildPreferences(sessionId,size,prefix) {
       })
       .eq('id',sessionId);
     if (!error) return true;
+    if (prof?.role === 'admin' && isAnnualJobPermissionError(error)) {
+      try {
+        await invokeAdminBackup('restore_batch',{
+          table:'count_sessions',
+          rows:[{
+            id:sessionId,
+            count_mode:'annual',
+            annual_items_per_job:size,
+            annual_job_prefix:prefix,
+          }],
+        });
+        return true;
+      } catch (fallbackError) {
+        console.warn('Annual JOB preference admin fallback failed:',fallbackError?.message || fallbackError);
+      }
+    }
     // The User-selected value still remains active in this page when Session
     // updates are intentionally restricted for a Supervisor account.
     console.warn('Annual JOB preference persistence skipped:',error.message || error);
@@ -55381,6 +55479,21 @@ function annualCompletedLocationIds(assignments=[]) {
   return completed;
 }
 
+function unfinishedNormalAssignmentEligibleForCancel(assignment,completedLocationIds,runtime) {
+  const locationId = String(assignment?.location_id || '');
+  if (!locationId || completedLocationIds.has(locationId)) return false;
+  // A Location that merely appears in a pending, unassigned Annual JOB is
+  // still owned by the Normal workflow. Exclude it only after an Annual JOB
+  // has actually been issued/locked; otherwise bulk Normal cancellation could
+  // not find assignments such as a pending Location already assigned to a user.
+  if (runtime.lockedAnnualLocationIds.has(locationId)) return false;
+  return Boolean(
+    assignment?.assigned_to
+    || assignment?.expired_at
+    || ['in_progress','round1_done','round2_done'].includes(String(assignment?.status || ''))
+  );
+}
+
 function annualUnfinishedSnapshotRows(snapshots=[],assignments=[]) {
   const completedLocationIds = annualCompletedLocationIds(assignments);
   return operationalStockSnapshotsByLocation(snapshots).filter(snapshot =>
@@ -55508,6 +55621,17 @@ async function loadAnnualJobWorkspace() {
   let annualJobs = jobsResult.data || [];
   let annualItems = itemsResult.data || [];
   const workspace = workspaceResult.data || { snapshots:[],assignments:[] };
+  const effectiveItemsPerJob = applyLatestAnnualJobBuildPreference(
+    config,annualJobs,annualItems,
+  );
+  if (
+    effectiveItemsPerJob !== config.itemsPerJob
+    && !S._annualJobBuildDraftEdited?.[config.sessionId]
+  ) {
+    persistAnnualJobBuildPreferences(
+      config.sessionId,effectiveItemsPerJob,config.prefix,
+    ).catch(error => console.warn('Annual JOB latest-size sync failed:',error?.message || error));
+  }
   try {
     const syncSummary = await syncImportedAnnualSnapshotsIntoPendingJobs({
       sessionId:config.sessionId,
@@ -55515,7 +55639,7 @@ async function loadAnnualJobWorkspace() {
       assignments:workspace.assignments || [],
       jobs:annualJobs,
       items:annualItems,
-      size:config.itemsPerJob,
+      size:effectiveItemsPerJob,
       prefix:config.prefix,
       requireExistingJobs:true,
     });
@@ -56376,11 +56500,15 @@ async function generateAnnualJobs() {
       summary = Array.isArray(rpcResult.data) ? rpcResult.data[0] : rpcResult.data;
     }
 
-    const preferencesSaved = await persistAnnualJobBuildPreferences(config.sessionId,size,prefix);
-    S._annualJobBuildDrafts = S._annualJobBuildDrafts || {};
-    S._annualJobBuildDrafts[config.sessionId] = { size:String(size),prefix };
+    const generatedJobCount = Number(summary?.job_count || 0);
+    const preferencesSaved = generatedJobCount > 0
+      ? await persistAnnualJobBuildPreferences(config.sessionId,size,prefix)
+      : false;
+    if (generatedJobCount > 0) {
+      cacheAnnualJobBuildPreference(config.sessionId,size,prefix);
+    }
     const option = Q('as-sess')?.options?.[Q('as-sess').selectedIndex];
-    if (option) {
+    if (option && generatedJobCount > 0) {
       option.dataset.countMode = 'annual';
       option.dataset.annualSize = String(size);
       option.dataset.annualPrefix = prefix;
@@ -58163,16 +58291,9 @@ async function cancelUnfinishedNormalAssignments() {
 
     const latestAssignments = [...annualLatestAssignmentsByLocation(assignmentResult.data || []).values()];
     const completedLocationIds = annualCompletedLocationIds(latestAssignments);
-    const unfinishedNormalAssignments = latestAssignments.filter(assignment => {
-      const locationId = String(assignment?.location_id || '');
-      if (!locationId || completedLocationIds.has(locationId)) return false;
-      if (runtime.activeAnnualLocationIds.has(locationId)) return false;
-      return Boolean(
-        assignment?.assigned_to
-        || assignment?.expired_at
-        || ['in_progress','round1_done','round2_done'].includes(String(assignment?.status || ''))
-      );
-    });
+    const unfinishedNormalAssignments = latestAssignments.filter(assignment =>
+      unfinishedNormalAssignmentEligibleForCancel(assignment,completedLocationIds,runtime)
+    );
     const locationIds = [...new Set(unfinishedNormalAssignments
       .map(assignment => String(assignment.location_id || ''))
       .filter(Boolean))];
@@ -65402,7 +65523,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.210" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.212" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
