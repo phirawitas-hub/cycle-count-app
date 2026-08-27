@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V1.210: Reconcile Annual JOBs with no unfinished items to completed and remove cancel/return actions from completed JOBs. -->
+<!-- V1.209: Build Annual JOBs incrementally from uncounted, unreserved Stock Snapshots; preserve existing JOBs and each User-selected JOB size. -->
 <!-- V1.208: Persist the hidden Count scanner/search state across R1/R2/R3 re-renders until the user explicitly shows it. -->
 <!-- V1.207: Let every device hide the Count scanner/search panel, keep the four KPIs visible, and align autofocus at the Location start. -->
 <!-- V1.206: Keep a Supervisor-confirmed late variance in the DIFF flow and open WMS automatically after the Location is fully confirmed. -->
@@ -69,7 +71,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.208</title>
+<title>Cycle Count V1.210</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
@@ -23787,7 +23789,7 @@ body.page-loading-active .main-wrapper{
 <script>
 // V1.190: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '1.208';
+const APP_VERSION = '1.210';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -25309,7 +25311,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.208':'e.g. Warehouse V1.208',
+  'เช่น Warehouse V1.210':'e.g. Warehouse V1.210',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -54423,10 +54425,10 @@ function annualAssignmentWorkspaceHtml(userOptionsHtml) {
     <div class="annual-generate-grid">
       <article class="annual-control-card">
         <h3>1 · สร้าง JOB</h3>
-        <p>สร้างจากงานที่ยังไม่เสร็จทุก Zone · แยก JOB ภายในแต่ละ Zone และเก็บ JOB ที่นับเสร็จแล้วไว้เป็นประวัติ</p>
+        <p>สร้างเพิ่มเฉพาะงานที่ยังไม่นับและยังไม่อยู่ใน JOB · แยก JOB ภายในแต่ละ Zone โดยไม่เปลี่ยน JOB เดิม</p>
         <div class="grid-2">
-          <div class="fg"><label>รายการต่อ JOB</label><input id="annual-build-size" type="number" min="1" max="200" value="20"></div>
-          <div class="fg"><label>คำนำหน้า JOB</label><input id="annual-build-prefix" maxlength="20" value="JOB"></div>
+          <div class="fg"><label>รายการต่อ JOB</label><input id="annual-build-size" type="number" min="1" max="200" value="20" inputmode="numeric" oninput="rememberAnnualJobBuildDraft()" onchange="rememberAnnualJobBuildDraft()"></div>
+          <div class="fg"><label>คำนำหน้า JOB</label><input id="annual-build-prefix" maxlength="20" value="JOB" oninput="rememberAnnualJobBuildDraft()" onchange="rememberAnnualJobBuildDraft()"></div>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:9px">
           <button class="btn btn-blue" id="annual-generate-btn" type="button" style="flex:1 1 220px"
@@ -54994,6 +54996,45 @@ function selectedAssignSessionConfig() {
   };
 }
 
+function rememberAnnualJobBuildDraft() {
+  const sessionId = selectedAssignSessionConfig().sessionId;
+  if (!sessionId) return;
+  S._annualJobBuildDrafts = S._annualJobBuildDrafts || {};
+  S._annualJobBuildDrafts[sessionId] = {
+    size:String(Q('annual-build-size')?.value ?? ''),
+    prefix:String(Q('annual-build-prefix')?.value ?? ''),
+  };
+}
+
+function restoreAnnualJobBuildDraft(config) {
+  if (!config?.sessionId) return;
+  const saved = S._annualJobBuildDrafts?.[config.sessionId];
+  const sizeInput = Q('annual-build-size');
+  const prefixInput = Q('annual-build-prefix');
+  if (sizeInput) sizeInput.value = saved ? saved.size : String(config.itemsPerJob);
+  if (prefixInput) prefixInput.value = saved ? saved.prefix : config.prefix;
+}
+
+async function persistAnnualJobBuildPreferences(sessionId,size,prefix) {
+  try {
+    const { error } = await sb.from('count_sessions')
+      .update({
+        count_mode:'annual',
+        annual_items_per_job:size,
+        annual_job_prefix:prefix,
+      })
+      .eq('id',sessionId);
+    if (!error) return true;
+    // The User-selected value still remains active in this page when Session
+    // updates are intentionally restricted for a Supervisor account.
+    console.warn('Annual JOB preference persistence skipped:',error.message || error);
+    return false;
+  } catch (error) {
+    console.warn('Annual JOB preference persistence failed:',error?.message || error);
+    return false;
+  }
+}
+
 function currentRound1AssignMode() {
   return S._round1AssignMode === 'annual' ? 'annual' : 'normal';
 }
@@ -55038,8 +55079,7 @@ function syncAssignWorkspaceMode(preferredMode) {
     badge.textContent = 'ROUND 1 เลือกได้ 2 แบบ';
     badge.className = 'assign-step-badge';
   }
-  if (Q('annual-build-size')) Q('annual-build-size').value = config.itemsPerJob;
-  if (Q('annual-build-prefix')) Q('annual-build-prefix').value = config.prefix;
+  restoreAnnualJobBuildDraft(config);
   updateExpiredAssignmentIndicators(annual
     ? (_annualWorkspaceJobs || []).filter(job =>
         _annualWorkspaceActiveJobIds.has(job.id) && !job.assigned_to && Boolean(job.expired_at)
@@ -55348,11 +55388,19 @@ function annualUnfinishedSnapshotRows(snapshots=[],assignments=[]) {
   );
 }
 
-function annualConfiguredSnapshotRows(snapshots=[],assignments=[],sessionId='',reservedLocationIds=new Set()) {
+function annualConfiguredSnapshotRows(snapshots=[],assignments=[],sessionId='',reservedSnapshotIds=new Set()) {
   // Both assignment views must expose the same unfinished operational scope.
   // Existing Normal assignments are allowed into the Annual preview; the
   // cross-mode confirmation is handled only when the JOB is actually issued.
-  return annualUnfinishedSnapshotRows(snapshots,assignments);
+  // A Stock Snapshot already linked to any JOB in the Session is immutable
+  // JOB history and must never be grouped again. This mirrors the database
+  // unique(session_id,stock_snapshot_id) constraint.
+  const reserved = reservedSnapshotIds instanceof Set
+    ? reservedSnapshotIds
+    : new Set(reservedSnapshotIds || []);
+  return annualUnfinishedSnapshotRows(snapshots,assignments).filter(snapshot =>
+    !reserved.has(String(snapshot?.id || ''))
+  );
 }
 
 async function annualUnfinishedJobItemRows(rows=[],sessionId='') {
@@ -55393,6 +55441,44 @@ let _normalFreeVisibleLocationIds = [];
 let _normalFreeFilteredLocationCount = 0;
 let _normalFreeFilters = { zone:[],row:[],level:[],status:[] };
 let _assignReviewFilters = { zone:[],row:[],level:[],status:[] };
+
+async function reconcileAnnualWorkspaceCompletedJobs(jobs=[],totalItemCounts={},unfinishedItemCounts={}) {
+  const staleJobs = (jobs || []).filter(job =>
+    job?.status !== 'completed'
+    && Number(totalItemCounts[job.id] || 0) > 0
+    && Number(unfinishedItemCounts[job.id] || 0) === 0
+  );
+  if (!staleJobs.length) return { completed:0,persisted:true };
+
+  const jobIds = staleJobs.map(job => job.id).filter(Boolean);
+  let persisted = true;
+  const batchSize = 200;
+  for (let start=0; start<jobIds.length; start+=batchSize) {
+    const batchIds = jobIds.slice(start,start+batchSize);
+    try {
+      const { error } = await sb.from('annual_count_jobs')
+        .update({ status:'completed' })
+        .in('id',batchIds);
+      if (!error) continue;
+      persisted = false;
+      console.warn('Annual JOB completed-status reconciliation skipped:',error.message || error);
+      break;
+    } catch (error) {
+      persisted = false;
+      console.warn('Annual JOB completed-status reconciliation failed:',error?.message || error);
+      break;
+    }
+  }
+
+  // Use the derived completed state immediately even when the current role
+  // cannot update the JOB master. The next authorized load will persist it.
+  staleJobs.forEach(job => {
+    job.status = 'completed';
+    job._completedFromNoRemainingItems = true;
+    job._completedStatusPersisted = persisted;
+  });
+  return { completed:staleJobs.length,persisted };
+}
 
 async function loadAnnualJobWorkspace() {
   const config = selectedAssignSessionConfig();
@@ -55460,13 +55546,20 @@ async function loadAnnualJobWorkspace() {
     _annualWorkspaceTotalItemCounts[row.job_id] = (_annualWorkspaceTotalItemCounts[row.job_id] || 0) + 1;
   });
   const completedLocationIds = annualCompletedLocationIds(workspace.assignments || []);
-  const reservedAnnualLocationIds = new Set(annualItems.map(row => String(row.location_id || '')).filter(Boolean));
+  const reservedAnnualSnapshotIds = new Set(
+    annualItems.map(row => String(row.stock_snapshot_id || '')).filter(Boolean)
+  );
   const unfinishedJobItems = annualItems.filter(row =>
     !completedLocationIds.has(String(row.location_id || ''))
   );
   unfinishedJobItems.forEach(row => {
     _annualWorkspaceItemCounts[row.job_id] = (_annualWorkspaceItemCounts[row.job_id] || 0) + 1;
   });
+  await reconcileAnnualWorkspaceCompletedJobs(
+    _annualWorkspaceJobs,
+    _annualWorkspaceTotalItemCounts,
+    _annualWorkspaceItemCounts,
+  );
   const activeJobs = _annualWorkspaceJobs.filter(job =>
     job.status !== 'completed' && Number(_annualWorkspaceItemCounts[job.id] || 0) > 0
   );
@@ -55474,7 +55567,7 @@ async function loadAnnualJobWorkspace() {
   const totalItems = _annualWorkspaceJobs.length
     ? unfinishedJobItems.length
     : annualConfiguredSnapshotRows(
-        workspace.snapshots || [],workspace.assignments || [],config.sessionId,reservedAnnualLocationIds,
+        workspace.snapshots || [],workspace.assignments || [],config.sessionId,reservedAnnualSnapshotIds,
       ).length;
   const assignedJobs = activeJobs.filter(job => job.assigned_to).length;
   const expiredJobs = activeJobs.filter(job => !job.assigned_to && Boolean(job.expired_at)).length;
@@ -55542,7 +55635,7 @@ function renderAnnualJobList() {
           ? `⏰ ผู้รับเดิม: ${escapeWmsText(job.expired_profiles?.name || 'ไม่ระบุ')}`
           : '— ยังไม่จ่ายงาน —'}</div>
       <span class="tag ${status.cls}">${status.label}</span>
-      ${job.assigned_to ? `<button class="btn btn-amber btn-sm assignment-cancel-button" type="button" onclick='cancelAnnualJobAssignment("${job.id}")'>↩ ยกเลิก/คืนงาน</button>` : ''}
+      ${job.assigned_to && !completed ? `<button class="btn btn-amber btn-sm assignment-cancel-button" type="button" onclick='cancelAnnualJobAssignment("${job.id}")'>↩ ยกเลิก/คืนงาน</button>` : ''}
       <button class="btn btn-blue btn-sm" type="button" onclick='openAnnualJobDetails("${job.id}")'>🔎 ดูรายละเอียด</button>
       <button class="btn btn-ghost btn-sm" type="button" onclick='printAnnualJobForms(["${job.id}"])'>🖨️ พิมพ์</button>
     </div>`;
@@ -55682,7 +55775,12 @@ function setAnnualJobGenerationProgress(alertBox,message) {
 
 async function writeAnnualJobGenerationRows(table,rows) {
   if (!rows.length) return;
-  const { error } = await sb.from(table).insert(rows);
+  const { error } = table === 'annual_count_job_items'
+    ? await sb.from(table).upsert(rows,{
+        onConflict:'session_id,stock_snapshot_id',
+        ignoreDuplicates:true,
+      })
+    : await sb.from(table).insert(rows);
   if (!error) return;
   if (prof?.role === 'admin' && isAnnualJobPermissionError(error)) {
     await invokeAdminBackup('restore_batch',{ table,rows });
@@ -55692,7 +55790,8 @@ async function writeAnnualJobGenerationRows(table,rows) {
 }
 
 function annualSnapshotWorkKey(row={}) {
-  return `${String(row.location_id || '')}|${String(row.item_id || '__empty_location__')}`;
+  const snapshotId = String(row.stock_snapshot_id || row.id || '');
+  return snapshotId || `${String(row.location_id || '')}|${String(row.item_id || '__empty_location__')}`;
 }
 
 // Import updates Stock Snapshot independently from Annual JOB definitions.
@@ -55903,7 +56002,7 @@ async function generateAnnualJobsClientSide({ sessionId,size,prefix,alertBox,per
       query => query.eq('session_id',sessionId).order('created_at'),
     ),
     fetchPagedSupabaseRows(
-      'annual_count_job_items','job_id,location_id',query => query.eq('session_id',sessionId),
+      'annual_count_job_items','job_id,stock_snapshot_id,location_id,item_id',query => query.eq('session_id',sessionId),
     ),
     fetchPagedSupabaseRows(
       'annual_count_jobs','id,status,job_no,job_code',query => query.eq('session_id',sessionId),
@@ -55914,20 +56013,26 @@ async function generateAnnualJobsClientSide({ sessionId,size,prefix,alertBox,per
   }
   const operationalSnapshots = operationalStockSnapshotsByLocation(snapshotResult.data || []);
   const unfinishedSnapshots = annualUnfinishedSnapshotRows(operationalSnapshots,assignmentResult.data || []);
-  const annualZoneSnapshots = unfinishedSnapshots;
-  const activeJobIds = new Set((existingJobResult.data || [])
-    .filter(job => job.status !== 'completed').map(job => String(job.id)));
-  const reservedAnnualLocationIds = new Set((existingItemResult.data || [])
-    .filter(item => activeJobIds.has(String(item.job_id || '')))
-    .map(item => String(item.location_id || '')).filter(Boolean));
+  const reservedAnnualSnapshotIds = new Set((existingItemResult.data || [])
+    .map(item => String(item.stock_snapshot_id || '')).filter(Boolean));
   const snapshots = annualConfiguredSnapshotRows(
-    operationalSnapshots,assignmentResult.data || [],sessionId,reservedAnnualLocationIds,
+    operationalSnapshots,assignmentResult.data || [],sessionId,reservedAnnualSnapshotIds,
   );
   const excludedCompleted = Math.max(0,operationalSnapshots.length-unfinishedSnapshots.length);
+  const excludedExisting = Math.max(0,unfinishedSnapshots.length-snapshots.length);
   const excludedOtherZones = 0;
   const excludedNormalAssigned = 0;
   if (!snapshots.length) {
-    throw new Error('ไม่มีงานที่ยังไม่เสร็จสำหรับสร้าง Annual JOB');
+    return {
+      job_count:0,
+      item_count:0,
+      excluded_completed:excludedCompleted,
+      excluded_existing_job:excludedExisting,
+      excluded_other_zones:excludedOtherZones,
+      excluded_normal_assigned:excludedNormalAssigned,
+      client_filtered:true,
+      permission_fallback:Boolean(permissionFallback),
+    };
   }
 
   const collator = new Intl.Collator('en',{ numeric:true,sensitivity:'base' });
@@ -55937,11 +56042,6 @@ async function generateAnnualJobsClientSide({ sessionId,size,prefix,alertBox,per
     || collator.compare(String(left.items?.code || ''),String(right.items?.code || ''))
     || collator.compare(String(left.id || ''),String(right.id || ''))
   );
-
-  const unfinishedExistingJobs = (existingJobResult.data || []).filter(job => job.status !== 'completed');
-  if (unfinishedExistingJobs.length) {
-    throw new Error(`ยังมี JOB ที่ยังไม่เสร็จ ${unfinishedExistingJobs.length.toLocaleString(uiLocale())} งาน กรุณากด “ยกเลิก JOB ที่ยังไม่เสร็จ” ก่อนสร้างใหม่`);
-  }
 
   const snapshotsByZone = new Map();
   snapshots.forEach(snapshot => {
@@ -56005,6 +56105,7 @@ async function generateAnnualJobsClientSide({ sessionId,size,prefix,alertBox,per
     job_count:jobRows.length,
     item_count:itemRows.length,
     excluded_completed:excludedCompleted,
+    excluded_existing_job:excludedExisting,
     excluded_other_zones:excludedOtherZones,
     excluded_normal_assigned:excludedNormalAssigned,
     client_filtered:true,
@@ -56185,6 +56286,7 @@ async function cancelUnfinishedAnnualJobs() {
 
 async function generateAnnualJobs() {
   const config = selectedAssignSessionConfig();
+  rememberAnnualJobBuildDraft();
   const size = Math.max(1,Math.min(200,Math.floor(Number(Q('annual-build-size')?.value) || config.itemsPerJob || 20)));
   const prefix = String(Q('annual-build-prefix')?.value || config.prefix || 'JOB').trim().slice(0,20) || 'JOB';
   const alertBox = Q('annual-generate-alert');
@@ -56193,12 +56295,7 @@ async function generateAnnualJobs() {
     if (alertBox) alertBox.innerHTML = `<div class="alert alert-amber" style="margin-top:12px">กรุณาเลือก Session ก่อนสร้าง JOB</div>`;
     return;
   }
-  const unfinishedExistingJobs = (_annualWorkspaceJobs || []).filter(job => job.status !== 'completed');
-  if (unfinishedExistingJobs.length) {
-    if (alertBox) alertBox.innerHTML = `<div class="alert alert-amber" style="margin-top:12px">⚠️ ยังมี JOB ที่ยังไม่เสร็จ ${unfinishedExistingJobs.length.toLocaleString(uiLocale())} งาน กรุณากด “ยกเลิก JOB ที่ยังไม่เสร็จ” ก่อน แล้วจึงสร้างใหม่</div>`;
-    return;
-  }
-  if (!confirm(`สร้าง JOB จากงานที่ยังไม่เสร็จ โดยแบ่งเป็น ${size.toLocaleString(uiLocale())} รายการต่อ JOB?\n\nJOB และผล Count ที่เสร็จแล้วจะถูกเก็บไว้ทั้งหมด`)) return;
+  if (!confirm(`สร้าง JOB เพิ่มจากงานที่ยังไม่นับและยังไม่อยู่ใน JOB โดยแบ่งเป็น ${size.toLocaleString(uiLocale())} รายการต่อ JOB?\n\nJOB เดิม งานที่นับเสร็จแล้ว และผล Count ทั้งหมดจะไม่ถูกเปลี่ยนแปลง`)) return;
   if (button) { button.disabled = true; button.textContent = '⏳ กำลังสร้าง Annual JOB...'; }
   setAnnualJobGenerationProgress(alertBox,'กำลังเรียงและแบ่ง Stock Snapshot เป็น JOB...');
   try {
@@ -56214,7 +56311,7 @@ async function generateAnnualJobs() {
         query => query.eq('session_id',config.sessionId).order('created_at'),
       ),
       fetchPagedSupabaseRows(
-        'annual_count_job_items','job_id,location_id',query => query.eq('session_id',config.sessionId),
+        'annual_count_job_items','job_id,stock_snapshot_id,location_id,item_id',query => query.eq('session_id',config.sessionId),
       ),
       fetchPagedSupabaseRows(
         'annual_count_jobs','id,status',query => query.eq('session_id',config.sessionId),
@@ -56228,16 +56325,13 @@ async function generateAnnualJobs() {
     const rawUnfinishedJobSnapshots = annualUnfinishedSnapshotRows(
       operationalJobSnapshots,assignmentResult.data || [],
     );
-    const annualZoneJobSnapshots = rawUnfinishedJobSnapshots;
-    const activeJobIds = new Set((existingJobResult.data || [])
-      .filter(job => job.status !== 'completed').map(job => String(job.id)));
-    const reservedAnnualLocationIds = new Set((existingItemResult.data || [])
-      .filter(item => activeJobIds.has(String(item.job_id || '')))
-      .map(item => String(item.location_id || '')).filter(Boolean));
+    const reservedAnnualSnapshotIds = new Set((existingItemResult.data || [])
+      .map(item => String(item.stock_snapshot_id || '')).filter(Boolean));
     const unfinishedJobSnapshots = annualConfiguredSnapshotRows(
-      operationalJobSnapshots,assignmentResult.data || [],config.sessionId,reservedAnnualLocationIds,
+      operationalJobSnapshots,assignmentResult.data || [],config.sessionId,reservedAnnualSnapshotIds,
     );
     const excludedCompleted = Math.max(0,operationalJobSnapshots.length-rawUnfinishedJobSnapshots.length);
+    const excludedExisting = Math.max(0,rawUnfinishedJobSnapshots.length-unfinishedJobSnapshots.length);
     const excludedOtherZones = 0;
     const excludedNormalAssigned = 0;
     // Generate client-side so completed work is excluded consistently while
@@ -56254,6 +56348,7 @@ async function generateAnnualJobs() {
       const filterMessages = [];
       if (operationalJobSnapshots.length !== rawJobSnapshots.length) filterMessages.push('Item ว่างซ้ำ/กำพร้า');
       if (excludedCompleted) filterMessages.push(`งานที่เสร็จแล้ว ${excludedCompleted.toLocaleString(uiLocale())} รายการ`);
+      if (excludedExisting) filterMessages.push(`งานที่อยู่ใน JOB เดิม ${excludedExisting.toLocaleString(uiLocale())} รายการ`);
       setAnnualJobGenerationProgress(
         alertBox,
         filterMessages.length
@@ -56281,6 +56376,9 @@ async function generateAnnualJobs() {
       summary = Array.isArray(rpcResult.data) ? rpcResult.data[0] : rpcResult.data;
     }
 
+    const preferencesSaved = await persistAnnualJobBuildPreferences(config.sessionId,size,prefix);
+    S._annualJobBuildDrafts = S._annualJobBuildDrafts || {};
+    S._annualJobBuildDrafts[config.sessionId] = { size:String(size),prefix };
     const option = Q('as-sess')?.options?.[Q('as-sess').selectedIndex];
     if (option) {
       option.dataset.countMode = 'annual';
@@ -56291,15 +56389,26 @@ async function generateAnnualJobs() {
       const filteredNote = Number(summary?.excluded_completed || 0)
         ? `<br><span style="font-size:10px">ตัดงานที่เสร็จแล้ว ${Number(summary.excluded_completed).toLocaleString(uiLocale())} รายการออกจากการคำนวณ</span>`
         : '';
+      const existingJobNote = Number(summary?.excluded_existing_job || 0)
+        ? `<br><span style="font-size:10px">ไม่นับงานที่อยู่ใน JOB เดิม ${Number(summary.excluded_existing_job).toLocaleString(uiLocale())} รายการซ้ำ</span>`
+        : '';
+      const preferenceNote = preferencesSaved
+        ? `<br><span style="font-size:10px">บันทึกค่า ${size.toLocaleString(uiLocale())} รายการต่อ JOB สำหรับ Session นี้แล้ว</span>`
+        : `<br><span style="font-size:10px">ใช้ค่า ${size.toLocaleString(uiLocale())} รายการต่อ JOB ในหน้าปัจจุบัน</span>`;
       const fallbackNote = summary?.permission_fallback ? '<br><span style="font-size:10px">ใช้โหมดสำรองโดยไม่แก้ตาราง Session</span>' : '';
-      alertBox.innerHTML = `<div class="alert alert-green" style="margin-top:12px">✅ สร้าง ${Number(summary?.job_count||0).toLocaleString(uiLocale())} JOB จากงานที่ยังไม่เสร็จทุก Zone จำนวน ${Number(summary?.item_count||0).toLocaleString(uiLocale())} รายการแล้ว${filteredNote}${fallbackNote}</div>`;
+      const resultText = Number(summary?.job_count || 0)
+        ? `สร้างเพิ่ม ${Number(summary.job_count).toLocaleString(uiLocale())} JOB จากงานคงเหลือ ${Number(summary?.item_count||0).toLocaleString(uiLocale())} รายการแล้ว`
+        : 'ไม่มีงานใหม่ที่ยังไม่นับและยังไม่อยู่ใน JOB';
+      alertBox.innerHTML = `<div class="alert alert-green" style="margin-top:12px">✅ ${resultText}${filteredNote}${existingJobNote}${preferenceNote}${fallbackNote}</div>`;
     }
     showActionSuccess('สร้าง Annual Count JOB เรียบร้อยแล้ว', {
       title:'สร้าง JOB สำเร็จ',
       facts:[
         {label:'จำนวน JOB',value:Number(summary?.job_count || 0).toLocaleString(uiLocale())},
-        {label:'งานที่ยังไม่เสร็จ',value:Number(summary?.item_count || 0).toLocaleString(uiLocale())},
+        {label:'งานใหม่ที่นำมาสร้าง',value:Number(summary?.item_count || 0).toLocaleString(uiLocale())},
+        {label:'รายการต่อ JOB',value:size.toLocaleString(uiLocale())},
         ...(Number(summary?.excluded_completed || 0) ? [{label:'ตัดงานเสร็จแล้ว',value:Number(summary.excluded_completed).toLocaleString(uiLocale())}] : []),
+        ...(Number(summary?.excluded_existing_job || 0) ? [{label:'อยู่ใน JOB เดิม',value:Number(summary.excluded_existing_job).toLocaleString(uiLocale())}] : []),
       ],
     });
     await loadAnnualJobWorkspace();
@@ -56394,12 +56503,16 @@ async function assignSelectedAnnualJobs() {
 
 async function cancelAnnualJobAssignment(jobId) {
   const job = (_annualWorkspaceJobs || []).find(row => String(row.id) === String(jobId));
-  if (!job?.assigned_to) {
-    alert('JOB นี้ยังไม่ได้จ่ายงาน');
+  if (!job) {
+    alert('ไม่พบ Annual JOB นี้ กรุณาโหลดรายการใหม่');
     return;
   }
   if (job.status === 'completed') {
     alert('JOB นี้เสร็จแล้ว ไม่สามารถยกเลิกการจ่ายงานได้');
+    return;
+  }
+  if (!job.assigned_to) {
+    alert('JOB นี้ยังไม่ได้จ่ายงาน');
     return;
   }
   try {
@@ -65289,7 +65402,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.208" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.210" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
