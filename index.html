@@ -3,6 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V1.208: Persist the hidden Count scanner/search state across R1/R2/R3 re-renders until the user explicitly shows it. -->
+<!-- V1.207: Let every device hide the Count scanner/search panel, keep the four KPIs visible, and align autofocus at the Location start. -->
+<!-- V1.206: Keep a Supervisor-confirmed late variance in the DIFF flow and open WMS automatically after the Location is fully confirmed. -->
+<!-- V1.205: Add a first-column action for matched tracker items that reopens the exact Item for Supervisor confirmation without sending it to WMS. -->
+<!-- V1.204: Match the live COUNT frame to the OH card and return WMS work to Supervisor review without changing the constrained resolution value. -->
+<!-- V1.203: Let active Annual JOB Locations be selected for Normal assignment, warn before switching, then safely release the old JOB. -->
+<!-- V1.202: Replace per-Location cancel buttons with Annual JOB source labels and add safe bulk cancellation for unfinished Normal work. -->
+<!-- V1.201: Reliably switch selected Annual JOB Locations to Normal assignment and combine both assignment modes in one progress graph with separate counters. -->
+<!-- V1.200: Cancel only unfinished Annual JOB work, preserve completed JOB history and Count evidence, then allow safe regrouping. -->
+<!-- V1.199: Show every unfinished Location in both Normal and Annual assignment views; resolve cross-mode work only when the user confirms assignment. -->
 <!-- V1.198: Remove the per-Zone assignment-mode settings card from the Assignment page while preserving assignment data and both work modes. -->
 <!-- V1.197: Allow per-Zone assignment mode switching with confirmation, automatically release the previous mode, and preserve Count history. -->
 <!-- V1.196: Reconcile newly imported Annual-Zone snapshots into untouched JOBs and explain mode-scoped assignment queues. -->
@@ -59,7 +69,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.198</title>
+<title>Cycle Count V1.208</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
@@ -11856,6 +11866,17 @@ details[open] > summary .assign-chevron { transform:rotate(225deg); }
 .work-tracker-gain-lost.gain{background:#e3f5ef;color:#14735e}
 .work-tracker-gain-lost.lost{background:#fff0ec;color:#c84b3b}
 .work-tracker-gain-lost.match{background:#eaf5f6;color:#08757d}
+.work-tracker-action-head{position:sticky !important;left:0;z-index:6 !important;text-align:center !important}
+.work-tracker-action-head .work-tracker-th-content{justify-content:center;padding:9px 8px}
+.work-tracker-action-cell{position:sticky;left:0;z-index:3;text-align:center;background:#fff}
+.work-tracker-return-sup{
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;width:100%;min-height:36px;
+  padding:7px 8px;border:1px solid rgba(166,96,0,.25);border-radius:11px;background:#fff3dc;
+  color:#965800;font:900 10px/1.25 'Mitr','Sarabun',sans-serif;cursor:pointer;white-space:normal
+}
+.work-tracker-return-sup:hover{background:#ffe7bb;border-color:rgba(166,96,0,.42)}
+.work-tracker-return-sup:disabled{opacity:.58;cursor:wait}
+.work-tracker-action-empty{color:#a5b0b2;font-weight:800}
 .work-tracker-column-backdrop{position:fixed;z-index:4200;inset:0;display:grid;place-items:center;padding:18px;background:rgba(21,42,44,.46);backdrop-filter:blur(3px)}
 .work-tracker-column-backdrop[hidden]{display:none!important}
 .work-tracker-column-panel{width:min(620px,100%);max-height:min(82vh,760px);display:flex;flex-direction:column;border:1px solid rgba(0,120,128,.2);border-radius:22px;background:#fff;box-shadow:0 28px 80px rgba(19,55,60,.26);overflow:hidden}
@@ -13100,6 +13121,14 @@ body .work-tracker-table td{
   color:var(--theme-table-row-text) !important;
   background:var(--theme-table-row-bg) !important;
   border-color:var(--theme-border-color) !important;
+}
+body .work-tracker-table td.work-tracker-action-cell{
+  background:var(--theme-table-row-bg) !important;
+}
+body .work-tracker-return-sup{
+  color:var(--theme-warning-color) !important;
+  background:color-mix(in srgb,var(--theme-warning-color) 14%,var(--theme-card-bg)) !important;
+  border-color:color-mix(in srgb,var(--theme-warning-color) 35%,var(--theme-border-color)) !important;
 }
 body .work-tracker-table tr:hover td{
   background:color-mix(in srgb,var(--theme-primary-color) 6%,var(--theme-table-row-bg)) !important;
@@ -17971,6 +18000,43 @@ body.login-page-active .lcard {
     height:50px !important;
     min-height:50px !important;
     border-radius:14px !important;
+  }
+}
+
+/* v204 — COUNT and OH use the same fixed outer footprint. The explicit stack
+   width also prevents the 100%-wide rugged input wrapper from stretching to
+   the remaining card width on tablet and desktop layouts. */
+#app .count-handheld-page .count-value-stack {
+  width:108px;
+}
+#app .count-handheld-page .count-input-frame,
+#app .count-handheld-page .count-value-stack .oh-badge {
+  width:108px !important;
+  height:76px !important;
+  min-height:76px !important;
+  box-sizing:border-box !important;
+}
+#app .count-handheld-page .count-input-frame > input.cqty,
+#app .count-handheld-page .count-input-frame > input.cqty.ok,
+#app .count-handheld-page .count-input-frame > input.cqty[data-handheld-count-entry="true"] {
+  height:74px !important;
+  min-height:74px !important;
+}
+@media (max-width:760px) {
+  #app .count-handheld-page .count-value-stack {
+    width:88px;
+  }
+  #app .count-handheld-page .count-input-frame,
+  #app .count-handheld-page .count-value-stack .oh-badge {
+    width:88px !important;
+    height:62px !important;
+    min-height:62px !important;
+  }
+  #app .count-handheld-page .count-input-frame > input.cqty,
+  #app .count-handheld-page .count-input-frame > input.cqty.ok,
+  #app .count-handheld-page .count-input-frame > input.cqty[data-handheld-count-entry="true"] {
+    height:60px !important;
+    min-height:60px !important;
   }
 }
 
@@ -23224,6 +23290,92 @@ body.count-page-active #app .count-handheld-page .citem-wrap {
   );
 }
 
+/* V1.207 · Scanner/search visibility is now controlled on every device.
+   Hiding the panel removes its visual height while keeping the real hardware
+   capture input mounted, and leaves the four Count summary cards visible. */
+body.count-page-active #app .count-item-collapse-button {
+  display:inline-flex !important;
+  align-items:center;
+  justify-content:center;
+  flex:0 0 auto;
+  gap:5px;
+  min-width:74px;
+  min-height:40px;
+  padding:7px 11px;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 28%,var(--theme-border-color));
+  border-radius:12px;
+  background:var(--theme-card-bg);
+  color:var(--theme-primary-color);
+  font:inherit;
+  font-size:10px;
+  font-weight:900;
+  line-height:1;
+  cursor:pointer;
+}
+body.count-page-active #app .count-item-collapse-chevron {
+  display:block;
+  margin:0;
+  font-size:16px;
+  line-height:.7;
+  transform:rotate(180deg);
+}
+body.count-page-active #app .count-scan-restore-button {
+  position:absolute;
+  z-index:5;
+  top:7px;
+  right:7px;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  width:30px;
+  height:30px;
+  padding:0;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 30%,var(--theme-border-color));
+  border-radius:50%;
+  background:var(--theme-card-bg);
+  color:var(--theme-primary-color);
+  font:inherit;
+  cursor:pointer;
+  box-shadow:0 4px 10px rgba(12,63,66,.13);
+}
+body.count-page-active #app .count-scan-restore-button svg { width:15px;height:15px; }
+body.count-page-active #app .count-scan-restore-button span { display:none; }
+body.count-page-active #app .count-sticky-stack.is-scan-hidden .count-scan-restore-button {
+  display:inline-flex;
+}
+/* Keep the scanner editor connected for USB/IME wedge devices without letting
+   the hidden scanner/search card occupy counting space. */
+body.count-page-active #app .count-sticky-stack.is-scan-hidden .count-item-lookup {
+  position:absolute !important;
+  width:1px !important;
+  height:1px !important;
+  margin:0 !important;
+  padding:0 !important;
+  overflow:hidden !important;
+  border:0 !important;
+  opacity:.001 !important;
+  clip-path:inset(50%) !important;
+  pointer-events:none !important;
+}
+@media (max-width:760px), (max-width:1400px) and (any-pointer:coarse) {
+  body.count-page-active #app .count-item-collapse-button {
+    width:42px;
+    min-width:42px;
+    height:42px;
+    min-height:42px;
+    flex-direction:column;
+    gap:1px;
+    padding:3px;
+    font-size:7.5px;
+  }
+  body.count-page-active #app .count-scan-restore-button {
+    top:5px;
+    right:5px;
+    width:26px;
+    height:26px;
+  }
+}
+
 /* V1.140 · Loading Cat — follows the supplied reference with the requested
    white canvas, orange elastic cat and centered Loading label. Progress runs
    internally for accessibility, but no percentage or progress bar is shown.
@@ -23553,6 +23705,80 @@ body.page-loading-active .main-wrapper{
     font-size:11px;
   }
 }
+
+/* V1.201 — one combined assignment graph plus separate Normal / Annual counters. */
+#app .assign-bento-shell .assign-hero-stats {
+  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  grid-template-rows:repeat(3,88px) !important;
+  grid-auto-rows:88px !important;
+}
+#app .assign-bento-shell .assign-hero-stat.is-normal-mode {
+  border-color:#8fb9de !important;
+  background:#eaf3fb !important;
+}
+#app .assign-bento-shell .assign-hero-stat.is-annual-mode {
+  border-color:#c7a7e8 !important;
+  background:#f3eafb !important;
+}
+#app .assign-bento-shell .assign-hero-stat.is-normal-mode strong { color:#245f91 !important; }
+#app .assign-bento-shell .assign-hero-stat.is-annual-mode strong { color:#7443a7 !important; }
+
+/* V1.202 — keep the Annual JOB source label inside each Location card and
+   provide one bulk cancellation action for unfinished Normal assignments. */
+#app .assign-bento-shell .normal-free-row.has-annual-job {
+  grid-template-columns:auto minmax(0,1fr) auto !important;
+  grid-template-rows:auto auto !important;
+  min-height:120px !important;
+  overflow:hidden !important;
+}
+#app .assign-bento-shell .normal-free-row.has-annual-job .annual-assignment-badge {
+  position:static !important;
+  grid-column:2 / 4 !important;
+  grid-row:2 !important;
+  justify-self:stretch !important;
+  display:flex !important;
+  align-items:center;
+  justify-content:center;
+  width:100% !important;
+  max-width:100% !important;
+  min-height:34px !important;
+  margin:0 !important;
+  padding:7px 12px !important;
+  border-radius:12px !important;
+  box-sizing:border-box !important;
+  color:#fff !important;
+  -webkit-text-fill-color:#fff !important;
+  background:#8f5520 !important;
+  font-size:11px;
+  font-weight:850;
+  line-height:1.25;
+  text-align:center;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+#app .assign-bento-shell .assign-bento-primary-actions {
+  grid-template-columns:repeat(auto-fit,minmax(148px,1fr)) !important;
+}
+#app .assign-bento-shell #normal-cancel-unfinished-btn {
+  color:#fff !important;
+  -webkit-text-fill-color:#fff !important;
+  border-color:#8f5520 !important;
+  background:#8f5520 !important;
+}
+#app .assign-bento-shell #normal-cancel-unfinished-btn:hover:not(:disabled) {
+  border-color:#744014 !important;
+  background:#744014 !important;
+}
+@media (max-width:560px) {
+  #app .assign-bento-shell .normal-free-row.has-annual-job {
+    grid-template-columns:auto minmax(0,1fr) !important;
+  }
+  #app .assign-bento-shell .normal-free-row.has-annual-job .assign-bento-tile-state,
+  #app .assign-bento-shell .normal-free-row.has-annual-job .annual-assignment-badge {
+    grid-column:2 !important;
+  }
+}
 </style>
 </head>
 <body data-build="v1-190">
@@ -23561,7 +23787,7 @@ body.page-loading-active .main-wrapper{
 <script>
 // V1.190: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '1.198';
+const APP_VERSION = '1.208';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -25083,7 +25309,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.198':'e.g. Warehouse V1.198',
+  'เช่น Warehouse V1.208':'e.g. Warehouse V1.208',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -25164,6 +25390,11 @@ const UI_EN_EXACT = Object.freeze({
   'กรอกผลจากเอกสาร':'Count Form Quick Entry',
   'ยืนยันผลและปรับสต๊อกสินค้า':'Confirmation & WMS Adjustment',
   'มอบหมายงาน':'Count Work Assignment',
+  'จำนวน Location ทั้งหมด':'Total Locations',
+  'มอบหมายแล้ว':'Assigned',
+  'ยังไม่มอบหมาย':'Not Assigned',
+  'แบบปกติ · Location':'Normal · Location',
+  'ความคืบหน้าการมอบหมายงานรวม':'Combined Assignment Progress',
   'นำเข้าข้อมูล':'Import WMS Data',
   'ประวัติการตรวจนับ':'Count History',
   'การเรียงข้อมูล':'Sort Order',
@@ -29579,7 +29810,9 @@ function captureCountViewportAnchorV128(preferredItemId='') {
     itemId:String(card.dataset.hwItemId || ''),
     viewportTop:card.getBoundingClientRect().top,
     activeId:active?.id || '',
-    scannerCollapsed:page.querySelector('.count-item-lookup')?.classList.contains('is-mobile-collapsed') ?? null,
+    // The stored preference is authoritative across Count round re-renders.
+    // Reading only the old DOM class can reopen the panel while R1 becomes R2.
+    scannerCollapsed:countScanPanelHiddenPreference(),
     capturedAt:Date.now(),
   };
   return _pendingCountViewportAnchorV128;
@@ -29625,10 +29858,11 @@ function scheduleCountViewportRestoreV128(assignmentId='') {
       scheduleCurrentCountEntryFocus();
       return;
     }
-    if (anchor.scannerCollapsed !== null) {
-      setCountScanPanelExpanded(!anchor.scannerCollapsed);
-      syncCountStickyStackMetricsV128();
-    }
+    // A round transition may restore Item/scroll position, but it must never
+    // override the user's scanner-panel choice. Only the visible toggle/show
+    // buttons are allowed to change the persisted preference.
+    setCountScanPanelExpanded(!countScanPanelHiddenPreference(),{ persist:false });
+    syncCountStickyStackMetricsV128();
     const delta = card.getBoundingClientRect().top - Number(anchor.viewportTop || 0);
     if (Number.isFinite(delta) && Math.abs(delta) > .5) {
       main.scrollTop = Math.max(0,main.scrollTop + delta);
@@ -34066,6 +34300,27 @@ let _countLaserLastInputAtV127 = 0;
 let _countLaserImeBufferV127 = '';
 let _countLaserImeLastAtV127 = 0;
 let _countLaserImeCommitTimerV127 = null;
+const COUNT_SCAN_PANEL_HIDDEN_STORAGE_KEY = 'cycle_count_scan_panel_hidden';
+let _countScanPanelHiddenV208 = (() => {
+  try { return localStorage.getItem(COUNT_SCAN_PANEL_HIDDEN_STORAGE_KEY) === 'true'; }
+  catch (_) { return false; }
+})();
+
+function countScanPanelHiddenPreference() {
+  try {
+    const stored = localStorage.getItem(COUNT_SCAN_PANEL_HIDDEN_STORAGE_KEY);
+    if (stored === 'true' || stored === 'false') return stored === 'true';
+  } catch (_) {}
+  return _countScanPanelHiddenV208 === true;
+}
+
+function persistCountScanPanelHiddenPreference(hidden) {
+  _countScanPanelHiddenV208 = Boolean(hidden);
+  try {
+    localStorage.setItem(COUNT_SCAN_PANEL_HIDDEN_STORAGE_KEY,String(_countScanPanelHiddenV208));
+  } catch (_) {}
+  return _countScanPanelHiddenV208;
+}
 let _hardwareCapturePollTimer = null;
 let _hardwareCapturePollValue = '';
 let _hardwareCapturePollChangedAt = 0;
@@ -34197,20 +34452,20 @@ function hardwareLaserCaptureHtml(id,context,instruction) {
   // injecting the decoded Location even when the field appears focused.
   const captureInputMode = isNarrowHandheldTerminal() ? 'text' : 'none';
   const shouldAutofocus = context === 'task-location';
-  const buildLabel = shouldAutofocus ? ' · v205' : '';
+  const buildLabel = shouldAutofocus ? ' · v208' : '';
   if (context === 'count-verify') {
-    return `<section class="count-item-lookup is-mobile-collapsed" data-i18n-skip aria-label="สแกนหรือค้นหาสินค้า">
+    return `<section class="count-item-lookup" data-i18n-skip aria-label="สแกนหรือค้นหาสินค้า">
       <div class="count-item-lookup-head">
         <span class="handheld-laser-icon">${barcodeScanIconSvg()}</span>
         <span class="count-item-lookup-copy">
           <strong>${escapeWmsText(uiCopy('สแกนหรือค้นหา SKU / LPN','Scan or Search SKU / LPN'))}</strong>
           <span>${escapeWmsText(uiCopy('พิมพ์บางส่วนได้ เช่น 5104 เพื่อค้นหา RMPW2605104','Enter a partial code, such as 5104, to find RMPW2605104'))}</span>
         </span>
-        <button type="button" class="count-item-collapse-button" aria-expanded="false"
-          aria-label="${escapeWmsText(uiCopy('กางช่องค้นหา SKU / LPN','Expand SKU / LPN search'))}"
+        <button type="button" class="count-item-collapse-button" aria-expanded="true"
+          aria-label="${escapeWmsText(uiCopy('ซ่อนส่วนสแกนหรือค้นหา SKU / LPN','Hide SKU / LPN scanner and search'))}"
           onclick="toggleCountScanPanel(event)">
           <span class="count-item-collapse-chevron" aria-hidden="true">⌄</span>
-          <span class="count-item-collapse-label">${escapeWmsText(uiCopy('ค้นหา','Search'))}</span>
+          <span class="count-item-collapse-label">${escapeWmsText(uiCopy('ซ่อน','Hide'))}</span>
         </button>
         <button type="button" class="count-item-camera-button" onclick="openCountBarcodeScanner()"
           title="${escapeWmsText(uiCopy('เปิดกล้องสแกน Barcode','Open Camera Barcode Scanner'))}">
@@ -35767,10 +36022,14 @@ function compactCountScannerViewportV127() {
   ).matches);
 }
 
-function setCountScanPanelExpanded(expanded,{ focusSearch=false }={}) {
+function setCountScanPanelExpanded(expanded,{ focusSearch=false,persist=true }={}) {
   const panel = document.querySelector('.count-handheld-page .count-item-lookup');
   if (!panel) return false;
   const shouldExpand = Boolean(expanded);
+  if (persist) persistCountScanPanelHiddenPreference(!shouldExpand);
+  else _countScanPanelHiddenV208 = !shouldExpand;
+  const stack = panel.closest('.count-sticky-stack');
+  stack?.classList.toggle('is-scan-hidden',!shouldExpand);
   panel.classList.toggle('is-mobile-collapsed',!shouldExpand);
   const button = panel.querySelector('.count-item-collapse-button');
   const label = panel.querySelector('.count-item-collapse-label');
@@ -35779,11 +36038,18 @@ function setCountScanPanelExpanded(expanded,{ focusSearch=false }={}) {
     button.setAttribute(
       'aria-label',
       shouldExpand
-        ? uiCopy('ย่อช่องค้นหา SKU / LPN','Collapse SKU / LPN search')
-        : uiCopy('กางช่องค้นหา SKU / LPN','Expand SKU / LPN search'),
+        ? uiCopy('ซ่อนส่วนสแกนหรือค้นหา SKU / LPN','Hide SKU / LPN scanner and search')
+        : uiCopy('แสดงส่วนสแกนหรือค้นหา SKU / LPN','Show SKU / LPN scanner and search'),
     );
   }
-  if (label) label.textContent = shouldExpand ? uiCopy('ย่อ','Close') : uiCopy('ค้นหา','Search');
+  if (label) label.textContent = shouldExpand ? uiCopy('ซ่อน','Hide') : uiCopy('แสดง','Show');
+  requestAnimationFrame(() => {
+    syncCountStickyStackMetricsV128();
+    const activeCountInput = document.activeElement?.classList?.contains('cqty')
+      ? document.activeElement
+      : null;
+    if (activeCountInput) scrollCountEntryWithLocation(activeCountInput,{ behavior:'auto' });
+  });
 
   if (!shouldExpand) {
     const active = document.activeElement;
@@ -37815,12 +38081,18 @@ async function loadCCount() {
         <div id="counterSelectedChips" class="counter-selected-chips"></div>
       </div>
     </div>
-      <div class="count-sticky-stack" aria-label="เครื่องมือค้นหาและสรุปผลการนับ">
+      <div class="count-sticky-stack ${countScanPanelHiddenPreference() ? 'is-scan-hidden' : ''}" aria-label="เครื่องมือค้นหาและสรุปผลการนับ">
         ${hardwareLaserCaptureHtml(
           'count_hardware_scan',
           'count-verify',
           uiCopy('ยิง Location, LPN หรือ Item เพื่อค้นหาและเลือกช่องนับ','Scan a Location, LPN or Item to find the count line'),
         )}
+        <button type="button" class="count-scan-restore-button"
+          onclick="setCountScanPanelExpanded(true,{focusSearch:false})"
+          title="${escapeWmsText(uiCopy('แสดงสแกน / ค้นหา SKU / LPN','Show SKU / LPN Scan / Search'))}"
+          aria-label="${escapeWmsText(uiCopy('แสดงส่วนสแกนหรือค้นหา SKU / LPN','Show SKU / LPN scanner and search'))}">
+          ${barcodeScanIconSvg()}<span>${escapeWmsText(uiCopy('แสดงสแกน / ค้นหา','Show Scan / Search'))}</span>
+        </button>
         <div class="count-entry-progress" aria-label="สรุปผลการนับรายการสินค้า">
           <div class="count-entry-progress-item">
             <strong id="countProgressSaved">${window._countEntryResolvedCount}/${countEntryRows.length}</strong><span>งานที่นับแล้ว</span>
@@ -38095,9 +38367,9 @@ function scrollCountEntryWithLocation(target,{ behavior='smooth' }={}) {
   const element = typeof target === 'string' ? Q(target) : target;
   if (!element) return false;
   const card = element.matches?.('.citem-wrap') ? element : element.closest?.('.citem-wrap');
-  if (!card || !isNarrowHandheldTerminal()) {
+  if (!card) {
     element.scrollIntoView?.({ block:'center',behavior });
-    return Boolean(card || element);
+    return true;
   }
   const page = card.closest('.count-handheld-page');
   const main = card.closest('.main-wrapper');
@@ -38110,9 +38382,9 @@ function scrollCountEntryWithLocation(target,{ behavior='smooth' }={}) {
   const mainRect = main.getBoundingClientRect();
   const headerHeight = Math.ceil(header?.getBoundingClientRect().height || 0);
   const stickyHeight = Math.ceil(sticky?.getBoundingClientRect().height || 0);
-  // Calculate from the sticky destination. On the first render the scanner is
-  // still in normal document flow below the page header; using its current
-  // bottom incorrectly keeps scrollTop at zero instead of opening at Location.
+  // Use one Location-first alignment on desktop, tablet, phone and rugged
+  // Handheld. Focusing COUNT must leave the beginning of the Location card
+  // visible below the sticky summary instead of centering only the input.
   const stickyTop = mainRect.top + headerHeight + 4;
   const visibleTop = stickyTop + stickyHeight + 8;
   const delta = card.getBoundingClientRect().top - visibleTop;
@@ -41507,6 +41779,9 @@ function buildWorkTrackerRows({ snapshots=[],details=[],assignments=[],counts=[]
     const latestRound = rounds[2] ? 3 : rounds[1] ? 2 : rounds[0] ? 1 : 0;
     const latest = latestRound ? rounds[latestRound - 1] : null;
     const approval = assignment ? approvalMap[`${assignment.id}|${snapshot.item_id}`] : null;
+    const approvalState = varianceReviewState(approval);
+    const approvalConfirmed = approvalState === 'confirmed';
+    const approvalDraft = approvalState === 'draft';
     const oh = Number(snapshot.onhand_qty || 0);
     const latestQty = latest ? Number(latest.count_qty || 0) : null;
     const itemStatus = computeItemStatus(
@@ -41530,16 +41805,19 @@ function buildWorkTrackerRows({ snapshots=[],details=[],assignments=[],counts=[]
     if (latestRound && itemStatus === 'PENDING') statusKey = 'recount';
     if (latestRound && itemStatus === 'Diff') statusKey = 'variance';
     if (latestRound && itemStatus === 'OK') statusKey = 'completed';
-    if (approval) statusKey = finalVariance === 0 ? 'completed' : (approval.wms_fixed ? 'wms_fixed' : 'approved');
+    if (approvalDraft) statusKey = 'variance';
+    if (approvalConfirmed) statusKey = finalVariance === 0 ? 'completed' : (approval.wms_fixed ? 'wms_fixed' : 'approved');
     let wmsStatus = 'none';
     if (latestRound && itemStatus === 'Diff') wmsStatus = 'pending';
-    if (approval) wmsStatus = finalVariance === 0 ? 'not_required' : (approval.wms_fixed ? 'fixed' : 'unfixed');
+    if (approvalDraft) wmsStatus = finalVariance === 0 ? 'none' : 'pending';
+    if (approvalConfirmed) wmsStatus = finalVariance === 0 ? 'not_required' : (approval.wms_fixed ? 'fixed' : 'unfixed');
     let finalStatusKey = 'not_counted';
     if (latestRound && itemStatus === 'PENDING') finalStatusKey = 'recount';
     if (latestRound && itemStatus === 'OK') finalStatusKey = 'count_match';
     if (latestRound && itemStatus === 'Diff') finalStatusKey = 'supervisor_pending';
-    if (approval && finalVariance === 0) finalStatusKey = approval.wms_fixed ? 'closed_match' : 'supervisor_match';
-    if (approval && finalVariance !== null && finalVariance !== 0) finalStatusKey = approval.wms_fixed ? 'closed_variance' : 'wms_pending';
+    if (approvalDraft) finalStatusKey = 'supervisor_pending';
+    if (approvalConfirmed && finalVariance === 0) finalStatusKey = approval.wms_fixed ? 'closed_match' : 'supervisor_match';
+    if (approvalConfirmed && finalVariance !== null && finalVariance !== 0) finalStatusKey = approval.wms_fixed ? 'closed_variance' : 'wms_pending';
     const supervisorAt = approval?.approved_at || approval?.created_at || '';
     const wmsFixedAt = approval?.wms_fixed_at || '';
     const latestActivityTime = [latest?.counted_at,supervisorAt,wmsFixedAt]
@@ -41561,7 +41839,11 @@ function buildWorkTrackerRows({ snapshots=[],details=[],assignments=[],counts=[]
           : 'match';
     return {
       id:snapshot.id || key,
+      sessionId:snapshot.session_id || assignment?.session_id || '',
+      locationId:snapshot.location_id || assignment?.location_id || '',
+      itemId:snapshot.item_id || '',
       assignmentId:assignment?.id || '',
+      assignmentStatus:assignment?.status || '',
       jobCode:job?.job_code || '',
       location:assignment?.locations?.code || snapshot.locations?.code || '',
       zone:assignment?.locations?.zone || snapshot.locations?.zone || '',
@@ -41591,7 +41873,9 @@ function buildWorkTrackerRows({ snapshots=[],details=[],assignments=[],counts=[]
       varianceType,
       finalStatusKey,
       finalStatusLabel:workTrackerFinalLabel(finalStatusKey),
-      hasApproval:Boolean(approval),
+      hasApproval:approvalConfirmed,
+      hasReviewDraft:approvalDraft,
+      approvalState,
       supervisorQty,
       supervisorVariance,
       supervisorName:approval?._approvedByName || '',
@@ -41765,6 +42049,7 @@ function workTrackerWmsCell(row) {
   </div>`;
 }
 
+const WORK_TRACKER_ACTION_COLUMN_WIDTH = 132;
 const WORK_TRACKER_TABLE_PREF_KEY = 'cycle_count_work_tracker_columns_v1';
 const WORK_TRACKER_COLUMNS = Object.freeze([
   { key:'job',labelTh:'งาน',labelEn:'Job',width:90,min:70 },
@@ -41855,6 +42140,152 @@ function workTrackerGainLostCell(row) {
   return `<span class="work-tracker-gain-lost ${escapeWmsText(key)}">${escapeWmsText(workTrackerGainLostLabel(key))}</span>`;
 }
 
+function workTrackerCanReturnMatchedItem(row) {
+  return ['admin','supervisor'].includes(prof?.role)
+    && Boolean(row?.assignmentId && row?.itemId)
+    && Number(row?.roundCount || 0) > 0
+    && row?.finalVariance !== null
+    && Number(row.finalVariance) === 0
+    && !row?.hasReviewDraft;
+}
+
+function workTrackerActionCellHtml(row) {
+  if (!workTrackerCanReturnMatchedItem(row)) return '<span class="work-tracker-action-empty">—</span>';
+  const assignmentArg = JSON.stringify(String(row.assignmentId || ''));
+  const itemArg = JSON.stringify(String(row.itemId || ''));
+  const locationArg = JSON.stringify(String(row.location || ''));
+  const itemCodeArg = JSON.stringify(String(row.item || ''));
+  return `<button type="button" class="work-tracker-return-sup"
+    onclick='returnMatchedWorkToSupervisor(${assignmentArg},${itemArg},${locationArg},${itemCodeArg},this)'
+    title="${uiCopy('ส่งงานนับตรงกลับให้ SUP ตรวจสอบและยืนยันผลใหม่','Return Matched Work for Supervisor Review')}">
+    ↩ <span>${uiCopy('ส่ง SUP ตรวจใหม่','SUP Review')}</span>
+  </button>`;
+}
+
+async function returnMatchedWorkToSupervisor(assignmentId,itemId,locationCode,itemCode,button) {
+  if (!['admin','supervisor'].includes(prof?.role)) {
+    alert(uiCopy('ฟังก์ชันนี้ใช้ได้เฉพาะ Supervisor / Admin','This action is available only to Supervisors and Administrators.'));
+    return;
+  }
+  const label = [locationCode,itemCode].filter(Boolean).join(' · ') || uiCopy('รายการนี้','This Item');
+  const confirmed = confirm(uiCopy(
+    `ส่ง ${label} กลับให้ SUP ตรวจสอบใหม่?\n\nระบบจะเปิดงานนี้ในหน้ายืนยันผล แต่จะยังไม่ส่งไป WMS จนกว่า SUP จะตรวจและยืนยันอีกครั้ง`,
+    `Return ${label} for Supervisor review?\n\nThe Item will reopen on the confirmation page and will not be sent to WMS until it is reviewed again.`
+  ));
+  if (!confirmed) return;
+
+  const originalButtonHtml = button?.innerHTML || '';
+  if (button) {
+    button.disabled = true;
+    button.innerHTML = `<span>${uiCopy('กำลังส่ง...','Sending...')}</span>`;
+  }
+  try {
+    const assignmentResult = await sb.from('assignments')
+      .select('id,status,session_id,location_id,wms_closed_at,wms_closed_by')
+      .eq('id',assignmentId).maybeSingle();
+    if (assignmentResult.error) throw assignmentResult.error;
+    const assignment = assignmentResult.data;
+    if (!assignment) throw new Error(uiCopy('ไม่พบ Assignment ของรายการนี้','Assignment not found.'));
+
+    const [countResult,snapshotResult,approvalResult] = await Promise.all([
+      sb.from('count_records').select('id,round,count_qty,counted_at')
+        .eq('assignment_id',assignmentId).eq('item_id',itemId)
+        .order('round',{ ascending:false }).order('counted_at',{ ascending:false }).limit(1).maybeSingle(),
+      sb.from('stock_snapshot').select('id,onhand_qty')
+        .eq('session_id',assignment.session_id).eq('location_id',assignment.location_id).eq('item_id',itemId).maybeSingle(),
+      sb.from('variance_approvals')
+        .select('id,assignment_id,item_id,final_qty,variance,resolution,supervisor_note,approved_by,approved_at,review_status,released_to_wms,draft_saved_by,draft_saved_at,updated_at,wms_fixed,wms_fixed_at,wms_fixed_by')
+        .eq('assignment_id',assignmentId).eq('item_id',itemId).maybeSingle(),
+    ]);
+    if (countResult.error || snapshotResult.error || approvalResult.error) {
+      throw (countResult.error || snapshotResult.error || approvalResult.error);
+    }
+    if (!countResult.data || !snapshotResult.data) {
+      throw new Error(uiCopy('ไม่พบยอด Count หรือ OH สำหรับตรวจสอบ','Count or OH data is missing.'));
+    }
+    const finalQty = Number(countResult.data.count_qty);
+    const oh = Number(snapshotResult.data.onhand_qty);
+    if (!Number.isFinite(finalQty) || !Number.isFinite(oh) || finalQty !== oh) {
+      throw new Error(uiCopy(
+        'รายการนี้ไม่ใช่งานนับตรงแล้ว กรุณารีเฟรชหน้าและตรวจสอบสถานะล่าสุด',
+        'This Item no longer matches OH. Refresh the page and check its latest status.'
+      ));
+    }
+
+    const approvalBefore = approvalResult.data || null;
+    if (varianceReviewState(approvalBefore) === 'draft') {
+      S._dashSid = assignment.session_id;
+      rememberDashboardSession(assignment.session_id);
+      go('sv-detail',{ aid:assignmentId });
+      return;
+    }
+    const now = new Date().toISOString();
+    const reopenPayload = {
+      assignment_id:assignmentId,
+      item_id:itemId,
+      final_qty:finalQty,
+      variance:0,
+      resolution:'ok',
+      review_status:'draft',
+      released_to_wms:false,
+      approved_by:null,
+      approved_at:null,
+      draft_saved_by:me.id,
+      draft_saved_at:now,
+      updated_at:now,
+      wms_fixed:false,
+      wms_fixed_at:null,
+      wms_fixed_by:null,
+    };
+    const approvalWrite = await sb.from('variance_approvals')
+      .upsert(reopenPayload,{ onConflict:'assignment_id,item_id' })
+      .select('id,item_id,review_status,released_to_wms,resolution');
+    if (approvalWrite.error) throw approvalWrite.error;
+    if (!approvalWrite.data?.length) throw new Error(uiCopy('เปิดรายการยืนยันผลไม่สำเร็จ','Could not reopen the confirmation Item.'));
+
+    const assignmentWrite = await sb.from('assignments')
+      .update({ status:'round3_done',wms_closed_at:null,wms_closed_by:null })
+      .eq('id',assignmentId)
+      .select('id,status');
+    if (assignmentWrite.error || !assignmentWrite.data?.length) {
+      if (approvalBefore) {
+        const { id,...approvalRollback } = approvalBefore;
+        await sb.from('variance_approvals').update(approvalRollback).eq('id',id);
+      } else {
+        await sb.from('variance_approvals').delete().eq('assignment_id',assignmentId).eq('item_id',itemId);
+      }
+      throw assignmentWrite.error || new Error(uiCopy('เปลี่ยนสถานะ Assignment ไม่สำเร็จ','Could not update the Assignment status.'));
+    }
+
+    try {
+      await logAudit(
+        assignment.session_id,assignment.location_id,itemId,
+        'work_tracker_match_reopened',
+        JSON.stringify({ status:assignment.status,final_qty:finalQty,variance:0 }),
+        JSON.stringify({ status:'round3_done',review_status:'draft',reason:'late_stock_change_review' }),
+        assignmentId,
+      );
+    } catch (auditError) {
+      console.warn('บันทึก Audit การส่งงานนับตรงกลับให้ SUP ไม่สำเร็จ:',auditError?.message || auditError);
+    }
+    invalidateWmsFastCacheV179(assignment.session_id);
+    invalidateDashboardCache();
+    S._dashSid = assignment.session_id;
+    rememberDashboardSession(assignment.session_id);
+    showActionSuccessToast(uiCopy('ส่งกลับให้ SUP ตรวจสอบแล้ว','Returned for Supervisor review.'),{
+      title:uiCopy('เปิดยืนยันผลใหม่สำเร็จ','Confirmation Reopened'),
+    });
+    go('sv-detail',{ aid:assignmentId });
+  } catch (error) {
+    console.error(error);
+    alert(uiCopy('ส่งกลับให้ SUP ตรวจสอบไม่สำเร็จ: ','Could not return the Item for Supervisor review: ') + (error.message || error));
+    if (button) {
+      button.disabled = false;
+      button.innerHTML = originalButtonHtml;
+    }
+  }
+}
+
 function workTrackerColumnCellHtml(key,row) {
   const variance = row.variance;
   const varianceClass = variance > 0 ? 'plus' : variance < 0 ? 'minus' : '';
@@ -41885,11 +42316,17 @@ function applyWorkTrackerColumnWidths() {
   if (!table || !colgroup) return;
   const prefs = workTrackerColumnPrefs();
   const columns = workTrackerOrderedColumns();
-  const totalWidth = columns.reduce((sum,column) => sum + Number(prefs.widths[column.key] || column.width),0);
+  const totalWidth = WORK_TRACKER_ACTION_COLUMN_WIDTH
+    + columns.reduce((sum,column) => sum + Number(prefs.widths[column.key] || column.width),0);
   table.style.width = `${Math.max(totalWidth,720)}px`;
   table.style.minWidth = '100%';
-  [...colgroup.children].forEach((col,index) => {
-    const column = columns[index];
+  [...colgroup.querySelectorAll('col[data-column-key]')].forEach(col => {
+    const key = col.dataset.columnKey || '';
+    if (key === 'action') {
+      col.style.width = `${WORK_TRACKER_ACTION_COLUMN_WIDTH}px`;
+      return;
+    }
+    const column = WORK_TRACKER_COLUMN_BY_KEY[key];
     if (!column) return;
     col.style.width = `${prefs.widths[column.key] || column.width}px`;
   });
@@ -41900,9 +42337,11 @@ function renderWorkTrackerTableStructure() {
   const prefs = workTrackerColumnPrefs();
   const colgroup = Q('tracker-table-colgroup');
   const head = Q('tracker-table-head-row');
-  if (colgroup) colgroup.innerHTML = columns.map(column => `<col data-column-key="${column.key}" style="width:${prefs.widths[column.key] || column.width}px">`).join('');
+  if (colgroup) colgroup.innerHTML = `<col data-column-key="action" style="width:${WORK_TRACKER_ACTION_COLUMN_WIDTH}px">`
+    + columns.map(column => `<col data-column-key="${column.key}" style="width:${prefs.widths[column.key] || column.width}px">`).join('');
   if (head) {
-    head.innerHTML = columns.map(column => `<th data-column-key="${column.key}" draggable="true"
+    head.innerHTML = `<th class="work-tracker-action-head" data-column-key="action"><div class="work-tracker-th-content"><span class="work-tracker-th-label">${uiCopy('ส่งตรวจใหม่','Review Again')}</span></div></th>`
+      + columns.map(column => `<th data-column-key="${column.key}" draggable="true"
       ondragstart="beginWorkTrackerColumnDrag(event,'${column.key}')"
       ondragover="overWorkTrackerColumnDrag(event,'${column.key}','x')"
       ondragleave="leaveWorkTrackerColumnDrag(event)"
@@ -42134,10 +42573,10 @@ function renderWorkTrackerList() {
   const body = Q('tracker-table-body');
   if (body) {
     body.innerHTML = visibleRows.length
-      ? visibleRows.map(row => `<tr>${visibleColumns.map(column =>
+      ? visibleRows.map(row => `<tr><td class="work-tracker-action-cell" data-column-key="action">${workTrackerActionCellHtml(row)}</td>${visibleColumns.map(column =>
           `<td data-column-key="${column.key}">${workTrackerColumnCellHtml(column.key,row)}</td>`
         ).join('')}</tr>`).join('')
-      : `<tr><td colspan="${Math.max(1,visibleColumns.length)}"><div class="work-tracker-empty">${uiCopy('ไม่พบงานที่ตรงกับตัวกรอง','No Work Matches the Selected Filters')}</div></td></tr>`;
+      : `<tr><td colspan="${Math.max(1,visibleColumns.length + 1)}"><div class="work-tracker-empty">${uiCopy('ไม่พบงานที่ตรงกับตัวกรอง','No Work Matches the Selected Filters')}</div></td></tr>`;
   }
   const pagination = Q('tracker-pagination');
   if (pagination) {
@@ -48292,6 +48731,7 @@ async function loadSvDash() {
 
   let wmsRows = [];
   let trackerApprovalRows = [];
+  let workTrackerApprovalRows = [];
   let vaError = null;
   const normalizeVarianceApprovalRow = value => {
     const row = value || {};
@@ -48334,9 +48774,8 @@ async function loadSvDash() {
       // An approval row is the strongest item-level record of the confirmed
       // historical DIFF. Keep it even if a legacy write left Assignment.status
       // at round3_done; discarding it makes the WMS queue silently become zero.
-      trackerApprovalRows = (vaData || [])
+      workTrackerApprovalRows = (vaData || [])
         .map(normalizeVarianceApprovalRow)
-        .filter(row => row.review_status === 'confirmed')
         .map(row => {
           const assignment = asgnInfoMap[row.assignment_id];
           const rounds = sessionCountByAsgn[row.assignment_id]?.[row.item_id] || {};
@@ -48344,6 +48783,8 @@ async function loadSvDash() {
           const oh = locationId ? ohMap[`${locationId}|${row.item_id}`] : undefined;
           return reconcileApprovalWithPhysicalCount(row,rounds,oh,rules);
         });
+      trackerApprovalRows = workTrackerApprovalRows
+        .filter(row => row.review_status === 'confirmed');
       wmsRows = trackerApprovalRows
         .filter(v => v.released_to_wms !== false && Number(v.variance) !== 0)
         .map(v => ({ ...v, _fromVA:true }));
@@ -48355,7 +48796,7 @@ async function loadSvDash() {
 
   const trackerActorIds = [...new Set([
     ...rawCounts.map(record => record.counted_by),
-    ...trackerApprovalRows.flatMap(approval => [approval.approved_by,approval.wms_fixed_by]),
+    ...workTrackerApprovalRows.flatMap(approval => [approval.approved_by,approval.wms_fixed_by,approval.draft_saved_by]),
   ].filter(Boolean))];
   const trackerActorResult = ['tracker','layout'].includes(tab)
     ? await fetchSupabaseRowsByValues(
@@ -48369,7 +48810,7 @@ async function loadSvDash() {
   if (trackerActorResult.error) console.warn('โหลดชื่อผู้ทำรายการสำหรับหน้าติดตามไม่สำเร็จ:',trackerActorResult.error.message);
   const trackerActorMap = Object.fromEntries((trackerActorResult.data || []).map(profile => [profile.id,profile.name]));
   rawCounts.forEach(record => { record._countedByName = trackerActorMap[record.counted_by] || ''; });
-  trackerApprovalRows.forEach(approval => {
+  workTrackerApprovalRows.forEach(approval => {
     approval._approvedByName = trackerActorMap[approval.approved_by] || '';
     approval._wmsFixedByName = trackerActorMap[approval.wms_fixed_by] || '';
   });
@@ -48380,7 +48821,7 @@ async function loadSvDash() {
         details:detailResult.data || [],
         assignments:asgns,
         counts:rawCounts,
-        approvals:trackerApprovalRows,
+        approvals:workTrackerApprovalRows,
         jobs:annualJobsResult.data || [],
         jobItems:annualJobItemsResult.data || [],
         rules,
@@ -49996,24 +50437,65 @@ async function returnWmsForReview(vaId, assignmentId, itemId, button) {
     }
     showWmsFeedback('กำลังส่งรายการกลับให้หัวหน้าตรวจสอบใหม่...');
 
+    // Keep the already-valid resolution untouched. Older return flows created
+    // a new approval with a return/recount resolution that the deployed
+    // variance_approvals_resolution_check does not allow. Reopening the same
+    // row preserves its evidence and only moves the workflow back to draft.
+    const { data:approvalBefore,error:approvalReadError } = await sb.from('variance_approvals')
+      .select('id,assignment_id,item_id,review_status,released_to_wms,approved_by,approved_at,draft_saved_by,draft_saved_at,updated_at,wms_fixed,wms_fixed_at,wms_fixed_by,resolution')
+      .eq('id',vaId)
+      .eq('assignment_id',assignmentId)
+      .maybeSingle();
+    if (approvalReadError) throw approvalReadError;
+    if (!approvalBefore) throw new Error('ไม่พบผลยืนยันที่ต้องการส่งกลับ');
+    if (itemId && String(approvalBefore.item_id || '') !== String(itemId)) {
+      throw new Error('Item ที่ส่งกลับไม่ตรงกับผลยืนยัน กรุณารีเฟรชแล้วลองใหม่');
+    }
+
+    const approvalRollback = {
+      review_status:approvalBefore.review_status,
+      released_to_wms:approvalBefore.released_to_wms,
+      approved_by:approvalBefore.approved_by,
+      approved_at:approvalBefore.approved_at,
+      draft_saved_by:approvalBefore.draft_saved_by,
+      draft_saved_at:approvalBefore.draft_saved_at,
+      updated_at:approvalBefore.updated_at,
+      wms_fixed:approvalBefore.wms_fixed,
+      wms_fixed_at:approvalBefore.wms_fixed_at,
+      wms_fixed_by:approvalBefore.wms_fixed_by,
+    };
+    const now = new Date().toISOString();
+    const reviewUpdates = {
+      review_status:'draft',
+      released_to_wms:false,
+      approved_by:null,
+      approved_at:null,
+      draft_saved_by:me.id,
+      draft_saved_at:now,
+      updated_at:now,
+      wms_fixed:false,
+      wms_fixed_at:null,
+      wms_fixed_by:null,
+    };
+    const { data:returnedRows,error:returnError } = await sb.from('variance_approvals')
+      .update(reviewUpdates)
+      .eq('id',vaId)
+      .eq('assignment_id',assignmentId)
+      .select('id,item_id,review_status,released_to_wms,resolution');
+    if (returnError) throw returnError;
+    if (!returnedRows?.length) throw new Error('ส่งผลยืนยันกลับให้หัวหน้าตรวจสอบไม่สำเร็จ');
+
     const { data: assignmentRows, error: assignmentError } = await sb.from('assignments')
       .update({ status:'round3_done',wms_closed_at:null,wms_closed_by:null })
       .eq('id', assignmentId)
       .select('id,status,wms_closed_at,wms_closed_by');
-    if (assignmentError) throw assignmentError;
-    if (!assignmentRows?.length) throw new Error('อัปเดตสถานะงานไม่สำเร็จ');
-
-    const { data: deletedRows, error: deleteError } = await sb.from('variance_approvals')
-      .delete()
-      .eq('id', vaId)
-      .select('id');
-    if (deleteError || !deletedRows?.length) {
-      await sb.from('assignments').update({
-        status:previousStatus,
-        wms_closed_at:previousWmsClosedAt,
-        wms_closed_by:previousWmsClosedBy,
-      }).eq('id', assignmentId);
-      throw deleteError || new Error('นำรายการออกจากขั้นตอน WMS ไม่สำเร็จ');
+    if (assignmentError || !assignmentRows?.length) {
+      const rollbackResult = await sb.from('variance_approvals')
+        .update(approvalRollback)
+        .eq('id',vaId)
+        .eq('assignment_id',assignmentId);
+      if (rollbackResult.error) console.error('คืนสถานะผลยืนยันหลังส่งกลับไม่สำเร็จ:',rollbackResult.error);
+      throw assignmentError || new Error('อัปเดตสถานะงานไม่สำเร็จ');
     }
 
     if (assignment) {
@@ -50021,6 +50503,7 @@ async function returnWmsForReview(vaId, assignmentId, itemId, button) {
       assignment.wms_closed_at = null;
       assignment.wms_closed_by = null;
     }
+    if (target) Object.assign(target,reviewUpdates);
     window._wmsRows = (window._wmsRows || []).filter(row => row.id !== vaId);
     await logAudit(
       S._dashSid || assignment?.session_id,
@@ -51601,19 +52084,25 @@ async function renderVarianceItemDetail(aid, container, idx, targetItemId='') {
     const currentVariance = latestPhysicalQty === undefined || latestPhysicalQty === null
       ? null
       : Number(latestPhysicalQty) - Number(s.onhand_qty);
+    const approval = approvalByItem.get(it.id) || null;
+    const reviewState = varianceReviewState(approval);
+    const reopenedMatchedItem = Number(currentVariance) === 0
+      && reviewState === 'draft'
+      && approval?.resolution === 'ok';
+    const supervisorConfirmedDiff = Number.isFinite(Number(approval?.variance))
+      && Number(approval.variance) !== 0;
 
     // The supervisor Variance detail is an exception queue. Do not mix items
     // that already match OH into the same panel, even when the Location holds
-    // several items. PENDING items remain visible while their current result
-    // is still different from OH.
-    if (!Number.isFinite(currentVariance) || currentVariance === 0) continue;
+    // several items, except for an exact Item deliberately reopened from Work
+    // Tracking because stock was found or went missing after the original Count.
+    if (!Number.isFinite(currentVariance)
+      || (currentVariance === 0 && !reopenedMatchedItem && !supervisorConfirmedDiff)) continue;
 
     const stKey = computeItemStatus(+s.onhand_qty, r1, r2, r3, rules);
     const st = VS[stKey] || { cls:'tag-gray', lbl:stKey, row:'' };
     const suggested = r3 ?? r2 ?? r1 ?? +s.onhand_qty;
     const alQty = s.al_qty ?? null;
-    const approval = approvalByItem.get(it.id) || null;
-    const reviewState = varianceReviewState(approval);
     const confirmed = reviewState === 'confirmed';
     const reviewFinalQty = approval?.final_qty ?? suggested;
     locationReviewSummary.total += 1;
@@ -51834,6 +52323,13 @@ async function saveVarianceReviewItem(aid,itemId,mode,inlineIndex,status,button)
   if (alertBox) alertBox.innerHTML = '<div class="alert alert-blue">⏳ กำลังบันทึก Item...</div>';
   try {
     await persistVarianceReviewRows(aid,[itemId],status);
+    if (status === 'confirmed') {
+      const state = await loadVarianceLocationReviewState(aid);
+      if (state.requiredItemIds.length > 0 && state.missingItemIds.length === 0) {
+        await finalizeVarianceLocation(aid,mode,inlineIndex,'continue',button);
+        return;
+      }
+    }
     showActionSuccessToast(
       status === 'confirmed' ? 'ยืนยัน Item แล้ว' : 'บันทึกร่าง Item แล้ว',
       { title:status === 'confirmed' ? 'ยืนยันสำเร็จ' : 'บันทึกร่างสำเร็จ' },
@@ -51854,6 +52350,11 @@ async function confirmSelectedVarianceReviewItems(aid,mode,inlineIndex,button) {
   if (alertBox) alertBox.innerHTML = `<div class="alert alert-blue">⏳ กำลังยืนยัน ${itemIds.length.toLocaleString(uiLocale())} Item...</div>`;
   try {
     await persistVarianceReviewRows(aid,itemIds,'confirmed');
+    const state = await loadVarianceLocationReviewState(aid);
+    if (state.requiredItemIds.length > 0 && state.missingItemIds.length === 0) {
+      await finalizeVarianceLocation(aid,mode,inlineIndex,'continue',button);
+      return;
+    }
     showActionSuccessToast(`ยืนยัน ${itemIds.length.toLocaleString(uiLocale())} Item แล้ว`,{ title:'ยืนยันรายการสำเร็จ' });
     if (mode === 'inline') await refreshDashboardData();
     else await refreshVarianceReviewView(aid,mode,inlineIndex);
@@ -51906,7 +52407,7 @@ async function loadVarianceLocationReviewState(aid) {
     sb.from('stock_snapshot').select('item_id,onhand_qty')
       .eq('session_id',assignment.session_id).eq('location_id',assignment.location_id),
     sb.from('count_records').select('item_id,round,count_qty').eq('assignment_id',aid),
-    sb.from('variance_approvals').select('item_id,review_status,approved_at').eq('assignment_id',aid),
+    sb.from('variance_approvals').select('item_id,variance,resolution,review_status,approved_at').eq('assignment_id',aid),
   ]);
   if (snapshotResult.error || countResult.error || approvalResult.error) {
     throw (snapshotResult.error || countResult.error || approvalResult.error);
@@ -51918,10 +52419,18 @@ async function loadVarianceLocationReviewState(aid) {
       latest.set(record.item_id,{ round:Number(record.round) || 0,qty:Number(record.count_qty) });
     }
   });
-  const requiredItemIds = (snapshotResult.data || []).filter(snapshot => {
+  const physicalDiffItemIds = (snapshotResult.data || []).filter(snapshot => {
     const physical = latest.get(snapshot.item_id)?.qty;
     return Number.isFinite(physical) && physical !== Number(snapshot.onhand_qty);
   }).map(snapshot => snapshot.item_id);
+  // A Supervisor-confirmed total is authoritative for a matched Item reopened
+  // from Work Tracking. Keep its stored variance in the same WMS queue used by
+  // a normal physical DIFF, even though the original Count still equals OH.
+  const supervisorDiffItemIds = (approvalResult.data || []).filter(row => {
+    const variance = Number(row.variance);
+    return Number.isFinite(variance) && variance !== 0;
+  }).map(row => row.item_id);
+  const requiredItemIds = [...new Set([...physicalDiffItemIds,...supervisorDiffItemIds])];
   const approvalByItem = new Map((approvalResult.data || []).map(row => [row.item_id,row]));
   const missingItemIds = requiredItemIds.filter(itemId => varianceReviewState(approvalByItem.get(itemId)) !== 'confirmed');
   return { assignment,requiredItemIds,missingItemIds };
@@ -52513,11 +53022,19 @@ async function loadSvDetail() {
     const currentVariance = latestPhysicalQty === undefined || latestPhysicalQty === null
       ? null
       : Number(latestPhysicalQty) - Number(s.onhand_qty);
+    const approval = approvalByItem.get(it.id) || null;
+    const reviewState = varianceReviewState(approval);
+    const reopenedMatchedItem = Number(currentVariance) === 0
+      && reviewState === 'draft'
+      && approval?.resolution === 'ok';
+    const supervisorConfirmedDiff = Number.isFinite(Number(approval?.variance))
+      && Number(approval.variance) !== 0;
 
     // This full review page is opened from an item-level WMS exception. Keep
-    // the Location context, but show only items whose latest Count still
-    // differs from OH. Matching items must not reappear in the review queue.
-    if (!Number.isFinite(currentVariance) || currentVariance === 0) continue;
+    // the Location context and include a matching Item only when Work Tracking
+    // explicitly reopened that exact draft for a late stock-change review.
+    if (!Number.isFinite(currentVariance)
+      || (currentVariance === 0 && !reopenedMatchedItem && !supervisorConfirmedDiff)) continue;
 
     hasVar = true;
     const stKey = computeItemStatus(+s.onhand_qty, r1, r2, r3, rules);
@@ -52525,8 +53042,6 @@ async function loadSvDetail() {
 
     const suggested = r3 ?? r2 ?? r1 ?? +s.onhand_qty;
     const alQty = s.al_qty ?? null;
-    const approval = approvalByItem.get(it.id) || null;
-    const reviewState = varianceReviewState(approval);
     const confirmed = reviewState === 'confirmed';
     const reviewFinalQty = approval?.final_qty ?? suggested;
     reviewSummary.total += 1;
@@ -53493,6 +54008,124 @@ async function releasePreviousAssignmentMode(sessionId,zoneKey,previousMode,runt
   };
 }
 
+async function releaseAssignmentLocationsForMode(sessionId,locationIds,previousMode,runtime=null) {
+  const sid = String(sessionId || '');
+  const requestedLocationIds = new Set((locationIds || []).map(String).filter(Boolean));
+  const mode = previousMode === 'annual' ? 'annual' : 'normal';
+  const liveRuntime = runtime || await assignmentZoneModeRuntime(sid);
+  const activeAnnualItems = mode === 'annual'
+    ? liveRuntime.items.filter(item => {
+        const job = liveRuntime.jobsById.get(String(item.job_id || ''));
+        return requestedLocationIds.has(String(item.location_id || '')) && job && job.status !== 'completed';
+      })
+    : [];
+  const relevantLocationIds = mode === 'annual'
+    ? new Set(activeAnnualItems.map(item => String(item.location_id || '')).filter(Boolean))
+    : requestedLocationIds;
+  // Cross-mode switching must use the latest Assignment rows. Annual JOBs can
+  // be issued after the assignment workspace cache was built, which previously
+  // left the old assignee in the database and made Normal assignment fail as
+  // if another device had just claimed the Location.
+  const assignmentResult = relevantLocationIds.size
+    ? await fetchSupabaseRowsByValues(
+        'assignments',
+        'id,session_id,location_id,assigned_to,status,created_at,assigned_at,expired_at,expired_from',
+        'location_id',
+        [...relevantLocationIds],
+      )
+    : { data:[],error:null };
+  if (assignmentResult.error) throw assignmentResult.error;
+  const assignments = (assignmentResult.data || []).filter(assignment =>
+    String(assignment.session_id || '') === sid
+    && relevantLocationIds.has(String(assignment.location_id || ''))
+    && !assignmentCountingFinished(assignment.status)
+  );
+  const assignmentIds = assignments.map(assignment => assignment.id).filter(Boolean);
+  const [countResult,approvalResult,foundResult] = assignmentIds.length
+    ? await Promise.all([
+        fetchSupabaseRowsByValues('count_records','assignment_id','assignment_id',assignmentIds),
+        fetchSupabaseRowsByValues('variance_approvals','assignment_id','assignment_id',assignmentIds),
+        fetchSupabaseRowsByValues('found_items','assignment_id','assignment_id',assignmentIds),
+      ])
+    : [
+        { data:[],error:null },
+        { data:[],error:null },
+        { data:[],error:null },
+      ];
+  if (countResult.error || approvalResult.error || foundResult.error) {
+    throw (countResult.error || approvalResult.error || foundResult.error);
+  }
+  const evidenceAssignmentIds = new Set([
+    ...(countResult.data || []),
+    ...(approvalResult.data || []),
+    ...(foundResult.data || []),
+  ].map(record => String(record.assignment_id || '')).filter(Boolean));
+  const preservedAssignments = assignments.filter(assignment =>
+    evidenceAssignmentIds.has(String(assignment.id || ''))
+    || String(assignment.status || '') === 'in_progress'
+  );
+  const preservedIds = new Set(preservedAssignments.map(assignment => String(assignment.id || '')));
+  const deletableAssignmentIds = assignments
+    .filter(assignment => !preservedIds.has(String(assignment.id || '')))
+    .map(assignment => assignment.id)
+    .filter(Boolean);
+  const now = new Date().toISOString();
+  const preservedByPreviousUser = new Map();
+  preservedAssignments.forEach(assignment => {
+    const previousUser = String(assignment.assigned_to || assignment.expired_from || '');
+    const ids = preservedByPreviousUser.get(previousUser) || [];
+    ids.push(assignment.id);
+    preservedByPreviousUser.set(previousUser,ids);
+  });
+  const batchSize = 200;
+  for (const [previousUser,ids] of preservedByPreviousUser.entries()) {
+    for (let start=0; start<ids.length; start+=batchSize) {
+      const { error } = await sb.from('assignments').update({
+        assigned_to:null,
+        assigned_at:null,
+        expired_at:now,
+        expired_from:previousUser || null,
+      }).in('id',ids.slice(start,start+batchSize));
+      if (error) throw error;
+    }
+  }
+  for (let start=0; start<deletableAssignmentIds.length; start+=batchSize) {
+    const { error } = await sb.from('assignments').delete().in('id',deletableAssignmentIds.slice(start,start+batchSize));
+    if (error) throw error;
+  }
+
+  let removedJobItems = 0;
+  let removedJobs = 0;
+  if (mode === 'annual' && activeAnnualItems.length) {
+    const removableItemIds = activeAnnualItems.map(item => item.id).filter(Boolean);
+    const removableItemIdSet = new Set(removableItemIds.map(String));
+    const affectedJobIds = new Set(activeAnnualItems.map(item => String(item.job_id || '')).filter(Boolean));
+    const remainingJobIds = new Set(liveRuntime.items
+      .filter(item => !removableItemIdSet.has(String(item.id || '')))
+      .map(item => String(item.job_id || ''))
+      .filter(Boolean));
+    const emptyJobIds = [...affectedJobIds].filter(jobId => !remainingJobIds.has(jobId));
+    for (let start=0; start<removableItemIds.length; start+=batchSize) {
+      const { error } = await sb.from('annual_count_job_items').delete().in('id',removableItemIds.slice(start,start+batchSize));
+      if (error) throw error;
+    }
+    for (let start=0; start<emptyJobIds.length; start+=batchSize) {
+      const { error } = await sb.from('annual_count_jobs').delete().in('id',emptyJobIds.slice(start,start+batchSize));
+      if (error) throw error;
+    }
+    removedJobItems = removableItemIds.length;
+    removedJobs = emptyJobIds.length;
+  }
+  return {
+    affectedLocations:relevantLocationIds.size,
+    releasedAssignments:assignments.length,
+    preservedAssignments:preservedAssignments.length,
+    deletedAssignments:deletableAssignmentIds.length,
+    removedJobItems,
+    removedJobs,
+  };
+}
+
 async function cancelAnnualZoneAndUseNormal(zoneKey) {
   const sid = selectedAssignSessionConfig().sessionId;
   const alertBox = Q('assignment-zone-mode-alert');
@@ -53790,13 +54423,17 @@ function annualAssignmentWorkspaceHtml(userOptionsHtml) {
     <div class="annual-generate-grid">
       <article class="annual-control-card">
         <h3>1 · สร้าง JOB</h3>
-        <p>สร้างเฉพาะ Zone ที่ตั้งเป็น Annual JOB · แยก JOB ภายในแต่ละ Zone และไม่รวมงานแบบปกติ</p>
+        <p>สร้างจากงานที่ยังไม่เสร็จทุก Zone · แยก JOB ภายในแต่ละ Zone และเก็บ JOB ที่นับเสร็จแล้วไว้เป็นประวัติ</p>
         <div class="grid-2">
           <div class="fg"><label>รายการต่อ JOB</label><input id="annual-build-size" type="number" min="1" max="200" value="20"></div>
           <div class="fg"><label>คำนำหน้า JOB</label><input id="annual-build-prefix" maxlength="20" value="JOB"></div>
         </div>
-        <button class="btn btn-blue" id="annual-generate-btn" type="button" style="width:100%"
-          onclick="generateAnnualJobs()">สร้าง JOB</button>
+        <div style="display:flex;flex-wrap:wrap;gap:9px">
+          <button class="btn btn-blue" id="annual-generate-btn" type="button" style="flex:1 1 220px"
+            onclick="generateAnnualJobs()">สร้าง JOB</button>
+          <button class="btn btn-amber" id="annual-cancel-unfinished-btn" type="button" style="flex:1 1 220px"
+            onclick="cancelUnfinishedAnnualJobs()">ยกเลิก JOB ที่ยังไม่เสร็จ</button>
+        </div>
         <div id="annual-generate-alert"></div>
       </article>
       <article class="annual-control-card">
@@ -53970,7 +54607,7 @@ async function renderManageAssign(container) {
             </span>
             <div class="assign-stat-copy">
               <strong id="assign-stat-total">—</strong>
-              <span id="assign-stat-total-label">จำนวนงานทั้งหมด</span>
+              <span id="assign-stat-total-label">จำนวน Location ทั้งหมด</span>
             </div>
           </div>
           <div class="assign-hero-stat is-assigned">
@@ -53983,7 +54620,7 @@ async function renderManageAssign(container) {
             </span>
             <div class="assign-stat-copy">
               <strong id="assign-stat-assigned">—</strong>
-              <span id="assign-stat-assigned-label">จ่ายแล้ว</span>
+              <span id="assign-stat-assigned-label">มอบหมายแล้ว</span>
             </div>
           </div>
           <div class="assign-hero-stat is-expired">
@@ -54004,13 +54641,27 @@ async function renderManageAssign(container) {
             </span>
             <div class="assign-stat-copy">
               <strong id="assign-stat-remaining">—</strong>
-              <span id="assign-stat-remaining-label">คงเหลือ</span>
+              <span id="assign-stat-remaining-label">ยังไม่มอบหมาย</span>
+            </div>
+          </div>
+          <div class="assign-hero-stat is-normal-mode">
+            <span class="assign-stat-icon" aria-hidden="true">📍</span>
+            <div class="assign-stat-copy">
+              <strong id="assign-stat-normal">—</strong>
+              <span>แบบปกติ · Location</span>
+            </div>
+          </div>
+          <div class="assign-hero-stat is-annual-mode">
+            <span class="assign-stat-icon" aria-hidden="true">📦</span>
+            <div class="assign-stat-copy">
+              <strong id="assign-stat-annual">—</strong>
+              <span>Annual JOB</span>
             </div>
           </div>
         </div>
         <div class="assign-hero-progress">
           <div class="assign-hero-progress-head">
-            <span id="assign-progress-title">ความคืบหน้าการจ่าย Location</span>
+            <span id="assign-progress-title">ความคืบหน้าการมอบหมายงานรวม</span>
             <strong id="assign-progress-label">0%</strong>
           </div>
           <div class="assign-hero-progress-track" role="progressbar" aria-label="ความคืบหน้าการจ่ายงาน" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
@@ -54073,6 +54724,8 @@ async function renderManageAssign(container) {
               onclick="reassignExpiredAssignments()" hidden disabled>จ่ายงานหมดเวลา</button>
             <button class="btn btn-ghost" id="normal-free-reassign-mode-btn" type="button"
               onclick="setNormalFreeReassignMode()">โหมดจ่ายซ้ำ</button>
+            <button class="btn btn-amber" id="normal-cancel-unfinished-btn" type="button"
+              onclick="cancelUnfinishedNormalAssignments()">ยกเลิกงานที่ยังไม่เสร็จ</button>
             <button class="btn btn-blue" id="normal-free-print-btn" type="button"
               onclick="printSelectedNormalRoundOneLocations()" disabled>🖨️ พิมพ์งานที่เลือก</button>
             <button class="btn btn-green" id="normal-free-assign-btn" type="button"
@@ -54303,7 +54956,7 @@ function setAssignmentSessionReady(ready) {
     ohStatus.textContent = 'เลือก Session ก่อน';
     ohStatus.className = 'tag tag-gray';
   }
-  ['assign-stat-total','assign-stat-assigned','assign-stat-expired','assign-stat-remaining'].forEach(id => {
+  ['assign-stat-total','assign-stat-assigned','assign-stat-expired','assign-stat-remaining','assign-stat-normal','assign-stat-annual'].forEach(id => {
     const node = Q(id);
     if (node) node.textContent = '—';
   });
@@ -54376,10 +55029,10 @@ function syncAssignWorkspaceMode(preferredMode) {
     annualButton.classList.toggle('active',annual);
     annualButton.setAttribute('aria-selected',String(annual));
   }
-  if (totalLabel) totalLabel.textContent = annual ? 'จำนวน ITEM ทั้งหมด' : 'จำนวนงานทั้งหมด';
-  if (assignedLabel) assignedLabel.textContent = annual ? 'JOB ที่จ่ายแล้ว' : 'จ่ายแล้ว';
-  if (remainingLabel) remainingLabel.textContent = annual ? 'JOB คงเหลือ' : 'คงเหลือ';
-  if (progressTitle) progressTitle.textContent = annual ? 'ความคืบหน้าการจ่าย Annual JOB' : 'ความคืบหน้าการจ่าย Location';
+  if (totalLabel) totalLabel.textContent = 'จำนวน Location ทั้งหมด';
+  if (assignedLabel) assignedLabel.textContent = 'มอบหมายแล้ว';
+  if (remainingLabel) remainingLabel.textContent = 'ยังไม่มอบหมาย';
+  if (progressTitle) progressTitle.textContent = 'ความคืบหน้าการมอบหมายงานรวม';
   if (roundBadge) roundBadge.textContent = annual ? 'ROUND 1 · ANNUAL JOB' : 'ROUND 1 · NORMAL';
   if (badge) {
     badge.textContent = 'ROUND 1 เลือกได้ 2 แบบ';
@@ -54446,17 +55099,136 @@ function setRound1AssignMode(mode, options={}) {
   return synced;
 }
 
+function cacheAnnualAssignmentJobsByLocation(jobs=[],items=[]) {
+  const activeAssignedJobs = new Map((jobs || [])
+    .filter(job => job && job.status !== 'completed' && Boolean(job.assigned_to))
+    .map(job => [String(job.id || ''),job]));
+  const byLocation = new Map();
+  (items || []).forEach(item => {
+    const locationId = String(item?.location_id || '');
+    const job = activeAssignedJobs.get(String(item?.job_id || ''));
+    if (!locationId || !job || byLocation.has(locationId)) return;
+    byLocation.set(locationId,{
+      id:job.id,
+      code:String(job.job_code || (job.job_no ? `JOB-${String(job.job_no).padStart(4,'0')}` : 'Annual JOB')),
+    });
+  });
+  window._annualAssignmentJobByLocation = byLocation;
+  return byLocation;
+}
+
+function calculateCombinedAssignmentStats(sessionId,workspace={},jobs=[],items=[]) {
+  const sid = String(sessionId || '');
+  const locationIds = new Set((workspace.snapshots || [])
+    .map(row => String(row.location_id || row.locations?.id || ''))
+    .filter(Boolean));
+  const jobsById = new Map((jobs || []).map(job => [String(job.id || ''),job]));
+  const jobIdsWithItems = new Set((items || []).map(item => String(item.job_id || '')).filter(Boolean));
+  const annualAssignedJobs = (jobs || []).filter(job =>
+    Boolean(job.assigned_to) && jobIdsWithItems.has(String(job.id || ''))
+  );
+  const annualAssignedJobIds = new Set(annualAssignedJobs.map(job => String(job.id || '')));
+  const annualExpiredJobIds = new Set((jobs || [])
+    .filter(job => job.status !== 'completed' && !job.assigned_to && Boolean(job.expired_at))
+    .map(job => String(job.id || '')));
+  const annualAssignedLocationIds = new Set();
+  const annualExpiredLocationIds = new Set();
+  (items || []).forEach(item => {
+    const locationId = String(item.location_id || '');
+    const jobId = String(item.job_id || '');
+    if (!locationId || !jobsById.has(jobId)) return;
+    if (annualAssignedJobIds.has(jobId)) annualAssignedLocationIds.add(locationId);
+    if (annualExpiredJobIds.has(jobId)) annualExpiredLocationIds.add(locationId);
+  });
+
+  const latestAssignments = annualLatestAssignmentsByLocation(
+    (workspace.assignments || []).filter(row => !sid || String(row.session_id || '') === sid)
+  );
+  const assignedLocationIds = new Set(annualAssignedLocationIds);
+  const normalAssignedLocationIds = new Set();
+  const expiredLocationIds = new Set(annualExpiredLocationIds);
+  latestAssignments.forEach((assignment,locationId) => {
+    const id = String(locationId || '');
+    if (!id || !locationIds.has(id)) return;
+    if (assignment?.assigned_to) {
+      assignedLocationIds.add(id);
+      if (!annualAssignedLocationIds.has(id)) normalAssignedLocationIds.add(id);
+      return;
+    }
+    if (assignment?.expired_at && !assignmentCountingFinished(assignment.status)) {
+      expiredLocationIds.add(id);
+    }
+  });
+  assignedLocationIds.forEach(id => expiredLocationIds.delete(id));
+  const totalLocations = locationIds.size;
+  const assignedLocations = [...assignedLocationIds].filter(id => locationIds.has(id)).length;
+  const expiredLocations = [...expiredLocationIds].filter(id => locationIds.has(id)).length;
+  return {
+    sessionId:sid,
+    totalLocations,
+    assignedLocations,
+    expiredLocations,
+    remainingLocations:Math.max(0,totalLocations-assignedLocations-expiredLocations),
+    normalAssignedLocations:normalAssignedLocationIds.size,
+    annualAssignedJobs:annualAssignedJobs.length,
+  };
+}
+
+function applyCombinedAssignmentStats(stats) {
+  window._combinedAssignmentStats = stats || null;
+  updateAssignWorkspaceStats(0,0,0);
+}
+
+async function refreshCombinedAssignmentStats(sessionId,workspace=null) {
+  const sid = String(sessionId || '');
+  if (!sid) return null;
+  const [workspaceResult,jobsResult,itemsResult] = await Promise.all([
+    workspace
+      ? Promise.resolve({ data:workspace,error:null })
+      : loadAssignmentWorkspaceData(sid)
+          .then(data => ({ data,error:null }))
+          .catch(error => ({ data:null,error })),
+    fetchPagedSupabaseRows(
+      'annual_count_jobs','id,session_id,job_no,job_code,assigned_to,status,expired_at',
+      query => query.eq('session_id',sid),
+    ),
+    fetchPagedSupabaseRows(
+      'annual_count_job_items','job_id,session_id,location_id',
+      query => query.eq('session_id',sid),
+    ),
+  ]);
+  if (workspaceResult.error || jobsResult.error || itemsResult.error) {
+    throw (workspaceResult.error || jobsResult.error || itemsResult.error);
+  }
+  if (selectedAssignSessionConfig().sessionId !== sid) return null;
+  cacheAnnualAssignmentJobsByLocation(jobsResult.data || [],itemsResult.data || []);
+  const stats = calculateCombinedAssignmentStats(
+    sid,workspaceResult.data || {},jobsResult.data || [],itemsResult.data || [],
+  );
+  applyCombinedAssignmentStats(stats);
+  return stats;
+}
+
 function updateAssignWorkspaceStats(total, assigned, remaining) {
+  const combined = window._combinedAssignmentStats;
+  const currentSessionId = String(selectedAssignSessionConfig().sessionId || '');
+  if (combined && String(combined.sessionId || '') === currentSessionId) {
+    total = combined.totalLocations;
+    assigned = combined.assignedLocations;
+    remaining = combined.remainingLocations;
+  }
   const totalEl = Q('assign-stat-total');
   const assignedEl = Q('assign-stat-assigned');
   const remainingEl = Q('assign-stat-remaining');
+  const normalEl = Q('assign-stat-normal');
+  const annualEl = Q('assign-stat-annual');
+  const expiredEl = Q('assign-stat-expired');
   const progressLabel = Q('assign-progress-label');
   const progressFill = Q('assign-progress-fill');
   const progressTrack = progressFill?.closest('.assign-hero-progress-track');
   const assignShell = document.querySelector('.assign-bento-shell');
   const progressTitle = Q('assign-progress-title');
-  const annual = currentRound1AssignMode() === 'annual';
-  const progressTotal = annual ? Number(_annualWorkspaceActiveJobIds.size || 0) : Number(total || 0);
+  const progressTotal = Number(total || 0);
   const progressValue = progressTotal > 0
     ? Math.max(0,Math.min(100,(Number(assigned || 0) / progressTotal) * 100))
     : 0;
@@ -54464,11 +55236,14 @@ function updateAssignWorkspaceStats(total, assigned, remaining) {
   if (totalEl) totalEl.textContent = Number(total || 0).toLocaleString(uiLocale());
   if (assignedEl) assignedEl.textContent = Number(assigned || 0).toLocaleString(uiLocale());
   if (remainingEl) remainingEl.textContent = Number(remaining || 0).toLocaleString(uiLocale());
+  if (normalEl) normalEl.textContent = Number(combined?.normalAssignedLocations || 0).toLocaleString(uiLocale());
+  if (annualEl) annualEl.textContent = Number(combined?.annualAssignedJobs || 0).toLocaleString(uiLocale());
+  if (expiredEl && combined) expiredEl.textContent = Number(combined.expiredLocations || 0).toLocaleString(uiLocale());
   if (progressLabel) progressLabel.textContent = progressText;
   if (progressFill) progressFill.style.width = `${progressValue}%`;
   if (progressTrack) progressTrack.setAttribute('aria-valuenow',String(Math.round(progressValue)));
   if (assignShell) assignShell.style.setProperty('--assign-progress',`${progressValue}%`);
-  if (progressTitle) progressTitle.textContent = 'จ่ายแล้ว';
+  if (progressTitle) progressTitle.textContent = 'ความคืบหน้าการมอบหมายงานรวม';
 }
 
 function updateExpiredAssignmentIndicators(expiredCount) {
@@ -54479,7 +55254,13 @@ function updateExpiredAssignmentIndicators(expiredCount) {
   const workflowButton = Q('assign-expired-workflow');
   const inlineSummary = Q('expired-work-queue');
   const formatted = count.toLocaleString(uiLocale());
-  if (expiredStat) expiredStat.textContent = formatted;
+  if (expiredStat) {
+    const combined = window._combinedAssignmentStats;
+    const currentSessionId = String(selectedAssignSessionConfig().sessionId || '');
+    expiredStat.textContent = combined && String(combined.sessionId || '') === currentSessionId
+      ? Number(combined.expiredLocations || 0).toLocaleString(uiLocale())
+      : formatted;
+  }
   if (expiredBadge) expiredBadge.textContent = formatted;
   if (workflowBadge) workflowBadge.textContent = formatted;
   if (workflowButton) {
@@ -54492,8 +55273,10 @@ function updateExpiredAssignmentIndicators(expiredCount) {
 async function handleAssignSessionChange() {
   closeExpiredAssignmentPrompt();
   updateAssignSessionHeading();
+  window._combinedAssignmentStats = null;
   updateAssignWorkspaceStats(0,0,0);
   window._bulkAssignments = [];
+  window._annualAssignmentJobByLocation = new Map();
   window._expiredAssignments = [];
   renderExpiredAssignmentQueue();
   syncNormalRoundOnePrintButton();
@@ -54566,23 +55349,10 @@ function annualUnfinishedSnapshotRows(snapshots=[],assignments=[]) {
 }
 
 function annualConfiguredSnapshotRows(snapshots=[],assignments=[],sessionId='',reservedLocationIds=new Set()) {
-  const sid = String(sessionId || '');
-  const reserved = reservedLocationIds instanceof Set
-    ? reservedLocationIds
-    : new Set(reservedLocationIds || []);
-  const latestAssignments = annualLatestAssignmentsByLocation(assignments);
-  return annualUnfinishedSnapshotRows(snapshots,assignments).filter(snapshot => {
-    if (!assignmentLocationMatchesMode(sid,snapshot?.locations || {},'annual')) return false;
-    const locationId = String(snapshot?.location_id || '');
-    const assignment = latestAssignments.get(locationId);
-    // An unassigned/expired Assignment is intentionally reusable when a Zone
-    // switches from normal work to Annual JOB. Only work that is still owned
-    // by a user must block Annual generation; Count history remains attached
-    // to the same Assignment and is restored when the new JOB is assigned.
-    if (assignment && !assignmentCountingFinished(assignment.status)
-      && assignment.assigned_to && !reserved.has(locationId)) return false;
-    return true;
-  });
+  // Both assignment views must expose the same unfinished operational scope.
+  // Existing Normal assignments are allowed into the Annual preview; the
+  // cross-mode confirmation is handled only when the JOB is actually issued.
+  return annualUnfinishedSnapshotRows(snapshots,assignments);
 }
 
 async function annualUnfinishedJobItemRows(rows=[],sessionId='') {
@@ -54602,14 +55372,15 @@ async function annualUnfinishedJobItemRows(rows=[],sessionId='') {
   );
   return (rows || []).filter(row => {
     if (completedLocationIds.has(String(row.location_id || ''))) return false;
-    if (row.locations && sessionId && !assignmentLocationMatchesMode(sessionId,row.locations,'annual')) return false;
     return true;
   });
 }
 
 let _annualWorkspaceJobs = [];
 let _annualWorkspaceItemCounts = {};
+let _annualWorkspaceTotalItemCounts = {};
 let _annualWorkspaceActiveJobIds = new Set();
+window._annualAssignmentJobByLocation = new Map();
 let _normalFreeSelectedLocationIds = new Set();
 let _normalFreeSelectedPrintLocationIds = new Set();
 let _normalFreeSelectedReassignLocationIds = new Set();
@@ -54678,17 +55449,20 @@ async function loadAnnualJobWorkspace() {
     const syncAlert = Q('annual-generate-alert');
     if (syncAlert) syncAlert.innerHTML = `<div class="alert alert-amber" style="margin-top:12px">⚠️ โหลด JOB เดิมได้ แต่ซิงก์งาน Import ใหม่ไม่สำเร็จ: ${escapeWmsText(syncError.message || syncError)}</div>`;
   }
+  applyCombinedAssignmentStats(calculateCombinedAssignmentStats(
+    config.sessionId,workspace,annualJobs,annualItems,
+  ));
+  cacheAnnualAssignmentJobsByLocation(annualJobs,annualItems);
   _annualWorkspaceJobs = annualJobs;
   _annualWorkspaceItemCounts = {};
+  _annualWorkspaceTotalItemCounts = {};
+  annualItems.forEach(row => {
+    _annualWorkspaceTotalItemCounts[row.job_id] = (_annualWorkspaceTotalItemCounts[row.job_id] || 0) + 1;
+  });
   const completedLocationIds = annualCompletedLocationIds(workspace.assignments || []);
   const reservedAnnualLocationIds = new Set(annualItems.map(row => String(row.location_id || '')).filter(Boolean));
   const unfinishedJobItems = annualItems.filter(row =>
     !completedLocationIds.has(String(row.location_id || ''))
-    && assignmentLocationMatchesMode(
-      config.sessionId,
-      workspace.locationById?.get(row.location_id) || {},
-      'annual',
-    )
   );
   unfinishedJobItems.forEach(row => {
     _annualWorkspaceItemCounts[row.job_id] = (_annualWorkspaceItemCounts[row.job_id] || 0) + 1;
@@ -54706,7 +55480,10 @@ async function loadAnnualJobWorkspace() {
   const expiredJobs = activeJobs.filter(job => !job.assigned_to && Boolean(job.expired_at)).length;
   const unassignedJobs = activeJobs.filter(job => !job.assigned_to && !job.expired_at).length;
   if (Q('annual-stat-items')) Q('annual-stat-items').textContent = totalItems.toLocaleString(uiLocale());
-  if (Q('annual-stat-jobs')) Q('annual-stat-jobs').textContent = activeJobs.length.toLocaleString(uiLocale());
+  const jobsWithItems = _annualWorkspaceJobs.filter(job =>
+    Number(_annualWorkspaceTotalItemCounts[job.id] || 0) > 0
+  );
+  if (Q('annual-stat-jobs')) Q('annual-stat-jobs').textContent = jobsWithItems.length.toLocaleString(uiLocale());
   if (Q('annual-stat-assigned')) Q('annual-stat-assigned').textContent = assignedJobs.toLocaleString(uiLocale());
   updateAssignWorkspaceStats(totalItems,assignedJobs,unassignedJobs);
   updateExpiredAssignmentIndicators(expiredJobs);
@@ -54720,18 +55497,21 @@ function renderAnnualJobList() {
     [...document.querySelectorAll('.annual-job-checkbox:checked')].map(input => input.value)
   );
   const filter = Q('annual-job-filter')?.value || 'all';
-  const activeJobs = (_annualWorkspaceJobs || []).filter(job => _annualWorkspaceActiveJobIds.has(job.id));
-  const jobs = activeJobs.filter(job => {
-    if (filter === 'unassigned') return !job.assigned_to && !job.expired_at;
-    if (filter === 'expired') return !job.assigned_to && Boolean(job.expired_at);
+  const jobsWithItems = (_annualWorkspaceJobs || []).filter(job =>
+    Number(_annualWorkspaceTotalItemCounts[job.id] || 0) > 0
+  );
+  const jobs = jobsWithItems.filter(job => {
+    if (filter === 'completed') return job.status === 'completed';
+    if (filter === 'unassigned') return job.status !== 'completed' && !job.assigned_to && !job.expired_at;
+    if (filter === 'expired') return job.status !== 'completed' && !job.assigned_to && Boolean(job.expired_at);
     if (filter === 'assigned') return Boolean(job.assigned_to);
-    if (['pending','in_progress','completed'].includes(filter)) {
+    if (['pending','in_progress'].includes(filter)) {
       return Boolean(job.assigned_to) && job.status === filter;
     }
     return true;
   });
   if (!jobs.length) {
-    list.innerHTML = `<div class="annual-empty">${activeJobs.length ? 'ไม่มี JOB ในสถานะที่เลือก' : (_annualWorkspaceJobs.length ? 'ไม่มี JOB ที่ยังไม่เสร็จ' : 'ยังไม่มี JOB · กด “สร้าง / แบ่ง Annual JOB” ก่อน')}</div>`;
+    list.innerHTML = `<div class="annual-empty">${jobsWithItems.length ? 'ไม่มี JOB ในสถานะที่เลือก' : (_annualWorkspaceJobs.length ? 'ไม่มีรายการภายใน JOB' : 'ยังไม่มี JOB · กด “สร้าง / แบ่ง Annual JOB” ก่อน')}</div>`;
     syncAnnualJobSelection();
     return;
   }
@@ -54741,17 +55521,20 @@ function renderAnnualJobList() {
     completed:{ cls:'tag-green',label:'เสร็จแล้ว' },
   };
   list.innerHTML = jobs.map(job => {
-    const expired = !job.assigned_to && Boolean(job.expired_at);
-    const status = expired
+    const completed = job.status === 'completed';
+    const expired = !completed && !job.assigned_to && Boolean(job.expired_at);
+    const status = completed
+      ? statusInfo.completed
+      : expired
       ? { cls:'tag-amber',label:'หมดเวลา · รอจ่ายใหม่' }
       : (statusInfo[job.status] || statusInfo.pending);
-    const checked = selectedIds.has(job.id) ? 'checked' : '';
+    const checked = !completed && selectedIds.has(job.id) ? 'checked' : '';
     return `<div class="annual-job-row ${expired ? 'is-expired' : ''}">
-      <input class="annual-job-checkbox" type="checkbox" value="${job.id}" ${checked}
+      <input class="annual-job-checkbox" type="checkbox" value="${job.id}" ${checked} ${completed ? 'disabled' : ''}
         onchange="syncAnnualJobSelection()" aria-label="เลือก ${escapeWmsText(job.job_code)}">
       <div>
         <div class="annual-job-code">${escapeWmsText(job.job_code)}</div>
-        <div class="annual-job-meta">${Number(_annualWorkspaceItemCounts[job.id] || 0)} รายการ Location + ITEM</div>
+        <div class="annual-job-meta">${Number(completed ? _annualWorkspaceTotalItemCounts[job.id] : _annualWorkspaceItemCounts[job.id] || 0)} รายการ Location + ITEM</div>
       </div>
       <div class="annual-job-user">${job.profiles?.name
         ? `👤 ${escapeWmsText(job.profiles.name)}`
@@ -54792,7 +55575,7 @@ async function openAnnualJobDetails(jobId) {
   };
   backdrop.innerHTML = `<section class="assignment-success-modal annual-job-detail-modal" role="dialog" aria-modal="true" aria-labelledby="annual-job-detail-title">
     <header class="annual-job-detail-header">
-      <div><h2 id="annual-job-detail-title">${escapeWmsText(job.job_code || 'Annual JOB')}</h2><p>รายการ Location และ Item ที่ยังไม่เสร็จใน JOB นี้</p></div>
+      <div><h2 id="annual-job-detail-title">${escapeWmsText(job.job_code || 'Annual JOB')}</h2><p>รายการ Location และ Item ภายใน JOB นี้</p></div>
       <button class="annual-job-detail-close" type="button" onclick="closeAnnualJobDetails()" aria-label="ปิด">×</button>
     </header>
     <div class="annual-job-detail-body" id="annual-job-detail-body"><div class="annual-empty">⏳ กำลังโหลดรายละเอียด JOB...</div></div>
@@ -54807,7 +55590,9 @@ async function openAnnualJobDetails(jobId) {
       query => query.eq('job_id',jobId).order('sort_order'),
     );
     if (itemResult.error) throw itemResult.error;
-    const unfinishedRows = await annualUnfinishedJobItemRows(itemResult.data || [],job.session_id);
+    const unfinishedRows = job.status === 'completed'
+      ? (itemResult.data || [])
+      : await annualUnfinishedJobItemRows(itemResult.data || [],job.session_id);
     const currentBackdrop = Q('annual-job-detail-backdrop');
     const body = Q('annual-job-detail-body');
     if (!currentBackdrop || currentBackdrop.dataset.jobId !== jobId || !body) return;
@@ -54822,7 +55607,7 @@ async function openAnnualJobDetails(jobId) {
     const itemCount = unfinishedRows.length;
     body.innerHTML = `<div class="annual-job-detail-summary">
       <div><span>JOB</span><strong>${escapeWmsText(job.job_code || '—')}</strong></div>
-      <div><span>Location ที่ยังไม่เสร็จ</span><strong>${locationCodes.length.toLocaleString(uiLocale())}</strong></div>
+      <div><span>Location</span><strong>${locationCodes.length.toLocaleString(uiLocale())}</strong></div>
       <div><span>Location + Item</span><strong>${itemCount.toLocaleString(uiLocale())}</strong></div>
     </div>
     ${locationCodes.length ? locationCodes.map(code => {
@@ -54837,7 +55622,7 @@ async function openAnnualJobDetails(jobId) {
           <span>${escapeWmsText(row.items?.description || 'ไม่ระบุ Description')}</span>
         </div>`).join('')}
       </section>`;
-    }).join('') : '<div class="annual-empty">JOB นี้ไม่มี Location ที่ยังไม่เสร็จ</div>'}`;
+    }).join('') : '<div class="annual-empty">JOB นี้ไม่มีรายการ Location</div>'}`;
   } catch (error) {
     const currentBackdrop = Q('annual-job-detail-backdrop');
     const body = Q('annual-job-detail-body');
@@ -54866,7 +55651,10 @@ function syncAnnualJobSelection() {
 function selectAnnualJobs(mode) {
   document.querySelectorAll('.annual-job-checkbox').forEach(input => {
     const job = _annualWorkspaceJobs.find(row => row.id === input.value);
-    input.checked = mode === 'all' || (mode === 'unassigned' && !job?.assigned_to && !job?.expired_at);
+    input.checked = !input.disabled && (
+      mode === 'all'
+      || (mode === 'unassigned' && job?.status !== 'completed' && !job?.assigned_to && !job?.expired_at)
+    );
   });
   syncAnnualJobSelection();
 }
@@ -54922,14 +55710,9 @@ async function syncImportedAnnualSnapshotsIntoPendingJobs({
 }={}) {
   const sid = String(sessionId || '');
   if (!sid) return { addedItems:0,createdJobs:0,deferredItems:0,jobs:[],items:[] };
-  if (requireExistingJobs && !(jobs || []).length) {
+  if (requireExistingJobs && !(jobs || []).some(job => job.status !== 'completed')) {
     return { addedItems:0,createdJobs:0,deferredItems:0,jobs:[],items:[] };
   }
-  const sessionModes = _assignmentZoneModeConfig?.sessions?.[sid]?.modes || {};
-  if (!Object.values(sessionModes).some(mode => mode === 'annual')) {
-    return { addedItems:0,createdJobs:0,deferredItems:0,jobs:[],items:[] };
-  }
-
   const jobsById = new Map((jobs || []).map(job => [String(job.id || ''),job]));
   const activeJobsByLocation = new Map();
   (items || []).forEach(item => {
@@ -54940,9 +55723,7 @@ async function syncImportedAnnualSnapshotsIntoPendingJobs({
     activeJobsByLocation.get(locationId).set(String(job.id),job);
   });
   const existingKeys = new Set((items || []).map(annualSnapshotWorkKey));
-  const annualSnapshots = annualUnfinishedSnapshotRows(snapshots,assignments).filter(snapshot =>
-    assignmentLocationMatchesMode(sid,snapshot.locations || {},'annual')
-  );
+  const annualSnapshots = annualUnfinishedSnapshotRows(snapshots,assignments);
   const missingSnapshots = annualSnapshots.filter(snapshot => !existingKeys.has(annualSnapshotWorkKey(snapshot)));
   if (!missingSnapshots.length) {
     return { addedItems:0,createdJobs:0,deferredItems:0,jobs:[],items:[] };
@@ -54960,14 +55741,13 @@ async function syncImportedAnnualSnapshotsIntoPendingJobs({
       assignment?.assigned_to && !assignmentCountingFinished(assignment.status)
     );
     if (!relatedJobs.length) {
-      if (locationAlreadyIssued) deferredItems += 1;
-      else freshSnapshots.push(snapshot);
+      freshSnapshots.push(snapshot);
       return;
     }
     const safeJobs = relatedJobs.filter(job =>
       job.status === 'pending' && !job.assigned_to && !job.expired_at
     );
-    if (safeJobs.length !== relatedJobs.length || locationAlreadyIssued) {
+    if (safeJobs.length !== relatedJobs.length) {
       deferredItems += 1;
       return;
     }
@@ -55126,7 +55906,7 @@ async function generateAnnualJobsClientSide({ sessionId,size,prefix,alertBox,per
       'annual_count_job_items','job_id,location_id',query => query.eq('session_id',sessionId),
     ),
     fetchPagedSupabaseRows(
-      'annual_count_jobs','id,status',query => query.eq('session_id',sessionId),
+      'annual_count_jobs','id,status,job_no,job_code',query => query.eq('session_id',sessionId),
     ),
   ]);
   if (snapshotResult.error || assignmentResult.error || existingItemResult.error || existingJobResult.error) {
@@ -55134,9 +55914,7 @@ async function generateAnnualJobsClientSide({ sessionId,size,prefix,alertBox,per
   }
   const operationalSnapshots = operationalStockSnapshotsByLocation(snapshotResult.data || []);
   const unfinishedSnapshots = annualUnfinishedSnapshotRows(operationalSnapshots,assignmentResult.data || []);
-  const annualZoneSnapshots = unfinishedSnapshots.filter(snapshot =>
-    assignmentLocationMatchesMode(sessionId,snapshot.locations || {},'annual')
-  );
+  const annualZoneSnapshots = unfinishedSnapshots;
   const activeJobIds = new Set((existingJobResult.data || [])
     .filter(job => job.status !== 'completed').map(job => String(job.id)));
   const reservedAnnualLocationIds = new Set((existingItemResult.data || [])
@@ -55146,12 +55924,10 @@ async function generateAnnualJobsClientSide({ sessionId,size,prefix,alertBox,per
     operationalSnapshots,assignmentResult.data || [],sessionId,reservedAnnualLocationIds,
   );
   const excludedCompleted = Math.max(0,operationalSnapshots.length-unfinishedSnapshots.length);
-  const excludedOtherZones = Math.max(0,unfinishedSnapshots.length-annualZoneSnapshots.length);
-  const excludedNormalAssigned = Math.max(0,annualZoneSnapshots.length-snapshots.length);
+  const excludedOtherZones = 0;
+  const excludedNormalAssigned = 0;
   if (!snapshots.length) {
-    throw new Error(annualZoneSnapshots.length
-      ? `ไม่มีงานว่างสำหรับสร้าง Annual JOB · พบงานแบบปกติที่ยังทำอยู่ ${excludedNormalAssigned.toLocaleString(uiLocale())} รายการ`
-      : 'ยังไม่มีงานใน Zone ที่กำหนดเป็น Annual JOB กรุณาตั้งรูปแบบ Zone ก่อน');
+    throw new Error('ไม่มีงานที่ยังไม่เสร็จสำหรับสร้าง Annual JOB');
   }
 
   const collator = new Intl.Collator('en',{ numeric:true,sensitivity:'base' });
@@ -55162,12 +55938,9 @@ async function generateAnnualJobsClientSide({ sessionId,size,prefix,alertBox,per
     || collator.compare(String(left.id || ''),String(right.id || ''))
   );
 
-  if ((_annualWorkspaceJobs || []).length) {
-    setAnnualJobGenerationProgress(alertBox,'กำลังล้าง Annual JOB เดิม...');
-    const itemDelete = await sb.from('annual_count_job_items').delete().eq('session_id',sessionId);
-    if (itemDelete.error) throw new Error(`ล้างรายการ JOB เดิมไม่สำเร็จ: ${itemDelete.error.message}`);
-    const jobDelete = await sb.from('annual_count_jobs').delete().eq('session_id',sessionId);
-    if (jobDelete.error) throw new Error(`ล้าง JOB เดิมไม่สำเร็จ: ${jobDelete.error.message}`);
+  const unfinishedExistingJobs = (existingJobResult.data || []).filter(job => job.status !== 'completed');
+  if (unfinishedExistingJobs.length) {
+    throw new Error(`ยังมี JOB ที่ยังไม่เสร็จ ${unfinishedExistingJobs.length.toLocaleString(uiLocale())} งาน กรุณากด “ยกเลิก JOB ที่ยังไม่เสร็จ” ก่อนสร้างใหม่`);
   }
 
   const snapshotsByZone = new Map();
@@ -55180,15 +55953,27 @@ async function generateAnnualJobsClientSide({ sessionId,size,prefix,alertBox,per
   snapshotsByZone.forEach(zoneRows => {
     for (let start=0; start<zoneRows.length; start+=size) jobChunks.push(zoneRows.slice(start,start+size));
   });
-  const jobRows = jobChunks.map((_,index) => ({
-    id:annualJobUuid(),
-    session_id:sessionId,
-    job_no:index + 1,
-    job_code:`${prefix}-${String(index + 1).padStart(4,'0')}`,
-    assigned_to:null,
-    status:'pending',
-    created_by:me?.id || null,
-  }));
+  let nextJobNo = Math.max(0,...(existingJobResult.data || []).map(job => Number(job.job_no) || 0));
+  const existingCodes = new Set(
+    (existingJobResult.data || []).map(job => String(job.job_code || '').toLowerCase()).filter(Boolean)
+  );
+  const jobRows = jobChunks.map(() => {
+    let jobCode = '';
+    do {
+      nextJobNo += 1;
+      jobCode = `${prefix}-${String(nextJobNo).padStart(4,'0')}`;
+    } while (existingCodes.has(jobCode.toLowerCase()));
+    existingCodes.add(jobCode.toLowerCase());
+    return {
+      id:annualJobUuid(),
+      session_id:sessionId,
+      job_no:nextJobNo,
+      job_code:jobCode,
+      assigned_to:null,
+      status:'pending',
+      created_by:me?.id || null,
+    };
+  });
   const writeBatchSize = 200;
   for (let start=0; start<jobRows.length; start+=writeBatchSize) {
     setAnnualJobGenerationProgress(
@@ -55227,6 +56012,177 @@ async function generateAnnualJobsClientSide({ sessionId,size,prefix,alertBox,per
   };
 }
 
+async function cancelUnfinishedAnnualJobs() {
+  const config = selectedAssignSessionConfig();
+  const alertBox = Q('annual-generate-alert');
+  const cancelButton = Q('annual-cancel-unfinished-btn');
+  const generateButton = Q('annual-generate-btn');
+  if (!config.sessionId) {
+    if (alertBox) alertBox.innerHTML = '<div class="alert alert-amber" style="margin-top:12px">กรุณาเลือก Session ก่อนยกเลิก JOB</div>';
+    return;
+  }
+
+  try {
+    await loadAssignmentZoneModeConfig(true);
+    const runtime = await assignmentZoneModeRuntime(config.sessionId);
+    const completedLocationIds = annualCompletedLocationIds(runtime.workspace.assignments || []);
+    const activeJobs = runtime.jobs.filter(job => job.status !== 'completed');
+    const activeJobIds = new Set(activeJobs.map(job => String(job.id || '')).filter(Boolean));
+    const activeItems = runtime.items.filter(item => activeJobIds.has(String(item.job_id || '')));
+    const activeItemJobIds = new Set(activeItems.map(item => String(item.job_id || '')).filter(Boolean));
+    const orphanActiveJobIds = activeJobs
+      .filter(job => !activeItemJobIds.has(String(job.id || '')))
+      .map(job => job.id)
+      .filter(Boolean);
+    const unfinishedItems = activeItems.filter(item =>
+      !completedLocationIds.has(String(item.location_id || ''))
+    );
+    const affectedJobIds = [...new Set(
+      unfinishedItems.map(item => String(item.job_id || '')).filter(Boolean)
+    )];
+    const fullyCompletedActiveJobIds = activeJobs
+      .filter(job => {
+        const rows = activeItems.filter(item => String(item.job_id || '') === String(job.id || ''));
+        return rows.length > 0 && rows.every(item => completedLocationIds.has(String(item.location_id || '')));
+      })
+      .map(job => job.id)
+      .filter(Boolean);
+
+    if (!unfinishedItems.length) {
+      if (orphanActiveJobIds.length) {
+        const { error } = await sb.from('annual_count_jobs')
+          .delete()
+          .in('id',orphanActiveJobIds);
+        if (error) throw error;
+      }
+      if (fullyCompletedActiveJobIds.length) {
+        const { error } = await sb.from('annual_count_jobs')
+          .update({ status:'completed' })
+          .in('id',fullyCompletedActiveJobIds);
+        if (error) throw error;
+      }
+      if (orphanActiveJobIds.length || fullyCompletedActiveJobIds.length) {
+        invalidateAssignmentWorkspaceCache(config.sessionId);
+        await loadAnnualJobWorkspace();
+      }
+      if (alertBox) alertBox.innerHTML = '<div class="alert alert-green" style="margin-top:12px">ไม่มี JOB ที่ยังนับไม่เสร็จให้ยกเลิก</div>';
+      return;
+    }
+
+    const affectedCodes = activeJobs
+      .filter(job => affectedJobIds.includes(String(job.id || '')))
+      .map(job => job.job_code || job.id);
+    const confirmed = confirm(
+      `ยกเลิกเฉพาะงานที่ยังนับไม่เสร็จ ${unfinishedItems.length.toLocaleString(uiLocale())} รายการ `
+      + `จาก ${affectedJobIds.length.toLocaleString(uiLocale())} JOB?\n\n`
+      + 'ระบบจะเก็บ JOB/Location ที่นับเสร็จแล้ว รวมถึงผล Count และประวัติทั้งหมดไว้\n'
+      + 'งานที่ยกเลิกจะกลับไปรอสร้าง JOB ใหม่'
+    );
+    if (!confirmed) return;
+
+    if (cancelButton) {
+      cancelButton.disabled = true;
+      cancelButton.textContent = '⏳ กำลังยกเลิก JOB...';
+    }
+    if (generateButton) generateButton.disabled = true;
+    setAnnualJobGenerationProgress(alertBox,'กำลังแยกงานที่เสร็จแล้วออกจากงานที่ต้องยกเลิก...');
+
+    const annualOwnedLocationIds = new Set();
+    unfinishedItems.forEach(item => {
+      const job = runtime.jobsById.get(String(item.job_id || ''));
+      if (job && (job.assigned_to || job.expired_at || job.status === 'in_progress')) {
+        annualOwnedLocationIds.add(String(item.location_id || ''));
+      }
+    });
+
+    let releaseSummary = {
+      releasedAssignments:0,
+      preservedAssignments:0,
+      deletedAssignments:0,
+      removedJobItems:0,
+      removedJobs:0,
+    };
+    if (annualOwnedLocationIds.size) {
+      releaseSummary = await releaseAssignmentLocationsForMode(
+        config.sessionId,
+        [...annualOwnedLocationIds],
+        'annual',
+        runtime,
+      );
+    }
+
+    const pendingItemIds = unfinishedItems
+      .filter(item => !annualOwnedLocationIds.has(String(item.location_id || '')))
+      .map(item => item.id)
+      .filter(Boolean);
+    const batchSize = 200;
+    for (let start=0; start<pendingItemIds.length; start+=batchSize) {
+      const { error } = await sb.from('annual_count_job_items')
+        .delete()
+        .in('id',pendingItemIds.slice(start,start+batchSize));
+      if (error) throw error;
+    }
+
+    const remainingResult = affectedJobIds.length
+      ? await fetchSupabaseRowsByValues(
+          'annual_count_job_items','id,job_id,location_id','job_id',affectedJobIds,
+        )
+      : { data:[],error:null };
+    if (remainingResult.error) throw remainingResult.error;
+    const remainingByJob = new Map();
+    (remainingResult.data || []).forEach(item => {
+      const jobId = String(item.job_id || '');
+      if (!remainingByJob.has(jobId)) remainingByJob.set(jobId,[]);
+      remainingByJob.get(jobId).push(item);
+    });
+    const emptyJobIds = [...new Set([
+      ...affectedJobIds.filter(jobId => !(remainingByJob.get(String(jobId)) || []).length),
+      ...orphanActiveJobIds,
+    ])];
+    const completedJobIds = affectedJobIds.filter(jobId => {
+      const rows = remainingByJob.get(String(jobId)) || [];
+      return rows.length > 0 && rows.every(item => completedLocationIds.has(String(item.location_id || '')));
+    });
+    for (let start=0; start<emptyJobIds.length; start+=batchSize) {
+      const { error } = await sb.from('annual_count_jobs')
+        .delete()
+        .in('id',emptyJobIds.slice(start,start+batchSize));
+      if (error) throw error;
+    }
+    const allCompletedJobIds = [...new Set([...completedJobIds,...fullyCompletedActiveJobIds])];
+    for (let start=0; start<allCompletedJobIds.length; start+=batchSize) {
+      const { error } = await sb.from('annual_count_jobs')
+        .update({ status:'completed' })
+        .in('id',allCompletedJobIds.slice(start,start+batchSize));
+      if (error) throw error;
+    }
+
+    invalidateAssignmentWorkspaceCache(config.sessionId);
+    await Promise.all([loadAnnualJobWorkspace(),refreshLocs(),refreshBulkFilters()]);
+    if (alertBox) {
+      alertBox.innerHTML = `<div class="alert alert-green" style="margin-top:12px">✅ ยกเลิกงานที่ยังไม่เสร็จ ${unfinishedItems.length.toLocaleString(uiLocale())} รายการแล้ว · เก็บผล Count/ประวัติ ${releaseSummary.preservedAssignments.toLocaleString(uiLocale())} Assignment · พร้อมตั้งจำนวนต่อ JOB และสร้างใหม่</div>`;
+    }
+    showActionSuccess('ยกเลิก JOB ที่ยังนับไม่เสร็จเรียบร้อยแล้ว', {
+      title:'ยกเลิก JOB สำเร็จ',
+      facts:[
+        { label:'JOB ที่ได้รับผลกระทบ',value:affectedJobIds.length.toLocaleString(uiLocale()) },
+        { label:'งานที่กลับไปรอสร้างใหม่',value:unfinishedItems.length.toLocaleString(uiLocale()) },
+        { label:'ประวัติ Count ที่เก็บไว้',value:releaseSummary.preservedAssignments.toLocaleString(uiLocale()) },
+        ...(affectedCodes.length ? [{ label:'ตัวอย่าง JOB',value:affectedCodes.slice(0,3).join(', ') }] : []),
+      ],
+    });
+  } catch (error) {
+    console.error('Cancel unfinished Annual JOB failed:',error);
+    if (alertBox) alertBox.innerHTML = `<div class="alert alert-red" style="margin-top:12px">❌ ยกเลิก JOB ไม่สำเร็จ: ${escapeWmsText(error.message || error)}</div>`;
+  } finally {
+    if (cancelButton) {
+      cancelButton.disabled = false;
+      cancelButton.textContent = 'ยกเลิก JOB ที่ยังไม่เสร็จ';
+    }
+    if (generateButton) generateButton.disabled = false;
+  }
+}
+
 async function generateAnnualJobs() {
   const config = selectedAssignSessionConfig();
   const size = Math.max(1,Math.min(200,Math.floor(Number(Q('annual-build-size')?.value) || config.itemsPerJob || 20)));
@@ -55237,7 +56193,12 @@ async function generateAnnualJobs() {
     if (alertBox) alertBox.innerHTML = `<div class="alert alert-amber" style="margin-top:12px">กรุณาเลือก Session ก่อนสร้าง JOB</div>`;
     return;
   }
-  if (_annualWorkspaceJobs.length && !confirm(`สร้าง JOB ใหม่ทั้งหมด?\n\nJOB เดิม ${_annualWorkspaceJobs.length} งานและ User ที่เคยได้รับมอบหมายจะถูกล้าง แล้วแบ่งใหม่เป็น ${size} รายการต่อ JOB`)) return;
+  const unfinishedExistingJobs = (_annualWorkspaceJobs || []).filter(job => job.status !== 'completed');
+  if (unfinishedExistingJobs.length) {
+    if (alertBox) alertBox.innerHTML = `<div class="alert alert-amber" style="margin-top:12px">⚠️ ยังมี JOB ที่ยังไม่เสร็จ ${unfinishedExistingJobs.length.toLocaleString(uiLocale())} งาน กรุณากด “ยกเลิก JOB ที่ยังไม่เสร็จ” ก่อน แล้วจึงสร้างใหม่</div>`;
+    return;
+  }
+  if (!confirm(`สร้าง JOB จากงานที่ยังไม่เสร็จ โดยแบ่งเป็น ${size.toLocaleString(uiLocale())} รายการต่อ JOB?\n\nJOB และผล Count ที่เสร็จแล้วจะถูกเก็บไว้ทั้งหมด`)) return;
   if (button) { button.disabled = true; button.textContent = '⏳ กำลังสร้าง Annual JOB...'; }
   setAnnualJobGenerationProgress(alertBox,'กำลังเรียงและแบ่ง Stock Snapshot เป็น JOB...');
   try {
@@ -55267,9 +56228,7 @@ async function generateAnnualJobs() {
     const rawUnfinishedJobSnapshots = annualUnfinishedSnapshotRows(
       operationalJobSnapshots,assignmentResult.data || [],
     );
-    const annualZoneJobSnapshots = rawUnfinishedJobSnapshots.filter(snapshot =>
-      assignmentLocationMatchesMode(config.sessionId,snapshot.locations || {},'annual')
-    );
+    const annualZoneJobSnapshots = rawUnfinishedJobSnapshots;
     const activeJobIds = new Set((existingJobResult.data || [])
       .filter(job => job.status !== 'completed').map(job => String(job.id)));
     const reservedAnnualLocationIds = new Set((existingItemResult.data || [])
@@ -55279,11 +56238,10 @@ async function generateAnnualJobs() {
       operationalJobSnapshots,assignmentResult.data || [],config.sessionId,reservedAnnualLocationIds,
     );
     const excludedCompleted = Math.max(0,operationalJobSnapshots.length-rawUnfinishedJobSnapshots.length);
-    const excludedOtherZones = Math.max(0,rawUnfinishedJobSnapshots.length-annualZoneJobSnapshots.length);
-    const excludedNormalAssigned = Math.max(0,annualZoneJobSnapshots.length-unfinishedJobSnapshots.length);
-    // Hybrid assignment must always be generated client-side so every JOB is
-    // scoped to one configured Annual Zone and normal-mode Locations can never
-    // be pulled into the same JOB by the legacy all-session RPC.
+    const excludedOtherZones = 0;
+    const excludedNormalAssigned = 0;
+    // Generate client-side so completed work is excluded consistently while
+    // every unfinished Zone remains visible in the Annual workspace.
     const requiresClientFilter = true;
     const rpcResult = requiresClientFilter
       ? { data:null,error:null,_skippedForHygiene:true }
@@ -55296,8 +56254,6 @@ async function generateAnnualJobs() {
       const filterMessages = [];
       if (operationalJobSnapshots.length !== rawJobSnapshots.length) filterMessages.push('Item ว่างซ้ำ/กำพร้า');
       if (excludedCompleted) filterMessages.push(`งานที่เสร็จแล้ว ${excludedCompleted.toLocaleString(uiLocale())} รายการ`);
-      if (excludedOtherZones) filterMessages.push(`Zone แบบปกติ ${excludedOtherZones.toLocaleString(uiLocale())} รายการ`);
-      if (excludedNormalAssigned) filterMessages.push(`Location ที่มีงานปกติ ${excludedNormalAssigned.toLocaleString(uiLocale())} รายการ`);
       setAnnualJobGenerationProgress(
         alertBox,
         filterMessages.length
@@ -55335,14 +56291,8 @@ async function generateAnnualJobs() {
       const filteredNote = Number(summary?.excluded_completed || 0)
         ? `<br><span style="font-size:10px">ตัดงานที่เสร็จแล้ว ${Number(summary.excluded_completed).toLocaleString(uiLocale())} รายการออกจากการคำนวณ</span>`
         : '';
-      const zoneNote = Number(summary?.excluded_other_zones || 0)
-        ? `<br><span style="font-size:10px">ไม่รวม Zone แบบปกติ ${Number(summary.excluded_other_zones).toLocaleString(uiLocale())} รายการ</span>`
-        : '';
-      const conflictNote = Number(summary?.excluded_normal_assigned || 0)
-        ? `<br><span style="font-size:10px">ข้าม Location ที่มีงานปกติ ${Number(summary.excluded_normal_assigned).toLocaleString(uiLocale())} รายการ</span>`
-        : '';
       const fallbackNote = summary?.permission_fallback ? '<br><span style="font-size:10px">ใช้โหมดสำรองโดยไม่แก้ตาราง Session</span>' : '';
-      alertBox.innerHTML = `<div class="alert alert-green" style="margin-top:12px">✅ สร้าง ${Number(summary?.job_count||0).toLocaleString(uiLocale())} JOB จาก Zone แบบ Annual และงานที่ยังไม่เสร็จ ${Number(summary?.item_count||0).toLocaleString(uiLocale())} รายการแล้ว${filteredNote}${zoneNote}${conflictNote}${fallbackNote}</div>`;
+      alertBox.innerHTML = `<div class="alert alert-green" style="margin-top:12px">✅ สร้าง ${Number(summary?.job_count||0).toLocaleString(uiLocale())} JOB จากงานที่ยังไม่เสร็จทุก Zone จำนวน ${Number(summary?.item_count||0).toLocaleString(uiLocale())} รายการแล้ว${filteredNote}${fallbackNote}</div>`;
     }
     showActionSuccess('สร้าง Annual Count JOB เรียบร้อยแล้ว', {
       title:'สร้าง JOB สำเร็จ',
@@ -55374,21 +56324,13 @@ async function assignSelectedAnnualJobs() {
   const jobCodes = jobIds.map(id =>
     _annualWorkspaceJobs.find(job => job.id === id)?.job_code || id
   );
+  const config = selectedAssignSessionConfig();
+  let crossModeConfirmed = false;
   try {
-    const config = selectedAssignSessionConfig();
     await loadAssignmentZoneModeConfig(true);
     const runtime = await assignmentZoneModeRuntime(config.sessionId);
     const selectedJobIds = new Set(jobIds.map(String));
     const selectedItems = runtime.items.filter(item => selectedJobIds.has(String(item.job_id)));
-    const wrongModeItems = selectedItems.filter(item => {
-      const location = runtime.workspace.locationById.get(item.location_id);
-      return !assignmentLocationMatchesMode(config.sessionId,location || {},'annual');
-    });
-    if (wrongModeItems.length) {
-      const location = runtime.workspace.locationById.get(wrongModeItems[0].location_id);
-      alert(`จ่าย JOB ไม่ได้: ${wrongModeItems.length.toLocaleString(uiLocale())} รายการอยู่ใน Zone แบบปกติ (เช่น ${location?.code || wrongModeItems[0].location_id})\n\nกรุณาสร้าง Annual JOB ใหม่ตามค่า Zone ล่าสุด`);
-      return;
-    }
     const jobsById = new Map((_annualWorkspaceJobs || []).map(job => [String(job.id),job]));
     const normalConflicts = selectedItems.filter(item => {
       const job = jobsById.get(String(item.job_id));
@@ -55396,15 +56338,24 @@ async function assignSelectedAnnualJobs() {
       return !job?.assigned_to && assignment?.assigned_to && !assignmentCountingFinished(assignment.status);
     });
     if (normalConflicts.length) {
-      const location = runtime.workspace.locationById.get(normalConflicts[0].location_id);
-      alert(`จ่าย JOB ไม่ได้: พบ ${normalConflicts.length.toLocaleString(uiLocale())} Location ที่มีงานแบบปกติอยู่แล้ว (เช่น ${location?.code || normalConflicts[0].location_id})`);
-      return;
+      const conflictLocationIds = [...new Set(normalConflicts.map(item => String(item.location_id || '')).filter(Boolean))];
+      const firstLocation = runtime.workspace.locationById.get(conflictLocationIds[0]);
+      const confirmed = confirm(
+        `พบ ${conflictLocationIds.length.toLocaleString(uiLocale())} Location ใน JOB ที่เลือก ซึ่งถูกจ่ายงานแบบปกติอยู่แล้ว`
+        + `${firstLocation ? ` (เช่น ${firstLocation.code || conflictLocationIds[0]})` : ''}\n\n`
+        + 'หากดำเนินการต่อ ระบบจะยกเลิกการจ่ายแบบปกติเดิมก่อน แล้วจึงจ่ายเป็น Annual JOB\n'
+        + 'ผล Count และประวัติเดิมจะถูกเก็บไว้ทั้งหมด\n\nต้องการดำเนินการต่อหรือไม่?'
+      );
+      if (!confirmed) return;
+      await releaseAssignmentLocationsForMode(config.sessionId,conflictLocationIds,'normal',runtime);
+      invalidateAssignmentWorkspaceCache(config.sessionId);
+      crossModeConfirmed = true;
     }
   } catch (error) {
     alert(`ตรวจสอบงานซ้ำก่อนจ่าย JOB ไม่สำเร็จ: ${error.message || error}`);
     return;
   }
-  if (!confirm(`จ่าย ${jobIds.length} JOB ให้ ${userName}?`)) return;
+  if (!crossModeConfirmed && !confirm(`จ่าย ${jobIds.length} JOB ให้ ${userName}?`)) return;
   const button = Q('annual-assign-btn');
   if (button) { button.disabled = true; button.textContent = 'กำลังจ่ายงาน...'; }
   const batchSize = 80;
@@ -55429,7 +56380,8 @@ async function assignSelectedAnnualJobs() {
     return;
   }
   if (button) button.textContent = '✓ จ่าย JOB ที่เลือก';
-  await loadAnnualJobWorkspace();
+  invalidateAssignmentWorkspaceCache(config.sessionId);
+  await Promise.all([loadAnnualJobWorkspace(),refreshLocs(),refreshBulkFilters()]);
   showAssignmentSuccessModal({
     count:jobIds.length,
     unit:'Annual JOB',
@@ -56244,7 +57196,6 @@ async function doR23Assign() {
 }
 
 function getNormalLocationRows() {
-  const sessionId = selectedAssignSessionConfig().sessionId;
   const assignmentsByLocation = new Map(
     (window._bulkAssignments || []).map(assignment => [assignment.location_id,assignment])
   );
@@ -56254,7 +57205,6 @@ function getNormalLocationRows() {
     const locationId = snapshot.location_id || snapshot.locations?.id;
     const location = window._assignmentLocationById?.get(locationId) || snapshot.locations;
     if (!locationId || !location || seen.has(locationId)) return;
-    if (!assignmentLocationMatchesMode(sessionId,location,'normal')) return;
     seen.add(locationId);
     rows.push({
       location,
@@ -56447,14 +57397,26 @@ function renderNormalFreeLocationList() {
   const list = Q('normal-free-location-list');
   if (!list) return;
   const rows = getNormalAssignmentWorkspaceRows();
+  const annualJobsByLocation = window._annualAssignmentJobByLocation instanceof Map
+    ? window._annualAssignmentJobByLocation
+    : new Map();
   const availableIds = new Set(
-    rows.filter(row => !row.assignment).map(row => row.location.id)
+    rows.filter(row =>
+      !row.assignment || annualJobsByLocation.has(String(row.location.id || ''))
+    ).map(row => row.location.id)
   );
   const assignedIds = new Set(
-    rows.filter(row => row.assignment && !isExpiredWaitingAssignment(row.assignment)).map(row => row.location.id)
+    rows.filter(row =>
+      row.assignment
+      && !isExpiredWaitingAssignment(row.assignment)
+      && !annualJobsByLocation.has(String(row.location.id || ''))
+    ).map(row => row.location.id)
   );
   const reassignableIds = new Set(
-    rows.filter(row => isNormalFreeReassignableAssignment(row.assignment)).map(row => row.location.id)
+    rows.filter(row =>
+      !annualJobsByLocation.has(String(row.location.id || ''))
+      && isNormalFreeReassignableAssignment(row.assignment)
+    ).map(row => row.location.id)
   );
   const expiredAssignmentIds = new Set(
     rows.filter(row => isExpiredWaitingAssignment(row.assignment)).map(row => row.assignment.id)
@@ -56492,41 +57454,31 @@ function renderNormalFreeLocationList() {
   _normalFreeFilteredLocationCount = filtered.length;
   _normalFreeVisibleLocationIds = displayed.map(entry => entry.location.id);
   if (!filtered.length) {
-    const sessionId = selectedAssignSessionConfig().sessionId;
-    const annualLocationCount = rows.length ? 0 : new Set(
-      (window._bulkSnaps || [])
-        .filter(snapshot => assignmentLocationMatchesMode(
-          sessionId,
-          window._assignmentLocationById?.get(snapshot.location_id) || snapshot.locations || {},
-          'annual',
-        ))
-        .map(snapshot => snapshot.location_id)
-        .filter(Boolean)
-    ).size;
     list.innerHTML = rows.length
       ? '<div class="annual-empty">ไม่พบ Location ที่ตรงกับตัวกรองหรือสถานะงาน</div>'
-      : annualLocationCount
-        ? `<div class="annual-empty"><strong>พบงาน ${annualLocationCount.toLocaleString(uiLocale())} Location ใน Zone แบบ Annual JOB</strong><br>งานเหล่านี้จะไม่แสดงในแท็บแบบปกติ<br><button class="btn btn-blue btn-sm" type="button" style="margin-top:10px" onclick="setRound1AssignMode('annual')">เปิด Annual JOB</button></div>`
-        : '<div class="annual-empty">ไม่มี Location ที่ต้องมอบหมายใน Session นี้</div>';
+      : '<div class="annual-empty">ไม่มี Location ที่ต้องมอบหมายใน Session นี้</div>';
     syncNormalFreeSelection();
     return;
   }
   list.innerHTML = displayed.map(entry => {
     const location = entry.location;
     const assignment = entry.assignment;
+    const annualJob = annualJobsByLocation.get(String(location.id || '')) || null;
     const expired = isExpiredWaitingAssignment(assignment);
     const available = !assignment;
-    const reassignable = isNormalFreeReassignableAssignment(assignment);
+    const reassignable = !annualJob && isNormalFreeReassignableAssignment(assignment);
     const selectionMode = expired
       ? 'expired'
       : _normalFreeReassignMode
       ? 'reassign'
+      : annualJob
+      ? 'switch'
       : (available ? 'assign' : 'print');
     const selectedSet = selectionMode === 'expired'
       ? _expiredSelectedAssignmentIds
       : selectionMode === 'reassign'
       ? _normalFreeSelectedReassignLocationIds
-      : available ? _normalFreeSelectedLocationIds : _normalFreeSelectedPrintLocationIds;
+      : (available || annualJob) ? _normalFreeSelectedLocationIds : _normalFreeSelectedPrintLocationIds;
     const selectionValue = expired ? assignment.id : location.id;
     const checked = selectedSet.has(selectionValue) ? 'checked' : '';
     const status = expired
@@ -56536,12 +57488,15 @@ function renderNormalFreeLocationList() {
       : tagInfo(assignment.status);
     const checkboxDisabled = !expired && _normalFreeReassignMode && !reassignable ? 'disabled' : '';
     const assignedUserName = assignment?.profiles?.name || 'ยังไม่จ่ายงาน';
-    const canCancel = Boolean(
-      assignment?.id && assignment?.assigned_to && !assignmentCountingFinished(assignment.status)
-    );
-    const ariaAction = expired ? 'งานหมดเวลา รอจ่ายใหม่' : selectionMode === 'reassign' ? 'เลือกเพื่อจ่ายงานซ้ำ' : available ? 'เลือกเพื่อจ่ายงาน' : 'เลือกเพื่อพิมพ์';
+    const ariaAction = expired
+      ? 'งานหมดเวลา รอจ่ายใหม่'
+      : selectionMode === 'reassign'
+      ? 'เลือกเพื่อจ่ายงานซ้ำ'
+      : selectionMode === 'switch'
+      ? 'เลือกเพื่อเปลี่ยนจาก Annual JOB เป็นแบบปกติ'
+      : available ? 'เลือกเพื่อจ่ายงาน' : 'เลือกเพื่อพิมพ์';
     const checkboxId = `normal-free-${selectionMode}-${String(selectionValue).replace(/[^a-zA-Z0-9_-]/g,'')}`;
-    return `<div class="normal-free-row ${available?'':'is-assigned'} ${expired?'is-expired':''}">
+    return `<div class="normal-free-row ${available?'':'is-assigned'} ${expired?'is-expired':''} ${annualJob?'has-annual-job':''}">
       <input id="${checkboxId}" class="normal-free-checkbox ${expired?'expired-work-check':''}" type="checkbox" value="${selectionValue}" ${checked} ${checkboxDisabled}
         aria-label="${ariaAction} ${escapeWmsText(location.code || '')}"
         onchange="toggleNormalFreeLocation('${selectionValue}',this.checked,'${selectionMode}')">
@@ -56550,8 +57505,7 @@ function renderNormalFreeLocationList() {
         <span class="normal-free-user">User: ${escapeWmsText(assignedUserName)}</span>
       </label>
       <span class="assign-bento-tile-state tag ${status.cls}">${escapeWmsText(status.lbl)}</span>
-      ${canCancel ? `<button class="btn btn-amber btn-sm assignment-cancel-button" type="button"
-        onclick="event.preventDefault();event.stopPropagation();cancelNormalAssignment('${assignment.id}','${escapeWmsText(location.code || '')}')">↩ ยกเลิก/คืนงาน</button>` : ''}
+      ${annualJob ? `<span class="annual-assignment-badge" title="จ่ายงานผ่าน ${escapeWmsText(annualJob.code)}">Annual JOB · ${escapeWmsText(annualJob.code)}</span>` : ''}
     </div>`;
   }).join('');
   syncNormalFreeSelection();
@@ -56570,9 +57524,15 @@ function toggleNormalFreeLocation(locationId,checked,mode='assign') {
 
 function selectNormalFreeLocations(mode) {
   if (mode === 'visible') {
+    const annualJobsByLocation = window._annualAssignmentJobByLocation instanceof Map
+      ? window._annualAssignmentJobByLocation
+      : new Map();
     if (_normalFreeReassignMode) {
       const reassignableIds = new Set(getNormalAssignmentWorkspaceRows()
-        .filter(entry => isNormalFreeReassignableAssignment(entry.assignment))
+        .filter(entry =>
+          !annualJobsByLocation.has(String(entry.location.id || ''))
+          && isNormalFreeReassignableAssignment(entry.assignment)
+        )
         .map(entry => entry.location.id));
       _normalFreeVisibleLocationIds.forEach(id => {
         if (reassignableIds.has(id)) _normalFreeSelectedReassignLocationIds.add(id);
@@ -56587,6 +57547,10 @@ function selectNormalFreeLocations(mode) {
         if (expiredIds.has(id)) {
           const expiredAssignment = expiredRows.find(entry => entry.location.id === id)?.assignment;
           if (expiredAssignment?.id) _expiredSelectedAssignmentIds.add(expiredAssignment.id);
+          return;
+        }
+        if (annualJobsByLocation.has(String(id || ''))) {
+          _normalFreeSelectedLocationIds.add(id);
           return;
         }
         if (assignedIds.has(id)) _normalFreeSelectedPrintLocationIds.add(id);
@@ -56633,9 +57597,16 @@ function syncNormalFreeSelection() {
 }
 
 function getAssignedNormalRoundOneLocationIds() {
+  const annualJobsByLocation = window._annualAssignmentJobByLocation instanceof Map
+    ? window._annualAssignmentJobByLocation
+    : new Map();
   return [...new Set(
     (window._bulkAssignments || [])
-      .filter(assignment => !isExpiredWaitingAssignment(assignment) && normalAssignmentVisibleInWorkspace(assignment))
+      .filter(assignment =>
+        !isExpiredWaitingAssignment(assignment)
+        && normalAssignmentVisibleInWorkspace(assignment)
+        && !annualJobsByLocation.has(String(assignment?.location_id || ''))
+      )
       .map(assignment => assignment?.location_id)
       .filter(Boolean)
   )];
@@ -56699,10 +57670,15 @@ function closeNormalAssignmentConfirmModal() {
 async function confirmNormalAssignmentModal() {
   const payload = _normalAssignmentConfirmPayload;
   if (!payload) return;
+  const switchingAnnual = Boolean(payload.annualJobLocationIds?.length);
   const confirmButton = Q('normal-assignment-confirm-submit');
   if (confirmButton) {
     confirmButton.disabled = true;
-    confirmButton.textContent = payload.isReassign ? '⏳ กำลังจ่ายงานซ้ำ...' : '⏳ กำลังจ่ายงาน...';
+    confirmButton.textContent = payload.isReassign
+      ? '⏳ กำลังจ่ายงานซ้ำ...'
+      : switchingAnnual
+      ? '⏳ กำลังสลับเป็นแบบปกติ...'
+      : '⏳ กำลังจ่ายงาน...';
   }
   Q('normal-assignment-confirm-backdrop')?.remove();
   _normalAssignmentConfirmPayload = null;
@@ -56728,6 +57704,8 @@ function showNormalAssignmentConfirmModal(payload) {
     .sort((a,b) => b[1] - a[1] || a[0].localeCompare(b[0],'th'))
     .map(([name,count]) => `<span><strong>${escapeWmsText(name)}</strong> ${count.toLocaleString(uiLocale())} Location</span>`)
     .join('');
+  const switchingAnnual = Boolean(payload.annualJobLocationIds?.length);
+  const annualJobCodes = Array.isArray(payload.annualJobCodes) ? payload.annualJobCodes : [];
   const visibleCodes = locationCodes.slice(0,12);
   const backdrop = document.createElement('div');
   backdrop.id = 'normal-assignment-confirm-backdrop';
@@ -56738,7 +57716,11 @@ function showNormalAssignmentConfirmModal(payload) {
   backdrop.innerHTML = `<section class="assignment-success-modal" role="dialog" aria-modal="true" aria-labelledby="normal-assignment-confirm-title">
     <div class="assignment-success-icon" style="color:#b76800;background:linear-gradient(145deg,#fff7df,#fde6ac)">!</div>
     <h2 class="assignment-success-title" id="normal-assignment-confirm-title">
-      ${payload.isReassign ? 'ยืนยันการจ่ายงานซ้ำ' : 'ยืนยันการจ่ายงาน'}
+      ${payload.isReassign
+        ? 'ยืนยันการจ่ายงานซ้ำ'
+        : switchingAnnual
+        ? 'ยืนยันเปลี่ยนเป็นการจ่ายงานแบบปกติ'
+        : 'ยืนยันการจ่ายงาน'}
     </h2>
     <div class="assignment-success-summary">
       <div class="assignment-success-count">${payload.locationIds.length.toLocaleString(uiLocale())}</div>
@@ -56748,11 +57730,20 @@ function showNormalAssignmentConfirmModal(payload) {
       จ่ายงานให้ <strong>${escapeWmsText(payload.userName || 'User')}</strong>
       ${payload.isReassign
         ? '<br><span style="color:#b76800">ผู้รับมอบหมายงานเดิมจะถูกเปลี่ยนทันทีหลังยืนยัน</span>'
+        : switchingAnnual
+        ? `<br><span style="color:#9a4e00;font-weight:800">พบ ${payload.annualJobLocationIds.length.toLocaleString(uiLocale())} Location ที่จ่ายผ่าน Annual JOB<br>เมื่อยืนยัน ระบบจะยกเลิกงาน JOB เดิมก่อน แล้วจ่ายเป็นแบบปกติ โดยเก็บผล Count และประวัติไว้</span>`
         : '<br>ตรวจสอบชื่อผู้รับงานและจำนวน Location ก่อนบันทึก'}
     </p>
     ${payload.isReassign ? `<div class="assignment-success-jobs">
       <span>ผู้รับงานเดิม</span>
       <div class="assignment-success-job-list" style="display:grid;gap:7px">${ownerSummary || '<span>ไม่พบข้อมูลผู้รับงานเดิม</span>'}</div>
+    </div>` : ''}
+    ${switchingAnnual ? `<div class="assignment-success-jobs" style="border-color:#d69a58;background:#fff8eb">
+      <span>ANNUAL JOB ที่จะยกเลิก</span>
+      <div class="assignment-success-job-list">
+        ${annualJobCodes.slice(0,12).map(code => `<strong>${escapeWmsText(code)}</strong>`).join('') || '<strong>Annual JOB เดิม</strong>'}
+        ${annualJobCodes.length > 12 ? `<strong>+${annualJobCodes.length-12} JOB</strong>` : ''}
+      </div>
     </div>` : ''}
     <div class="assignment-success-jobs">
       <span>LOCATION ที่เลือก</span>
@@ -56763,9 +57754,13 @@ function showNormalAssignmentConfirmModal(payload) {
     </div>
     <div class="assignment-success-buttons">
       <button class="btn btn-ghost" type="button" onclick="closeNormalAssignmentConfirmModal()">ยกเลิก</button>
-      <button class="btn ${payload.isReassign ? 'btn-amber' : 'btn-green'}" id="normal-assignment-confirm-submit"
+      <button class="btn ${payload.isReassign || switchingAnnual ? 'btn-amber' : 'btn-green'}" id="normal-assignment-confirm-submit"
         type="button" onclick="confirmNormalAssignmentModal()">
-        ${payload.isReassign ? '🔄 ยืนยันจ่ายงานซ้ำ' : '✓ ยืนยันการจ่ายงาน'}
+        ${payload.isReassign
+          ? '🔄 ยืนยันจ่ายงานซ้ำ'
+          : switchingAnnual
+          ? '↔ ยกเลิก JOB เดิมและจ่ายแบบปกติ'
+          : '✓ ยืนยันการจ่ายงาน'}
       </button>
     </div>
   </section>`;
@@ -56779,9 +57774,19 @@ function assignSelectedNormalLocations() {
   const userSelect = Q('normal-free-user');
   const userId = userSelect?.value;
   const isReassign = _normalFreeReassignMode;
-  const availableIds = new Set(getBulkAvailableLocations().map(location => location.id));
+  const annualJobsByLocation = window._annualAssignmentJobByLocation instanceof Map
+    ? window._annualAssignmentJobByLocation
+    : new Map();
+  const annualSwitchIds = new Set([...annualJobsByLocation.keys()].map(String));
+  const availableIds = new Set([
+    ...getBulkAvailableLocations().map(location => location.id),
+    ...annualSwitchIds,
+  ]);
   const reassignableIds = new Set(getNormalAssignmentWorkspaceRows()
-    .filter(entry => isNormalFreeReassignableAssignment(entry.assignment))
+    .filter(entry =>
+      !annualSwitchIds.has(String(entry.location.id || ''))
+      && isNormalFreeReassignableAssignment(entry.assignment)
+    )
     .map(entry => entry.location.id));
   const selectedIds = isReassign
     ? _normalFreeSelectedReassignLocationIds
@@ -56798,13 +57803,17 @@ function assignSelectedNormalLocations() {
     userId,
     userName:userSelect?.options?.[userSelect.selectedIndex]?.textContent || 'User',
     locationIds,
+    annualJobLocationIds:locationIds.filter(id => annualSwitchIds.has(String(id))),
+    annualJobCodes:[...new Set(locationIds
+      .map(id => annualJobsByLocation.get(String(id))?.code)
+      .filter(Boolean))],
     isReassign,
     printFilterSummary:currentNormalPrintFilterSummary(),
   });
 }
 
 async function commitSelectedNormalLocations(payload) {
-  const { sid,userId,userName,locationIds,isReassign,printFilterSummary } = payload;
+  const { sid,userId,userName,locationIds,isReassign,printFilterSummary,annualJobLocationIds=[] } = payload;
   const alertBox = Q('aa');
   const button = Q('normal-free-assign-btn');
   if (button) {
@@ -56820,14 +57829,25 @@ async function commitSelectedNormalLocations(payload) {
   try {
     await loadAssignmentZoneModeConfig(true);
     const modeRuntime = await assignmentZoneModeRuntime(sid);
-    const crossModeConflicts = locationIds.filter(locationId => {
-      const location = modeRuntime.workspace.locationById.get(locationId);
-      return !assignmentLocationMatchesMode(sid,location || {},'normal')
-        || modeRuntime.activeAnnualLocationIds.has(String(locationId));
-    });
+    const crossModeConflicts = locationIds.filter(locationId =>
+      modeRuntime.activeAnnualLocationIds.has(String(locationId))
+    );
     if (crossModeConflicts.length) {
-      const firstCode = modeRuntime.workspace.locationById.get(crossModeConflicts[0])?.code || crossModeConflicts[0];
-      throw new Error(`พบ ${crossModeConflicts.length.toLocaleString(uiLocale())} Location ที่ถูกกำหนดหรือสำรองไว้เป็น Annual JOB (เช่น ${firstCode}) กรุณารีเฟรชรายการ`);
+      const warnedLocationIds = new Set((annualJobLocationIds || []).map(String));
+      const unexpectedConflicts = crossModeConflicts.filter(locationId =>
+        !warnedLocationIds.has(String(locationId))
+      );
+      if (unexpectedConflicts.length) {
+        const firstCode = modeRuntime.workspace.locationById.get(unexpectedConflicts[0])?.code || unexpectedConflicts[0];
+        const confirmed = confirm(
+          `พบงาน Annual JOB เพิ่มเติม ${unexpectedConflicts.length.toLocaleString(uiLocale())} Location (เช่น ${firstCode})\n\n`
+          + 'หากดำเนินการต่อ ระบบจะยกเลิก Annual JOB เดิมก่อน แล้วจึงจ่ายงานแบบปกติ\n'
+          + 'ผล Count และประวัติเดิมจะถูกเก็บไว้ทั้งหมด\n\nต้องการดำเนินการต่อหรือไม่?'
+        );
+        if (!confirmed) return;
+      }
+      await releaseAssignmentLocationsForMode(sid,crossModeConflicts,'annual',modeRuntime);
+      invalidateAssignmentWorkspaceCache(sid);
     }
     if (isReassign) {
       // Reassignment must UPDATE an existing row. Using UPSERT here makes
@@ -56848,12 +57868,54 @@ async function commitSelectedNormalLocations(payload) {
         updatedAssignments.push(...(data || []));
       }
     } else {
-      const rows = locationIds.map(locationId => ({
-        session_id:sid,
-        location_id:locationId,
-        assigned_to:userId,
-        assigned_at:assignedAt,
-      }));
+      // A cross-mode switch can leave an unassigned Assignment row behind to
+      // preserve Count history. Reactivate that row; insert only Locations
+      // that genuinely have no Assignment yet.
+      const existingResult = await fetchSupabaseRowsByValues(
+        'assignments',
+        'id,session_id,location_id,assigned_to,status,expired_at,expired_from',
+        'location_id',
+        locationIds,
+      );
+      if (existingResult.error) throw existingResult.error;
+      const existingAssignments = (existingResult.data || []).filter(assignment =>
+        String(assignment.session_id || '') === String(sid)
+        && locationIds.includes(assignment.location_id)
+      );
+      const occupiedAssignments = existingAssignments.filter(assignment =>
+        assignmentCountingFinished(assignment.status) || assignment.assigned_to
+      );
+      if (occupiedAssignments.length) {
+        throw new Error('มีบาง Location ถูกจ่ายงานจากเครื่องอื่นหรือปิดงานแล้ว กรุณารีเฟรชรายการก่อนจ่ายงานอีกครั้ง');
+      }
+      const reusableAssignments = existingAssignments.filter(assignment =>
+        !assignmentCountingFinished(assignment.status) && !assignment.assigned_to
+      );
+      const reusableLocationIds = new Set(reusableAssignments.map(assignment => String(assignment.location_id || '')));
+      const reusableIds = reusableAssignments.map(assignment => assignment.id).filter(Boolean);
+      for (let start=0; start<reusableIds.length; start+=batchSize) {
+        const chunkIds = reusableIds.slice(start,start+batchSize);
+        const { data,error } = await sb.from('assignments').update({
+          assigned_to:userId,
+          assigned_at:assignedAt,
+          expired_at:null,
+          expired_from:null,
+        }).in('id',chunkIds).is('assigned_to',null)
+          .select('id,session_id,location_id,assigned_to,status');
+        if (error) throw error;
+        if ((data || []).length !== chunkIds.length) {
+          throw new Error('มีบาง Location ถูกจ่ายงานจากเครื่องอื่นแล้ว กรุณารีเฟรชรายการก่อนจ่ายงานอีกครั้ง');
+        }
+        updatedAssignments.push(...(data || []));
+      }
+      const rows = locationIds
+        .filter(locationId => !reusableLocationIds.has(String(locationId)))
+        .map(locationId => ({
+          session_id:sid,
+          location_id:locationId,
+          assigned_to:userId,
+          assigned_at:assignedAt,
+        }));
       for (let start=0; start<rows.length; start+=batchSize) {
         const chunk = rows.slice(start,start+batchSize);
         const { data,error } = await sb.from('assignments')
@@ -56966,11 +58028,102 @@ async function cancelNormalAssignment(assignmentId,locationCode='') {
   }
 }
 
+async function cancelUnfinishedNormalAssignments() {
+  const config = selectedAssignSessionConfig();
+  const alertBox = Q('aa');
+  const cancelButton = Q('normal-cancel-unfinished-btn');
+  if (!config.sessionId) {
+    if (alertBox) alertBox.innerHTML = '<div class="alert alert-amber">กรุณาเลือก Session ก่อนยกเลิกงาน</div>';
+    return;
+  }
+
+  try {
+    await loadAssignmentZoneModeConfig(true);
+    const runtime = await assignmentZoneModeRuntime(config.sessionId);
+    const assignmentResult = await fetchPagedSupabaseRows(
+      'assignments',
+      'id,session_id,location_id,assigned_to,status,created_at,assigned_at,expired_at,expired_from,wms_closed_at',
+      query => query.eq('session_id',config.sessionId).order('created_at'),
+    );
+    if (assignmentResult.error) throw assignmentResult.error;
+    if (selectedAssignSessionConfig().sessionId !== config.sessionId) return;
+
+    const latestAssignments = [...annualLatestAssignmentsByLocation(assignmentResult.data || []).values()];
+    const completedLocationIds = annualCompletedLocationIds(latestAssignments);
+    const unfinishedNormalAssignments = latestAssignments.filter(assignment => {
+      const locationId = String(assignment?.location_id || '');
+      if (!locationId || completedLocationIds.has(locationId)) return false;
+      if (runtime.activeAnnualLocationIds.has(locationId)) return false;
+      return Boolean(
+        assignment?.assigned_to
+        || assignment?.expired_at
+        || ['in_progress','round1_done','round2_done'].includes(String(assignment?.status || ''))
+      );
+    });
+    const locationIds = [...new Set(unfinishedNormalAssignments
+      .map(assignment => String(assignment.location_id || ''))
+      .filter(Boolean))];
+
+    if (!locationIds.length) {
+      if (alertBox) alertBox.innerHTML = '<div class="alert alert-green">ไม่มีงานแบบปกติที่ยังไม่เสร็จให้ยกเลิก</div>';
+      return;
+    }
+
+    const confirmed = confirm(
+      `ยกเลิกงานแบบปกติที่ยังไม่เสร็จ ${locationIds.length.toLocaleString(uiLocale())} Location?\n\n`
+      + 'งานที่นับเสร็จแล้วและประวัติทั้งหมดจะถูกเก็บไว้\n'
+      + 'งานที่ยังไม่เริ่มจะกลับเป็นงานว่าง ส่วนงานที่มีผล Count จะกลับไปรอจ่ายใหม่'
+    );
+    if (!confirmed) return;
+
+    if (cancelButton) {
+      cancelButton.disabled = true;
+      cancelButton.textContent = '⏳ กำลังยกเลิกงาน...';
+    }
+    if (alertBox) alertBox.innerHTML = '<div class="alert alert-blue">⏳ กำลังแยกงานที่เสร็จแล้วและยกเลิกเฉพาะงานแบบปกติที่ยังไม่เสร็จ...</div>';
+
+    const releaseSummary = await releaseAssignmentLocationsForMode(
+      config.sessionId,
+      locationIds,
+      'normal',
+      runtime,
+    );
+
+    _normalFreeSelectedLocationIds.clear();
+    _normalFreeSelectedPrintLocationIds.clear();
+    _normalFreeSelectedReassignLocationIds.clear();
+    _expiredSelectedAssignmentIds.clear();
+    invalidateAssignmentWorkspaceCache(config.sessionId);
+    await Promise.all([refreshLocs(),refreshBulkFilters()]);
+    await renderAssignmentZoneModeSettings();
+
+    if (alertBox) {
+      alertBox.innerHTML = `<div class="alert alert-green">✅ ยกเลิกงานแบบปกติที่ยังไม่เสร็จ ${releaseSummary.releasedAssignments.toLocaleString(uiLocale())} Location แล้ว · เก็บผล Count/ประวัติ ${releaseSummary.preservedAssignments.toLocaleString(uiLocale())} งาน</div>`;
+    }
+    showActionSuccess('ยกเลิกงานแบบปกติที่ยังไม่เสร็จเรียบร้อยแล้ว', {
+      title:'ยกเลิกงานสำเร็จ',
+      facts:[
+        { label:'งานที่ยกเลิก/คืนงาน',value:releaseSummary.releasedAssignments.toLocaleString(uiLocale()) },
+        { label:'กลับเป็นงานว่าง',value:releaseSummary.deletedAssignments.toLocaleString(uiLocale()) },
+        { label:'เก็บผล Count และรอจ่ายใหม่',value:releaseSummary.preservedAssignments.toLocaleString(uiLocale()) },
+      ],
+    });
+  } catch (error) {
+    console.error('Cancel unfinished Normal assignments failed:',error);
+    if (alertBox) alertBox.innerHTML = `<div class="alert alert-red">❌ ยกเลิกงานแบบปกติไม่สำเร็จ: ${escapeWmsText(error.message || error)}</div>`;
+  } finally {
+    if (cancelButton) {
+      cancelButton.disabled = false;
+      cancelButton.textContent = 'ยกเลิกงานที่ยังไม่เสร็จ';
+    }
+  }
+}
+
 async function refreshBulkFilters() {
   const sid = Q('as-sess')?.value; if (!sid) return;
-  let snaps = [], existing = [];
+  let snaps = [], existing = [], workspace = null;
   try {
-    const workspace = await loadAssignmentWorkspaceData(sid);
+    workspace = await loadAssignmentWorkspaceData(sid);
     if (Q('as-sess')?.value !== sid) return;
     snaps = workspace.snapshots;
     existing = workspace.assignments;
@@ -56989,6 +58142,11 @@ async function refreshBulkFilters() {
   window._bulkSnaps = snaps || [];
   window._bulkAssigned = assignedSet;
   window._bulkAssignments = existing || [];
+  try {
+    await refreshCombinedAssignmentStats(sid,workspace);
+  } catch (error) {
+    console.warn('Combined assignment summary unavailable:',error);
+  }
   updateNormalAssignmentStatsFromRows();
   syncNormalRoundOnePrintButton();
   refreshBulkDependentFilters();
@@ -64131,7 +65289,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.198" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V1.208" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
