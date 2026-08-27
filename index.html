@@ -3,6 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V2.8: Cancel every unfinished Normal assignment even when its Location remains reserved in an unissued Annual JOB. -->
+<!-- V2.7: Route Handheld laser scans from a focused COUNT field to Location / Item / LPN lookup without changing or saving the Count. -->
+<!-- V2.6: Allow a Supervisor-confirmed matched Item to reopen for review even when its original raw Count differed from OH. -->
+<!-- V2.5: After Supervisor confirms a DIFF, bypass list filters for that Location until WMS review and Location closure are complete. -->
+<!-- V2.4: After a DIFF completes WMS review and Location closure, clear only the Location / Item search before and after the WMS page refresh. -->
+<!-- V2.3: Clear only the Location / Item search when the Supervisor's final confirmed quantity matches OH. -->
+<!-- V2.2: Persist WMS list filters by User and Session so Supervisor confirmation redirects cannot reset them. -->
 <!-- V1.212: Keep WMS list filters locked until the User changes them; closing a Location clears only the Location / Item search. -->
 <!-- V1.211: Require a fresh items-per-JOB value for every manual build, stop automatic JOB creation after WMS imports, and show unique Locations waiting for JOB creation. -->
 <!-- V1.210: Reconcile Annual JOBs with no unfinished items to completed and remove cancel/return actions from completed JOBs. -->
@@ -73,7 +80,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V1.212</title>
+<title>Cycle Count V2.8</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
@@ -23791,7 +23798,7 @@ body.page-loading-active .main-wrapper{
 <script>
 // V1.190: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '1.212';
+const APP_VERSION = '2.8';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -25313,7 +25320,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V1.212':'e.g. Warehouse V1.212',
+  'เช่น Warehouse V2.8':'e.g. Warehouse V2.8',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -28234,6 +28241,8 @@ function paintDashboardView(tab, cache = _dashboardViewCache) {
   }
   else disconnectTabletAccuracyLayoutGuard();
   if (tab === 'wms') {
+    restoreWmsPersistedFiltersV22(S._dashSid);
+    restoreWmsActiveWorkflowV25(S._dashSid);
     if (Q('wms-zone')) Q('wms-zone').value = S._wmsZone || '';
     if (Q('wms-row')) Q('wms-row').value = S._wmsRow || '';
     if (Q('wms-level')) Q('wms-level').value = S._wmsLevel || '';
@@ -31610,6 +31619,163 @@ function fillStickyWmsOptionSelect(id, options, allLabel='ทั้งหมด'
   return current;
 }
 
+const WMS_PERSISTED_FILTER_FIELDS_V22 = Object.freeze({
+  Filter:'_wmsFilter',
+  Zone:'_wmsZone',
+  Row:'_wmsRow',
+  Level:'_wmsLevel',
+  User:'_wmsUser',
+  Counter:'_wmsCounter',
+});
+
+function wmsPersistedFilterStorageKeyV22(sessionId=S?._dashSid) {
+  const sid = String(sessionId || '');
+  const userId = String(me?.id || 'anonymous');
+  return sid ? `cycle-count:wms-filters:v2.2:${userId}:${sid}` : '';
+}
+
+function currentWmsPersistedFiltersV22() {
+  const output = {};
+  Object.entries(WMS_PERSISTED_FILTER_FIELDS_V22).forEach(([key,stateKey]) => {
+    output[key] = String(S?.[stateKey] ?? (key === 'Filter' ? 'all' : ''));
+  });
+  if (!['all','unfixed','fixed','pending'].includes(output.Filter)) output.Filter = 'all';
+  output.labels = { ...(S?._wmsFilterLabels || {}) };
+  return output;
+}
+
+function readWmsPersistedFiltersV22(sessionId=S?._dashSid) {
+  const storageKey = wmsPersistedFilterStorageKeyV22(sessionId);
+  if (!storageKey) return null;
+  try {
+    const saved = JSON.parse(localStorage.getItem(storageKey) || 'null');
+    if (!saved || typeof saved !== 'object') return null;
+    const output = {};
+    Object.keys(WMS_PERSISTED_FILTER_FIELDS_V22).forEach(key => {
+      output[key] = String(saved[key] ?? (key === 'Filter' ? 'all' : ''));
+    });
+    if (!['all','unfixed','fixed','pending'].includes(output.Filter)) output.Filter = 'all';
+    output.labels = saved.labels && typeof saved.labels === 'object' ? { ...saved.labels } : {};
+    return output;
+  } catch (error) {
+    console.warn('อ่านค่าตัวกรอง WMS ที่จำไว้ไม่สำเร็จ:',error);
+    return null;
+  }
+}
+
+function saveWmsPersistedFiltersV22(sessionId=S?._dashSid) {
+  const storageKey = wmsPersistedFilterStorageKeyV22(sessionId);
+  if (!storageKey) return false;
+  try {
+    localStorage.setItem(storageKey,JSON.stringify({
+      version:'2.2',
+      sessionId:String(sessionId || ''),
+      userId:String(me?.id || ''),
+      ...currentWmsPersistedFiltersV22(),
+    }));
+    return true;
+  } catch (error) {
+    console.warn('บันทึกค่าตัวกรอง WMS ไม่สำเร็จ:',error);
+    return false;
+  }
+}
+
+function restoreWmsPersistedFiltersV22(sessionId=S?._dashSid) {
+  const saved = readWmsPersistedFiltersV22(sessionId);
+  if (!saved) return false;
+  Object.entries(WMS_PERSISTED_FILTER_FIELDS_V22).forEach(([key,stateKey]) => {
+    S[stateKey] = saved[key];
+  });
+  S._wmsFilterLabels = { ...(S._wmsFilterLabels || {}),...(saved.labels || {}) };
+  return true;
+}
+
+function wmsPersistedRouteStateV22(sessionId=S?._dashSid) {
+  const saved = readWmsPersistedFiltersV22(sessionId) || currentWmsPersistedFiltersV22();
+  return {
+    _wmsFilter:saved.Filter,
+    _wmsZone:saved.Zone,
+    _wmsRow:saved.Row,
+    _wmsLevel:saved.Level,
+    _wmsUser:saved.User,
+    _wmsCounter:saved.Counter,
+    _wmsFilterLabels:{ ...(saved.labels || {}) },
+  };
+}
+
+function wmsActiveWorkflowStorageKeyV25(sessionId=S?._dashSid) {
+  const sid = String(sessionId || '');
+  const userId = String(me?.id || 'anonymous');
+  return sid ? `cycle-count:wms-active-flow:v2.5:${userId}:${sid}` : '';
+}
+
+function readWmsActiveWorkflowV25(sessionId=S?._dashSid) {
+  const storageKey = wmsActiveWorkflowStorageKeyV25(sessionId);
+  if (!storageKey) return null;
+  try {
+    const saved = JSON.parse(localStorage.getItem(storageKey) || 'null');
+    const assignmentId = String(saved?.assignmentId || '');
+    if (!assignmentId) return null;
+    return {
+      assignmentId,
+      locationCode:String(saved?.locationCode || ''),
+      sessionId:String(sessionId || ''),
+    };
+  } catch (error) {
+    console.warn('อ่านสถานะ Flow WMS ต่อเนื่องไม่สำเร็จ:',error);
+    return null;
+  }
+}
+
+function saveWmsActiveWorkflowV25(sessionId,assignmentId,locationCode='') {
+  const storageKey = wmsActiveWorkflowStorageKeyV25(sessionId);
+  const aid = String(assignmentId || '');
+  if (!storageKey || !aid) return false;
+  try {
+    localStorage.setItem(storageKey,JSON.stringify({
+      version:'2.5',
+      sessionId:String(sessionId || ''),
+      userId:String(me?.id || ''),
+      assignmentId:aid,
+      locationCode:String(locationCode || ''),
+      savedAt:Date.now(),
+    }));
+    S._wmsWorkflowAssignment = aid;
+    return true;
+  } catch (error) {
+    console.warn('บันทึกสถานะ Flow WMS ต่อเนื่องไม่สำเร็จ:',error);
+    return false;
+  }
+}
+
+function restoreWmsActiveWorkflowV25(sessionId=S?._dashSid) {
+  const saved = readWmsActiveWorkflowV25(sessionId);
+  if (!saved) return '';
+  S._wmsWorkflowAssignment = saved.assignmentId;
+  return saved.assignmentId;
+}
+
+function clearWmsActiveWorkflowV25(sessionId=S?._dashSid,assignmentId='') {
+  const storageKey = wmsActiveWorkflowStorageKeyV25(sessionId);
+  const expectedId = String(assignmentId || '');
+  try {
+    const saved = readWmsActiveWorkflowV25(sessionId);
+    if (!expectedId || !saved || saved.assignmentId === expectedId) {
+      if (storageKey) localStorage.removeItem(storageKey);
+    }
+  } catch (_) {}
+  if (!expectedId || String(S._wmsWorkflowAssignment || '') === expectedId) {
+    S._wmsWorkflowAssignment = '';
+  }
+}
+
+function clearWmsLocationSearchOnlyV24() {
+  S._wmsLocSearch = '';
+  S._wmsFocusAssignment = '';
+  const locationSearchInput = Q('wms-loc-search');
+  if (locationSearchInput) locationSearchInput.value = '';
+}
+
 function cnt() { return Q('cnt'); }
 function rLabel(r) { return {admin:'Admin',counter:'User',supervisor:'Supervisor'}[r] || (r||''); }
 function errBox(msg) { return `<div class="card"><div class="alert alert-red">❌ ${msg}</div></div>`; }
@@ -34367,6 +34533,7 @@ let _hardwareScanLastAppendedCharacter = '';
 let _hardwareScanLastAppendedSource = '';
 let _hardwareScanLastAppendedAt = 0;
 let _hardwareScanLastAppendedTarget = null;
+const _countQtyScanTerminatorBlockedUntilV27 = new WeakMap();
 
 const HANDHELD_SOFT_KEYBOARD_STORAGE_KEY = 'cycle_count_handheld_soft_keyboard';
 let _handheldSoftKeyboardEnabled = (() => {
@@ -34574,18 +34741,22 @@ function resetHardwareScanBuffer() {
 
 function commitHardwareScanBufferWithoutSuffix() {
   const target = _hardwareScanTarget;
-  const numericTarget = Boolean(target?.matches?.('input[type="number"]'));
+  const countQtyTarget = hardwareScanCountQtyTargetV27(target);
+  const numericTarget = Boolean(target?.matches?.('input[type="number"]')) || countQtyTarget;
   const originalNumericValue = _hardwareScanNumberOriginalValue;
   const elapsed = _hardwareScanStartedAt ? performance.now() - _hardwareScanStartedAt : 0;
   const exactTaskValue = exactAssignedTaskLocationScanValue(_hardwareScanBuffer);
-  const valid = Boolean(exactTaskValue) || (_hardwareScanBuffer.length >= 4
+  const ordinaryValid = _hardwareScanBuffer.length >= 4
     && elapsed <= HANDHELD_SCAN_CONFIG.maxDurationMs
-    && _hardwareScanMaxGap <= HANDHELD_SCAN_CONFIG.maxInterKeyMs);
+    && _hardwareScanMaxGap <= HANDHELD_SCAN_CONFIG.maxInterKeyMs;
+  const valid = Boolean(exactTaskValue) || (ordinaryValid
+    && (!countQtyTarget || countQtyLooksLikeHardwareScanV27(_hardwareScanBuffer)));
   const value = exactTaskValue || (valid ? _hardwareScanBuffer : '');
   resetHardwareScanBuffer();
   if (value && numericTarget) {
     target.value = originalNumericValue;
     target.dispatchEvent(new Event('input',{ bubbles:true }));
+    if (countQtyTarget) blockCountQtyScanTerminatorV27(target);
   }
   if (value) routeHardwareLaserScan(value,target);
 }
@@ -34671,6 +34842,54 @@ function hardwareScanEditableTarget(target) {
   return target instanceof HTMLElement && (
     target.matches('input,textarea,select') || target.isContentEditable
   );
+}
+
+function hardwareScanCountQtyTargetV27(target) {
+  return Boolean(
+    S?.page === 'c-count'
+    && target instanceof HTMLElement
+    && target.matches?.('.count-handheld-page input.cqty')
+  );
+}
+
+function blockCountQtyScanTerminatorV27(target,duration=1400) {
+  if (!hardwareScanCountQtyTargetV27(target)) return false;
+  _countQtyScanTerminatorBlockedUntilV27.set(target,Date.now() + Math.max(0,Number(duration) || 0));
+  return true;
+}
+
+function countQtyScanTerminatorBlockedV27(target) {
+  return hardwareScanCountQtyTargetV27(target)
+    && Date.now() < Number(_countQtyScanTerminatorBlockedUntilV27.get(target) || 0);
+}
+
+function countPageHardwareScanKeysV27() {
+  const keys = new Set();
+  const page = document.querySelector('.count-handheld-page');
+  const locationKey = hardwareScanCompareKey(page?.dataset.hwLocationCode || '');
+  if (locationKey) keys.add(locationKey);
+  document.querySelectorAll('.count-handheld-page .citem-wrap[data-hw-item-id]').forEach(wrapper => {
+    const itemKey = hardwareScanCompareKey(wrapper.dataset.hwItemCode || '');
+    if (itemKey) keys.add(itemKey);
+    String(wrapper.dataset.hwLpCodes || '')
+      .split('|')
+      .map(hardwareScanCompareKey)
+      .filter(Boolean)
+      .forEach(key => keys.add(key));
+  });
+  return keys;
+}
+
+function countQtyLooksLikeHardwareScanV27(value='') {
+  const payload = hardwareScanPayloadValue(value) || normalizeHardwareScanValue(value);
+  if (payload.length < 4) return false;
+  const compareKey = hardwareScanCompareKey(payload);
+  if (compareKey && countPageHardwareScanKeysV27().has(compareKey)) return true;
+  // Locations and most Item/LPN formats contain letters or separators. For a
+  // digits-only wedge, require barcode-like length so normal Count values such
+  // as 20, 200 or 1200 remain ordinary quantity entry.
+  if (/[^0-9]/.test(payload)) return true;
+  return /^\d{6,}$/.test(payload);
 }
 
 function hardwareScanRoleLabel(role='') {
@@ -35406,7 +35625,8 @@ function scheduleHardwareCaptureCommit(target,fallbackValue='',delay=HANDHELD_SC
 
 function appendHardwareScanCharacter(target,scanCharacter,source='keydown') {
   if (!scanCharacter) return false;
-  const numericTarget = Boolean(target?.matches?.('input[type="number"]'));
+  const countQtyTarget = hardwareScanCountQtyTargetV27(target);
+  const numericTarget = Boolean(target?.matches?.('input[type="number"]')) || countQtyTarget;
   const captureTarget = Boolean(target?.dataset?.hwScanCapture);
   const now = performance.now();
 
@@ -35450,6 +35670,15 @@ function appendHardwareScanCharacter(target,scanCharacter,source='keydown') {
     },commitDelay);
     return true;
   }
+  if (countQtyTarget) {
+    // Do not auto-route ordinary quantity typing merely because four or more
+    // keys were entered quickly. A Handheld scanner supplies Enter/OK as its
+    // suffix; that terminator is the reliable point at which we restore COUNT
+    // and route the complete code to Location / Item / LPN lookup.
+    clearTimeout(_hardwareScanCommitTimer);
+    _hardwareScanCommitTimer = setTimeout(resetHardwareScanBuffer,900);
+    return true;
+  }
   clearTimeout(_hardwareScanCommitTimer);
   const bufferCommitDelay = S?.page === 'c-tasks'
     ? (exactAssignedTaskLocationScanValue(_hardwareScanBuffer)
@@ -35464,12 +35693,13 @@ function handleHardwareLaserKeydown(event) {
   if (!hardwareScanOperationalPage() || Q('scanOverlay')) return;
   if (event.ctrlKey || event.altKey || event.metaKey) return;
   const target = event.target instanceof HTMLElement ? event.target : null;
-  const numericTarget = Boolean(target?.matches('input[type="number"]'));
+  const countQtyTarget = hardwareScanCountQtyTargetV27(target);
+  const numericTarget = Boolean(target?.matches('input[type="number"]')) || countQtyTarget;
   const captureTarget = Boolean(target?.dataset?.hwScanCapture);
   const terminalKey = hardwareScanTerminalEvent(event);
   const unknownWedgeKey = ['Unidentified','Process'].includes(String(event.key || ''))
     || Number(event.which || event.keyCode || 0) === 229;
-  if (!terminalKey && (captureTarget || unknownWedgeKey)) {
+  if (!terminalKey && (captureTarget || countQtyTarget || unknownWedgeKey)) {
     _hardwareScanLastRawEventAt = Date.now();
   }
   if (event.isComposing && !captureTarget) return;
@@ -35512,12 +35742,17 @@ function handleHardwareLaserKeydown(event) {
     const candidate = exactTaskCandidate || (captureTarget
       ? bestHardwareCaptureValue(target,fieldValue,_hardwareScanBuffer)
       : (fastBuffer ? _hardwareScanBuffer : fieldValue));
-    const numericBarcode = numericTarget && fastBuffer && candidate.length >= 4;
+    const numericBarcode = numericTarget
+      && fastBuffer
+      && candidate.length >= 4
+      && (!countQtyTarget || countQtyLooksLikeHardwareScanV27(candidate));
     if (numericBarcode) {
       event.preventDefault();
       event.stopPropagation();
+      event.stopImmediatePropagation?.();
       target.value = _hardwareScanNumberOriginalValue;
       target.dispatchEvent(new Event('input',{ bubbles:true }));
+      if (countQtyTarget) blockCountQtyScanTerminatorV27(target);
       routeHardwareLaserScan(candidate,target);
     } else if (captureTarget && target?.id === 'task_hardware_scan'
         && candidate.length >= HANDHELD_SCAN_CONFIG.minLength && !exactTaskCandidate) {
@@ -35556,7 +35791,8 @@ function handleHardwareLaserSecondaryKeyEvent(event,source) {
   if (!hardwareScanOperationalPage() || Q('scanOverlay') || hardwareScanTerminalEvent(event)) return;
   if (event.ctrlKey || event.altKey || event.metaKey) return;
   const target = event.target instanceof HTMLElement ? event.target : null;
-  const numericTarget = Boolean(target?.matches('input[type="number"]'));
+  const countQtyTarget = hardwareScanCountQtyTargetV27(target);
+  const numericTarget = Boolean(target?.matches('input[type="number"]')) || countQtyTarget;
   const captureTarget = Boolean(target?.dataset?.hwScanCapture);
   const scanTarget = Boolean(captureTarget || target?.dataset?.hwScanRole);
   if (hardwareScanEditableTarget(target) && !scanTarget && !numericTarget) return;
@@ -38764,6 +39000,16 @@ function countQtyHardwareConfirmEvent(event) {
 
 function handleCountQtyHardwareConfirmKey(event,input) {
   if (S?.page !== 'c-count' || !countQtyHardwareConfirmEvent(event)) return;
+  // A Handheld wedge normally ends its barcode with Enter/OK. The capture
+  // listener handles the barcode before the focused COUNT field sees it; its
+  // matching keyup must also be consumed or the inline COUNT handler would
+  // save the restored quantity as though the User had pressed OK.
+  if (countQtyScanTerminatorBlockedV27(input)) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    return;
+  }
   event.preventDefault();
   event.stopPropagation();
   if (event.repeat) return;
@@ -42240,17 +42486,39 @@ async function returnMatchedWorkToSupervisor(assignmentId,itemId,locationCode,it
     if (!countResult.data || !snapshotResult.data) {
       throw new Error(uiCopy('ไม่พบยอด Count หรือ OH สำหรับตรวจสอบ','Count or OH data is missing.'));
     }
-    const finalQty = Number(countResult.data.count_qty);
-    const oh = Number(snapshotResult.data.onhand_qty);
-    if (!Number.isFinite(finalQty) || !Number.isFinite(oh) || finalQty !== oh) {
+    const latestCountQty = countResult.data.count_qty === null || countResult.data.count_qty === ''
+      ? Number.NaN
+      : Number(countResult.data.count_qty);
+    const oh = snapshotResult.data.onhand_qty === null || snapshotResult.data.onhand_qty === ''
+      ? Number.NaN
+      : Number(snapshotResult.data.onhand_qty);
+    const approvalBefore = approvalResult.data || null;
+    const approvalState = varianceReviewState(approvalBefore);
+    const approvedFinalQty = approvalBefore?.final_qty === null || approvalBefore?.final_qty === undefined || approvalBefore?.final_qty === ''
+      ? Number.NaN
+      : Number(approvalBefore.final_qty);
+    const approvedVariance = approvalBefore?.variance === null || approvalBefore?.variance === undefined || approvalBefore?.variance === ''
+      ? Number.NaN
+      : Number(approvalBefore.variance);
+    const approvalConfirmsMatch = approvalState === 'confirmed' && (
+      Number.isFinite(approvedFinalQty)
+        ? approvedFinalQty === oh
+        : Number.isFinite(approvedVariance) && approvedVariance === 0
+    );
+    const rawCountMatches = Number.isFinite(latestCountQty)
+      && Number.isFinite(oh)
+      && latestCountQty === oh;
+    if (!Number.isFinite(oh) || (!approvalConfirmsMatch && !rawCountMatches)) {
       throw new Error(uiCopy(
-        'รายการนี้ไม่ใช่งานนับตรงแล้ว กรุณารีเฟรชหน้าและตรวจสอบสถานะล่าสุด',
-        'This Item no longer matches OH. Refresh the page and check its latest status.'
+        'ผลล่าสุดของรายการนี้ไม่ตรงกับ OH แล้ว กรุณารีเฟรชหน้าและตรวจสอบสถานะล่าสุด',
+        'The latest resolved quantity no longer matches OH. Refresh the page and check its latest status.'
       ));
     }
+    const finalQty = approvalConfirmsMatch
+      ? (Number.isFinite(approvedFinalQty) ? approvedFinalQty : oh)
+      : latestCountQty;
 
-    const approvalBefore = approvalResult.data || null;
-    if (varianceReviewState(approvalBefore) === 'draft') {
+    if (approvalState === 'draft') {
       S._dashSid = assignment.session_id;
       rememberDashboardSession(assignment.session_id);
       go('sv-detail',{ aid:assignmentId });
@@ -42298,7 +42566,13 @@ async function returnMatchedWorkToSupervisor(assignmentId,itemId,locationCode,it
       await logAudit(
         assignment.session_id,assignment.location_id,itemId,
         'work_tracker_match_reopened',
-        JSON.stringify({ status:assignment.status,final_qty:finalQty,variance:0 }),
+        JSON.stringify({
+          status:assignment.status,
+          count_qty:latestCountQty,
+          final_qty:finalQty,
+          variance:0,
+          matched_by:approvalConfirmsMatch ? 'supervisor_confirmation' : 'raw_count',
+        }),
         JSON.stringify({ status:'round3_done',review_status:'draft',reason:'late_stock_change_review' }),
         assignmentId,
       );
@@ -48246,6 +48520,8 @@ function buildWmsFastWorkspaceHtmlV179(rows,asgnInfoMap,options={}) {
 function paintWmsFastPayloadV179(payload,context={}) {
   const sessionId = String(context.sessionId || payload?.session_id || '');
   if (!sessionId || String(payload?.session_id || sessionId) !== sessionId) return false;
+  restoreWmsPersistedFiltersV22(sessionId);
+  restoreWmsActiveWorkflowV25(sessionId);
   let rows = Array.isArray(payload?.rows) ? payload.rows.map(row => ({ ...row })) : [];
   rows = mergeWmsFastAuditV179(rows,payload?.audit_rows || []);
   const activeDateFilter = dashboardDateRange();
@@ -50039,6 +50315,8 @@ async function loadSvDash() {
       </div>
     </section>`;
 
+  restoreWmsPersistedFiltersV22(curSid);
+  restoreWmsActiveWorkflowV25(curSid);
   const allowedWmsStatuses = new Set(['all','unfixed','fixed','pending']);
   const requestedWmsFilter = S._wmsFilter || 'all';
   const wmsFilter = allowedWmsStatuses.has(requestedWmsFilter) ? requestedWmsFilter : 'all';
@@ -50301,6 +50579,7 @@ function updateWmsOverview() {
 
 function setWmsStatusFilter(status) {
   S._wmsFilter = status;
+  saveWmsPersistedFiltersV22(S._dashSid);
   const select = Q('wms-status');
   if (select) select.value = status;
   document.querySelectorAll('[data-wms-kpi]').forEach(card => {
@@ -50541,6 +50820,7 @@ async function returnWmsForReview(vaId, assignmentId, itemId, button) {
     }
     if (target) Object.assign(target,reviewUpdates);
     window._wmsRows = (window._wmsRows || []).filter(row => row.id !== vaId);
+    clearWmsActiveWorkflowV25(assignment?.session_id || S._dashSid,assignmentId);
     await logAudit(
       S._dashSid || assignment?.session_id,
       assignment?.location_id,
@@ -51162,17 +51442,24 @@ async function closeWmsLocation(assignmentId,button) {
       'ปิดงาน WMS Location แล้ว',
       assignmentId,
     );
-    // Closing a Location finishes the focused workflow. Do not leave its code
-    // in the shared Location / Item filter when the next task is displayed.
-    S._wmsLocSearch = '';
-    S._wmsFocusAssignment = '';
-    const locationSearchInput = Q('wms-loc-search');
-    if (locationSearchInput) locationSearchInput.value = '';
+    clearWmsActiveWorkflowV25(assignment.session_id || S._dashSid,assignmentId);
+    // Closing a DIFF Location finishes the focused workflow. Clear only the
+    // Location / Item search; the six User-selected filters stay persisted.
+    clearWmsLocationSearchOnlyV24();
     renderWmsList();
     showWmsFeedback(`ปิดงาน ${locationCode} แล้ว · ตรวจครบ ${serverRows.length.toLocaleString(uiLocale())}/${serverRows.length.toLocaleString(uiLocale())} Item`);
     invalidateWmsFastCacheV179();
     invalidateDashboardCache();
-    refreshDashboardData();
+    try {
+      const dashboardRefresh = refreshDashboardData();
+      Promise.resolve(dashboardRefresh).then(
+        () => clearWmsLocationSearchOnlyV24(),
+        () => clearWmsLocationSearchOnlyV24(),
+      );
+    } catch (refreshError) {
+      console.warn('โหลดหน้า WMS หลังปิด Location ไม่สำเร็จ:',refreshError);
+      clearWmsLocationSearchOnlyV24();
+    }
   } catch (error) {
     console.error(error);
     if (error?.code === 'WMS_NOTE_SAVE_FAILED') {
@@ -51404,6 +51691,9 @@ function updateWmsFilter(key, value) {
     S._wmsFilterLabels = S._wmsFilterLabels || {};
     S._wmsFilterLabels[selectId] = selectedOption.textContent || String(value);
   }
+  if (Object.hasOwn(WMS_PERSISTED_FILTER_FIELDS_V22,key)) {
+    saveWmsPersistedFiltersV22(S._dashSid);
+  }
   if (key !== 'Filter' && key !== 'LocSearch') refreshWmsDependentFilters();
   if (key === 'Filter') {
     document.querySelectorAll('[data-wms-kpi]').forEach(card => {
@@ -51571,8 +51861,22 @@ function renderWmsList() {
   const filterUser = S._wmsUser || '';
   const filterCounter = S._wmsCounter || '';
   const searchLoc = (S._wmsLocSearch || '').trim().toLowerCase();
+  let workflowAssignmentId = String(S._wmsWorkflowAssignment || '');
+  const workflowAssignment = workflowAssignmentId ? asgnInfoMap[workflowAssignmentId] : null;
+  if (workflowAssignmentId && workflowAssignment?.wms_closed_at) {
+    clearWmsActiveWorkflowV25(workflowAssignment.session_id || S._dashSid,workflowAssignmentId);
+    workflowAssignmentId = '';
+  }
+  const workflowActive = Boolean(
+    workflowAssignmentId
+    && wmsRows.some(row => String(row.assignment_id || '') === workflowAssignmentId)
+  );
 
   const filtered = sortRowsByLocation(wmsRows.filter(v => {
+    // Special sequential flow: once a Supervisor confirms a DIFF, keep this
+    // Location visible through WMS confirmation and Location closure. The
+    // User's six filters remain saved but cannot hide the active work.
+    if (workflowActive) return String(v.assignment_id || '') === workflowAssignmentId;
     if (!wmsRowMatchesStatus(v,filterStatus)) return false;
     const loc = asgnInfoMap[v.assignment_id]?.locations || {};
     const locationMeta = warehouseLocationFilterMeta(loc);
@@ -51592,7 +51896,7 @@ function renderWmsList() {
 
   const visibleAssignmentIds = [...new Set(filtered.map(row => row.assignment_id).filter(Boolean))];
   const visibleCount = Q('wms-visible-count');
-  if (visibleCount) visibleCount.textContent = `${visibleAssignmentIds.length.toLocaleString(uiLocale())} Location · ${filtered.length.toLocaleString(uiLocale())} Item`;
+  if (visibleCount) visibleCount.textContent = `${visibleAssignmentIds.length.toLocaleString(uiLocale())} Location · ${filtered.length.toLocaleString(uiLocale())} Item${workflowActive ? ' · Flow ต่อเนื่อง (ข้าม Filter)' : ''}`;
   if (!filtered.length) {
     const msg = filterStatus==='unfixed' ? '🎉 ไม่มีรายการที่ยังไม่ได้ตรวจสอบ' 
       : filterStatus==='fixed' ? 'ยังไม่มีรายการที่ตรวจสอบแล้ว' 
@@ -52014,17 +52318,18 @@ function openCombinedWmsLocationFlow({ aid,sessionId,locationCode,focus=true }={
   _dashTab = 'wms';
   rememberDashboardSession(safeSessionId);
   window._openNavGroup = 'my-work';
+  const stickyFilters = wmsPersistedRouteStateV22(safeSessionId);
+  if (focus && safeAssignmentId) {
+    saveWmsActiveWorkflowV25(safeSessionId,safeAssignmentId,safeLocationCode);
+  }
+  const activeWorkflow = readWmsActiveWorkflowV25(safeSessionId);
   go('sv-dash',{
     _dashTab:'wms',
     _dashSid:safeSessionId,
-    _wmsFilter:'all',
-    _wmsZone:'',
-    _wmsRow:'',
-    _wmsLevel:'',
-    _wmsUser:'',
-    _wmsCounter:'',
+    ...stickyFilters,
     _wmsLocSearch:focus ? safeLocationCode : '',
     _wmsFocusAssignment:focus ? safeAssignmentId : '',
+    _wmsWorkflowAssignment:activeWorkflow?.assignmentId || '',
   },{
     replace:true,
     resetHistory:true,
@@ -52476,10 +52781,16 @@ async function loadVarianceLocationReviewState(aid) {
     const variance = Number(row.variance);
     return Number.isFinite(variance) && variance !== 0;
   }).map(row => row.item_id);
+  const confirmedVarianceItemIds = (approvalResult.data || []).filter(row => {
+    const variance = Number(row.variance);
+    return varianceReviewState(row) === 'confirmed'
+      && Number.isFinite(variance)
+      && variance !== 0;
+  }).map(row => row.item_id);
   const requiredItemIds = [...new Set([...physicalDiffItemIds,...supervisorDiffItemIds])];
   const approvalByItem = new Map((approvalResult.data || []).map(row => [row.item_id,row]));
   const missingItemIds = requiredItemIds.filter(itemId => varianceReviewState(approvalByItem.get(itemId)) !== 'confirmed');
-  return { assignment,requiredItemIds,missingItemIds };
+  return { assignment,requiredItemIds,missingItemIds,confirmedVarianceItemIds };
 }
 
 async function finalizeVarianceLocation(aid,mode,inlineIndex,nextAction='continue',button) {
@@ -52521,11 +52832,14 @@ async function finalizeVarianceLocation(aid,mode,inlineIndex,nextAction='continu
       facts:[{ label:'Item ที่ตรวจครบ',value:state.requiredItemIds.length.toLocaleString(uiLocale()) }],
     });
     const shouldContinueWms = state.requiredItemIds.length > 0 && nextAction !== 'exit';
+    const hasConfirmedWmsDiff = state.confirmedVarianceItemIds.length > 0;
     setTimeout(() => openCombinedWmsLocationFlow({
       aid,
       sessionId:state.assignment.session_id,
       locationCode:state.assignment.locations?.code,
-      focus:shouldContinueWms,
+      // If the Supervisor's final quantity matches OH, clear only the search
+      // box. The six persisted list filters remain untouched by V2.2 state.
+      focus:shouldContinueWms && hasConfirmedWmsDiff,
     }),350);
   } catch (error) {
     if (alertBox) alertBox.innerHTML = `<div class="alert alert-red">❌ ${escapeWmsText(error.message || error)}</div>`;
@@ -54771,7 +55085,7 @@ async function renderManageAssign(container) {
             <button class="btn btn-ghost" id="normal-free-reassign-mode-btn" type="button"
               onclick="setNormalFreeReassignMode()">โหมดจ่ายซ้ำ</button>
             <button class="btn btn-amber" id="normal-cancel-unfinished-btn" type="button"
-              onclick="cancelUnfinishedNormalAssignments()">ยกเลิกงานที่ยังไม่เสร็จ</button>
+              onclick="cancelUnfinishedNormalAssignments()">ยกเลิกการจ่ายงานทั้งหมด</button>
             <button class="btn btn-blue" id="normal-free-print-btn" type="button"
               onclick="printSelectedNormalRoundOneLocations()" disabled>🖨️ พิมพ์งานที่เลือก</button>
             <button class="btn btn-green" id="normal-free-assign-btn" type="button"
@@ -58170,6 +58484,22 @@ async function cancelNormalAssignment(assignmentId,locationCode='') {
   }
 }
 
+function normalAssignmentEligibleForBulkCancelV28(assignment,completedLocationIds,runtime) {
+  const locationId = String(assignment?.location_id || '');
+  if (!locationId || completedLocationIds?.has?.(locationId)) return false;
+  // A Location can remain reserved inside a pending, unissued Annual JOB
+  // while its live Assignment was issued from the Normal tab. Excluding every
+  // planned Annual Location made the bulk cancel report zero even though the
+  // cards clearly showed a Normal assignee. Exclude only an Annual JOB that is
+  // actually assigned/in progress/expired.
+  if (runtime?.lockedAnnualLocationIds?.has?.(locationId)) return false;
+  return Boolean(
+    assignment?.assigned_to
+    || assignment?.expired_at
+    || ['in_progress','round1_done','round2_done'].includes(String(assignment?.status || ''))
+  );
+}
+
 async function cancelUnfinishedNormalAssignments() {
   const config = selectedAssignSessionConfig();
   const alertBox = Q('aa');
@@ -58192,29 +58522,23 @@ async function cancelUnfinishedNormalAssignments() {
 
     const latestAssignments = [...annualLatestAssignmentsByLocation(assignmentResult.data || []).values()];
     const completedLocationIds = annualCompletedLocationIds(latestAssignments);
-    const unfinishedNormalAssignments = latestAssignments.filter(assignment => {
-      const locationId = String(assignment?.location_id || '');
-      if (!locationId || completedLocationIds.has(locationId)) return false;
-      if (runtime.activeAnnualLocationIds.has(locationId)) return false;
-      return Boolean(
-        assignment?.assigned_to
-        || assignment?.expired_at
-        || ['in_progress','round1_done','round2_done'].includes(String(assignment?.status || ''))
-      );
-    });
+    const unfinishedNormalAssignments = latestAssignments.filter(assignment =>
+      normalAssignmentEligibleForBulkCancelV28(assignment,completedLocationIds,runtime)
+    );
     const locationIds = [...new Set(unfinishedNormalAssignments
       .map(assignment => String(assignment.location_id || ''))
       .filter(Boolean))];
 
     if (!locationIds.length) {
-      if (alertBox) alertBox.innerHTML = '<div class="alert alert-green">ไม่มีงานแบบปกติที่ยังไม่เสร็จให้ยกเลิก</div>';
+      if (alertBox) alertBox.innerHTML = '<div class="alert alert-green">ไม่มีการจ่ายงานแบบปกติที่ยังไม่เสร็จให้ยกเลิก</div>';
       return;
     }
 
     const confirmed = confirm(
-      `ยกเลิกงานแบบปกติที่ยังไม่เสร็จ ${locationIds.length.toLocaleString(uiLocale())} Location?\n\n`
-      + 'งานที่นับเสร็จแล้วและประวัติทั้งหมดจะถูกเก็บไว้\n'
-      + 'งานที่ยังไม่เริ่มจะกลับเป็นงานว่าง ส่วนงานที่มีผล Count จะกลับไปรอจ่ายใหม่'
+      `ยกเลิกการจ่ายงานแบบปกติทั้งหมด ${locationIds.length.toLocaleString(uiLocale())} Location?\n\n`
+      + 'ระบบจะยกเลิกผู้รับมอบหมายของงานแบบปกติที่ยังไม่เสร็จทั้งหมดใน Session นี้\n'
+      + 'งานที่ยังไม่เริ่มจะกลับเป็นงานว่าง ส่วนงานที่มีผล Count จะเก็บประวัติและกลับไปรอจ่ายใหม่\n'
+      + 'งานที่นับเสร็จสมบูรณ์แล้วจะเก็บไว้และไม่ถูกลบ'
     );
     if (!confirmed) return;
 
@@ -58222,7 +58546,7 @@ async function cancelUnfinishedNormalAssignments() {
       cancelButton.disabled = true;
       cancelButton.textContent = '⏳ กำลังยกเลิกงาน...';
     }
-    if (alertBox) alertBox.innerHTML = '<div class="alert alert-blue">⏳ กำลังแยกงานที่เสร็จแล้วและยกเลิกเฉพาะงานแบบปกติที่ยังไม่เสร็จ...</div>';
+    if (alertBox) alertBox.innerHTML = '<div class="alert alert-blue">⏳ กำลังยกเลิกการจ่ายงานแบบปกติทั้งหมดที่ยังไม่เสร็จ...</div>';
 
     const releaseSummary = await releaseAssignmentLocationsForMode(
       config.sessionId,
@@ -58240,10 +58564,10 @@ async function cancelUnfinishedNormalAssignments() {
     await renderAssignmentZoneModeSettings();
 
     if (alertBox) {
-      alertBox.innerHTML = `<div class="alert alert-green">✅ ยกเลิกงานแบบปกติที่ยังไม่เสร็จ ${releaseSummary.releasedAssignments.toLocaleString(uiLocale())} Location แล้ว · เก็บผล Count/ประวัติ ${releaseSummary.preservedAssignments.toLocaleString(uiLocale())} งาน</div>`;
+      alertBox.innerHTML = `<div class="alert alert-green">✅ ยกเลิกการจ่ายงานแบบปกติ ${releaseSummary.releasedAssignments.toLocaleString(uiLocale())} Location แล้ว · เก็บผล Count/ประวัติ ${releaseSummary.preservedAssignments.toLocaleString(uiLocale())} งาน</div>`;
     }
-    showActionSuccess('ยกเลิกงานแบบปกติที่ยังไม่เสร็จเรียบร้อยแล้ว', {
-      title:'ยกเลิกงานสำเร็จ',
+    showActionSuccess('ยกเลิกการจ่ายงานแบบปกติทั้งหมดเรียบร้อยแล้ว', {
+      title:'ยกเลิกการจ่ายงานสำเร็จ',
       facts:[
         { label:'งานที่ยกเลิก/คืนงาน',value:releaseSummary.releasedAssignments.toLocaleString(uiLocale()) },
         { label:'กลับเป็นงานว่าง',value:releaseSummary.deletedAssignments.toLocaleString(uiLocale()) },
@@ -58256,7 +58580,7 @@ async function cancelUnfinishedNormalAssignments() {
   } finally {
     if (cancelButton) {
       cancelButton.disabled = false;
-      cancelButton.textContent = 'ยกเลิกงานที่ยังไม่เสร็จ';
+      cancelButton.textContent = 'ยกเลิกการจ่ายงานทั้งหมด';
     }
   }
 }
@@ -65417,7 +65741,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V1.212" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V2.8" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
