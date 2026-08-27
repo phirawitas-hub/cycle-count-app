@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V2.10: Show each Annual JOB's remaining and original Location + Item totals explicitly so completed work is never mistaken for missing work. -->
+<!-- V2.9: Cancel every truly uncounted Normal assignment from fresh database rows, regardless of stale status, and verify no assignee remains. -->
 <!-- V2.8: Cancel every unfinished Normal assignment even when its Location remains reserved in an unissued Annual JOB. -->
 <!-- V2.7: Route Handheld laser scans from a focused COUNT field to Location / Item / LPN lookup without changing or saving the Count. -->
 <!-- V2.6: Allow a Supervisor-confirmed matched Item to reopen for review even when its original raw Count differed from OH. -->
@@ -80,7 +82,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V2.8</title>
+<title>Cycle Count V2.10</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
@@ -23798,7 +23800,7 @@ body.page-loading-active .main-wrapper{
 <script>
 // V1.190: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.8';
+const APP_VERSION = '2.10';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -25320,7 +25322,7 @@ const UI_EN_EXACT = Object.freeze({
   'เช่น B-EA-001-A':'e.g. B-EA-001-A',
   'เช่น Cycle Count':'e.g. Cycle Count',
   '… และแถวอื่นอีก':'… and Additional Rows',
-  'เช่น Warehouse V2.8':'e.g. Warehouse V2.8',
+  'เช่น Warehouse V2.9':'e.g. Warehouse V2.9',
   'รถเวสป้าหันไปทางขวา':'Vespa Scooter Facing Right',
   '2. Restore จาก Excel':'2. Restore from Excel',
   'Cycle Count ก.ค. 2569':'Cycle Count Jul 2026',
@@ -55981,12 +55983,17 @@ function renderAnnualJobList() {
       ? { cls:'tag-amber',label:'หมดเวลา · รอจ่ายใหม่' }
       : (statusInfo[job.status] || statusInfo.pending);
     const checked = !completed && selectedIds.has(job.id) ? 'checked' : '';
+    const totalItems = Number(_annualWorkspaceTotalItemCounts[job.id] || 0);
+    const remainingItems = completed ? 0 : Number(_annualWorkspaceItemCounts[job.id] || 0);
+    const itemSummary = completed
+      ? `เสร็จแล้ว ${totalItems} / ทั้งหมด ${totalItems} รายการ Location + Item`
+      : `คงเหลือ ${remainingItems} / ทั้งหมด ${totalItems} รายการ Location + Item`;
     return `<div class="annual-job-row ${expired ? 'is-expired' : ''}">
       <input class="annual-job-checkbox" type="checkbox" value="${job.id}" ${checked} ${completed ? 'disabled' : ''}
         onchange="syncAnnualJobSelection()" aria-label="เลือก ${escapeWmsText(job.job_code)}">
       <div>
         <div class="annual-job-code">${escapeWmsText(job.job_code)}</div>
-        <div class="annual-job-meta">${Number(completed ? _annualWorkspaceTotalItemCounts[job.id] : _annualWorkspaceItemCounts[job.id] || 0)} รายการ Location + ITEM</div>
+        <div class="annual-job-meta">${itemSummary}</div>
       </div>
       <div class="annual-job-user">${job.profiles?.name
         ? `👤 ${escapeWmsText(job.profiles.name)}`
@@ -58484,20 +58491,15 @@ async function cancelNormalAssignment(assignmentId,locationCode='') {
   }
 }
 
-function normalAssignmentEligibleForBulkCancelV28(assignment,completedLocationIds,runtime) {
-  const locationId = String(assignment?.location_id || '');
-  if (!locationId || completedLocationIds?.has?.(locationId)) return false;
-  // A Location can remain reserved inside a pending, unissued Annual JOB
-  // while its live Assignment was issued from the Normal tab. Excluding every
-  // planned Annual Location made the bulk cancel report zero even though the
-  // cards clearly showed a Normal assignee. Exclude only an Annual JOB that is
-  // actually assigned/in progress/expired.
-  if (runtime?.lockedAnnualLocationIds?.has?.(locationId)) return false;
-  return Boolean(
-    assignment?.assigned_to
-    || assignment?.expired_at
-    || ['in_progress','round1_done','round2_done'].includes(String(assignment?.status || ''))
-  );
+function issuedAnnualLocationIdsForNormalCancelV29(runtime={}) {
+  const issuedLocationIds = new Set();
+  (runtime.items || []).forEach(item => {
+    const job = runtime.jobsById?.get?.(String(item?.job_id || ''));
+    if (!job || job.status === 'completed' || !job.assigned_to) return;
+    const locationId = String(item?.location_id || '');
+    if (locationId) issuedLocationIds.add(locationId);
+  });
+  return issuedLocationIds;
 }
 
 async function cancelUnfinishedNormalAssignments() {
@@ -58520,25 +58522,41 @@ async function cancelUnfinishedNormalAssignments() {
     if (assignmentResult.error) throw assignmentResult.error;
     if (selectedAssignSessionConfig().sessionId !== config.sessionId) return;
 
-    const latestAssignments = [...annualLatestAssignmentsByLocation(assignmentResult.data || []).values()];
-    const completedLocationIds = annualCompletedLocationIds(latestAssignments);
-    const unfinishedNormalAssignments = latestAssignments.filter(assignment =>
-      normalAssignmentEligibleForBulkCancelV28(assignment,completedLocationIds,runtime)
+    const issuedAnnualLocationIds = issuedAnnualLocationIdsForNormalCancelV29(runtime);
+    const assignedNormalRows = (assignmentResult.data || []).filter(assignment =>
+      Boolean(assignment?.id)
+      && Boolean(assignment?.assigned_to)
+      && !issuedAnnualLocationIds.has(String(assignment?.location_id || ''))
     );
-    const locationIds = [...new Set(unfinishedNormalAssignments
+    const assignedNormalIds = [...new Set(assignedNormalRows.map(row => row.id).filter(Boolean))];
+    const countResult = assignedNormalIds.length
+      ? await fetchSupabaseRowsByValues(
+          'count_records','assignment_id','assignment_id',assignedNormalIds,
+        )
+      : { data:[],error:null };
+    if (countResult.error) throw countResult.error;
+    const countedAssignmentIds = new Set((countResult.data || [])
+      .map(row => String(row.assignment_id || ''))
+      .filter(Boolean));
+    const uncountedNormalAssignments = assignedNormalRows.filter(assignment =>
+      !countedAssignmentIds.has(String(assignment.id || ''))
+    );
+    const assignmentIds = [...new Set(uncountedNormalAssignments
+      .map(assignment => assignment.id)
+      .filter(Boolean))];
+    const locationIds = [...new Set(uncountedNormalAssignments
       .map(assignment => String(assignment.location_id || ''))
       .filter(Boolean))];
 
-    if (!locationIds.length) {
-      if (alertBox) alertBox.innerHTML = '<div class="alert alert-green">ไม่มีการจ่ายงานแบบปกติที่ยังไม่เสร็จให้ยกเลิก</div>';
+    if (!assignmentIds.length) {
+      if (alertBox) alertBox.innerHTML = '<div class="alert alert-green">ไม่มีการจ่ายงานแบบปกติที่ยังไม่มีผล Count ให้ยกเลิก</div>';
       return;
     }
 
     const confirmed = confirm(
       `ยกเลิกการจ่ายงานแบบปกติทั้งหมด ${locationIds.length.toLocaleString(uiLocale())} Location?\n\n`
-      + 'ระบบจะยกเลิกผู้รับมอบหมายของงานแบบปกติที่ยังไม่เสร็จทั้งหมดใน Session นี้\n'
-      + 'งานที่ยังไม่เริ่มจะกลับเป็นงานว่าง ส่วนงานที่มีผล Count จะเก็บประวัติและกลับไปรอจ่ายใหม่\n'
-      + 'งานที่นับเสร็จสมบูรณ์แล้วจะเก็บไว้และไม่ถูกลบ'
+      + 'ระบบจะยกเลิกผู้รับมอบหมายของงานแบบปกติที่ยังไม่มีผล Count ทุกสถานะใน Session นี้\n'
+      + 'งานที่มีผล Count แล้วและงานที่จ่ายผ่าน Annual JOB จะเก็บไว้ทั้งหมด'
     );
     if (!confirmed) return;
 
@@ -58546,14 +58564,76 @@ async function cancelUnfinishedNormalAssignments() {
       cancelButton.disabled = true;
       cancelButton.textContent = '⏳ กำลังยกเลิกงาน...';
     }
-    if (alertBox) alertBox.innerHTML = '<div class="alert alert-blue">⏳ กำลังยกเลิกการจ่ายงานแบบปกติทั้งหมดที่ยังไม่เสร็จ...</div>';
+    if (alertBox) alertBox.innerHTML = '<div class="alert alert-blue">⏳ กำลังยกเลิกผู้รับงานแบบปกติทุก Location ที่ยังไม่มีผล Count...</div>';
 
-    const releaseSummary = await releaseAssignmentLocationsForMode(
-      config.sessionId,
-      locationIds,
-      'normal',
-      runtime,
+    const [approvalResult,foundResult] = await Promise.all([
+      fetchSupabaseRowsByValues(
+        'variance_approvals','assignment_id','assignment_id',assignmentIds,
+      ),
+      fetchSupabaseRowsByValues(
+        'found_items','assignment_id','assignment_id',assignmentIds,
+      ),
+    ]);
+    if (approvalResult.error || foundResult.error) {
+      throw (approvalResult.error || foundResult.error);
+    }
+    const supportingEvidenceIds = new Set([
+      ...(approvalResult.data || []),
+      ...(foundResult.data || []),
+    ].map(row => String(row.assignment_id || '')).filter(Boolean));
+    const preservedAssignments = uncountedNormalAssignments.filter(assignment =>
+      supportingEvidenceIds.has(String(assignment.id || ''))
     );
+    const deletableAssignmentIds = uncountedNormalAssignments
+      .filter(assignment => !supportingEvidenceIds.has(String(assignment.id || '')))
+      .map(assignment => assignment.id)
+      .filter(Boolean);
+    const preservedByPreviousUser = new Map();
+    preservedAssignments.forEach(assignment => {
+      const previousUser = String(assignment.assigned_to || assignment.expired_from || '');
+      const ids = preservedByPreviousUser.get(previousUser) || [];
+      ids.push(assignment.id);
+      preservedByPreviousUser.set(previousUser,ids);
+    });
+    const batchSize = 200;
+    const now = new Date().toISOString();
+    let clearedRows = 0;
+    for (const [previousUser,ids] of preservedByPreviousUser.entries()) {
+      for (let start=0; start<ids.length; start+=batchSize) {
+        const chunkIds = ids.slice(start,start+batchSize);
+        const { data,error } = await sb.from('assignments').update({
+          assigned_to:null,
+          assigned_at:null,
+          expired_at:now,
+          expired_from:previousUser || null,
+        }).in('id',chunkIds).select('id');
+        if (error) throw error;
+        if ((data || []).length !== chunkIds.length) {
+          throw new Error('ล้างผู้รับงานบางรายการไม่สำเร็จ กรุณารีเฟรชแล้วลองอีกครั้ง');
+        }
+        clearedRows += (data || []).length;
+      }
+    }
+    let deletedRows = 0;
+    for (let start=0; start<deletableAssignmentIds.length; start+=batchSize) {
+      const chunkIds = deletableAssignmentIds.slice(start,start+batchSize);
+      const { data,error } = await sb.from('assignments')
+        .delete().in('id',chunkIds).select('id');
+      if (error) throw error;
+      if ((data || []).length !== chunkIds.length) {
+        throw new Error('ยกเลิก Assignment บางรายการไม่สำเร็จ กรุณารีเฟรชแล้วลองอีกครั้ง');
+      }
+      deletedRows += (data || []).length;
+    }
+
+    const verifyResult = await fetchSupabaseRowsByValues(
+      'assignments','id,assigned_to','id',assignmentIds,
+    );
+    if (verifyResult.error) throw verifyResult.error;
+    const lingeringAssignments = (verifyResult.data || []).filter(row => Boolean(row.assigned_to));
+    if (lingeringAssignments.length) {
+      throw new Error(`ยังมีผู้รับงานค้างอยู่ ${lingeringAssignments.length.toLocaleString(uiLocale())} Assignment กรุณารีเฟรชแล้วลองอีกครั้ง`);
+    }
 
     _normalFreeSelectedLocationIds.clear();
     _normalFreeSelectedPrintLocationIds.clear();
@@ -58564,18 +58644,20 @@ async function cancelUnfinishedNormalAssignments() {
     await renderAssignmentZoneModeSettings();
 
     if (alertBox) {
-      alertBox.innerHTML = `<div class="alert alert-green">✅ ยกเลิกการจ่ายงานแบบปกติ ${releaseSummary.releasedAssignments.toLocaleString(uiLocale())} Location แล้ว · เก็บผล Count/ประวัติ ${releaseSummary.preservedAssignments.toLocaleString(uiLocale())} งาน</div>`;
+      alertBox.innerHTML = `<div class="alert alert-green">✅ ยกเลิกการจ่ายงานแบบปกติที่ยังไม่มีผล Count ครบ ${locationIds.length.toLocaleString(uiLocale())} Location แล้ว · ตรวจสอบแล้วไม่เหลือ User ค้าง</div>`;
     }
     showActionSuccess('ยกเลิกการจ่ายงานแบบปกติทั้งหมดเรียบร้อยแล้ว', {
       title:'ยกเลิกการจ่ายงานสำเร็จ',
       facts:[
-        { label:'งานที่ยกเลิก/คืนงาน',value:releaseSummary.releasedAssignments.toLocaleString(uiLocale()) },
-        { label:'กลับเป็นงานว่าง',value:releaseSummary.deletedAssignments.toLocaleString(uiLocale()) },
-        { label:'เก็บผล Count และรอจ่ายใหม่',value:releaseSummary.preservedAssignments.toLocaleString(uiLocale()) },
+        { label:'Location ที่ยกเลิกผู้รับงาน',value:locationIds.length.toLocaleString(uiLocale()) },
+        { label:'กลับเป็นงานว่าง',value:deletedRows.toLocaleString(uiLocale()) },
+        { label:'เก็บข้อมูลประกอบและล้าง User',value:clearedRows.toLocaleString(uiLocale()) },
       ],
     });
   } catch (error) {
     console.error('Cancel unfinished Normal assignments failed:',error);
+    invalidateAssignmentWorkspaceCache(config.sessionId);
+    await Promise.allSettled([refreshLocs(),refreshBulkFilters()]);
     if (alertBox) alertBox.innerHTML = `<div class="alert alert-red">❌ ยกเลิกงานแบบปกติไม่สำเร็จ: ${escapeWmsText(error.message || error)}</div>`;
   } finally {
     if (cancelButton) {
@@ -65741,7 +65823,7 @@ async function loadAdBranding() {
           <div class="admin-user-field">
             <label for="branding-system-subtitle">ชื่อรอง / เวอร์ชัน</label>
             <input id="branding-system-subtitle" maxlength="100" value="${escapeWmsText(uiBranding.systemSubtitle)}"
-              placeholder="เช่น Warehouse V2.8" oninput="previewBrandingDraft()">
+              placeholder="เช่น Warehouse V2.9" oninput="previewBrandingDraft()">
           </div>
         </div>
         <div class="logo-admin-layout">
