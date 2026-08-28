@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- V2.17: Split the Count-page summary into assigned Work progress and current-Location Item progress, with shorter Pass/Recount labels. -->
+<!-- V2.18: Wait for the complete Android IME payload before routing Count-page Item/LPN laser scans, preserving repeated characters such as LPN leading zeros. -->
 <!-- V2.12: Open expiry prompts only inside their selected assignment mode and classify work as expired only when it has a real previous assignee. -->
 <!-- V2.11: Give Annual JOBs an independent midnight-expiry queue and dedicated reassignment controls matching Normal Location work. -->
 <!-- V2.10: Show each Annual JOB's remaining and original Location + Item totals explicitly so completed work is never mistaken for missing work. -->
@@ -85,7 +85,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V2.17</title>
+<title>Cycle Count V2.18</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
@@ -23984,9 +23984,9 @@ body.page-loading-active .main-wrapper{
 <div id="app"></div>
 
 <script>
-// V2.17: one authoritative application version for the browser title,
+// V2.18: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.17';
+const APP_VERSION = '2.18';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -34676,6 +34676,10 @@ const HANDHELD_SCAN_CONFIG = Object.freeze({
   // can be accepted immediately.
   taskInputCommitDelayMs:900,
   taskTerminatorGraceMs:180,
+  // Android Handheld IMEs can publish the final composed Item/LPN after the
+  // scanner's Enter suffix. In particular, repeated leading zeroes may be
+  // missing from key events even though the complete field value follows.
+  countTerminatorGraceMs:520,
   taskConnectionRefreshMs:1800,
   duplicateWindowMs:1100,
 });
@@ -35020,12 +35024,37 @@ function exactAssignedTaskLocationScanValue(...candidates) {
   return '';
 }
 
+function bestCountHardwareCaptureValueV218(...candidates) {
+  const values = candidates
+    .map(value => normalizeHardwareScanValue(value || ''))
+    .filter(Boolean);
+  if (!values.length) return '';
+
+  // Prefer a value that exactly identifies a Location, Item or LPN currently
+  // visible in this Count task. A partial key stream can be longer or arrive
+  // first, so length alone is not a reliable indication of completeness.
+  const pageKeys = countPageHardwareScanKeysV27();
+  const exactValues = values.filter(value => (
+    [...hardwareScanCandidateKeys(value)].some(key => pageKeys.has(key))
+  ));
+  const pool = exactValues.length ? exactValues : values;
+  return pool.reduce((best,value) => value.length > best.length ? value : best,'');
+}
+
 function bestHardwareCaptureValue(target,fieldValue='',fallbackValue='') {
   const field = normalizeHardwareScanValue(fieldValue);
   const fallback = normalizeHardwareScanValue(fallbackValue);
   if (target?.id === 'task_hardware_scan') {
     const exact = exactAssignedTaskLocationScanValue(field,fallback);
     if (exact) return exact;
+  }
+  if (target?.id === 'count_hardware_scan') {
+    return bestCountHardwareCaptureValueV218(
+      field,
+      fallback,
+      _countLaserImeBufferV127,
+      _hardwareScanBuffer,
+    );
   }
   return field.length >= fallback.length ? field : fallback;
 }
@@ -35491,7 +35520,11 @@ function captureCountLaserImeTextV127(target,chunk='') {
   _countLaserImeCommitTimerV127 = setTimeout(() => {
     const fieldValue = normalizeHardwareScanValue(target.value || '');
     const imeValue = normalizeHardwareScanValue(_countLaserImeBufferV127);
-    const candidate = fieldValue.length >= imeValue.length ? fieldValue : imeValue;
+    const candidate = bestCountHardwareCaptureValueV218(
+      fieldValue,
+      imeValue,
+      _hardwareScanBuffer,
+    );
     resetCountLaserImeBufferV127();
     if (candidate.length >= HANDHELD_SCAN_CONFIG.minLength) {
       commitHardwareCaptureTarget(target,candidate);
@@ -36105,6 +36138,28 @@ function handleHardwareLaserKeydown(event) {
       target.dispatchEvent(new Event('input',{ bubbles:true }));
       if (countQtyTarget) blockCountQtyScanTerminatorV27(target);
       routeHardwareLaserScan(candidate,target);
+    } else if (captureTarget && target?.id === 'count_hardware_scan'
+        && candidate.length >= HANDHELD_SCAN_CONFIG.minLength) {
+      // The scanner suffix can precede Android's final composition update.
+      // Delay routing so the complete Item/LPN (including repeated zeroes)
+      // can replace the truncated key-buffer candidate before lookup.
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      const lateTarget = target;
+      const fallbackCandidate = bestCountHardwareCaptureValueV218(
+        fieldValue,
+        _countLaserImeBufferV127,
+        _hardwareScanBuffer,
+        candidate,
+      );
+      resetHardwareScanBuffer();
+      _hardwareScanInputCommitTimer = setTimeout(
+        () => commitHardwareCaptureTarget(lateTarget,fallbackCandidate),
+        HANDHELD_SCAN_CONFIG.countTerminatorGraceMs,
+      );
+      _hardwareScanLastRawEventAt = 0;
+      return;
     } else if (captureTarget && target?.id === 'task_hardware_scan'
         && candidate.length >= HANDHELD_SCAN_CONFIG.minLength && !exactTaskCandidate) {
       // Enter/OK can arrive before the IME publishes its final composed text.
