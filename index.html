@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V2.14: Move the Annual JOB summary and builder into the Current Flow card without changing their working controls. -->
+<!-- V2.12: Open expiry prompts only inside their selected assignment mode and classify work as expired only when it has a real previous assignee. -->
+<!-- V2.11: Give Annual JOBs an independent midnight-expiry queue and dedicated reassignment controls matching Normal Location work. -->
 <!-- V2.10: Show each Annual JOB's remaining and original Location + Item totals explicitly so completed work is never mistaken for missing work. -->
 <!-- V2.9: Cancel every truly uncounted Normal assignment from fresh database rows, regardless of stale status, and verify no assignee remains. -->
 <!-- V2.8: Cancel every unfinished Normal assignment even when its Location remains reserved in an unissued Annual JOB. -->
@@ -82,7 +85,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V2.10</title>
+<title>Cycle Count V2.14</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
@@ -19197,6 +19200,34 @@ body {
 .expired-session-group-info { min-width:0; }
 .expired-session-group strong { display:block;color:#1d1d1f;font-size:15px;overflow-wrap:anywhere; }
 .expired-session-group span { display:block;margin-top:2px;color:#5f6368;font-size:12px; }
+.expired-annual-job-picker {
+  grid-column:1 / -1;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(145px,1fr));
+  gap:7px;
+  padding-top:10px;
+  border-top:1px solid color-mix(in srgb,#d97706 24%,transparent);
+}
+.expired-annual-job-option {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-height:38px;
+  padding:8px 10px;
+  border:1px solid color-mix(in srgb,#d97706 26%,var(--theme-border-color));
+  border-radius:11px;
+  background:var(--theme-card-bg);
+  color:var(--theme-heading-color);
+  font-size:12px;
+  font-weight:800;
+  cursor:pointer;
+}
+.expired-annual-job-option:has(input:checked) {
+  border-color:#d97706;
+  background:color-mix(in srgb,#f59e0b 10%,var(--theme-card-bg));
+}
+.expired-annual-job-option input { width:17px;height:17px;accent-color:#a45a17; }
+.expired-annual-job-selected-count { font-weight:800;color:#995014 !important; }
 .expired-session-group-buttons {
   display:flex;
   align-items:center;
@@ -23792,15 +23823,170 @@ body.page-loading-active .main-wrapper{
     grid-column:2 !important;
   }
 }
+
+/* V2.14 — compact Annual JOB summary and builder inside CURRENT FLOW. */
+#app .assign-bento-shell .annual-nav-tools {
+  grid-column:1 / -1;
+  display:grid;
+  grid-template-columns:1fr;
+  gap:9px;
+  min-width:0;
+  width:100%;
+  max-width:100%;
+  margin-top:2px;
+  padding-top:12px;
+  border-top:1px solid color-mix(in srgb,var(--theme-primary-color) 12%,transparent);
+  box-sizing:border-box;
+}
+#app .assign-bento-shell .annual-nav-tools[hidden],
+#app .assign-bento-shell:not([data-current-step="assign-step-round1"]) .annual-nav-tools {
+  display:none !important;
+}
+#app .assign-bento-shell .annual-nav-summary,
+#app .assign-bento-shell .annual-nav-builder {
+  min-width:0;
+  max-width:100%;
+  padding:11px 12px;
+  overflow:hidden;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 15%,transparent);
+  border-radius:16px;
+  box-sizing:border-box;
+  background:color-mix(in srgb,var(--theme-primary-color) 4%,var(--theme-card-bg));
+}
+#app .assign-bento-shell .annual-nav-section-head {
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:10px;
+  min-width:0;
+  margin-bottom:8px;
+}
+#app .assign-bento-shell .annual-nav-section-head > div { min-width:0; }
+#app .assign-bento-shell .annual-nav-section-head span {
+  display:block;
+  color:var(--theme-muted-text-color);
+  font-size:7px;
+  font-weight:900;
+  letter-spacing:.12em;
+}
+#app .assign-bento-shell .annual-nav-section-head strong {
+  display:block;
+  margin-top:1px;
+  color:var(--theme-heading-color);
+  font-size:13px;
+  font-weight:900;
+  line-height:1.2;
+}
+#app .assign-bento-shell .annual-nav-section-head small {
+  min-width:0;
+  color:var(--theme-muted-text-color);
+  font-size:8px;
+  font-weight:700;
+  line-height:1.3;
+  text-align:right;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+#app .assign-bento-shell .annual-nav-summary .annual-job-stats {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:6px;
+}
+#app .assign-bento-shell .annual-nav-summary .annual-job-stat {
+  min-width:0;
+  min-height:54px;
+  padding:6px 5px;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 10%,transparent);
+  border-radius:11px;
+  box-sizing:border-box;
+  background:var(--theme-card-bg) !important;
+}
+#app .assign-bento-shell .annual-nav-summary .annual-job-stat strong {
+  color:var(--theme-primary-color) !important;
+  font-size:17px;
+  line-height:1;
+}
+#app .assign-bento-shell .annual-nav-summary .annual-job-stat span {
+  min-width:0;
+  margin-top:4px;
+  color:var(--theme-muted-text-color);
+  font-size:7px;
+  line-height:1.25;
+  overflow-wrap:anywhere;
+}
+#app .assign-bento-shell .annual-nav-builder-fields {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:7px;
+}
+#app .assign-bento-shell .annual-nav-builder-fields .fg { min-width:0; margin:0; }
+#app .assign-bento-shell .annual-nav-builder-fields label {
+  display:block;
+  margin-bottom:4px;
+  color:var(--theme-muted-text-color);
+  font-size:8px;
+  font-weight:850;
+}
+#app .assign-bento-shell .annual-nav-builder-fields input {
+  width:100%;
+  min-width:0;
+  height:36px !important;
+  min-height:36px !important;
+  padding:7px 10px !important;
+  border-radius:11px !important;
+  box-sizing:border-box;
+  color:var(--theme-heading-color);
+  font-size:11px;
+  font-weight:800;
+}
+#app .assign-bento-shell .annual-nav-builder-actions {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:7px;
+  margin-top:8px;
+}
+#app .assign-bento-shell .annual-nav-builder-actions .btn {
+  width:100%;
+  min-width:0;
+  min-height:38px !important;
+  padding:7px 9px !important;
+  border-radius:11px !important;
+  font-size:9px !important;
+  font-weight:900 !important;
+  line-height:1.25 !important;
+  white-space:normal !important;
+}
+#app .assign-bento-shell .annual-nav-alert:empty { display:none; }
+#app .assign-bento-shell .annual-nav-alert .alert {
+  max-height:64px;
+  margin:8px 0 0 !important;
+  padding:8px 10px !important;
+  overflow:auto;
+  border-radius:10px !important;
+  font-size:8px !important;
+  line-height:1.4;
+}
+@media (max-width:620px) {
+  #app .assign-bento-shell .annual-nav-summary .annual-job-stats {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+@media (max-width:420px) {
+  #app .assign-bento-shell .annual-nav-section-head { align-items:flex-start;flex-direction:column;gap:3px; }
+  #app .assign-bento-shell .annual-nav-section-head small { width:100%;text-align:left; }
+  #app .assign-bento-shell .annual-nav-builder-fields,
+  #app .assign-bento-shell .annual-nav-builder-actions { grid-template-columns:1fr; }
+}
 </style>
 </head>
 <body data-build="v1-190">
 <div id="app"></div>
 
 <script>
-// V1.190: one authoritative application version for the browser title,
+// V2.14: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.10';
+const APP_VERSION = '2.14';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -54122,7 +54308,7 @@ async function assignmentZoneModeRuntime(sessionId,workspace=null) {
       query => query.eq('session_id',sid),
     ),
     fetchPagedSupabaseRows(
-      'annual_count_jobs','id,session_id,job_code,assigned_to,status,expired_at,created_at',
+      'annual_count_jobs','id,session_id,job_code,assigned_to,status,assigned_at,expired_at,expired_from,created_at',
       query => query.eq('session_id',sid),
     ),
   ]);
@@ -54142,7 +54328,7 @@ async function assignmentZoneModeRuntime(sessionId,workspace=null) {
     annualLocationIds.add(locationId);
     const job = jobsById.get(String(item.job_id || ''));
     if (job && job.status !== 'completed') activeAnnualLocationIds.add(locationId);
-    if (job && job.status !== 'completed' && (job.assigned_to || job.status === 'in_progress' || job.expired_at)) {
+    if (job && job.status !== 'completed' && (job.assigned_to || job.status === 'in_progress' || isExpiredAnnualJob(job))) {
       lockedAnnualLocationIds.add(locationId);
     }
   });
@@ -54237,7 +54423,7 @@ async function renderAssignmentZoneModeSettings(workspace=null) {
 async function pruneUnassignedAnnualZoneItems(sessionId,zoneKey) {
   const runtime = await assignmentZoneModeRuntime(sessionId);
   const removableJobs = new Set(runtime.jobs.filter(job =>
-    !job.assigned_to && job.status === 'pending' && !job.expired_at
+    !job.assigned_to && job.status === 'pending' && !isExpiredAnnualJob(job)
   ).map(job => String(job.id)));
   const removableItemIds = runtime.items.filter(item => {
     const location = runtime.workspace.locationById.get(item.location_id);
@@ -54780,35 +54966,40 @@ async function loadAssignmentWorkspaceData(sessionId) {
   return promise;
 }
 
+function annualJobCurrentFlowToolsHtml() {
+  return `<section class="annual-nav-tools" id="annual-nav-tools" aria-label="สรุปและสร้าง Annual JOB" hidden>
+    <article class="annual-nav-summary">
+      <div class="annual-nav-section-head">
+        <div><span>ANNUAL JOB</span><strong>สรุป JOB</strong></div>
+        <small>อัปเดตตาม Session</small>
+      </div>
+      <div class="annual-job-stats">
+        <div class="annual-job-stat"><strong id="annual-stat-items">—</strong><span>LOCATION + ITEM</span></div>
+        <div class="annual-job-stat"><strong id="annual-stat-jobs">—</strong><span>JOB ทั้งหมด</span></div>
+        <div class="annual-job-stat"><strong id="annual-stat-assigned">—</strong><span>JOB ที่จ่ายแล้ว</span></div>
+        <div class="annual-job-stat"><strong id="annual-stat-unbuilt-locations">—</strong><span>รอสร้าง JOB</span></div>
+      </div>
+    </article>
+    <article class="annual-nav-builder">
+      <div class="annual-nav-section-head">
+        <div><span>CREATE</span><strong>1 · สร้าง JOB</strong></div>
+        <small>เฉพาะงานที่ยังไม่นับและยังไม่อยู่ใน JOB</small>
+      </div>
+      <div class="annual-nav-builder-fields">
+        <div class="fg"><label for="annual-build-size">รายการต่อ JOB</label><input id="annual-build-size" type="number" min="1" max="200" value="" placeholder="1-200" inputmode="numeric" required></div>
+        <div class="fg"><label for="annual-build-prefix">คำนำหน้า JOB</label><input id="annual-build-prefix" maxlength="20" value="JOB" oninput="rememberAnnualJobBuildDraft()" onchange="rememberAnnualJobBuildDraft()"></div>
+      </div>
+      <div class="annual-nav-builder-actions">
+        <button class="btn btn-blue" id="annual-generate-btn" type="button" onclick="generateAnnualJobs()">สร้าง JOB</button>
+        <button class="btn btn-amber" id="annual-cancel-unfinished-btn" type="button" onclick="cancelUnfinishedAnnualJobs()">ยกเลิก JOB ที่ยังไม่เสร็จ</button>
+      </div>
+      <div class="annual-nav-alert" id="annual-generate-alert"></div>
+    </article>
+  </section>`;
+}
+
 function annualAssignmentWorkspaceHtml(userOptionsHtml) {
   return `<div class="annual-workspace round1-panel" id="annual-first-round-panel" hidden>
-    <div class="annual-generate-grid">
-      <article class="annual-control-card">
-        <h3>1 · สร้าง JOB</h3>
-        <p>สร้างเพิ่มเฉพาะงานที่ยังไม่นับและยังไม่อยู่ใน JOB · แยก JOB ภายในแต่ละ Zone โดยไม่เปลี่ยน JOB เดิม</p>
-        <div class="grid-2">
-          <div class="fg"><label>รายการต่อ JOB</label><input id="annual-build-size" type="number" min="1" max="200" value="" placeholder="กรอกใหม่ทุกครั้ง (1-200)" inputmode="numeric" required></div>
-          <div class="fg"><label>คำนำหน้า JOB</label><input id="annual-build-prefix" maxlength="20" value="JOB" oninput="rememberAnnualJobBuildDraft()" onchange="rememberAnnualJobBuildDraft()"></div>
-        </div>
-        <div style="display:flex;flex-wrap:wrap;gap:9px">
-          <button class="btn btn-blue" id="annual-generate-btn" type="button" style="flex:1 1 220px"
-            onclick="generateAnnualJobs()">สร้าง JOB</button>
-          <button class="btn btn-amber" id="annual-cancel-unfinished-btn" type="button" style="flex:1 1 220px"
-            onclick="cancelUnfinishedAnnualJobs()">ยกเลิก JOB ที่ยังไม่เสร็จ</button>
-        </div>
-        <div id="annual-generate-alert"></div>
-      </article>
-      <article class="annual-control-card">
-        <h3>สรุป JOB</h3>
-        <div class="annual-job-stats">
-          <div class="annual-job-stat"><strong id="annual-stat-items">—</strong><span>LOCATION + ITEM</span></div>
-          <div class="annual-job-stat"><strong id="annual-stat-jobs">—</strong><span>JOBS ทั้งหมด</span></div>
-          <div class="annual-job-stat"><strong id="annual-stat-assigned">—</strong><span>JOBS ที่จ่ายแล้ว</span></div>
-          <div class="annual-job-stat"><strong id="annual-stat-unbuilt-locations">—</strong><span>LOCATION รอสร้าง JOB</span></div>
-        </div>
-      </article>
-    </div>
-
     <div class="normal-free-shell">
       <div class="assign-workspace-heading">
         <strong>2 · เลือก User และ JOB</strong>
@@ -54825,10 +55016,13 @@ function annualAssignmentWorkspaceHtml(userOptionsHtml) {
           <option value="completed">เสร็จแล้ว</option>
         </select>
         <button class="btn btn-ghost btn-sm" type="button" onclick="selectAnnualJobs('unassigned')">เลือกงานว่าง</button>
+        <button class="btn btn-ghost btn-sm" type="button" onclick="selectAnnualJobs('expired')">เลือกงานหมดเวลา</button>
         <button class="btn btn-ghost btn-sm" type="button" onclick="selectAnnualJobs('all')">เลือกทั้งหมด</button>
         <button class="btn btn-ghost btn-sm" type="button" onclick="selectAnnualJobs('none')">ล้าง</button>
         <span class="annual-job-selection-count" id="annual-job-selection-count">เลือก 0 JOB</span>
         <button class="btn btn-green btn-sm" id="annual-assign-btn" type="button" onclick="assignSelectedAnnualJobs()" disabled>ยืนยันจ่ายงาน</button>
+        <button class="btn btn-amber btn-sm" id="annual-expired-reassign-btn" type="button"
+          onclick="reassignSelectedExpiredAnnualJobs()" hidden disabled>จ่าย Annual JOB หมดเวลา</button>
         <button class="btn btn-blue btn-sm" id="annual-print-btn" type="button" onclick="printSelectedAnnualJobs()" disabled>พิมพ์ที่เลือก</button>
       </div>
       <div class="annual-job-list" id="annual-job-list"><div class="annual-empty">กำลังโหลด Annual JOB...</div></div>
@@ -55073,6 +55267,7 @@ async function renderManageAssign(container) {
             <span>📦</span> Annual JOB
           </button>
         </div>
+        ${annualJobCurrentFlowToolsHtml()}
         <div class="normal-free-toolbar assign-bento-nav-actions assign-bento-command-bar">
           <div class="assign-bento-assignee-bar">
             <span class="assign-bento-assignee-icon" aria-hidden="true">👤</span>
@@ -55262,7 +55457,7 @@ async function renderManageAssign(container) {
             <p id="expired-session-modal-summary">พบงานเก่าที่ต้องจ่ายใหม่</p>
           </div>
           <div class="expired-session-groups" id="expired-session-groups"></div>
-          <div class="expired-session-actions">
+          <div class="expired-session-actions" id="expired-session-actions">
             <button class="btn btn-ghost" type="button" onclick="closeExpiredAssignmentPrompt()">ปิด</button>
           </div>
         </div>
@@ -55303,7 +55498,7 @@ function setAssignmentSessionReady(ready) {
   if (expiredFlowButton) expiredFlowButton.disabled = !isReady;
   const advancedToggle = Q('assign-advanced-toggle');
   if (advancedToggle) advancedToggle.disabled = !isReady;
-  document.querySelectorAll('.round1-mode-switch button, .assign-bento-nav-actions button, .assign-bento-nav-actions select').forEach(control => {
+  document.querySelectorAll('.round1-mode-switch button, .assign-bento-nav-actions button, .assign-bento-nav-actions select, .annual-nav-tools button, .annual-nav-tools input').forEach(control => {
     control.disabled = !isReady;
   });
 
@@ -55398,6 +55593,16 @@ function currentRound1AssignMode() {
   return S._round1AssignMode === 'annual' ? 'annual' : 'normal';
 }
 
+function isExpiredAnnualJob(job) {
+  return Boolean(
+    job
+    && job.status !== 'completed'
+    && !job.assigned_to
+    && job.expired_at
+    && job.expired_from
+  );
+}
+
 function syncAssignWorkspaceMode(preferredMode) {
   const config = selectedAssignSessionConfig();
   const mode = preferredMode === 'annual' || preferredMode === 'normal'
@@ -55409,6 +55614,7 @@ function syncAssignWorkspaceMode(preferredMode) {
   const annualPanel = Q('annual-first-round-panel');
   const normalButton = Q('round1-mode-normal');
   const annualButton = Q('round1-mode-annual');
+  const annualNavTools = Q('annual-nav-tools');
   const normalFilters = Q('assign-bento-round1-filters');
   const normalActions = document.querySelector('.assign-bento-nav-actions');
   const roundBadge = Q('round1-mode-badge');
@@ -55419,8 +55625,11 @@ function syncAssignWorkspaceMode(preferredMode) {
   const badge = Q('assign-mode-badge');
   if (normalPanel) normalPanel.hidden = annual;
   if (annualPanel) annualPanel.hidden = !annual;
+  if (annualNavTools) annualNavTools.hidden = !annual;
   if (normalFilters) normalFilters.hidden = annual;
   if (normalActions) normalActions.hidden = annual;
+  const shell = document.querySelector('.assign-bento-shell');
+  if (shell) shell.dataset.round1Mode = mode;
   if (normalButton) {
     normalButton.classList.toggle('active',!annual);
     normalButton.setAttribute('aria-selected',String(!annual));
@@ -55441,7 +55650,7 @@ function syncAssignWorkspaceMode(preferredMode) {
   restoreAnnualJobBuildDraft(config);
   updateExpiredAssignmentIndicators(annual
     ? (_annualWorkspaceJobs || []).filter(job =>
-        _annualWorkspaceActiveJobIds.has(job.id) && !job.assigned_to && Boolean(job.expired_at)
+        _annualWorkspaceActiveJobIds.has(job.id) && isExpiredAnnualJob(job)
       ).length
     : (window._expiredAssignments || []).length);
   return { ...config, round1Mode:mode };
@@ -55490,17 +55699,19 @@ function setRound1AssignMode(mode, options={}) {
   const synced = syncAssignWorkspaceMode(nextMode);
   if (options.skipLoad) return synced;
   if (nextMode === 'annual') {
-    loadAnnualJobWorkspace();
+    _annualExpiredPromptSessionId = '';
+    loadAnnualJobWorkspace().then(() => showExpiredAssignmentPrompt(config.sessionId,'annual'));
   } else {
-    refreshLocs();
-    refreshBulkFilters();
+    _expiredPromptSessionId = '';
+    Promise.all([refreshLocs(),refreshBulkFilters()])
+      .then(() => showExpiredAssignmentPrompt(config.sessionId,'normal'));
   }
   return synced;
 }
 
 function cacheAnnualAssignmentJobsByLocation(jobs=[],items=[]) {
   const activeAssignedJobs = new Map((jobs || [])
-    .filter(job => job && job.status !== 'completed' && Boolean(job.assigned_to))
+    .filter(job => job && job.status !== 'completed')
     .map(job => [String(job.id || ''),job]));
   const byLocation = new Map();
   (items || []).forEach(item => {
@@ -55528,7 +55739,7 @@ function calculateCombinedAssignmentStats(sessionId,workspace={},jobs=[],items=[
   );
   const annualAssignedJobIds = new Set(annualAssignedJobs.map(job => String(job.id || '')));
   const annualExpiredJobIds = new Set((jobs || [])
-    .filter(job => job.status !== 'completed' && !job.assigned_to && Boolean(job.expired_at))
+    .filter(job => isExpiredAnnualJob(job))
     .map(job => String(job.id || '')));
   const annualAssignedLocationIds = new Set();
   const annualExpiredLocationIds = new Set();
@@ -55588,7 +55799,7 @@ async function refreshCombinedAssignmentStats(sessionId,workspace=null) {
           .then(data => ({ data,error:null }))
           .catch(error => ({ data:null,error })),
     fetchPagedSupabaseRows(
-      'annual_count_jobs','id,session_id,job_no,job_code,assigned_to,status,expired_at',
+      'annual_count_jobs','id,session_id,job_no,job_code,assigned_to,status,assigned_at,expired_at,expired_from',
       query => query.eq('session_id',sid),
     ),
     fetchPagedSupabaseRows(
@@ -55600,9 +55811,28 @@ async function refreshCombinedAssignmentStats(sessionId,workspace=null) {
     throw (workspaceResult.error || jobsResult.error || itemsResult.error);
   }
   if (selectedAssignSessionConfig().sessionId !== sid) return null;
-  cacheAnnualAssignmentJobsByLocation(jobsResult.data || [],itemsResult.data || []);
+  const workspaceData = workspaceResult.data || {};
+  const annualJobs = jobsResult.data || [];
+  const annualItems = itemsResult.data || [];
+  const totalItemCounts = {};
+  const unfinishedItemCounts = {};
+  annualItems.forEach(item => {
+    totalItemCounts[item.job_id] = (totalItemCounts[item.job_id] || 0) + 1;
+  });
+  const completedLocationIds = annualCompletedLocationIds(workspaceData.assignments || []);
+  annualItems.forEach(item => {
+    if (completedLocationIds.has(String(item.location_id || ''))) return;
+    unfinishedItemCounts[item.job_id] = (unfinishedItemCounts[item.job_id] || 0) + 1;
+  });
+  await reconcileAnnualWorkspaceCompletedJobs(annualJobs,totalItemCounts,unfinishedItemCounts);
+  try {
+    await expireOverdueAnnualJobs(annualJobs,annualItems,workspaceData);
+  } catch (error) {
+    console.error('Annual JOB background expiry failed:',error);
+  }
+  cacheAnnualAssignmentJobsByLocation(annualJobs,annualItems);
   const stats = calculateCombinedAssignmentStats(
-    sid,workspaceResult.data || {},jobsResult.data || [],itemsResult.data || [],
+    sid,workspaceData,annualJobs,annualItems,
   );
   applyCombinedAssignmentStats(stats);
   return stats;
@@ -55690,6 +55920,7 @@ async function handleAssignSessionChange() {
   _normalFreeSelectedReassignLocationIds = new Set();
   _expiredSelectedAssignmentIds = new Set();
   _expiredPromptSessionId = '';
+  _annualExpiredPromptSessionId = '';
   _normalFreeReassignMode = false;
   _normalFreeFilters = { zone:[],row:[],level:[],status:[] };
   _assignReviewFilters = { zone:[],row:[],level:[],status:[] };
@@ -55713,10 +55944,11 @@ async function handleAssignSessionChange() {
   await renderAssignmentZoneModeSettings();
   if (selectedAssignSessionConfig().sessionId !== config.sessionId) return;
   if (config.round1Mode === 'annual') await loadAnnualJobWorkspace();
+  scheduleAnnualMidnightExpiryCheck();
   if (Q('r23-round')) refreshR23Preview();
   if (Q('zoneDashDetails')?.open) refreshZoneDashboard();
   focusRoundOneAssignmentWorkspace({ scroll:false });
-  showExpiredAssignmentPrompt(config.sessionId);
+  showExpiredAssignmentPrompt(config.sessionId,config.round1Mode);
 }
 
 function annualLatestAssignmentsByLocation(assignments=[]) {
@@ -55799,12 +56031,14 @@ let _annualWorkspaceJobs = [];
 let _annualWorkspaceItemCounts = {};
 let _annualWorkspaceTotalItemCounts = {};
 let _annualWorkspaceActiveJobIds = new Set();
+let _annualMidnightExpiryTimer = null;
 window._annualAssignmentJobByLocation = new Map();
 let _normalFreeSelectedLocationIds = new Set();
 let _normalFreeSelectedPrintLocationIds = new Set();
 let _normalFreeSelectedReassignLocationIds = new Set();
 let _expiredSelectedAssignmentIds = new Set();
 let _expiredPromptSessionId = '';
+let _annualExpiredPromptSessionId = '';
 let _normalFreeReassignMode = false;
 let _normalAssignmentConfirmPayload = null;
 let _normalAssignmentConfirmPreviousOverflow = '';
@@ -55851,6 +56085,145 @@ async function reconcileAnnualWorkspaceCompletedJobs(jobs=[],totalItemCounts={},
   return { completed:staleJobs.length,persisted };
 }
 
+function annualBangkokDateKey(value) {
+  const date = value instanceof Date ? value : new Date(value || '');
+  if (Number.isNaN(date.getTime())) return '';
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US',{
+    timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit',
+  }).formatToParts(date).map(part => [part.type,part.value]));
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function scheduleAnnualMidnightExpiryCheck() {
+  if (_annualMidnightExpiryTimer) clearTimeout(_annualMidnightExpiryTimer);
+  const bangkokOffsetMs = 7 * 60 * 60 * 1000;
+  const bangkokNow = new Date(Date.now() + bangkokOffsetMs);
+  const nextBangkokMidnightUtc = Date.UTC(
+    bangkokNow.getUTCFullYear(),bangkokNow.getUTCMonth(),bangkokNow.getUTCDate() + 1,
+  ) - bangkokOffsetMs;
+  const delay = Math.max(1000,nextBangkokMidnightUtc - Date.now() + 1500);
+  _annualMidnightExpiryTimer = setTimeout(() => {
+    _annualMidnightExpiryTimer = null;
+    if (!Q('as-sess')?.value) return;
+    if (currentRound1AssignMode() === 'annual' && Q('annual-job-list')) {
+      loadAnnualJobWorkspace();
+    } else {
+      Promise.allSettled([refreshLocs(),refreshBulkFilters()]);
+    }
+    scheduleAnnualMidnightExpiryCheck();
+  },delay);
+}
+
+function annualJobAssignmentTimestamp(job,jobItems=[],latestAssignments=new Map()) {
+  if (job?.assigned_at) return job.assigned_at;
+  const timestamps = (jobItems || [])
+    .map(item => latestAssignments.get(String(item.location_id || ''))?.assigned_at)
+    .filter(Boolean)
+    .sort();
+  return timestamps[0] || '';
+}
+
+async function expireOverdueAnnualJobs(jobs=[],items=[],workspace={}) {
+  const todayKey = annualBangkokDateKey(new Date());
+  if (!todayKey) return { expired:0,jobs:[] };
+  const latestAssignments = annualLatestAssignmentsByLocation(workspace.assignments || []);
+  const itemsByJobId = new Map();
+  (items || []).forEach(item => {
+    const jobId = String(item.job_id || '');
+    if (!jobId) return;
+    const rows = itemsByJobId.get(jobId) || [];
+    rows.push(item);
+    itemsByJobId.set(jobId,rows);
+  });
+  const overdueJobs = (jobs || []).filter(job => {
+    if (!job?.assigned_to || job.status === 'completed' || isExpiredAnnualJob(job)) return false;
+    const assignedAt = annualJobAssignmentTimestamp(
+      job,itemsByJobId.get(String(job.id || '')) || [],latestAssignments,
+    );
+    const assignedKey = annualBangkokDateKey(assignedAt);
+    return Boolean(assignedKey && assignedKey < todayKey);
+  });
+  if (!overdueJobs.length) return { expired:0,jobs:[] };
+
+  const now = new Date().toISOString();
+  const jobsByPreviousUser = new Map();
+  overdueJobs.forEach(job => {
+    const previousUser = String(job.assigned_to || '');
+    const ids = jobsByPreviousUser.get(previousUser) || [];
+    ids.push(job.id);
+    jobsByPreviousUser.set(previousUser,ids);
+  });
+  const batchSize = 200;
+  for (const [previousUser,jobIds] of jobsByPreviousUser.entries()) {
+    for (let start=0; start<jobIds.length; start+=batchSize) {
+      const chunkIds = jobIds.slice(start,start+batchSize);
+      const { data,error } = await sb.from('annual_count_jobs').update({
+        assigned_to:null,
+        assigned_at:null,
+        expired_at:now,
+        expired_from:previousUser || null,
+      }).in('id',chunkIds).select('id');
+      if (error) throw error;
+      if ((data || []).length !== chunkIds.length) {
+        throw new Error('ปรับสถานะ Annual JOB หมดเวลาบางรายการไม่สำเร็จ');
+      }
+    }
+  }
+
+  const assignmentIdsByPreviousUser = new Map();
+  overdueJobs.forEach(job => {
+    const previousUser = String(job.assigned_to || '');
+    const jobItems = itemsByJobId.get(String(job.id || '')) || [];
+    jobItems.forEach(item => {
+      const assignment = latestAssignments.get(String(item.location_id || ''));
+      if (!assignment?.id || assignmentCountingFinished(assignment.status)) return;
+      if (String(assignment.assigned_to || '') !== previousUser) return;
+      const ids = assignmentIdsByPreviousUser.get(previousUser) || [];
+      if (!ids.includes(assignment.id)) ids.push(assignment.id);
+      assignmentIdsByPreviousUser.set(previousUser,ids);
+    });
+  });
+  for (const [previousUser,assignmentIds] of assignmentIdsByPreviousUser.entries()) {
+    for (let start=0; start<assignmentIds.length; start+=batchSize) {
+      const chunkIds = assignmentIds.slice(start,start+batchSize);
+      const { data,error } = await sb.from('assignments').update({
+        assigned_to:null,
+        assigned_at:null,
+        expired_at:now,
+        expired_from:previousUser || null,
+      }).in('id',chunkIds).select('id');
+      if (error) throw error;
+      if ((data || []).length !== chunkIds.length) {
+        throw new Error('คืน Assignment ของ Annual JOB หมดเวลาบางรายการไม่สำเร็จ');
+      }
+    }
+  }
+
+  const expiredIds = new Set(overdueJobs.map(job => String(job.id || '')));
+  (jobs || []).forEach(job => {
+    if (!expiredIds.has(String(job.id || ''))) return;
+    job.expired_from = job.assigned_to;
+    job.expired_profiles = job.profiles || job.expired_profiles || null;
+    job.assigned_to = null;
+    job.assigned_at = null;
+    job.expired_at = now;
+    job.profiles = null;
+  });
+  (workspace.assignments || []).forEach(assignment => {
+    const previousUser = String(assignment.assigned_to || '');
+    const affectedIds = assignmentIdsByPreviousUser.get(previousUser) || [];
+    if (!affectedIds.includes(assignment.id)) return;
+    assignment.expired_from = assignment.assigned_to;
+    assignment.expired_profiles = assignment.profiles || assignment.expired_profiles || null;
+    assignment.assigned_to = null;
+    assignment.assigned_at = null;
+    assignment.expired_at = now;
+    assignment.profiles = null;
+  });
+  invalidateAssignmentWorkspaceCache(overdueJobs[0]?.session_id);
+  return { expired:overdueJobs.length,jobs:overdueJobs };
+}
+
 async function loadAnnualJobWorkspace() {
   const config = selectedAssignSessionConfig();
   const list = Q('annual-job-list');
@@ -55879,10 +56252,6 @@ async function loadAnnualJobWorkspace() {
   let annualJobs = jobsResult.data || [];
   let annualItems = itemsResult.data || [];
   const workspace = workspaceResult.data || { snapshots:[],assignments:[] };
-  applyCombinedAssignmentStats(calculateCombinedAssignmentStats(
-    config.sessionId,workspace,annualJobs,annualItems,
-  ));
-  cacheAnnualAssignmentJobsByLocation(annualJobs,annualItems);
   _annualWorkspaceJobs = annualJobs;
   _annualWorkspaceItemCounts = {};
   _annualWorkspaceTotalItemCounts = {};
@@ -55907,6 +56276,20 @@ async function loadAnnualJobWorkspace() {
     _annualWorkspaceTotalItemCounts,
     _annualWorkspaceItemCounts,
   );
+  let annualExpirySummary = { expired:0,jobs:[] };
+  let annualExpiryError = null;
+  try {
+    annualExpirySummary = await expireOverdueAnnualJobs(
+      _annualWorkspaceJobs,annualItems,workspace,
+    );
+  } catch (error) {
+    annualExpiryError = error;
+    console.error('Annual JOB automatic expiry failed:',error);
+  }
+  applyCombinedAssignmentStats(calculateCombinedAssignmentStats(
+    config.sessionId,workspace,annualJobs,annualItems,
+  ));
+  cacheAnnualAssignmentJobsByLocation(annualJobs,annualItems);
   const activeJobs = _annualWorkspaceJobs.filter(job =>
     job.status !== 'completed' && Number(_annualWorkspaceItemCounts[job.id] || 0) > 0
   );
@@ -55922,8 +56305,8 @@ async function loadAnnualJobWorkspace() {
     ? unfinishedJobItems.length
     : unbuiltSnapshots.length;
   const assignedJobs = activeJobs.filter(job => job.assigned_to).length;
-  const expiredJobs = activeJobs.filter(job => !job.assigned_to && Boolean(job.expired_at)).length;
-  const unassignedJobs = activeJobs.filter(job => !job.assigned_to && !job.expired_at).length;
+  const expiredJobs = activeJobs.filter(isExpiredAnnualJob).length;
+  const unassignedJobs = activeJobs.filter(job => !job.assigned_to && !isExpiredAnnualJob(job)).length;
   if (Q('annual-stat-items')) Q('annual-stat-items').textContent = totalItems.toLocaleString(uiLocale());
   const jobsWithItems = _annualWorkspaceJobs.filter(job =>
     Number(_annualWorkspaceTotalItemCounts[job.id] || 0) > 0
@@ -55934,7 +56317,11 @@ async function loadAnnualJobWorkspace() {
     Q('annual-stat-unbuilt-locations').textContent = unbuiltLocationCount.toLocaleString(uiLocale());
   }
   const generateAlert = Q('annual-generate-alert');
-  if (generateAlert && !generateAlert.querySelector('.alert-green,.alert-red')) {
+  if (generateAlert && annualExpiryError) {
+    generateAlert.innerHTML = `<div class="alert alert-red" style="margin-top:12px">❌ เปลี่ยน Annual JOB ข้ามวันเป็นงานหมดเวลาไม่สำเร็จ: ${escapeWmsText(annualExpiryError.message || annualExpiryError)}</div>`;
+  } else if (generateAlert && Number(annualExpirySummary.expired || 0) > 0) {
+    generateAlert.innerHTML = `<div class="alert alert-amber" style="margin-top:12px">⏱ Annual JOB ข้ามวันที่ยังไม่เสร็จ ${Number(annualExpirySummary.expired).toLocaleString(uiLocale())} JOB ถูกย้ายไป “งานหมดเวลา รอจ่ายใหม่” แล้ว</div>`;
+  } else if (generateAlert && !generateAlert.querySelector('.alert-green,.alert-red,.alert-amber')) {
     generateAlert.innerHTML = unbuiltLocationCount
       ? `<div class="alert alert-blue" style="margin-top:12px">ℹ️ มี ${unbuiltLocationCount.toLocaleString(uiLocale())} Location รอสร้าง JOB · กำหนดรายการต่อ JOB แล้วกด “สร้าง JOB”</div>`
       : '';
@@ -55942,6 +56329,7 @@ async function loadAnnualJobWorkspace() {
   updateAssignWorkspaceStats(totalItems,assignedJobs,unassignedJobs);
   updateExpiredAssignmentIndicators(expiredJobs);
   renderAnnualJobList();
+  scheduleAnnualMidnightExpiryCheck();
 }
 
 function renderAnnualJobList() {
@@ -55956,8 +56344,8 @@ function renderAnnualJobList() {
   );
   const jobs = jobsWithItems.filter(job => {
     if (filter === 'completed') return job.status === 'completed';
-    if (filter === 'unassigned') return job.status !== 'completed' && !job.assigned_to && !job.expired_at;
-    if (filter === 'expired') return job.status !== 'completed' && !job.assigned_to && Boolean(job.expired_at);
+    if (filter === 'unassigned') return job.status !== 'completed' && !job.assigned_to && !isExpiredAnnualJob(job);
+    if (filter === 'expired') return isExpiredAnnualJob(job);
     if (filter === 'assigned') return Boolean(job.assigned_to);
     if (['pending','in_progress'].includes(filter)) {
       return Boolean(job.assigned_to) && job.status === filter;
@@ -55976,7 +56364,7 @@ function renderAnnualJobList() {
   };
   list.innerHTML = jobs.map(job => {
     const completed = job.status === 'completed';
-    const expired = !completed && !job.assigned_to && Boolean(job.expired_at);
+    const expired = isExpiredAnnualJob(job);
     const status = completed
       ? statusInfo.completed
       : expired
@@ -56098,12 +56486,42 @@ function selectedAnnualJobIds() {
 }
 
 function syncAnnualJobSelection() {
-  const selectedCount = selectedAnnualJobIds().length;
+  const selectedIds = selectedAnnualJobIds();
+  const selectedJobs = selectedIds.map(id =>
+    (_annualWorkspaceJobs || []).find(job => String(job.id) === String(id))
+  ).filter(Boolean);
+  const selectedCount = selectedJobs.length;
+  const selectedExpiredCount = selectedJobs.filter(job =>
+    isExpiredAnnualJob(job)
+  ).length;
+  const selectedUnassignedCount = selectedJobs.filter(job =>
+    job.status !== 'completed' && !job.assigned_to && !isExpiredAnnualJob(job)
+  ).length;
+  const expiredJobCount = (_annualWorkspaceJobs || []).filter(job =>
+    _annualWorkspaceActiveJobIds.has(job.id)
+    && job.status !== 'completed'
+    && !job.assigned_to
+    && isExpiredAnnualJob(job)
+  ).length;
   const label = Q('annual-job-selection-count');
   const assignButton = Q('annual-assign-btn');
+  const expiredAssignButton = Q('annual-expired-reassign-btn');
   const printButton = Q('annual-print-btn');
-  if (label) label.textContent = `เลือก ${selectedCount} JOB`;
-  if (assignButton) assignButton.disabled = selectedCount === 0;
+  if (label) {
+    label.textContent = selectedExpiredCount
+      ? `เลือก ${selectedCount} JOB · หมดเวลา ${selectedExpiredCount}`
+      : `เลือก ${selectedCount} JOB`;
+  }
+  if (assignButton) {
+    assignButton.disabled = selectedCount === 0 || selectedUnassignedCount !== selectedCount;
+  }
+  if (expiredAssignButton) {
+    expiredAssignButton.hidden = expiredJobCount === 0;
+    expiredAssignButton.disabled = selectedCount === 0 || selectedExpiredCount !== selectedCount;
+    expiredAssignButton.textContent = selectedExpiredCount
+      ? `จ่าย Annual JOB หมดเวลา (${selectedExpiredCount})`
+      : 'จ่าย Annual JOB หมดเวลา';
+  }
   if (printButton) printButton.disabled = selectedCount === 0;
 }
 
@@ -56112,7 +56530,8 @@ function selectAnnualJobs(mode) {
     const job = _annualWorkspaceJobs.find(row => row.id === input.value);
     input.checked = !input.disabled && (
       mode === 'all'
-      || (mode === 'unassigned' && job?.status !== 'completed' && !job?.assigned_to && !job?.expired_at)
+      || (mode === 'unassigned' && job?.status !== 'completed' && !job?.assigned_to && !isExpiredAnnualJob(job))
+      || (mode === 'expired' && isExpiredAnnualJob(job))
     );
   });
   syncAnnualJobSelection();
@@ -56213,7 +56632,7 @@ async function syncImportedAnnualSnapshotsIntoPendingJobs({
       return;
     }
     const safeJobs = relatedJobs.filter(job =>
-      job.status === 'pending' && !job.assigned_to && !job.expired_at
+      job.status === 'pending' && !job.assigned_to && !isExpiredAnnualJob(job)
     );
     if (safeJobs.length !== relatedJobs.length) {
       deferredItems += 1;
@@ -56532,7 +56951,7 @@ async function cancelUnfinishedAnnualJobs() {
     const annualOwnedLocationIds = new Set();
     unfinishedItems.forEach(item => {
       const job = runtime.jobsById.get(String(item.job_id || ''));
-      if (job && (job.assigned_to || job.expired_at || job.status === 'in_progress')) {
+      if (job && (job.assigned_to || isExpiredAnnualJob(job) || job.status === 'in_progress')) {
         annualOwnedLocationIds.add(String(item.location_id || ''));
       }
     });
@@ -56775,10 +57194,23 @@ async function generateAnnualJobs() {
   }
 }
 
-async function assignSelectedAnnualJobs() {
-  const jobIds = selectedAnnualJobIds();
+async function assignSelectedAnnualJobs(options={}) {
+  const expiredOnly = options.expiredOnly === true;
+  const promptFlow = options.promptFlow === true;
+  const selectedIds = selectedAnnualJobIds();
+  const jobIds = selectedIds.filter(id => {
+    const job = (_annualWorkspaceJobs || []).find(row => String(row.id) === String(id));
+    if (!job || job.status === 'completed' || job.assigned_to) return false;
+    return expiredOnly ? isExpiredAnnualJob(job) : !isExpiredAnnualJob(job);
+  });
   const userId = Q('annual-assign-user')?.value;
-  if (!jobIds.length || !userId) { alert('กรุณาเลือก JOB และ User ผู้รับงาน'); return; }
+  if (!selectedIds.length || !userId) { alert('กรุณาเลือก JOB และ User ผู้รับงาน'); return; }
+  if (jobIds.length !== selectedIds.length) {
+    alert(expiredOnly
+      ? 'ปุ่มนี้ใช้เฉพาะ Annual JOB ที่มีสถานะ “หมดเวลา รอจ่ายใหม่” กรุณาเลือกงานหมดเวลาเท่านั้น'
+      : 'ปุ่มยืนยันจ่ายงานใช้เฉพาะ Annual JOB ที่ยังไม่เคยจ่าย กรุณาใช้ปุ่ม “จ่าย Annual JOB หมดเวลา” สำหรับงานข้ามวัน');
+    return;
+  }
   const userName = Q('annual-assign-user')?.options?.[Q('annual-assign-user').selectedIndex]?.textContent || 'User';
   const jobCodes = jobIds.map(id =>
     _annualWorkspaceJobs.find(job => job.id === id)?.job_code || id
@@ -56814,8 +57246,12 @@ async function assignSelectedAnnualJobs() {
     alert(`ตรวจสอบงานซ้ำก่อนจ่าย JOB ไม่สำเร็จ: ${error.message || error}`);
     return;
   }
-  if (!crossModeConfirmed && !confirm(`จ่าย ${jobIds.length} JOB ให้ ${userName}?`)) return;
-  const button = Q('annual-assign-btn');
+  const confirmationText = expiredOnly
+    ? `จ่าย Annual JOB หมดเวลา ${jobIds.length} JOB ให้ ${userName}?\n\nผล Count และประวัติเดิมจะถูกเก็บไว้ทั้งหมด`
+    : `จ่าย ${jobIds.length} JOB ให้ ${userName}?`;
+  if (!crossModeConfirmed && !confirm(confirmationText)) return;
+  const button = Q(expiredOnly ? 'annual-expired-reassign-btn' : 'annual-assign-btn');
+  const buttonLabel = expiredOnly ? 'จ่าย Annual JOB หมดเวลา' : 'ยืนยันจ่ายงาน';
   if (button) { button.disabled = true; button.textContent = 'กำลังจ่ายงาน...'; }
   const batchSize = 80;
   for (let start=0; start<jobIds.length; start+=batchSize) {
@@ -56827,7 +57263,7 @@ async function assignSelectedAnnualJobs() {
     }).in('id',jobIds.slice(start,start+batchSize));
     if (error) {
       alert('จ่าย Annual JOB ไม่สำเร็จ: ' + error.message);
-      if (button) { button.disabled = false; button.textContent = '✓ จ่าย JOB ที่เลือก'; }
+      if (button) { button.disabled = false; button.textContent = buttonLabel; }
       return;
     }
   }
@@ -56835,20 +57271,36 @@ async function assignSelectedAnnualJobs() {
     await ensureAnnualJobAssignments(jobIds,userId);
   } catch (error) {
     alert(`จ่าย JOB แล้ว แต่สร้างงานสำหรับหน้า "บันทึกการนับ" ไม่สำเร็จ: ${error.message || error}\n\nกรุณาลองกดจ่าย JOB ชุดนี้อีกครั้ง`);
-    if (button) { button.disabled = false; button.textContent = '✓ จ่าย JOB ที่เลือก'; }
+    if (button) { button.disabled = false; button.textContent = buttonLabel; }
     return;
   }
-  if (button) button.textContent = '✓ จ่าย JOB ที่เลือก';
+  if (button) button.textContent = buttonLabel;
   invalidateAssignmentWorkspaceCache(config.sessionId);
   await Promise.all([loadAnnualJobWorkspace(),refreshLocs(),refreshBulkFilters()]);
+  if (promptFlow && expiredOnly) {
+    showActionSuccess(`จ่าย Annual JOB หมดเวลา ${jobIds.length.toLocaleString(uiLocale())} JOB ให้ ${userName} แล้ว`,{
+      title:'จ่าย JOB ที่เลือกสำเร็จ',
+      facts:[{ label:'JOB ที่จ่าย',value:jobCodes.join(', ') }],
+      mode:'toast',
+    });
+    _annualExpiredPromptSessionId = '';
+    showExpiredAssignmentPrompt(config.sessionId,'annual');
+    return;
+  }
   showAssignmentSuccessModal({
     count:jobIds.length,
-    unit:'Annual JOB',
+    unit:expiredOnly ? 'Annual JOB หมดเวลา' : 'Annual JOB',
     userName,
-    detail:'พร้อมพิมพ์ Form Count ของ JOB ที่เพิ่งจ่าย',
+    detail:expiredOnly
+      ? 'จ่ายงานหมดเวลาใหม่แล้ว โดยเก็บ Count และประวัติเดิมทั้งหมด'
+      : 'พร้อมพิมพ์ Form Count ของ JOB ที่เพิ่งจ่าย',
     jobCodes,
     printAction:() => printAnnualJobForms(jobIds),
   });
+}
+
+async function reassignSelectedExpiredAnnualJobs() {
+  return assignSelectedAnnualJobs({ expiredOnly:true });
 }
 
 async function cancelAnnualJobAssignment(jobId) {
@@ -57689,11 +58141,17 @@ function getNormalAssignmentWorkspaceRows() {
 
 function updateNormalAssignmentStatsFromRows() {
   const rows = getNormalLocationRows();
+  const annualJobsByLocation = window._annualAssignmentJobByLocation instanceof Map
+    ? window._annualAssignmentJobByLocation
+    : new Map();
   const assigned = rows.filter(row => Boolean(row.assignment?.assigned_to)).length;
-  const expired = rows.filter(row => isExpiredWaitingAssignment(row.assignment)).length;
-  const neverAssigned = rows.filter(row => !row.assignment).length;
+  const expired = rows.filter(row =>
+    !annualJobsByLocation.has(String(row.location?.id || ''))
+    && isExpiredWaitingAssignment(row.assignment)
+  ).length;
+  const neverAssigned = rows.filter(row => isAvailableNormalAssignment(row.assignment)).length;
   updateAssignWorkspaceStats(rows.length,assigned,neverAssigned);
-  updateExpiredAssignmentIndicators(expired);
+  if (currentRound1AssignMode() === 'normal') updateExpiredAssignmentIndicators(expired);
 }
 
 function focusRoundOneAssignmentWorkspace(options={}) {
@@ -57727,6 +58185,29 @@ function focusRoundOneAssignmentWorkspace(options={}) {
 function focusExpiredAssignmentWorkspace() {
   if (!Q('as-sess')?.value) return;
   closeExpiredAssignmentPrompt();
+  if (currentRound1AssignMode() === 'annual') {
+    focusAssignmentStep('assign-step-round1',{ scroll:false });
+    const shell = document.querySelector('.assign-bento-shell');
+    if (shell) shell.dataset.assignmentView = 'annual-expired';
+    const annualFilter = Q('annual-job-filter');
+    if (annualFilter) annualFilter.value = 'expired';
+    renderAnnualJobList();
+    selectAnnualJobs('expired');
+    const roundOneButton = document.querySelector('.assign-workflow-item[data-step="assign-step-round1"]');
+    const expiredButton = Q('assign-expired-workflow');
+    roundOneButton?.classList.remove('is-active');
+    roundOneButton?.setAttribute('aria-current','false');
+    expiredButton?.classList.add('is-active');
+    expiredButton?.setAttribute('aria-current','step');
+    const bentoTitle = Q('assign-bento-step-title');
+    const bentoCount = Q('assign-bento-step-count');
+    if (bentoTitle) bentoTitle.textContent = 'Annual JOB หมดเวลา รอจ่ายใหม่';
+    if (bentoCount) bentoCount.textContent = `ขั้นที่ 3 / ${assignmentAdvancedStepsOpen() ? 5 : 3}`;
+    requestAnimationFrame(() => {
+      Q('annual-job-list')?.scrollIntoView({ behavior:'smooth',block:'start' });
+    });
+    return;
+  }
   setRound1AssignMode('normal',{ skipLoad:true });
   focusAssignmentStep('assign-step-round1',{ scroll:false });
   const shell = document.querySelector('.assign-bento-shell');
@@ -57758,7 +58239,7 @@ function handleR23FilterChange(key) {
 
 function normalFreeSearchMatches(entry, search) {
   if (!search) return true;
-  const status = normalAssignmentDisplayStatus(entry.assignment);
+  const status = normalAssignmentDisplayStatus(entry.assignment,entry.location?.id);
   const location = entry.location || {};
   const searchable = [
     location.code,location.zone,location.area,location.row_no,location.level,
@@ -57781,7 +58262,7 @@ function refreshNormalFreeDependentFilters() {
   const search = String(Q('normal-free-search')?.value || '').trim().toLowerCase();
   const facetRows = (excludeKey='') => sourceRows.filter(entry => {
     const location = entry.location || {};
-    const status = normalAssignmentDisplayStatus(entry.assignment);
+    const status = normalAssignmentDisplayStatus(entry.assignment,location.id);
     if (!normalFreeSearchMatches(entry,search)) return false;
     if (excludeKey !== 'zone' && !myTaskFilterMatches(_normalFreeFilters.zone,location.zone)) return false;
     if (excludeKey !== 'row' && !myTaskFilterMatches(_normalFreeFilters.row,String(location.row_no ?? ''))) return false;
@@ -57817,7 +58298,9 @@ function refreshNormalFreeDependentFilters() {
     values => handleNormalFreeMultiFilterChange('level',values),
   );
   const statusOrder = ['unassigned','expired','pending','in_progress','round1_done','round2_done','round3_done','completed','approved'];
-  const availableStatuses = new Set(facetRows('status').map(entry => normalAssignmentDisplayStatus(entry.assignment)));
+  const availableStatuses = new Set(facetRows('status').map(entry =>
+    normalAssignmentDisplayStatus(entry.assignment,entry.location?.id)
+  ));
   _normalFreeFilters.status = setMultiFilterOptions(
     'normal-free-status',
     statusOrder.filter(status => availableStatuses.has(status)).map(status => ({
@@ -57835,12 +58318,32 @@ function refreshNormalFreeDependentFilters() {
 }
 
 function isNormalFreeReassignableAssignment(assignment) {
-  return Boolean(assignment && !assignment.expired_at && ['pending','in_progress'].includes(assignment.status));
+  return Boolean(
+    assignment?.assigned_to
+    && !assignment.expired_at
+    && ['pending','in_progress'].includes(assignment.status)
+  );
 }
 
-function normalAssignmentDisplayStatus(assignment) {
+function isAvailableNormalAssignment(assignment) {
+  return Boolean(
+    !assignment
+    || (
+      !assignment.assigned_to
+      && !assignment.expired_from
+      && !assignmentCountingFinished(assignment.status)
+    )
+  );
+}
+
+function normalAssignmentDisplayStatus(assignment,locationId='') {
   if (!assignment) return 'unassigned';
+  const annualJobsByLocation = window._annualAssignmentJobByLocation instanceof Map
+    ? window._annualAssignmentJobByLocation
+    : new Map();
+  if (annualJobsByLocation.has(String(locationId || ''))) return assignment.status || 'pending';
   if (isExpiredWaitingAssignment(assignment)) return 'expired';
+  if (isAvailableNormalAssignment(assignment)) return 'unassigned';
   return assignment.status || 'pending';
 }
 
@@ -57865,12 +58368,13 @@ function renderNormalFreeLocationList() {
     : new Map();
   const availableIds = new Set(
     rows.filter(row =>
-      !row.assignment || annualJobsByLocation.has(String(row.location.id || ''))
+      isAvailableNormalAssignment(row.assignment)
+      || annualJobsByLocation.has(String(row.location.id || ''))
     ).map(row => row.location.id)
   );
   const assignedIds = new Set(
     rows.filter(row =>
-      row.assignment
+      row.assignment?.assigned_to
       && !isExpiredWaitingAssignment(row.assignment)
       && !annualJobsByLocation.has(String(row.location.id || ''))
     ).map(row => row.location.id)
@@ -57882,7 +58386,10 @@ function renderNormalFreeLocationList() {
     ).map(row => row.location.id)
   );
   const expiredAssignmentIds = new Set(
-    rows.filter(row => isExpiredWaitingAssignment(row.assignment)).map(row => row.assignment.id)
+    rows.filter(row =>
+      !annualJobsByLocation.has(String(row.location.id || ''))
+      && isExpiredWaitingAssignment(row.assignment)
+    ).map(row => row.assignment.id)
   );
   _normalFreeSelectedLocationIds = new Set(
     [..._normalFreeSelectedLocationIds].filter(id => availableIds.has(id))
@@ -57903,7 +58410,7 @@ function renderNormalFreeLocationList() {
   const search = String(Q('normal-free-search')?.value || '').trim().toLowerCase();
   const filtered = rows.filter(entry => {
     const location = entry.location;
-    const status = normalAssignmentDisplayStatus(entry.assignment);
+    const status = normalAssignmentDisplayStatus(entry.assignment,location.id);
     if (!myTaskFilterMatches(zone,location.zone)) return false;
     if (!myTaskFilterMatches(row,String(location.row_no ?? ''))) return false;
     if (!myTaskFilterMatches(level,String(location.level ?? ''))) return false;
@@ -57912,7 +58419,8 @@ function renderNormalFreeLocationList() {
     return true;
   });
   const displayed = [...filtered].sort((left,right) =>
-    Number(isExpiredWaitingAssignment(right.assignment)) - Number(isExpiredWaitingAssignment(left.assignment))
+    Number(!annualJobsByLocation.has(String(right.location?.id || '')) && isExpiredWaitingAssignment(right.assignment))
+    - Number(!annualJobsByLocation.has(String(left.location?.id || '')) && isExpiredWaitingAssignment(left.assignment))
   );
   _normalFreeFilteredLocationCount = filtered.length;
   _normalFreeVisibleLocationIds = displayed.map(entry => entry.location.id);
@@ -57927,8 +58435,8 @@ function renderNormalFreeLocationList() {
     const location = entry.location;
     const assignment = entry.assignment;
     const annualJob = annualJobsByLocation.get(String(location.id || '')) || null;
-    const expired = isExpiredWaitingAssignment(assignment);
-    const available = !assignment;
+    const expired = !annualJob && isExpiredWaitingAssignment(assignment);
+    const available = isAvailableNormalAssignment(assignment);
     const reassignable = !annualJob && isNormalFreeReassignableAssignment(assignment);
     const selectionMode = expired
       ? 'expired'
@@ -57950,7 +58458,10 @@ function renderNormalFreeLocationList() {
       ? { cls:'tag-gray',lbl:'ยังไม่จ่ายงาน' }
       : tagInfo(assignment.status);
     const checkboxDisabled = !expired && _normalFreeReassignMode && !reassignable ? 'disabled' : '';
-    const assignedUserName = assignment?.profiles?.name || 'ยังไม่จ่ายงาน';
+    const assignedUserLabel = expired ? 'User เดิม' : 'User';
+    const assignedUserName = expired
+      ? (assignment?.expired_profiles?.name || 'ไม่พบผู้รับเดิม')
+      : (assignment?.profiles?.name || 'ยังไม่จ่ายงาน');
     const ariaAction = expired
       ? 'งานหมดเวลา รอจ่ายใหม่'
       : selectionMode === 'reassign'
@@ -57965,7 +58476,7 @@ function renderNormalFreeLocationList() {
         onchange="toggleNormalFreeLocation('${selectionValue}',this.checked,'${selectionMode}')">
       <label for="${checkboxId}" class="assign-bento-tile-copy">
         <span class="normal-free-code">${escapeWmsText(location.code || '?')}</span>
-        <span class="normal-free-user">User: ${escapeWmsText(assignedUserName)}</span>
+        <span class="normal-free-user">${assignedUserLabel}: ${escapeWmsText(assignedUserName)}</span>
       </label>
       <span class="assign-bento-tile-state tag ${status.cls}">${escapeWmsText(status.lbl)}</span>
       ${annualJob ? `<span class="annual-assignment-badge" title="จ่ายงานผ่าน ${escapeWmsText(annualJob.code)}">Annual JOB · ${escapeWmsText(annualJob.code)}</span>` : ''}
@@ -58004,7 +58515,10 @@ function selectNormalFreeLocations(mode) {
       const assignedIds = new Set(getAssignedNormalRoundOneLocationIds());
       const expiredRows = getNormalAssignmentWorkspaceRows();
       const expiredIds = new Set(expiredRows
-        .filter(entry => isExpiredWaitingAssignment(entry.assignment))
+        .filter(entry =>
+          !annualJobsByLocation.has(String(entry.location.id || ''))
+          && isExpiredWaitingAssignment(entry.assignment)
+        )
         .map(entry => entry.location.id));
       _normalFreeVisibleLocationIds.forEach(id => {
         if (expiredIds.has(id)) {
@@ -58066,7 +58580,8 @@ function getAssignedNormalRoundOneLocationIds() {
   return [...new Set(
     (window._bulkAssignments || [])
       .filter(assignment =>
-        !isExpiredWaitingAssignment(assignment)
+        Boolean(assignment?.assigned_to)
+        && !isExpiredWaitingAssignment(assignment)
         && normalAssignmentVisibleInWorkspace(assignment)
         && !annualJobsByLocation.has(String(assignment?.location_id || ''))
       )
@@ -58686,7 +59201,13 @@ async function refreshBulkFilters() {
     return;
   }
 
-  const assignedSet = new Set(existing?.map(a => a.location_id) || []);
+  const assignedSet = new Set((existing || [])
+    .filter(assignment =>
+      Boolean(assignment.assigned_to)
+      || isExpiredWaitingAssignment(assignment)
+      || assignmentCountingFinished(assignment.status)
+    )
+    .map(assignment => assignment.location_id));
   window._bulkSnaps = snaps || [];
   window._bulkAssigned = assignedSet;
   window._bulkAssignments = existing || [];
@@ -58695,6 +59216,14 @@ async function refreshBulkFilters() {
   } catch (error) {
     console.warn('Combined assignment summary unavailable:',error);
   }
+  const annualJobsByLocation = window._annualAssignmentJobByLocation instanceof Map
+    ? window._annualAssignmentJobByLocation
+    : new Map();
+  window._expiredAssignments = (existing || []).filter(assignment =>
+    isExpiredWaitingAssignment(assignment)
+    && !annualJobsByLocation.has(String(assignment.location_id || ''))
+  );
+  renderExpiredAssignmentQueue();
   updateNormalAssignmentStatsFromRows();
   syncNormalRoundOnePrintButton();
   refreshBulkDependentFilters();
@@ -58803,6 +59332,7 @@ function isExpiredWaitingAssignment(assignment) {
     assignment
     && !assignment.assigned_to
     && assignment.expired_at
+    && assignment.expired_from
     && !assignmentCountingFinished(assignment.status)
   );
 }
@@ -58838,7 +59368,10 @@ function renderExpiredAssignmentQueue() {
 
 function closeExpiredAssignmentPrompt() {
   const modal = Q('expired-session-modal');
-  if (modal) modal.hidden = true;
+  if (modal) {
+    modal.hidden = true;
+    delete modal.dataset.expiredMode;
+  }
   document.body.classList.remove('expired-session-modal-open');
 }
 
@@ -58861,9 +59394,16 @@ function expiredAssignmentGroups() {
 function renderExpiredAssignmentPromptContent(options={}) {
   const assignments = window._expiredAssignments || [];
   const modal = Q('expired-session-modal');
+  const titleNode = Q('expired-session-modal-title');
   const groupsNode = Q('expired-session-groups');
   const summaryNode = Q('expired-session-modal-summary');
+  const actionsNode = Q('expired-session-actions');
   if (!modal || !groupsNode) return false;
+  modal.dataset.expiredMode = 'normal';
+  if (titleNode) titleNode.textContent = 'งานหมดเวลาแบบปกติ รอจ่ายใหม่';
+  if (actionsNode) {
+    actionsNode.innerHTML = '<button class="btn btn-ghost" type="button" onclick="closeExpiredAssignmentPrompt()">ปิด</button>';
+  }
   const groups = expiredAssignmentGroups();
   if (assignments.length) {
     if (summaryNode) summaryNode.textContent = `เหลือ ${assignments.length.toLocaleString(uiLocale())} Location จาก ${groups.length.toLocaleString(uiLocale())} ผู้รับเดิม`;
@@ -58905,9 +59445,201 @@ function renderExpiredAssignmentPromptContent(options={}) {
   return true;
 }
 
-function showExpiredAssignmentPrompt(sessionId) {
-  const assignments = window._expiredAssignments || [];
+function annualExpiredJobGroups() {
+  const groups = new Map();
+  (_annualWorkspaceJobs || []).filter(job =>
+    _annualWorkspaceActiveJobIds.has(job.id) && isExpiredAnnualJob(job)
+  ).forEach(job => {
+    const userId = String(job.expired_from || '').trim();
+    if (!userId) return;
+    const key = userId;
+    if (!groups.has(key)) groups.set(key,{
+      userId,
+      userName:job.expired_profiles?.name || 'ไม่พบผู้รับเดิม',
+      jobs:[],
+    });
+    groups.get(key).jobs.push(job);
+  });
+  return [...groups.values()].sort((a,b) => b.jobs.length-a.jobs.length
+    || String(a.userName).localeCompare(String(b.userName),'th'));
+}
+
+function renderAnnualExpiredJobPromptContent(options={}) {
   const modal = Q('expired-session-modal');
+  const titleNode = Q('expired-session-modal-title');
+  const groupsNode = Q('expired-session-groups');
+  const summaryNode = Q('expired-session-modal-summary');
+  const actionsNode = Q('expired-session-actions');
+  if (!modal || !groupsNode) return false;
+  const groups = annualExpiredJobGroups();
+  const jobs = groups.flatMap(group => group.jobs);
+  modal.dataset.expiredMode = 'annual';
+  if (titleNode) titleNode.textContent = 'Annual JOB หมดเวลา รอจ่ายใหม่';
+  if (summaryNode) {
+    summaryNode.textContent = jobs.length
+      ? `พบ ${jobs.length.toLocaleString(uiLocale())} JOB จาก ${groups.length.toLocaleString(uiLocale())} ผู้รับเดิม`
+      : 'ไม่มี Annual JOB หมดเวลาที่รอจ่ายใหม่';
+  }
+  groupsNode.innerHTML = jobs.length
+    ? groups.map((group,index) => {
+      const availableUsers = (window._assignmentProfiles || [])
+        .filter(user => String(user.id || '') !== String(group.userId || ''));
+      const userOptions = availableUsers.length
+        ? `<option value="">— เลือกคนนับใหม่ —</option>${availableUsers.map(user =>
+            `<option value="${escapeWmsText(user.id)}">${escapeWmsText(user.name)}</option>`).join('')}`
+        : '<option value="">ไม่มีคนนับอื่นให้เลือก</option>';
+      return `<div class="expired-session-group" data-annual-expired-owner-id="${escapeWmsText(group.userId)}">
+        <div class="expired-session-group-info">
+          <strong>${escapeWmsText(group.userName)}</strong>
+          <span>${group.jobs.length.toLocaleString(uiLocale())} JOB · เลือกแยกเพื่อแบ่งให้หลายคนได้</span>
+          <span class="expired-annual-job-selected-count">เลือก ${group.jobs.length.toLocaleString(uiLocale())} / ${group.jobs.length.toLocaleString(uiLocale())} JOB</span>
+        </div>
+        <div class="expired-session-group-buttons">
+          <button class="btn btn-ghost btn-sm" type="button" onclick="toggleAllAnnualExpiredPromptJobs(this)">เลือก/ล้างทั้งหมด</button>
+          <button class="btn btn-amber btn-sm annual-expired-group-action" type="button"
+            onclick="reassignAnnualExpiredGroupToPrevious(this.closest('.expired-session-group')?.dataset.annualExpiredOwnerId || '',this)">จ่ายคนเดิม</button>
+          <button class="btn btn-ghost btn-sm annual-expired-group-action" type="button" ${availableUsers.length ? '' : 'disabled'}
+            data-user-options="${availableUsers.length}"
+            aria-expanded="false" aria-controls="annual-expired-user-picker-${index}"
+            onclick="toggleExpiredGroupUserPicker(this)">เปลี่ยนคน</button>
+        </div>
+        <div class="expired-annual-job-picker">
+          ${[...group.jobs].sort((a,b) => Number(a.job_no || 0)-Number(b.job_no || 0)
+            || String(a.job_code || '').localeCompare(String(b.job_code || ''),'th',{numeric:true}))
+            .map(job => `<label class="expired-annual-job-option">
+              <input class="expired-annual-job-check" type="checkbox" value="${escapeWmsText(job.id)}" checked
+                onchange="syncAnnualExpiredPromptGroupSelection(this)">
+              <span>${escapeWmsText(job.job_code || 'Annual JOB')}</span>
+            </label>`).join('')}
+        </div>
+        <div class="expired-session-user-picker" id="annual-expired-user-picker-${index}" hidden>
+          <label class="expired-session-user-field">
+            <span>เลือกคนนับใหม่</span>
+            <select>${userOptions}</select>
+          </label>
+          <button class="btn btn-blue btn-sm annual-expired-confirm-action" type="button" onclick="confirmAnnualExpiredGroupNewUser(this)">ยืนยัน</button>
+          <button class="btn btn-ghost btn-sm expired-session-picker-close" type="button"
+            onclick="closeExpiredGroupUserPicker(this)" aria-label="ยกเลิกเปลี่ยนคน">×</button>
+        </div>
+      </div>`;
+    }).join('')
+    : '<div class="expired-session-empty">✓ ไม่มี Annual JOB หมดเวลา</div>';
+  if (actionsNode) {
+    actionsNode.innerHTML = `${jobs.length
+      ? '<button class="btn btn-amber" type="button" onclick="openAnnualExpiredWorkspaceFromPrompt()">ไปจ่าย Annual JOB หมดเวลา</button>'
+      : ''}<button class="btn btn-ghost" type="button" onclick="closeExpiredAssignmentPrompt()">ปิด</button>`;
+  }
+  if (options.focus === true) {
+    (modal.querySelector('.expired-session-group button:not(:disabled)')
+      || modal.querySelector('button:not(:disabled)'))?.focus({ preventScroll:true });
+  }
+  return jobs.length > 0;
+}
+
+function openAnnualExpiredWorkspaceFromPrompt() {
+  closeExpiredAssignmentPrompt();
+  if (currentRound1AssignMode() !== 'annual') setRound1AssignMode('annual',{ skipLoad:true });
+  focusExpiredAssignmentWorkspace();
+}
+
+function selectedAnnualExpiredPromptJobIds(groupNode) {
+  if (!groupNode) return [];
+  return [...groupNode.querySelectorAll('.expired-annual-job-check:checked')]
+    .map(input => String(input.value || ''))
+    .filter(Boolean);
+}
+
+function syncAnnualExpiredPromptGroupSelection(control) {
+  const groupNode = control?.closest('.expired-session-group') || control;
+  if (!groupNode?.querySelectorAll) return;
+  const all = [...groupNode.querySelectorAll('.expired-annual-job-check')];
+  const selectedCount = all.filter(input => input.checked).length;
+  const countNode = groupNode.querySelector('.expired-annual-job-selected-count');
+  if (countNode) {
+    countNode.textContent = `เลือก ${selectedCount.toLocaleString(uiLocale())} / ${all.length.toLocaleString(uiLocale())} JOB`;
+  }
+  groupNode.querySelectorAll('.annual-expired-group-action').forEach(button => {
+    const hasUserOptions = button.dataset.userOptions === undefined
+      || Number(button.dataset.userOptions || 0) > 0;
+    button.disabled = selectedCount === 0 || !hasUserOptions;
+  });
+  groupNode.querySelectorAll('.annual-expired-confirm-action').forEach(button => {
+    button.disabled = selectedCount === 0;
+  });
+}
+
+function toggleAllAnnualExpiredPromptJobs(button) {
+  const groupNode = button?.closest('.expired-session-group');
+  if (!groupNode) return;
+  const inputs = [...groupNode.querySelectorAll('.expired-annual-job-check')];
+  const shouldSelect = inputs.some(input => !input.checked);
+  inputs.forEach(input => { input.checked = shouldSelect; });
+  syncAnnualExpiredPromptGroupSelection(groupNode);
+}
+
+async function reassignAnnualExpiredPromptGroup(previousUserId,newUserId,triggerButton=null) {
+  const ownerId = String(previousUserId || '');
+  const targetUserId = String(newUserId || ownerId);
+  const groupNode = triggerButton?.closest('.expired-session-group');
+  const selectedIds = selectedAnnualExpiredPromptJobIds(groupNode);
+  const eligibleIds = new Set((_annualWorkspaceJobs || []).filter(job =>
+    isExpiredAnnualJob(job) && String(job.expired_from || '') === ownerId
+  ).map(job => String(job.id || '')).filter(Boolean));
+  const jobIds = selectedIds.filter(id => eligibleIds.has(id));
+  if (!ownerId || !targetUserId) return;
+  if (!jobIds.length) {
+    alert('กรุณาเลือกอย่างน้อย 1 JOB ที่ต้องการจ่ายใหม่');
+    return;
+  }
+  const userSelect = Q('annual-assign-user');
+  if (!userSelect || ![...userSelect.options].some(option => String(option.value) === targetUserId)) {
+    alert('ไม่พบ User ที่ต้องการจ่าย Annual JOB กรุณาเปิดรายการและเลือก User ใหม่');
+    return;
+  }
+  if (triggerButton) triggerButton.disabled = true;
+  const annualFilter = Q('annual-job-filter');
+  if (annualFilter) annualFilter.value = 'expired';
+  renderAnnualJobList();
+  document.querySelectorAll('.annual-job-checkbox').forEach(input => {
+    input.checked = jobIds.includes(String(input.value || ''));
+  });
+  userSelect.value = targetUserId;
+  syncAnnualJobSelection();
+  closeExpiredAssignmentPrompt();
+  await assignSelectedAnnualJobs({ expiredOnly:true,promptFlow:true });
+}
+
+async function reassignAnnualExpiredGroupToPrevious(userId,triggerButton=null) {
+  return reassignAnnualExpiredPromptGroup(userId,userId,triggerButton);
+}
+
+async function confirmAnnualExpiredGroupNewUser(button) {
+  const groupNode = button?.closest('.expired-session-group');
+  const previousUserId = groupNode?.dataset.annualExpiredOwnerId || '';
+  const newUserId = groupNode?.querySelector('.expired-session-user-picker select')?.value || '';
+  if (!newUserId) {
+    groupNode?.querySelector('.expired-session-user-picker select')?.focus({ preventScroll:true });
+    return;
+  }
+  return reassignAnnualExpiredPromptGroup(previousUserId,newUserId,button);
+}
+
+function showExpiredAssignmentPrompt(sessionId,mode=currentRound1AssignMode()) {
+  const promptMode = mode === 'annual' ? 'annual' : 'normal';
+  if (promptMode !== currentRound1AssignMode()) return;
+  const modal = Q('expired-session-modal');
+  if (!modal) return;
+  if (promptMode === 'annual') {
+    const groups = annualExpiredJobGroups();
+    if (!groups.length || _annualExpiredPromptSessionId === sessionId) return;
+    _annualExpiredPromptSessionId = sessionId;
+    renderAnnualExpiredJobPromptContent();
+    modal.hidden = false;
+    document.body.classList.add('expired-session-modal-open');
+    renderAnnualExpiredJobPromptContent({ focus:true });
+    return;
+  }
+  const assignments = window._expiredAssignments || [];
   if (!modal || !assignments.length || _expiredPromptSessionId === sessionId) return;
   _expiredPromptSessionId = sessionId;
   renderExpiredAssignmentPromptContent();
@@ -59049,7 +59781,14 @@ async function refreshLocs() {
     return;
   }
 
-  const assignedSet = new Set(asgns.map(a => a.location_id)); const seen = new Set(); const locs = [];
+  const assignedSet = new Set(asgns
+    .filter(assignment =>
+      Boolean(assignment.assigned_to)
+      || isExpiredWaitingAssignment(assignment)
+      || assignmentCountingFinished(assignment.status)
+    )
+    .map(assignment => assignment.location_id));
+  const seen = new Set(); const locs = [];
   for (const s of snaps || []) {
     const locationId = s.location_id || s.locations?.id;
     const location = window._assignmentLocationById?.get(locationId) || s.locations;
@@ -59064,8 +59803,17 @@ async function refreshLocs() {
       ...assignment,
       _location:{ ...(locationById.get(assignment.location_id) || {}),...(assignment.locations || {}) },
     }));
-  const expiredAssignments = sortedAssignments.filter(isExpiredWaitingAssignment);
-  const activeAssignments = sortedAssignments.filter(assignment => !isExpiredWaitingAssignment(assignment));
+  const annualJobsByLocation = window._annualAssignmentJobByLocation instanceof Map
+    ? window._annualAssignmentJobByLocation
+    : new Map();
+  const expiredAssignments = sortedAssignments.filter(assignment =>
+    isExpiredWaitingAssignment(assignment)
+    && !annualJobsByLocation.has(String(assignment.location_id || ''))
+  );
+  const activeAssignments = sortedAssignments.filter(assignment =>
+    !isExpiredWaitingAssignment(assignment)
+    && (Boolean(assignment.assigned_to) || assignmentCountingFinished(assignment.status))
+  );
   const sel = Q('as-loc');
   if (sel) {
     sel.setAttribute('data-location-sort-select','');
@@ -59079,7 +59827,7 @@ async function refreshLocs() {
   window._printableAssignments = activeAssignments;
   const activeAssignedCount = activeAssignments.filter(assignment => Boolean(assignment.assigned_to)).length;
   updateAssignWorkspaceStats(locs.length,activeAssignedCount,free.length);
-  updateExpiredAssignmentIndicators(expiredAssignments.length);
+  if (currentRound1AssignMode() === 'normal') updateExpiredAssignmentIndicators(expiredAssignments.length);
   renderExpiredAssignmentQueue();
   const missingCount = window._assignmentMissingLocationIds?.length || 0;
   if (missingCount) {
