@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- V2.16: Capture subsequent rugged Handheld IME laser scans even while COUNT is focused, restore COUNT, and route the complete Item/LPN Barcode. -->
+<!-- V2.17: Split the Count-page summary into assigned Work progress and current-Location Item progress, with shorter Pass/Recount labels. -->
 <!-- V2.12: Open expiry prompts only inside their selected assignment mode and classify work as expired only when it has a real previous assignee. -->
 <!-- V2.11: Give Annual JOBs an independent midnight-expiry queue and dedicated reassignment controls matching Normal Location work. -->
 <!-- V2.10: Show each Annual JOB's remaining and original Location + Item totals explicitly so completed work is never mistaken for missing work. -->
@@ -85,7 +85,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V2.16</title>
+<title>Cycle Count V2.17</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
@@ -23984,9 +23984,9 @@ body.page-loading-active .main-wrapper{
 <div id="app"></div>
 
 <script>
-// V2.16: one authoritative application version for the browser title,
+// V2.17: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.16';
+const APP_VERSION = '2.17';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -33585,6 +33585,16 @@ function myTaskMatchesDate(row) {
   return rowDate === (mode === 'date' ? currentMyTaskDateValue() : bangkokDateKey());
 }
 
+function assignedCountWorkProgressV217(assignments=[],annualJobs=[]) {
+  const taskRows = Array.isArray(assignments) ? assignments : [];
+  const jobRows = Array.isArray(annualJobs) ? annualJobs : [];
+  return {
+    done:taskRows.filter(assignmentPhysicalCountFinished).length
+      + jobRows.filter(job => job?._countFinished || job?.status === 'completed').length,
+    total:taskRows.length + jobRows.length,
+  };
+}
+
 function setMyTaskDateFilter(mode,dateValue='') {
   S._mtDateMode = MY_TASK_DATE_MODES.has(mode) ? mode : 'today';
   if (S._mtDateMode === 'date') S._mtDateValue = dateValue || currentMyTaskDateValue();
@@ -34014,9 +34024,13 @@ async function loadCTasks() {
   // the same filters and A→Z / Z→A direction the user selected.
   if (await continueToNextMyTaskAfterCount()) return;
 
-  const done = asgns.filter(assignmentPhysicalCountFinished).length
-    + annualJobs.filter(job => job._countFinished || job.status === 'completed').length;
-  const total = asgns.length + annualJobs.length;
+  const { done,total } = assignedCountWorkProgressV217(asgns,annualJobs);
+  window._countAssignedWorkProgressV217 = {
+    done,
+    total,
+    dateMode:currentMyTaskDateMode(),
+    dateValue:currentMyTaskDateValue(),
+  };
   const pct = total ? Math.round(done / total * 100) : 0;
   const variancePending = asgns.filter(assignmentPendingVarianceReview).length
     + annualJobs.filter(job => job._pendingVariance).length;
@@ -37869,9 +37883,33 @@ function setCountEntryItemResult(itemId,state,text) {
   badge.textContent = text;
 }
 
+function currentCountWorkProgressV217() {
+  const live = assignedCountWorkProgressV217(
+    window._myTasks || [],
+    window._myAnnualJobs || [],
+  );
+  if (live.total > 0) return live;
+  const cached = window._countAssignedWorkProgressV217;
+  if (cached && Number(cached.total) > 0) {
+    return {
+      done:Math.max(0,Number(cached.done) || 0),
+      total:Math.max(0,Number(cached.total) || 0),
+    };
+  }
+  // Direct Count-page entry can occur before the task workspace is cached.
+  // Keep the current Assignment visible as the safe fallback; normal scanner
+  // navigation from My Tasks uses the full assigned-work totals above.
+  const current = window._countFoundContext || {};
+  return {
+    done:assignmentPhysicalCountFinished(current.assignmentStatus || '') ? 1 : 0,
+    total:current.assignmentId ? 1 : 0,
+  };
+}
+
 function refreshCountEntrySummary() {
   const inputs = [...document.querySelectorAll('.count-handheld-page .cqty[data-item-id]')];
   if (!inputs.length && !window._countEntryResolvedCount) return;
+  const workProgress = currentCountWorkProgressV217();
   const resolved = Number(window._countEntryResolvedCount || 0);
   let saved = 0;
   let match = Number(window._countEntryResolvedMatchCount || 0);
@@ -37893,10 +37931,10 @@ function refreshCountEntrySummary() {
   const total = resolved + inputs.length;
   const counted = resolved + saved;
   const values = {
-    countProgressSaved:`${counted}/${total}`,
+    countProgressWork:`${workProgress.done}/${workProgress.total}`,
+    countProgressItems:`${counted}/${total}`,
     countProgressMatch:match,
     countProgressDiff:diff,
-    countProgressRemaining:Math.max(0,total - counted),
   };
   Object.entries(values).forEach(([id,value]) => {
     const target = Q(id);
@@ -38679,6 +38717,7 @@ async function loadCCount() {
     go('c-tasks');
     return;
   }
+  const countWorkProgressV217 = currentCountWorkProgressV217();
 
   cnt().innerHTML = `<div class="count-handheld-page" data-hw-location-code="${escapeWmsText(l.code || '')}">
     <div class="card count-header-card">
@@ -38736,16 +38775,16 @@ async function loadCCount() {
         </button>
         <div class="count-entry-progress" aria-label="สรุปผลการนับรายการสินค้า">
           <div class="count-entry-progress-item">
-            <strong id="countProgressSaved">${window._countEntryResolvedCount}/${countEntryRows.length}</strong><span>งานที่นับแล้ว</span>
+            <strong id="countProgressWork">${countWorkProgressV217.done}/${countWorkProgressV217.total}</strong><span data-i18n-skip>งาน</span>
           </div>
           <div class="count-entry-progress-item is-remaining">
-            <strong id="countProgressRemaining">${activeCountRows.length}</strong><span>คงเหลือ</span>
+            <strong id="countProgressItems">${window._countEntryResolvedCount}/${countEntryRows.length}</strong><span data-i18n-skip>รายการ</span>
           </div>
           <div class="count-entry-progress-item is-match">
-            <strong id="countProgressMatch">${window._countEntryResolvedMatchCount}</strong><span>ผ่าน</span>
+            <strong id="countProgressMatch">${window._countEntryResolvedMatchCount}</strong><span data-i18n-skip>ผ่าน</span>
           </div>
           <div class="count-entry-progress-item is-diff">
-            <strong id="countProgressDiff">${initialDiffCount}</strong><span>ต้องนับใหม่</span>
+            <strong id="countProgressDiff">${initialDiffCount}</strong><span data-i18n-skip>นับใหม่</span>
           </div>
         </div>
       </div>
