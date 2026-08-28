@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- V2.25: Restore universal COUNT R1/R2/R3 autofocus on every device without moving Location from the top of the first Item card. -->
+<!-- V2.24: Restore universal COUNT R1/R2/R3 autofocus and Location-at-header while keeping one-trigger Handheld laser lookup scanner-safe. -->
 <!-- V2.23: Keep DIFF Items in Supervisor review after a WMS re-import changes OH; only Supervisor confirmation may close them. -->
 <!-- V2.12: Open expiry prompts only inside their selected assignment mode and classify work as expired only when it has a real previous assignee. -->
 <!-- V2.11: Give Annual JOBs an independent midnight-expiry queue and dedicated reassignment controls matching Normal Location work. -->
@@ -86,7 +86,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V2.25</title>
+<title>Cycle Count V2.24</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
@@ -18191,7 +18191,27 @@ body.login-page-active .lcard {
   transform:none !important;
 }
 
-/* v193 — Location context lives inside the first Count item card. */
+/* V2.24 — Restore Location to the Count-page header. It remains visible when
+   every device receives its initial COUNT R1/R2/R3 focus. */
+.count-header-location {
+  color:var(--theme-heading-color);
+  font:900 28px/1.1 'Fredoka','Mitr',ui-monospace,monospace;
+  overflow-wrap:anywhere;
+}
+.count-header-meta {
+  margin-top:5px;
+  color:var(--theme-muted-text-color);
+  font-size:13px;
+  font-weight:700;
+  line-height:1.4;
+  overflow-wrap:anywhere;
+}
+.count-header-location + .count-header-meta + .count-context-tags,
+.count-header-location + .count-context-tags {
+  margin-top:12px;
+}
+
+/* Legacy item-banner styles remain for old cached markup. */
 .count-location-item-banner {
   padding:18px 26px 16px;
   display:grid;
@@ -18262,7 +18282,7 @@ body.count-page-active #app .count-handheld-page .citem-wrap {
 .count-item-identity + .citem-detail-scroll { margin-top:12px; }
 
 @media (max-width:480px), (max-width:600px) and (max-height:760px) {
-  .count-header-card .count-context-tags { margin-top:0 !important; }
+  .count-header-card .count-context-tags { margin-top:8px !important; }
   .count-location-item-banner {
     padding:10px 10px 9px !important;
     grid-template-columns:34px minmax(0,1fr);
@@ -23985,9 +24005,9 @@ body.page-loading-active .main-wrapper{
 <div id="app"></div>
 
 <script>
-// V2.25: one authoritative application version for the browser title,
+// V2.24: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.25';
+const APP_VERSION = '2.24';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -35725,6 +35745,25 @@ function countEntryAutofocusBlocked() {
   )].some(node => node.offsetParent !== null);
 }
 
+function alignCurrentCountEntryFocusV224(input,{ behavior='auto' }={}) {
+  if (!input) return false;
+  const page = input.closest?.('.count-handheld-page');
+  const keepHeader = page?.dataset?.initialCountHeaderFocus === 'true'
+    && input.dataset.countInitialFocus === 'true';
+  if (!keepHeader) return scrollCountEntryWithLocation(input,{ behavior });
+  const main = page.closest('.main-wrapper');
+  if (!main) return false;
+  // focus({preventScroll:true}) leaves the browser cursor in COUNT. Pinning the
+  // initial viewport to the top keeps Location + the complete work context in
+  // view instead of jumping directly into the first Item card.
+  if (behavior === 'auto') main.scrollTop = 0;
+  else {
+    try { main.scrollTo({ top:0,behavior }); }
+    catch (_) { main.scrollTop = 0; }
+  }
+  return true;
+}
+
 function prepareCurrentCountEntryFocus({ force=false,preferredInputId='' }={}) {
   if (S?.page !== 'c-count') return false;
   if (countEntryAutofocusBlocked()) return false;
@@ -35769,7 +35808,7 @@ function prepareCurrentCountEntryFocus({ force=false,preferredInputId='' }={}) {
     firstInput.setSelectionRange?.(0,String(firstInput.value || '').length);
   } catch (_) {}
   if (countNumericKeypadEnabled()) openCountNumericKeypad(firstInput);
-  scrollCountEntryWithLocation(firstInput,{ behavior:'auto' });
+  alignCurrentCountEntryFocusV224(firstInput,{ behavior:'auto' });
   return document.activeElement === firstInput;
 }
 
@@ -35787,7 +35826,7 @@ function scheduleCurrentCountEntryFocus({ preferredInputId='' }={}) {
     const activeInput = document.activeElement?.classList?.contains('cqty')
       ? document.activeElement
       : null;
-    if (activeInput) scrollCountEntryWithLocation(activeInput,{ behavior:'auto' });
+    if (activeInput) alignCurrentCountEntryFocusV224(activeInput,{ behavior:'auto' });
     else prepareCurrentCountEntryFocus({ preferredInputId });
   });
   [60,180,420,850,1500,2500].forEach(delay => {
@@ -35798,12 +35837,16 @@ function scheduleCurrentCountEntryFocus({ preferredInputId='' }={}) {
         ? document.activeElement
         : null;
       if (activeInput) {
-        scrollCountEntryWithLocation(activeInput,{ behavior:'auto' });
+        alignCurrentCountEntryFocusV224(activeInput,{ behavior:'auto' });
         return;
       }
       prepareCurrentCountEntryFocus({ preferredInputId });
     },delay));
   });
+  _handheldCountFocusTimers.push(setTimeout(() => {
+    const page = document.querySelector('.count-handheld-page');
+    if (token === _handheldCountFocusToken && page) delete page.dataset.initialCountHeaderFocus;
+  },2700));
 }
 
 function scheduleCountOperationalFocusV215({ preferredInputId='' }={}) {
@@ -36000,7 +36043,7 @@ function activateHardwareLaserScanner() {
   if (S?.page === 'c-count') {
     clearTaskLocationFocusTimers();
     clearCountLaserFocusTimersV127();
-    // V2.25: every device starts on the current COUNT field (R1/R2/R3). The
+    // V2.24: every device starts on the current COUNT field (R1/R2/R3). The
     // scanner-safe COUNT listeners now preserve the original quantity, collect
     // the complete Barcode and route it without needing a hidden editor to own
     // focus, so autofocus and one-trigger laser lookup can coexist.
@@ -36079,6 +36122,11 @@ document.addEventListener('focusout',event => {
   if (event.target?.id !== 'task_hardware_scan') return;
   setTimeout(restoreHandheldLocationFocus,90);
 },true);
+document.addEventListener('pointerdown',() => {
+  if (S?.page !== 'c-count') return;
+  const page = document.querySelector('.count-handheld-page');
+  if (page) delete page.dataset.initialCountHeaderFocus;
+},true);
 document.addEventListener('focusin',event => {
   if (S?.page !== 'c-count') return;
   const target = event.target instanceof HTMLElement ? event.target : null;
@@ -36146,7 +36194,7 @@ function handleFoundHardwareScan(value,target=null) {
   return assignHardwareScanToField(input,value,input.dataset.hwScanRole || '');
 }
 
-function resumeCountOrScannerFocusV225(target,delay=80) {
+function resumeCountOrScannerFocusV224(target,delay=80) {
   if (hardwareScanCountQtyTargetV27(target)) {
     _countLaserModeV127 = 'qty';
     setTimeout(() => scheduleCurrentCountEntryFocus({ preferredInputId:target.id || '' }),delay);
@@ -36174,7 +36222,7 @@ function handleCountHardwareScan(value,target=null) {
   const locationKey = hardwareScanCompareKey(page?.dataset.hwLocationCode || '');
   if (candidateKeys.size && locationKey && candidateKeys.has(locationKey)) {
     handheldScanFeedback('success',uiCopy('Location ถูกต้อง','Location Verified'),scanValue,uiCopy('ยิง LPN หรือ Item เพื่อเลือกสินค้าที่จะนับ','Scan an LPN or Item to select the count line'));
-    resumeCountOrScannerFocusV225(target,80);
+    resumeCountOrScannerFocusV224(target,80);
     return true;
   }
   const wrappers = [...document.querySelectorAll('.count-handheld-page .citem-wrap[data-hw-item-id]')];
@@ -36191,7 +36239,7 @@ function handleCountHardwareScan(value,target=null) {
   });
   if (!match) {
     handheldScanFeedback('error',uiCopy('ไม่พบ Barcode ใน Location นี้','Barcode Not Found in This Location'),scanValue,uiCopy('ตรวจสอบ LPN / Item หรือ Location แล้วลองอีกครั้ง','Check the LPN, Item or Location and try again'));
-    resumeCountOrScannerFocusV225(target,80);
+    resumeCountOrScannerFocusV224(target,80);
     return false;
   }
   const resolvedMatch = match.classList.contains('is-count-resolved');
@@ -37129,7 +37177,7 @@ function setCountScanPanelExpanded(expanded,{ focusSearch=false,persist=true }={
     const activeCountInput = document.activeElement?.classList?.contains('cqty')
       ? document.activeElement
       : null;
-    if (activeCountInput) scrollCountEntryWithLocation(activeCountInput,{ behavior:'auto' });
+    if (activeCountInput) alignCurrentCountEntryFocusV224(activeCountInput,{ behavior:'auto' });
   });
 
   if (!shouldExpand) {
@@ -38951,7 +38999,6 @@ async function loadCCount() {
       .map(detail => normalizeHardwareScanValue(detail.license_plate || ''))
       .filter(Boolean)
       .join('|');
-    const firstCountItem = items === '';
     const initialCountFocusAttr = !resolvedBeforeRound
       && String(it.id) === String(initialActiveItemIdV128 || '')
       && !countViewportRestorePendingV128(aid)
@@ -38964,16 +39011,6 @@ async function loadCCount() {
       data-hw-lp-codes="${escapeWmsText(hardwareLpCodes)}"
       data-count-item-status="${countEntryRow.itemStatus || ''}"
       data-count-next-round="${countEntryRow.itemNextRound || ''}">
-      ${firstCountItem ? `<div class="count-location-item-banner">
-        <span class="count-location-item-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z"></path><circle cx="12" cy="10" r="2.2"></circle></svg>
-        </span>
-        <div class="count-location-item-copy">
-          <span class="count-location-item-label">LOCATION</span>
-          <strong class="count-location-item-code mono" data-i18n-skip>${escapeWmsText(l.code || '')}</strong>
-          ${sub ? `<span class="count-location-item-meta" data-i18n-skip>${escapeWmsText(sub)}</span>` : ''}
-        </div>
-      </div>` : ''}
       <div class="citem">
         <div class="citem-info">
           <div class="count-item-identity">
@@ -39148,8 +39185,11 @@ async function loadCCount() {
   }
   const countWorkProgressV217 = currentCountWorkProgressV217();
 
-  cnt().innerHTML = `<div class="count-handheld-page" data-hw-location-code="${escapeWmsText(l.code || '')}">
+  cnt().innerHTML = `<div class="count-handheld-page" data-hw-location-code="${escapeWmsText(l.code || '')}"
+    data-initial-count-header-focus="true">
     <div class="card count-header-card">
+      <div class="count-header-location mono" data-i18n-skip>${escapeWmsText(l.code || '')}</div>
+      ${sub ? `<div class="count-header-meta" data-i18n-skip>${escapeWmsText(sub)}</div>` : ''}
       <div class="count-context-tags" style="display:flex;gap:10px;flex-wrap:wrap">
         <span class="tag tag-blue">${activeRoundLabel}</span>
         <span class="tag tag-gray">${asgn.count_sessions.name}</span>
