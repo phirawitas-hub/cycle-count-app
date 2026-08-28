@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- V2.22: Cancel stale COUNT autofocus retries and pin the first matched scan to its Item so one successful trigger always scrolls and focuses the correct row. -->
+<!-- V2.23: Keep DIFF Items in Supervisor review after a WMS re-import changes OH; only Supervisor confirmation may close them. -->
 <!-- V2.12: Open expiry prompts only inside their selected assignment mode and classify work as expired only when it has a real previous assignee. -->
 <!-- V2.11: Give Annual JOBs an independent midnight-expiry queue and dedicated reassignment controls matching Normal Location work. -->
 <!-- V2.10: Show each Annual JOB's remaining and original Location + Item totals explicitly so completed work is never mistaken for missing work. -->
@@ -85,7 +85,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V2.22</title>
+<title>Cycle Count V2.23</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
@@ -23984,9 +23984,9 @@ body.page-loading-active .main-wrapper{
 <div id="app"></div>
 
 <script>
-// V2.22: one authoritative application version for the browser title,
+// V2.23: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.22';
+const APP_VERSION = '2.23';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -32029,6 +32029,54 @@ function computeItemStatus(oh, r1, r2, r3, rules) {
   return 'Diff';
 }
 
+// A WMS Import may legitimately change live OH after a Count was already sent
+// to Supervisor. That mutable OH must not remove the historical exception from
+// the review queue. Reconstruct the hand-off from saved rounds for legacy jobs
+// created before the OH baseline audit existed as well.
+function countRoundsReachedVarianceReview(rounds={},rules={}) {
+  const cfg = Object.assign({ maxRounds:3,repeatMatchAction:'recount' },rules || {});
+  const maxRounds = Math.max(1,Math.min(3,Number(cfg.maxRounds) || 3));
+  const values = [1,2,3]
+    .filter(round => rounds?.[round] !== null && rounds?.[round] !== undefined && rounds?.[round] !== '')
+    .map(round => Number(rounds[round]))
+    .filter(Number.isFinite)
+    .slice(0,maxRounds);
+  if (!values.length) return false;
+  if (values.length >= maxRounds) return true;
+  if (cfg.repeatMatchAction !== 'send_variance') return false;
+  return values.some((value,index) => values.slice(index + 1).some(other => other === value));
+}
+
+function varianceReviewEvidence({ snapshot={},rounds={},rules={},assignmentStatus='',approval=null }={}) {
+  const latestPhysicalQty = rounds?.[3] ?? rounds?.[2] ?? rounds?.[1] ?? approval?.final_qty;
+  const oh = Number(snapshot?.onhand_qty);
+  const physical = Number(latestPhysicalQty);
+  const currentVariance = Number.isFinite(physical) && Number.isFinite(oh)
+    ? physical-oh
+    : null;
+  const approvalVariance = Number(approval?.variance);
+  const supervisorStoredDiff = Number.isFinite(approvalVariance) && approvalVariance !== 0;
+  const reviewState = varianceReviewState(approval);
+  const reopenedMatchedItem = currentVariance === 0
+    && reviewState === 'draft'
+    && approval?.resolution === 'ok';
+  const protectedHistoricalDiff = String(assignmentStatus || '') === 'round3_done'
+    && countRoundsReachedVarianceReview(rounds,rules);
+  const required = Number.isFinite(currentVariance)
+    && (currentVariance !== 0 || reopenedMatchedItem || supervisorStoredDiff || protectedHistoricalDiff);
+  const liveOh = Number(snapshot?._liveOnhandQty);
+  const importChangedOh = Boolean(snapshot?._countBaselineApplied)
+    && Number.isFinite(liveOh)
+    && Number.isFinite(oh)
+    && liveOh !== oh;
+  return {
+    required,currentVariance,latestPhysicalQty,reviewState,
+    protectedHistoricalDiff,
+    historicalMatchRetained:required && currentVariance === 0 && protectedHistoricalDiff,
+    importChangedOh,liveOh,
+  };
+}
+
 // V1.116: Count follows each Item to its next required round immediately.
 // A Location may therefore contain untouched Count 1 Items while one DIFF
 // Item is already being recounted in Count 2/3. The stored rows remain the
@@ -32779,12 +32827,16 @@ function assignmentPendingVarianceReview(assignmentOrStatus) {
     ? assignmentOrStatus
     : null;
   const itemStatuses = assignment?._workflow?.itemStatuses;
+  const storedStatus = String(assignment?._storedStatus || assignment?.status || assignmentOrStatus || '');
+  if (storedStatus === 'approved') return false;
+  // round3_done is the durable hand-off to Supervisor. A later Import can
+  // make every live comparison look OK, but only Supervisor may close it.
+  if (storedStatus === 'round3_done') return true;
   if (Array.isArray(itemStatuses) && itemStatuses.length) {
     const allCounted = itemStatuses.every(status => status === 'OK' || status === 'Diff');
-    return allCounted && itemStatuses.some(status => status === 'Diff')
-      && String(assignment?._storedStatus || assignment?.status || '') !== 'approved';
+    return allCounted && itemStatuses.some(status => status === 'Diff');
   }
-  return String(assignment?.status || assignmentOrStatus || '') === 'round3_done';
+  return false;
 }
 
 function assignmentNeedsAnotherCount(assignmentOrStatus) {
@@ -53204,24 +53256,21 @@ async function renderVarianceItemDetail(aid, container, idx, targetItemId='') {
     const emptyLocation = isEmptyLocationItem(it?.code);
     const v  = byItem[it.id] || {};
     const r1 = v[1]?.count_qty, r2 = v[2]?.count_qty, r3 = v[3]?.count_qty;
-    const latestPhysicalQty = r3 ?? r2 ?? r1;
-    const currentVariance = latestPhysicalQty === undefined || latestPhysicalQty === null
-      ? null
-      : Number(latestPhysicalQty) - Number(s.onhand_qty);
     const approval = approvalByItem.get(it.id) || null;
-    const reviewState = varianceReviewState(approval);
-    const reopenedMatchedItem = Number(currentVariance) === 0
-      && reviewState === 'draft'
-      && approval?.resolution === 'ok';
-    const supervisorConfirmedDiff = Number.isFinite(Number(approval?.variance))
-      && Number(approval.variance) !== 0;
+    const evidence = varianceReviewEvidence({
+      snapshot:s,
+      rounds:{ 1:r1,2:r2,3:r3 },
+      rules,
+      assignmentStatus:asgn.status,
+      approval,
+    });
+    const reviewState = evidence.reviewState;
 
     // The supervisor Variance detail is an exception queue. Do not mix items
     // that already match OH into the same panel, even when the Location holds
     // several items, except for an exact Item deliberately reopened from Work
     // Tracking because stock was found or went missing after the original Count.
-    if (!Number.isFinite(currentVariance)
-      || (currentVariance === 0 && !reopenedMatchedItem && !supervisorConfirmedDiff)) continue;
+    if (!evidence.required) continue;
 
     const stKey = computeItemStatus(+s.onhand_qty, r1, r2, r3, rules);
     const st = VS[stKey] || { cls:'tag-gray', lbl:stKey, row:'' };
@@ -53257,9 +53306,16 @@ async function renderVarianceItemDetail(aid, container, idx, targetItemId='') {
         </div>
         <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
           ${varianceReviewStateBadgeHtml(reviewState)}
-          <span class="tag ${st.cls}">${st.lbl}</span>
+          <span class="tag ${evidence.historicalMatchRetained ? 'tag-amber' : st.cls}">${
+            evidence.historicalMatchRetained ? 'รอหัวหน้าตัดสิน' : st.lbl
+          }</span>
         </div>
       </div>
+      ${evidence.importChangedOh ? `<div class="alert alert-amber" style="margin:0 0 12px;font-size:12px">
+        OH ตอนส่งตรวจ ${varianceQuantityText(s.onhand_qty)} · OH จาก Import ล่าสุด ${varianceQuantityText(evidence.liveOh)} — รายการยังคงอยู่จนกว่าหัวหน้าจะยืนยัน
+      </div>` : evidence.historicalMatchRetained ? `<div class="alert alert-amber" style="margin:0 0 12px;font-size:12px">
+        ยอด Import ปัจจุบันตรงกับยอดนับ แต่ Item นี้เคยถูกส่งมาตรวจสอบ จึงยังไม่ปิดงานอัตโนมัติ
+      </div>` : ''}
       <section class="variance-review-step">
         <div class="variance-review-step-head"><b>1</b><div><strong>ตรวจสอบยอด</strong><small>เทียบ OH กับยอดนับ แล้วระบุยอดยืนยัน</small></div></div>
         ${varianceQuantitySummaryHtml({
@@ -53527,26 +53583,35 @@ async function loadVarianceLocationReviewState(aid) {
   const { data:assignment,error:assignmentError } = await sb.from('assignments')
     .select('id,session_id,location_id,status,locations(code)').eq('id',aid).maybeSingle();
   if (assignmentError || !assignment) throw (assignmentError || new Error('ไม่พบ Assignment'));
-  const [snapshotResult,countResult,approvalResult] = await Promise.all([
+  const [snapshotResult,countResult,approvalResult,baselineAuditResult,rules] = await Promise.all([
     sb.from('stock_snapshot').select('item_id,onhand_qty')
       .eq('session_id',assignment.session_id).eq('location_id',assignment.location_id),
     sb.from('count_records').select('item_id,round,count_qty').eq('assignment_id',aid),
-    sb.from('variance_approvals').select('item_id,variance,resolution,review_status,approved_at').eq('assignment_id',aid),
+    sb.from('variance_approvals').select('item_id,final_qty,variance,resolution,review_status,approved_at').eq('assignment_id',aid),
+    sb.from('audit_log')
+      .select('id,assignment_id,item_id,action,old_value,new_value,created_at')
+      .eq('assignment_id',aid)
+      .eq('action',WMS_COUNT_BASELINE_ACTION)
+      .order('created_at'),
+    getSessionRules(assignment.session_id),
   ]);
-  if (snapshotResult.error || countResult.error || approvalResult.error) {
-    throw (snapshotResult.error || countResult.error || approvalResult.error);
+  if (snapshotResult.error || countResult.error || approvalResult.error || baselineAuditResult.error) {
+    throw (snapshotResult.error || countResult.error || approvalResult.error || baselineAuditResult.error);
   }
-  const latest = new Map();
+  applyWmsCountBaselines(snapshotResult.data || [],[assignment],baselineAuditResult.data || []);
+  const roundsByItem = new Map();
   (countResult.data || []).forEach(record => {
-    const previous = latest.get(record.item_id);
-    if (!previous || Number(record.round) >= previous.round) {
-      latest.set(record.item_id,{ round:Number(record.round) || 0,qty:Number(record.count_qty) });
-    }
+    if (!roundsByItem.has(record.item_id)) roundsByItem.set(record.item_id,{});
+    roundsByItem.get(record.item_id)[Number(record.round)] = Number(record.count_qty);
   });
-  const physicalDiffItemIds = (snapshotResult.data || []).filter(snapshot => {
-    const physical = latest.get(snapshot.item_id)?.qty;
-    return Number.isFinite(physical) && physical !== Number(snapshot.onhand_qty);
-  }).map(snapshot => snapshot.item_id);
+  const approvalByItem = new Map((approvalResult.data || []).map(row => [row.item_id,row]));
+  const physicalDiffItemIds = (snapshotResult.data || []).filter(snapshot => varianceReviewEvidence({
+    snapshot,
+    rounds:roundsByItem.get(snapshot.item_id) || {},
+    rules,
+    assignmentStatus:assignment.status,
+    approval:approvalByItem.get(snapshot.item_id) || null,
+  }).required).map(snapshot => snapshot.item_id);
   // A Supervisor-confirmed total is authoritative for a matched Item reopened
   // from Work Tracking. Keep its stored variance in the same WMS queue used by
   // a normal physical DIFF, even though the original Count still equals OH.
@@ -53561,7 +53626,6 @@ async function loadVarianceLocationReviewState(aid) {
       && variance !== 0;
   }).map(row => row.item_id);
   const requiredItemIds = [...new Set([...physicalDiffItemIds,...supervisorDiffItemIds])];
-  const approvalByItem = new Map((approvalResult.data || []).map(row => [row.item_id,row]));
   const missingItemIds = requiredItemIds.filter(itemId => varianceReviewState(approvalByItem.get(itemId)) !== 'confirmed');
   return { assignment,requiredItemIds,missingItemIds,confirmedVarianceItemIds };
 }
@@ -53695,7 +53759,7 @@ async function loadSvList() {
     ),
     fetchSupabaseRowsByValues(
       'variance_approvals',
-      'assignment_id,item_id,review_status,approved_at',
+      'assignment_id,item_id,final_qty,variance,resolution,review_status,approved_at',
       'assignment_id',
       assignmentIds,
     ),
@@ -53741,11 +53805,13 @@ async function loadSvList() {
       rulesBySession[assignment.session_id],
       assignment.status,
     );
-    const requiredItemIds = scopeSnapshots.filter(snapshot => {
-      const rounds = assignmentCounts[snapshot.item_id] || {};
-      const latestQty = rounds[3] ?? rounds[2] ?? rounds[1];
-      return Number.isFinite(Number(latestQty)) && Number(latestQty) !== Number(snapshot.onhand_qty);
-    }).map(snapshot => snapshot.item_id);
+    const requiredItemIds = scopeSnapshots.filter(snapshot => varianceReviewEvidence({
+      snapshot,
+      rounds:assignmentCounts[snapshot.item_id] || {},
+      rules:rulesBySession[assignment.session_id],
+      assignmentStatus:assignment.status,
+      approval:approvalsByAssignment[assignment.id]?.get(snapshot.item_id) || null,
+    }).required).map(snapshot => snapshot.item_id);
     const confirmed = requiredItemIds.filter(itemId =>
       varianceReviewState(approvalsByAssignment[assignment.id]?.get(itemId)) === 'confirmed').length;
     return {
@@ -54151,23 +54217,20 @@ async function loadSvDetail() {
     const it = s.items; const v = byItem[it.id] || {};
     const emptyLocation = isEmptyLocationItem(it?.code);
     const r1 = v[1]?.count_qty, r2 = v[2]?.count_qty, r3 = v[3]?.count_qty;
-    const latestPhysicalQty = r3 ?? r2 ?? r1;
-    const currentVariance = latestPhysicalQty === undefined || latestPhysicalQty === null
-      ? null
-      : Number(latestPhysicalQty) - Number(s.onhand_qty);
     const approval = approvalByItem.get(it.id) || null;
-    const reviewState = varianceReviewState(approval);
-    const reopenedMatchedItem = Number(currentVariance) === 0
-      && reviewState === 'draft'
-      && approval?.resolution === 'ok';
-    const supervisorConfirmedDiff = Number.isFinite(Number(approval?.variance))
-      && Number(approval.variance) !== 0;
+    const evidence = varianceReviewEvidence({
+      snapshot:s,
+      rounds:{ 1:r1,2:r2,3:r3 },
+      rules,
+      assignmentStatus:asgn.status,
+      approval,
+    });
+    const reviewState = evidence.reviewState;
 
     // This full review page is opened from an item-level WMS exception. Keep
     // the Location context and include a matching Item only when Work Tracking
     // explicitly reopened that exact draft for a late stock-change review.
-    if (!Number.isFinite(currentVariance)
-      || (currentVariance === 0 && !reopenedMatchedItem && !supervisorConfirmedDiff)) continue;
+    if (!evidence.required) continue;
 
     hasVar = true;
     const stKey = computeItemStatus(+s.onhand_qty, r1, r2, r3, rules);
@@ -54199,9 +54262,16 @@ async function loadSvDetail() {
         </div>
         <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
           ${varianceReviewStateBadgeHtml(reviewState)}
-          <span class="tag ${st.cls}">${st.lbl}</span>
+          <span class="tag ${evidence.historicalMatchRetained ? 'tag-amber' : st.cls}">${
+            evidence.historicalMatchRetained ? 'รอหัวหน้าตัดสิน' : st.lbl
+          }</span>
         </div>
       </div>
+      ${evidence.importChangedOh ? `<div class="alert alert-amber" style="margin:0 0 12px;font-size:12px">
+        OH ตอนส่งตรวจ ${varianceQuantityText(s.onhand_qty)} · OH จาก Import ล่าสุด ${varianceQuantityText(evidence.liveOh)} — รายการยังคงอยู่จนกว่าหัวหน้าจะยืนยัน
+      </div>` : evidence.historicalMatchRetained ? `<div class="alert alert-amber" style="margin:0 0 12px;font-size:12px">
+        ยอด Import ปัจจุบันตรงกับยอดนับ แต่ Item นี้เคยถูกส่งมาตรวจสอบ จึงยังไม่ปิดงานอัตโนมัติ
+      </div>` : ''}
       <div class="variance-counter-line">R1: ${fmt(v[1])} · R2: ${fmt(v[2])} · R3: ${fmt(v[3])}</div>
       ${varianceIssueEditorHtml(v,`variance_detail_${it.id}`,it,{
         assignmentId:aid,sessionId:asgn.session_id,locationId:asgn.location_id,mode:'detail',locked:confirmed,
