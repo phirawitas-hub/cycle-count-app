@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- V2.20: Preserve the scanner's text stream while COUNT is focused, recover a uniquely truncated current-page Barcode, and isolate Android OK handling from Location scans. -->
+<!-- V2.21: Correct uniquely dropped scanner characters at the final routing boundary so every input path uses the real assigned Location/Item/LPN value. -->
 <!-- V2.12: Open expiry prompts only inside their selected assignment mode and classify work as expired only when it has a real previous assignee. -->
 <!-- V2.11: Give Annual JOBs an independent midnight-expiry queue and dedicated reassignment controls matching Normal Location work. -->
 <!-- V2.10: Show each Annual JOB's remaining and original Location + Item totals explicitly so completed work is never mistaken for missing work. -->
@@ -85,7 +85,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V2.20</title>
+<title>Cycle Count V2.21</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
@@ -23984,9 +23984,9 @@ body.page-loading-active .main-wrapper{
 <div id="app"></div>
 
 <script>
-// V2.20: one authoritative application version for the browser title,
+// V2.21: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.20';
+const APP_VERSION = '2.21';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -36061,8 +36061,12 @@ function handleCountHardwareScan(value,target=null) {
   if (directRole && !target.dataset.hwScanCapture) {
     return assignHardwareScanToField(target,value,directRole);
   }
-  const scanValue = hardwareScanPayloadValue(value) || normalizeHardwareScanValue(value);
-  const candidateKeys = hardwareScanCandidateKeys(value);
+  // Direct callers must receive the same correction as the central router.
+  // This covers manual-result selection and any scanner path that bypasses a
+  // dedicated capture input.
+  const correctedValue = bestCountHardwareCaptureValueV218(value) || value;
+  const scanValue = hardwareScanPayloadValue(correctedValue) || normalizeHardwareScanValue(correctedValue);
+  const candidateKeys = hardwareScanCandidateKeys(correctedValue);
   const page = document.querySelector('.count-handheld-page');
   const locationKey = hardwareScanCompareKey(page?.dataset.hwLocationCode || '');
   if (candidateKeys.size && locationKey && candidateKeys.has(locationKey)) {
@@ -36139,10 +36143,25 @@ function handleCountHardwareScan(value,target=null) {
   return true;
 }
 
+function routedHardwareScanValueV221(rawValue='') {
+  const normalizedValue = normalizeHardwareScanValue(rawValue);
+  const payloadValue = hardwareScanPayloadValue(normalizedValue) || normalizedValue;
+  if (!payloadValue) return '';
+  if (S?.page === 'c-tasks') {
+    return exactAssignedTaskLocationScanValue(payloadValue) || payloadValue;
+  }
+  if (S?.page === 'c-count') {
+    return bestCountHardwareCaptureValueV218(payloadValue) || payloadValue;
+  }
+  return payloadValue;
+}
+
 function routeHardwareLaserScan(rawValue,target=null) {
   if (_hardwareScanNavigationPending) return true;
-  const normalizedValue = normalizeHardwareScanValue(rawValue);
-  const value = hardwareScanPayloadValue(normalizedValue) || normalizedValue;
+  // Correct the scanner payload here, after every event source has converged
+  // but before duplicate detection or lookup. Thus body/key-buffer, COUNT IME,
+  // dedicated capture, polling and camera paths all use one real value.
+  const value = routedHardwareScanValueV221(rawValue);
   if (value.length < HANDHELD_SCAN_CONFIG.minLength) return false;
   const now = Date.now();
   if (hardwareScanCompareKey(value) === hardwareScanCompareKey(_hardwareScanLastValue)
@@ -37161,7 +37180,8 @@ function runTaskScanNavigation(action,afterHardwareInput=false) {
 }
 
 function onTaskLocationScanned(text,fromHardwareLaser=false) {
-  const code = hardwareScanPayloadValue(text) || normalizeHardwareScanValue(text);
+  const correctedText = exactAssignedTaskLocationScanValue(text) || text;
+  const code = hardwareScanPayloadValue(correctedText) || normalizeHardwareScanValue(correctedText);
   const codeKeys = hardwareScanCandidateKeys(code);
   const tasks = window._myTasks || [];
   const selectedSessions = new Set(
