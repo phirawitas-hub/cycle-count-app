@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- V2.19: Apply the complete-IME scan path even while a Count quantity field is focused, preserving the Count value and routing Location/Item/LPN on the first trigger. -->
+<!-- V2.20: Preserve the scanner's text stream while COUNT is focused, recover a uniquely truncated current-page Barcode, and isolate Android OK handling from Location scans. -->
 <!-- V2.12: Open expiry prompts only inside their selected assignment mode and classify work as expired only when it has a real previous assignee. -->
 <!-- V2.11: Give Annual JOBs an independent midnight-expiry queue and dedicated reassignment controls matching Normal Location work. -->
 <!-- V2.10: Show each Annual JOB's remaining and original Location + Item totals explicitly so completed work is never mistaken for missing work. -->
@@ -85,7 +85,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V2.19</title>
+<title>Cycle Count V2.20</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
@@ -23984,9 +23984,9 @@ body.page-loading-active .main-wrapper{
 <div id="app"></div>
 
 <script>
-// V2.19: one authoritative application version for the browser title,
+// V2.20: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.19';
+const APP_VERSION = '2.20';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -35009,6 +35009,21 @@ function assignedTaskLocationScanKeys() {
   return keys;
 }
 
+function assignedTaskLocationScanValuesV220() {
+  const values = [];
+  const seen = new Set();
+  const add = rawValue => {
+    const value = hardwareScanPayloadValue(rawValue) || normalizeHardwareScanValue(rawValue);
+    const key = hardwareScanCompareKey(value);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    values.push({ value,key });
+  };
+  (window._myTasks || []).forEach(assignment => add(assignment?.locations?.code || ''));
+  (window._myAnnualJobItems || []).forEach(item => add(item?.locations?.code || ''));
+  return values;
+}
+
 function exactAssignedTaskLocationScanValue(...candidates) {
   if (S?.page !== 'c-tasks') return '';
   const assignedKeys = assignedTaskLocationScanKeys();
@@ -35021,7 +35036,10 @@ function exactAssignedTaskLocationScanValue(...candidates) {
       return hardwareScanPayloadValue(value) || value;
     }
   }
-  return '';
+  return recoverUniqueHardwareScanValueV220(
+    candidates,
+    assignedTaskLocationScanValuesV220(),
+  );
 }
 
 function bestCountHardwareCaptureValueV218(...candidates) {
@@ -35037,7 +35055,15 @@ function bestCountHardwareCaptureValueV218(...candidates) {
   const exactValues = values.filter(value => (
     [...hardwareScanCandidateKeys(value)].some(key => pageKeys.has(key))
   ));
-  const pool = exactValues.length ? exactValues : values;
+  if (exactValues.length) {
+    return exactValues.reduce((best,value) => value.length > best.length ? value : best,'');
+  }
+  // If Android omitted a few characters before the COUNT editor recognised
+  // the stream as a Barcode, recover only a unique close match from the exact
+  // Location / Item / LPN values of this page. Ambiguous scans remain errors.
+  const recovered = recoverExactCountPageScanValueV220(...values);
+  if (recovered) return recovered;
+  const pool = values;
   return pool.reduce((best,value) => value.length > best.length ? value : best,'');
 }
 
@@ -35111,6 +35137,127 @@ function countPageHardwareScanKeysV27() {
       .forEach(key => keys.add(key));
   });
   return keys;
+}
+
+function countPageHardwareScanValuesV220() {
+  const values = [];
+  const seen = new Set();
+  const add = rawValue => {
+    const value = hardwareScanPayloadValue(rawValue) || normalizeHardwareScanValue(rawValue);
+    const key = hardwareScanCompareKey(value);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    values.push({ value,key });
+  };
+  const page = document.querySelector('.count-handheld-page');
+  add(page?.dataset.hwLocationCode || '');
+  document.querySelectorAll('.count-handheld-page .citem-wrap[data-hw-item-id]').forEach(wrapper => {
+    add(wrapper.dataset.hwItemCode || '');
+    String(wrapper.dataset.hwLpCodes || '').split('|').forEach(add);
+  });
+  return values;
+}
+
+function countHardwareScanCandidateValuesV220(...candidates) {
+  const values = [];
+  const seen = new Set();
+  candidates.forEach(candidate => {
+    const raw = String(candidate || '').normalize('NFKC');
+    [raw,...raw.split(/[\r\n\t]+/)].forEach(part => {
+      const normalized = normalizeHardwareScanValue(part);
+      const payload = hardwareScanPayloadValue(normalized);
+      [normalized,payload].filter(Boolean).forEach(value => {
+        const key = hardwareScanCompareKey(value);
+        if (!key || seen.has(key)) return;
+        seen.add(key);
+        values.push({ value,key });
+      });
+    });
+  });
+  return values;
+}
+
+function hardwareScanEditDistanceV220(left='',right='') {
+  const a = String(left || '');
+  const b = String(right || '');
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  let previous = Array.from({ length:b.length + 1 },(_,index) => index);
+  for (let row = 1; row <= a.length; row += 1) {
+    const current = [row];
+    for (let column = 1; column <= b.length; column += 1) {
+      current[column] = Math.min(
+        current[column - 1] + 1,
+        previous[column] + 1,
+        previous[column - 1] + (a[row - 1] === b[column - 1] ? 0 : 1),
+      );
+    }
+    previous = current;
+  }
+  return previous[b.length];
+}
+
+function hardwareScanSubsequenceGapV220(shorter='',longer='') {
+  const small = String(shorter || '');
+  const large = String(longer || '');
+  if (!small.length || small.length > large.length) return Number.POSITIVE_INFINITY;
+  let index = 0;
+  for (const character of large) {
+    if (character === small[index]) index += 1;
+    if (index === small.length) return large.length - small.length;
+  }
+  return Number.POSITIVE_INFINITY;
+}
+
+function recoverUniqueHardwareScanValueV220(candidates=[],expectedValues=[]) {
+  const observedValues = countHardwareScanCandidateValuesV220(...candidates)
+    .filter(entry => entry.key.length >= 6);
+  if (!observedValues.length || !expectedValues.length) return '';
+  const matches = [];
+  observedValues.forEach(observed => {
+    expectedValues.forEach(expected => {
+      if (observed.key === expected.key) {
+        matches.push({ value:expected.value,key:expected.key,score:0,lengthGap:0 });
+        return;
+      }
+      const longerLength = Math.max(observed.key.length,expected.key.length);
+      const coverage = Math.min(observed.key.length,expected.key.length) / longerLength;
+      if (coverage < 0.58) return;
+      const editDistance = hardwareScanEditDistanceV220(observed.key,expected.key);
+      const subsequenceGap = observed.key.length <= expected.key.length
+        ? hardwareScanSubsequenceGapV220(observed.key,expected.key)
+        : hardwareScanSubsequenceGapV220(expected.key,observed.key);
+      const editLimit = Math.max(2,Math.ceil(longerLength * 0.30));
+      const subsequenceLimit = Math.max(2,Math.ceil(longerLength * 0.38));
+      if (editDistance > editLimit && subsequenceGap > subsequenceLimit) return;
+      const score = Number.isFinite(subsequenceGap)
+        ? Math.min(editDistance,subsequenceGap)
+        : editDistance;
+      matches.push({
+        value:expected.value,
+        key:expected.key,
+        score,
+        lengthGap:Math.abs(observed.key.length - expected.key.length),
+      });
+    });
+  });
+  matches.sort((left,right) => left.score - right.score
+    || left.lengthGap - right.lengthGap
+    || right.key.length - left.key.length);
+  const best = matches[0];
+  if (!best) return '';
+  const ambiguous = matches.some((match,index) => index > 0
+    && match.key !== best.key
+    && match.score === best.score
+    && match.lengthGap === best.lengthGap);
+  return ambiguous ? '' : best.value;
+}
+
+function recoverExactCountPageScanValueV220(...candidates) {
+  return recoverUniqueHardwareScanValueV220(
+    candidates,
+    countPageHardwareScanValuesV220(),
+  );
 }
 
 function countQtyLooksLikeHardwareScanV27(value='') {
@@ -35497,7 +35644,11 @@ function prepareCurrentCountEntryFocus({ force=false,preferredInputId='' }={}) {
   if (narrowHandheld) {
     const useDeviceKeyboard = handheldSoftKeyboardEnabled() && !countNumericKeypadEnabled();
     inputs.forEach(input => {
-      input.setAttribute('inputmode',useDeviceKeyboard ? 'decimal' : 'none');
+      // Keep a text-capable IME connection on rugged Android. A decimal IME
+      // can discard letters from an Item/Location before JavaScript sees them.
+      input.setAttribute('inputmode',useDeviceKeyboard ? 'text' : 'none');
+      input.setAttribute('autocapitalize','characters');
+      input.setAttribute('spellcheck','false');
       input.setAttribute('enterkeyhint','next');
       input.setAttribute('data-handheld-count-entry','true');
     });
@@ -36013,14 +36164,12 @@ function routeHardwareLaserScan(rawValue,target=null) {
 }
 
 function hardwareScanTerminalEvent(event) {
-  const key = String(event?.key || '').toLowerCase();
-  const code = String(event?.code || '').toLowerCase();
+  const key = String(event?.key || '');
+  const code = String(event?.code || '');
   const legacyCode = Number(event?.which || event?.keyCode || 0);
-  return ['enter','tab','ok','accept','select','go','done'].includes(key)
-    || ['enter','numpadenter','tab','ok','accept','select'].includes(code)
-    // Rugged Android scanners may expose the same suffix as DPAD_CENTER (23)
-    // or Android ENTER (66) without a conventional DOM key string.
-    || [9,13,23,66].includes(legacyCode);
+  return key === 'Enter' || key === 'Tab'
+    || code === 'Enter' || code === 'NumpadEnter' || code === 'Tab'
+    || legacyCode === 13 || legacyCode === 9;
 }
 
 function hardwareScanLegacyCharacter(event) {
@@ -36160,7 +36309,8 @@ function handleHardwareLaserKeydown(event) {
   const countQtyTarget = hardwareScanCountQtyTargetV27(target);
   const numericTarget = Boolean(target?.matches('input[type="number"]')) || countQtyTarget;
   const captureTarget = Boolean(target?.dataset?.hwScanCapture);
-  const terminalKey = hardwareScanTerminalEvent(event);
+  const terminalKey = hardwareScanTerminalEvent(event)
+    || (countQtyTarget && countLaserWedgeDeviceV127() && countQtyHardwareConfirmEvent(event));
   const unknownWedgeKey = ['Unidentified','Process'].includes(String(event.key || ''))
     || Number(event.which || event.keyCode || 0) === 229;
   if (!terminalKey && (captureTarget || countQtyTarget || unknownWedgeKey)) {
@@ -38771,13 +38921,13 @@ async function loadCCount() {
                <div class="count-input-frame" data-count-input-frame="true"
                  style="display:block;width:100%;box-sizing:border-box;padding:1px;border-radius:15px;background:#080808;overflow:hidden">
                  <input type="text" class="cqty ${v !== undefined ? 'ok' : ''}"
-                   id="q_${it.id}" inputmode="decimal" enterkeyhint="next"
+                   id="q_${it.id}" inputmode="${isNarrowHandheldTerminal() ? 'text' : 'decimal'}" enterkeyhint="next"
                    data-item-id="${it.id}"
                    data-count-round="${itemInputRound}"
                    data-count-saved="${v !== undefined ? 'true' : 'false'}"
                    data-count-saved-value="${v !== undefined ? escapeWmsText(String(v)) : ''}"
                    ${initialCountFocusAttr}
-                   pattern="[0-9]*[.]?[0-9]*" autocomplete="off"
+                   pattern="[0-9]*[.]?[0-9]*" autocomplete="off" autocapitalize="characters" spellcheck="false"
                    value="${v !== undefined ? v : ''}" placeholder="0"
                    style="display:block;width:100%;box-sizing:border-box;margin:0;border:0;background:#fff;-webkit-appearance:none;appearance:none"
                    oninput="handleCountQtyInput(this)"
@@ -39106,7 +39256,10 @@ function applyCountNumericKeypadMode() {
   const readOnly = enabled && countNumericKeypadNeedsReadOnly();
   document.querySelectorAll('.count-handheld-page .cqty').forEach(input => {
     input.readOnly = readOnly;
-    input.setAttribute('inputmode',readOnly || keepSoftKeyboardHidden ? 'none' : 'decimal');
+    const scanSafeHandheldInput = countLaserWedgeDeviceV127() && !readOnly;
+    input.setAttribute('inputmode',readOnly || keepSoftKeyboardHidden
+      ? 'none'
+      : scanSafeHandheldInput ? 'text' : 'decimal');
     if (keepSoftKeyboardHidden) input.setAttribute('virtualkeyboardpolicy','manual');
     else input.removeAttribute('virtualkeyboardpolicy');
     input.classList.toggle('custom-keypad-ready',enabled);
