@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- V2.18: Wait for the complete Android IME payload before routing Count-page Item/LPN laser scans, preserving repeated characters such as LPN leading zeros. -->
+<!-- V2.19: Apply the complete-IME scan path even while a Count quantity field is focused, preserving the Count value and routing Location/Item/LPN on the first trigger. -->
 <!-- V2.12: Open expiry prompts only inside their selected assignment mode and classify work as expired only when it has a real previous assignee. -->
 <!-- V2.11: Give Annual JOBs an independent midnight-expiry queue and dedicated reassignment controls matching Normal Location work. -->
 <!-- V2.10: Show each Annual JOB's remaining and original Location + Item totals explicitly so completed work is never mistaken for missing work. -->
@@ -85,7 +85,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V2.18</title>
+<title>Cycle Count V2.19</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
@@ -23984,9 +23984,9 @@ body.page-loading-active .main-wrapper{
 <div id="app"></div>
 
 <script>
-// V2.18: one authoritative application version for the browser title,
+// V2.19: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.18';
+const APP_VERSION = '2.19';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -35146,6 +35146,50 @@ function countQtyImeLooksLikeScanV216(value='',chunk='',inputType='') {
   return multiCharacterIme && /^\d{6,}$/.test(hardwareScanPayloadValue(raw));
 }
 
+function countQtyFieldScanCandidateV219(target,state=null) {
+  const fieldValue = normalizeHardwareScanValue(target?.value || '');
+  const originalValue = normalizeHardwareScanValue(
+    state?.originalValue ?? _hardwareScanNumberOriginalValue ?? '',
+  );
+  if (!fieldValue || fieldValue === originalValue) return '';
+  const candidates = [fieldValue];
+  // Some Android WebViews append the wedge text to the selected COUNT value,
+  // while others prepend it or replace the field. Remove only the known value
+  // that existed before the scan; never strip Barcode characters by pattern.
+  if (originalValue && fieldValue.startsWith(originalValue)) {
+    candidates.push(fieldValue.slice(originalValue.length));
+  }
+  if (originalValue && fieldValue.endsWith(originalValue)) {
+    candidates.push(fieldValue.slice(0,-originalValue.length));
+  }
+  return bestCountHardwareCaptureValueV218(...candidates);
+}
+
+function bestCountQtyScanCandidateV219(target,fallbackValue='') {
+  const state = _countQtyImeScanStateV216.get(target);
+  return bestCountHardwareCaptureValueV218(
+    state?.raw,
+    state?.fallbackCandidate,
+    fallbackValue,
+    _hardwareScanBuffer,
+    countQtyFieldScanCandidateV219(target,state),
+  );
+}
+
+function countQtyKeyBufferLooksLikeScannerV219(value='',fastBuffer=false,elapsed=0) {
+  if (!fastBuffer) return false;
+  const payload = hardwareScanPayloadValue(value) || normalizeHardwareScanValue(value);
+  if (payload.length < HANDHELD_SCAN_CONFIG.minLength) return false;
+  if (countQtyImeExactPageScanV216(payload)) return true;
+  // Letters/separators cannot be a quantity. A digits-only Barcode is accepted
+  // from key events only at scanner speed, so a manually typed six-digit COUNT
+  // is not mistaken for an Item/LPN.
+  if (/[^0-9.,]/.test(payload)) return true;
+  return /^\d{6,}$/.test(payload)
+    && _hardwareScanMaxGap <= 90
+    && Number(elapsed || 0) <= 1500;
+}
+
 function restoreCountQtyBeforeScanV216(target,originalValue='') {
   if (!hardwareScanCountQtyTargetV27(target)) return false;
   const restored = String(originalValue ?? '');
@@ -35165,8 +35209,9 @@ function clearCountQtyImeScanStateV216(target) {
 function commitCountQtyImeScanV216(target,fallbackValue='') {
   if (!hardwareScanCountQtyTargetV27(target)) return false;
   const state = _countQtyImeScanStateV216.get(target);
-  const raw = normalizeHardwareScanValue(state?.raw || fallbackValue);
+  const raw = bestCountQtyScanCandidateV219(target,fallbackValue);
   const scannerDetected = Boolean(state?.scanner)
+    || countQtyImeExactPageScanV216(raw)
     || countQtyImeLooksLikeScanV216(raw,fallbackValue,'composition');
   if (!scannerDetected || raw.length < HANDHELD_SCAN_CONFIG.minLength) return false;
   const originalValue = String(state?.originalValue ?? target.value ?? '');
@@ -35200,6 +35245,7 @@ function observeCountQtyImeScanV216(event,source='beforeinput') {
     state = {
       originalValue:String(target.value || ''),
       raw:'',
+      fallbackCandidate:'',
       scanner:false,
       lastAt:0,
       lastChunk:'',
@@ -35233,7 +35279,10 @@ function observeCountQtyImeScanV216(event,source='beforeinput') {
   state.timer = setTimeout(() => {
     if (state.scanner) commitCountQtyImeScanV216(target);
     else clearCountQtyImeScanStateV216(target);
-  },HANDHELD_SCAN_CONFIG.inputCommitDelayMs + 140);
+  },Math.max(
+    HANDHELD_SCAN_CONFIG.inputCommitDelayMs + 140,
+    HANDHELD_SCAN_CONFIG.countTerminatorGraceMs,
+  ));
 
   if (!state.scanner) return false;
   if (event.cancelable) event.preventDefault();
@@ -35242,6 +35291,46 @@ function observeCountQtyImeScanV216(event,source='beforeinput') {
   // Earlier IME chunks may already have reached the COUNT editor before the
   // stream became recognisable as a Barcode. Remove them immediately.
   restoreCountQtyBeforeScanV216(target,state.originalValue);
+  return true;
+}
+
+function scheduleCountQtyLaserCommitV219(target,fallbackValue='') {
+  if (!hardwareScanCountQtyTargetV27(target)) return false;
+  let state = _countQtyImeScanStateV216.get(target);
+  const originalValue = String(
+    state?.originalValue ?? _hardwareScanNumberOriginalValue ?? target.value ?? '',
+  );
+  const candidate = bestCountQtyScanCandidateV219(target,fallbackValue);
+  if (candidate.length < HANDHELD_SCAN_CONFIG.minLength) return false;
+  if (!state) {
+    state = {
+      originalValue,
+      raw:'',
+      fallbackCandidate:candidate,
+      scanner:true,
+      lastAt:Date.now(),
+      lastChunk:'',
+      lastSource:'terminator',
+      timer:null,
+    };
+    _countQtyImeScanStateV216.set(target,state);
+  } else {
+    state.scanner = true;
+    state.fallbackCandidate = bestCountHardwareCaptureValueV218(
+      state.fallbackCandidate,
+      candidate,
+    );
+  }
+  // Restore the exact COUNT that existed before the trigger. Late IME events
+  // continue accumulating in state.raw during the grace period.
+  restoreCountQtyBeforeScanV216(target,state.originalValue);
+  blockCountQtyScanTerminatorV27(target,1800);
+  clearTimeout(state.timer);
+  state.timer = setTimeout(
+    () => commitCountQtyImeScanV216(target,candidate),
+    HANDHELD_SCAN_CONFIG.countTerminatorGraceMs,
+  );
+  resetHardwareScanBuffer();
   return true;
 }
 
@@ -35924,12 +36013,14 @@ function routeHardwareLaserScan(rawValue,target=null) {
 }
 
 function hardwareScanTerminalEvent(event) {
-  const key = String(event?.key || '');
-  const code = String(event?.code || '');
+  const key = String(event?.key || '').toLowerCase();
+  const code = String(event?.code || '').toLowerCase();
   const legacyCode = Number(event?.which || event?.keyCode || 0);
-  return key === 'Enter' || key === 'Tab'
-    || code === 'Enter' || code === 'NumpadEnter' || code === 'Tab'
-    || legacyCode === 13 || legacyCode === 9;
+  return ['enter','tab','ok','accept','select','go','done'].includes(key)
+    || ['enter','numpadenter','tab','ok','accept','select'].includes(code)
+    // Rugged Android scanners may expose the same suffix as DPAD_CENTER (23)
+    // or Android ENTER (66) without a conventional DOM key string.
+    || [9,13,23,66].includes(legacyCode);
 }
 
 function hardwareScanLegacyCharacter(event) {
@@ -36086,17 +36177,6 @@ function handleHardwareLaserKeydown(event) {
     return;
   }
   if (terminalKey) {
-    // The second and later Item scan happens while the previous matched
-    // Item's COUNT field is focused. Android IME may expose the Barcode only
-    // through beforeinput/composition, so commit that raw stream before the
-    // physical Enter/OK can save it as a quantity.
-    if (countQtyTarget && commitCountQtyImeScanV216(target)) {
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation?.();
-      _hardwareScanLastRawEventAt = 0;
-      return;
-    }
     const recentScannerActivity = Date.now() - _hardwareScanLastRawEventAt < 1800;
     const suppressTaskTerminator = S?.page === 'c-tasks' && (
       captureTarget
@@ -36126,11 +36206,32 @@ function handleHardwareLaserKeydown(event) {
     const candidate = exactTaskCandidate || (captureTarget
       ? bestHardwareCaptureValue(target,fieldValue,_hardwareScanBuffer)
       : (fastBuffer ? _hardwareScanBuffer : fieldValue));
+    const countQtyCandidate = countQtyTarget
+      ? bestCountQtyScanCandidateV219(target,candidate)
+      : '';
+    const countQtyImeState = countQtyTarget ? _countQtyImeScanStateV216.get(target) : null;
+    const countQtyScannerDetected = countQtyTarget
+      && countQtyCandidate.length >= HANDHELD_SCAN_CONFIG.minLength
+      && (
+        Boolean(countQtyImeState?.scanner)
+        || countQtyImeExactPageScanV216(countQtyCandidate)
+        || countQtyKeyBufferLooksLikeScannerV219(countQtyCandidate,fastBuffer,elapsed)
+      );
     const numericBarcode = numericTarget
       && fastBuffer
       && candidate.length >= 4
       && (!countQtyTarget || countQtyLooksLikeHardwareScanV27(candidate));
-    if (numericBarcode) {
+    if (countQtyScannerDetected) {
+      // Do not route or save on the scanner suffix yet. Android can deliver
+      // Enter before the final composition chunk, which made the first scan
+      // lose characters whenever the visible COUNT field had focus.
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      scheduleCountQtyLaserCommitV219(target,countQtyCandidate);
+      _hardwareScanLastRawEventAt = 0;
+      return;
+    } else if (numericBarcode) {
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation?.();
@@ -36255,6 +36356,7 @@ document.addEventListener('compositionstart',event => {
   _countQtyImeScanStateV216.set(target,{
     originalValue:String(target.value || ''),
     raw:'',
+    fallbackCandidate:'',
     scanner:false,
     lastAt:Date.now(),
     lastChunk:'',
