@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- V2.14: Move the Annual JOB summary and builder into the Current Flow card without changing their working controls. -->
+<!-- V2.15: Keep the rugged Handheld laser connected to the dedicated Item/LPN scanner on Count entry so one trigger never leaks Barcode digits into COUNT. -->
 <!-- V2.12: Open expiry prompts only inside their selected assignment mode and classify work as expired only when it has a real previous assignee. -->
 <!-- V2.11: Give Annual JOBs an independent midnight-expiry queue and dedicated reassignment controls matching Normal Location work. -->
 <!-- V2.10: Show each Annual JOB's remaining and original Location + Item totals explicitly so completed work is never mistaken for missing work. -->
@@ -85,7 +85,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V2.14</title>
+<title>Cycle Count V2.15</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
@@ -23984,9 +23984,9 @@ body.page-loading-active .main-wrapper{
 <div id="app"></div>
 
 <script>
-// V2.14: one authoritative application version for the browser title,
+// V2.15: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.14';
+const APP_VERSION = '2.15';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -35311,6 +35311,19 @@ function scheduleCurrentCountEntryFocus({ preferredInputId='' }={}) {
   });
 }
 
+function scheduleCountOperationalFocusV215({ preferredInputId='' }={}) {
+  if (S?.page !== 'c-count') return;
+  // The rugged Android laser is an IME/keyboard wedge. Its decoded text must
+  // land in the dedicated scanner editor, not in the visible COUNT editor.
+  // Once an Item has matched, handleCountHardwareScan deliberately changes
+  // the mode to "qty" and focuses that Item's COUNT field for manual entry.
+  if (!preferredInputId && countLaserWedgeDeviceV127() && _countLaserModeV127 === 'scan') {
+    scheduleCountLaserFocusV127();
+    return;
+  }
+  scheduleCurrentCountEntryFocus({ preferredInputId });
+}
+
 function countLaserWedgeDeviceV127() {
   return /Android/i.test(navigator.userAgent) && isNarrowHandheldTerminal();
 }
@@ -35488,7 +35501,11 @@ function activateHardwareLaserScanner() {
   if (S?.page === 'c-count') {
     clearTaskLocationFocusTimers();
     clearCountLaserFocusTimersV127();
-    _countLaserModeV127 = 'qty';
+    // Start rugged Handheld Count pages in scanner mode. Previously the first
+    // COUNT field was focused, so the first decoded Barcode could be reduced
+    // by the quantity normalizer (for example, only its first digit appeared)
+    // and the User had to pull the trigger a second time.
+    _countLaserModeV127 = countLaserWedgeDeviceV127() ? 'scan' : 'qty';
     if (countViewportRestorePendingV128(S.aid)) {
       // A post-save re-render must not focus/scroll the first remaining Item.
       // The exact Item and viewport position are restored after the DOM settles.
@@ -35497,8 +35514,7 @@ function activateHardwareLaserScanner() {
     }
     else {
       stopHardwareCapturePolling();
-      startHardwareCapturePolling('count_hardware_scan');
-      scheduleCurrentCountEntryFocus();
+      scheduleCountOperationalFocusV215();
     }
     _hardwareScanNavigationPending = false;
     return;
@@ -35584,12 +35600,12 @@ document.addEventListener('focusin',event => {
 document.addEventListener('visibilitychange',() => {
   if (!document.hidden && S?.page === 'c-tasks') setTimeout(scheduleTaskLocationScanFocus,120);
   if (!document.hidden && S?.page === 'c-count') {
-    setTimeout(scheduleCurrentCountEntryFocus,120);
+    setTimeout(scheduleCountOperationalFocusV215,120);
   }
 });
 window.addEventListener('pageshow',() => {
   if (S?.page === 'c-tasks') setTimeout(scheduleTaskLocationScanFocus,120);
-  if (S?.page === 'c-count') setTimeout(scheduleCurrentCountEntryFocus,120);
+  if (S?.page === 'c-count') setTimeout(scheduleCountOperationalFocusV215,120);
 });
 
 function assignHardwareScanToField(input,value,role='') {
@@ -38604,8 +38620,8 @@ async function loadCCount() {
   renderCounterPicker();
   refreshCountEntrySummary();
   initializeCountTouchControls();
-  // Initialize the current round first, then focus its first Count field.
-  // This runs for Count 1, Count 2 and Count 3 alike.
+  // Initialize the current round. Rugged Handheld starts on the dedicated
+  // Item/LPN laser editor; other devices keep their first Count-field focus.
   activateHardwareLaserScanner();
   scheduleCountViewportRestoreV128(aid);
 
@@ -39419,7 +39435,7 @@ function toggleCounterDropdown(event) {
   trigger.setAttribute('aria-expanded', String(willOpen));
   document.body.classList.toggle('counter-picker-open',willOpen);
   if (!willOpen && S?.page === 'c-count') {
-    setTimeout(() => scheduleCurrentCountEntryFocus(),80);
+    setTimeout(() => scheduleCountOperationalFocusV215(),80);
   }
 }
 
@@ -39430,7 +39446,7 @@ function closeCounterDropdown({ resumeCount=false }={}) {
   if (trigger) trigger.setAttribute('aria-expanded', 'false');
   document.body.classList.remove('counter-picker-open');
   if (resumeCount && S?.page === 'c-count') {
-    setTimeout(() => scheduleCurrentCountEntryFocus(),80);
+    setTimeout(() => scheduleCountOperationalFocusV215(),80);
   }
 }
 
