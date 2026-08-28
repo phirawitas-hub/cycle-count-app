@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- V2.21: Correct uniquely dropped scanner characters at the final routing boundary so every input path uses the real assigned Location/Item/LPN value. -->
+<!-- V2.22: Cancel stale COUNT autofocus retries and pin the first matched scan to its Item so one successful trigger always scrolls and focuses the correct row. -->
 <!-- V2.12: Open expiry prompts only inside their selected assignment mode and classify work as expired only when it has a real previous assignee. -->
 <!-- V2.11: Give Annual JOBs an independent midnight-expiry queue and dedicated reassignment controls matching Normal Location work. -->
 <!-- V2.10: Show each Annual JOB's remaining and original Location + Item totals explicitly so completed work is never mistaken for missing work. -->
@@ -85,7 +85,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V2.21</title>
+<title>Cycle Count V2.22</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
@@ -23984,9 +23984,9 @@ body.page-loading-active .main-wrapper{
 <div id="app"></div>
 
 <script>
-// V2.21: one authoritative application version for the browser title,
+// V2.22: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.21';
+const APP_VERSION = '2.22';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -35628,6 +35628,43 @@ function clearHandheldCountFocusTimers() {
   _handheldCountFocusTimers = [];
 }
 
+function focusMatchedCountItemV222(match,qtyInput=null) {
+  if (S?.page !== 'c-count' || !match) return false;
+  // The initial Count-page autofocus schedules retries for up to 2.5 seconds.
+  // If a scan matches during that window, those retries can scroll back to the
+  // old COUNT field after the green success message. Cancel them and make this
+  // matched Item the only authoritative focus target.
+  clearHandheldCountFocusTimers();
+  const token = _handheldCountFocusToken;
+  const itemId = String(match.dataset?.hwItemId || '');
+  const inputId = String(qtyInput?.id || '');
+  const align = () => {
+    if (token !== _handheldCountFocusToken || S?.page !== 'c-count') return false;
+    const liveMatch = itemId
+      ? [...document.querySelectorAll('.count-handheld-page .citem-wrap[data-hw-item-id]')]
+        .find(card => String(card.dataset.hwItemId || '') === itemId)
+      : match;
+    const liveInput = inputId ? Q(inputId) : null;
+    const target = liveInput || liveMatch;
+    if (!target || target.hidden || target.closest?.('[hidden]') || target.offsetParent === null) return false;
+    // Focus with preventScroll first, then calculate the Location-first offset
+    // from the final sticky-header layout. Repeating this across two frames
+    // covers rugged WebViews that apply focus/layout asynchronously.
+    if (liveInput && !liveInput.disabled) focusHardwareScanTarget(liveInput);
+    scrollCountEntryWithLocation(target,{ behavior:'auto' });
+    return true;
+  };
+  align();
+  requestAnimationFrame(() => {
+    if (token !== _handheldCountFocusToken) return;
+    requestAnimationFrame(align);
+  });
+  [80,200,420].forEach(delay => {
+    _handheldCountFocusTimers.push(setTimeout(align,delay));
+  });
+  return true;
+}
+
 function countEntryAutofocusBlocked() {
   if (Q('scanOverlay') || Q('count-pause-backdrop')) return true;
   return [...document.querySelectorAll(
@@ -36102,7 +36139,7 @@ function handleCountHardwareScan(value,target=null) {
   setTimeout(() => match.classList.remove('handheld-scan-match'),1800);
   const itemId = match.dataset.hwItemId || '';
   if (resolvedMatch) {
-    scrollCountEntryWithLocation(match,{ behavior:'smooth' });
+    focusMatchedCountItemV222(match,null);
     const nextRound = Number(match.dataset.countNextRound || 0);
     if (nextRound) {
       handheldScanFeedback(
@@ -36136,8 +36173,7 @@ function handleCountHardwareScan(value,target=null) {
   }
   const qtyInput = Q(`q_${itemId}`);
   window._hardwareScanReturnInputId = qtyInput?.id || '';
-  scrollCountEntryWithLocation(qtyInput || match,{ behavior:'smooth' });
-  setTimeout(() => focusHardwareScanTarget(qtyInput),170);
+  focusMatchedCountItemV222(match,qtyInput);
   const matchedAs = candidateKeys.has(hardwareScanCompareKey(match.dataset.hwItemCode || '')) ? 'Item' : 'LPN';
   handheldScanFeedback('success',`${matchedAs} ${uiCopy('ตรงกับรายการ','Matched')}`,scanValue,uiCopy('กรอกจำนวนที่นับได้ แล้วกด Enter / OK','Enter the counted quantity, then press Enter / OK'));
   return true;
