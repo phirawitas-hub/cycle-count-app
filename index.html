@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- V2.15: Keep the rugged Handheld laser connected to the dedicated Item/LPN scanner on Count entry so one trigger never leaks Barcode digits into COUNT. -->
+<!-- V2.16: Capture subsequent rugged Handheld IME laser scans even while COUNT is focused, restore COUNT, and route the complete Item/LPN Barcode. -->
 <!-- V2.12: Open expiry prompts only inside their selected assignment mode and classify work as expired only when it has a real previous assignee. -->
 <!-- V2.11: Give Annual JOBs an independent midnight-expiry queue and dedicated reassignment controls matching Normal Location work. -->
 <!-- V2.10: Show each Annual JOB's remaining and original Location + Item totals explicitly so completed work is never mistaken for missing work. -->
@@ -85,7 +85,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V2.15</title>
+<title>Cycle Count V2.16</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
@@ -23984,9 +23984,9 @@ body.page-loading-active .main-wrapper{
 <div id="app"></div>
 
 <script>
-// V2.15: one authoritative application version for the browser title,
+// V2.16: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.15';
+const APP_VERSION = '2.16';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -34722,6 +34722,8 @@ let _hardwareScanLastAppendedSource = '';
 let _hardwareScanLastAppendedAt = 0;
 let _hardwareScanLastAppendedTarget = null;
 const _countQtyScanTerminatorBlockedUntilV27 = new WeakMap();
+const _countQtyImeScanStateV216 = new WeakMap();
+const _countQtyImeScanHandledV216 = new WeakMap();
 
 const HANDHELD_SOFT_KEYBOARD_STORAGE_KEY = 'cycle_count_handheld_soft_keyboard';
 let _handheldSoftKeyboardEnabled = (() => {
@@ -35078,6 +35080,126 @@ function countQtyLooksLikeHardwareScanV27(value='') {
   // as 20, 200 or 1200 remain ordinary quantity entry.
   if (/[^0-9]/.test(payload)) return true;
   return /^\d{6,}$/.test(payload);
+}
+
+function countQtyImeExactPageScanV216(value='') {
+  const pageKeys = countPageHardwareScanKeysV27();
+  if (!pageKeys.size) return false;
+  return [...hardwareScanCandidateKeys(value)].some(key => pageKeys.has(key));
+}
+
+function countQtyImeLooksLikeScanV216(value='',chunk='',inputType='') {
+  const raw = normalizeHardwareScanValue(value);
+  if (raw.length < HANDHELD_SCAN_CONFIG.minLength) return false;
+  if (countQtyImeExactPageScanV216(raw)) return true;
+  // Quantity entry may contain digits and one decimal point. Letters and
+  // warehouse-code separators cannot be a COUNT and therefore identify a
+  // scanner stream. A digits-only stream is treated as a scan only when the
+  // Android IME delivered several characters together; ordinary rapid keypad
+  // entry, including a six-digit quantity, remains manual COUNT input.
+  if (raw.length >= 4 && /[^0-9.,]/.test(raw)) return true;
+  const multiCharacterIme = String(chunk || '').length > 1
+    || String(inputType || '').toLowerCase().includes('composition');
+  return multiCharacterIme && /^\d{6,}$/.test(hardwareScanPayloadValue(raw));
+}
+
+function restoreCountQtyBeforeScanV216(target,originalValue='') {
+  if (!hardwareScanCountQtyTargetV27(target)) return false;
+  const restored = String(originalValue ?? '');
+  if (String(target.value || '') !== restored) {
+    target.value = restored;
+    target.dispatchEvent(new Event('input',{ bubbles:true }));
+  }
+  return true;
+}
+
+function clearCountQtyImeScanStateV216(target) {
+  const state = _countQtyImeScanStateV216.get(target);
+  if (state?.timer) clearTimeout(state.timer);
+  _countQtyImeScanStateV216.delete(target);
+}
+
+function commitCountQtyImeScanV216(target,fallbackValue='') {
+  if (!hardwareScanCountQtyTargetV27(target)) return false;
+  const state = _countQtyImeScanStateV216.get(target);
+  const raw = normalizeHardwareScanValue(state?.raw || fallbackValue);
+  const scannerDetected = Boolean(state?.scanner)
+    || countQtyImeLooksLikeScanV216(raw,fallbackValue,'composition');
+  if (!scannerDetected || raw.length < HANDHELD_SCAN_CONFIG.minLength) return false;
+  const originalValue = String(state?.originalValue ?? target.value ?? '');
+  clearCountQtyImeScanStateV216(target);
+  restoreCountQtyBeforeScanV216(target,originalValue);
+  _countQtyImeScanHandledV216.set(target,{ until:Date.now() + 650,originalValue });
+  blockCountQtyScanTerminatorV27(target,1600);
+  resetHardwareScanBuffer();
+  routeHardwareLaserScan(raw,target);
+  return true;
+}
+
+function observeCountQtyImeScanV216(event,source='beforeinput') {
+  const target = event?.target instanceof HTMLElement ? event.target : null;
+  if (!hardwareScanCountQtyTargetV27(target) || !event?.data || !countLaserWedgeDeviceV127()) return false;
+  const now = Date.now();
+  const handled = _countQtyImeScanHandledV216.get(target);
+  if (handled && now < Number(handled.until || 0)) {
+    if (event.cancelable) event.preventDefault();
+    event.stopPropagation?.();
+    event.stopImmediatePropagation?.();
+    restoreCountQtyBeforeScanV216(target,handled.originalValue);
+    return true;
+  }
+  if (handled) _countQtyImeScanHandledV216.delete(target);
+
+  const chunk = String(event.data || '');
+  let state = _countQtyImeScanStateV216.get(target);
+  if (!state || now - Number(state.lastAt || 0) > 700) {
+    clearCountQtyImeScanStateV216(target);
+    state = {
+      originalValue:String(target.value || ''),
+      raw:'',
+      scanner:false,
+      lastAt:0,
+      lastChunk:'',
+      lastSource:'',
+      timer:null,
+    };
+    _countQtyImeScanStateV216.set(target,state);
+  }
+  const crossEventDuplicate = source !== state.lastSource
+    && chunk === state.lastChunk
+    && now - Number(state.lastAt || 0) < 120;
+  if (!crossEventDuplicate) {
+    // compositionend/textInput may repeat the complete value after a series
+    // of per-character beforeinput events. Prefer the complete representation
+    // instead of concatenating the Barcode twice.
+    if (source !== 'beforeinput' && chunk.length > 1 && chunk.includes(state.raw)) state.raw = chunk;
+    else if (source !== 'beforeinput' && chunk.length > 1 && state.raw.includes(chunk)) {
+      // The accumulated stream is already complete.
+    } else state.raw += chunk;
+  }
+  state.lastAt = now;
+  state.lastChunk = chunk;
+  state.lastSource = source;
+  state.scanner = state.scanner || countQtyImeLooksLikeScanV216(
+    state.raw,
+    chunk,
+    event.inputType || (event.isComposing ? 'composition' : ''),
+  );
+
+  clearTimeout(state.timer);
+  state.timer = setTimeout(() => {
+    if (state.scanner) commitCountQtyImeScanV216(target);
+    else clearCountQtyImeScanStateV216(target);
+  },HANDHELD_SCAN_CONFIG.inputCommitDelayMs + 140);
+
+  if (!state.scanner) return false;
+  if (event.cancelable) event.preventDefault();
+  event.stopPropagation?.();
+  event.stopImmediatePropagation?.();
+  // Earlier IME chunks may already have reached the COUNT editor before the
+  // stream became recognisable as a Barcode. Remove them immediately.
+  restoreCountQtyBeforeScanV216(target,state.originalValue);
+  return true;
 }
 
 function hardwareScanRoleLabel(role='') {
@@ -35906,7 +36028,7 @@ function handleHardwareLaserKeydown(event) {
   if (!terminalKey && (captureTarget || countQtyTarget || unknownWedgeKey)) {
     _hardwareScanLastRawEventAt = Date.now();
   }
-  if (event.isComposing && !captureTarget) return;
+  if (event.isComposing && !captureTarget && !countQtyTarget) return;
   if (target?.matches('textarea,select,[contenteditable="true"]')) {
     resetHardwareScanBuffer();
     return;
@@ -35917,6 +36039,17 @@ function handleHardwareLaserKeydown(event) {
     return;
   }
   if (terminalKey) {
+    // The second and later Item scan happens while the previous matched
+    // Item's COUNT field is focused. Android IME may expose the Barcode only
+    // through beforeinput/composition, so commit that raw stream before the
+    // physical Enter/OK can save it as a quantity.
+    if (countQtyTarget && commitCountQtyImeScanV216(target)) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      _hardwareScanLastRawEventAt = 0;
+      return;
+    }
     const recentScannerActivity = Date.now() - _hardwareScanLastRawEventAt < 1800;
     const suppressTaskTerminator = S?.page === 'c-tasks' && (
       captureTarget
@@ -36028,7 +36161,12 @@ document.addEventListener('input',event => {
 },true);
 document.addEventListener('beforeinput',event => {
   const target = event.target instanceof HTMLElement ? event.target : null;
-  if (!hardwareScanOperationalPage() || !target?.dataset?.hwScanCapture || !event.data) return;
+  if (!hardwareScanOperationalPage() || !event.data) return;
+  if (hardwareScanCountQtyTargetV27(target)) {
+    observeCountQtyImeScanV216(event,'beforeinput');
+    return;
+  }
+  if (!target?.dataset?.hwScanCapture) return;
   if (target.id === 'count_hardware_scan'
       && !String(event.inputType || '').toLowerCase().includes('composition')) {
     // Older Android scanner IMEs may provide decoded characters only through
@@ -36041,14 +36179,40 @@ document.addEventListener('beforeinput',event => {
   // event payload remains a fallback for scanner IMEs that never update value.
   scheduleHardwareCaptureCommit(target,event.data);
 },true);
+document.addEventListener('compositionstart',event => {
+  const target = event.target instanceof HTMLElement ? event.target : null;
+  if (!hardwareScanOperationalPage() || !hardwareScanCountQtyTargetV27(target)) return;
+  clearCountQtyImeScanStateV216(target);
+  _countQtyImeScanStateV216.set(target,{
+    originalValue:String(target.value || ''),
+    raw:'',
+    scanner:false,
+    lastAt:Date.now(),
+    lastChunk:'',
+    lastSource:'compositionstart',
+    timer:null,
+  });
+},true);
 document.addEventListener('compositionend',event => {
   const target = event.target instanceof HTMLElement ? event.target : null;
-  if (!hardwareScanOperationalPage() || !target?.dataset?.hwScanCapture) return;
+  if (!hardwareScanOperationalPage()) return;
+  if (hardwareScanCountQtyTargetV27(target)) {
+    if (event.data) observeCountQtyImeScanV216(event,'compositionend');
+    const state = _countQtyImeScanStateV216.get(target);
+    if (state?.scanner) commitCountQtyImeScanV216(target,event.data || '');
+    return;
+  }
+  if (!target?.dataset?.hwScanCapture) return;
   scheduleHardwareCaptureCommit(target,event.data || '',0);
 },true);
 document.addEventListener('textInput',event => {
   const target = event.target instanceof HTMLElement ? event.target : null;
-  if (!hardwareScanOperationalPage() || !target?.dataset?.hwScanCapture || !event.data) return;
+  if (!hardwareScanOperationalPage() || !event.data) return;
+  if (hardwareScanCountQtyTargetV27(target)) {
+    observeCountQtyImeScanV216(event,'textInput');
+    return;
+  }
+  if (!target?.dataset?.hwScanCapture) return;
   scheduleHardwareCaptureCommit(target,event.data);
 },true);
 document.addEventListener('paste',event => {
