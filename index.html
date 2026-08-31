@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V2.43: Add an opt-in encrypted device vault so remembered login works in Safari and installed iPad web apps without plaintext password storage. -->
 <!-- V2.42: Make remembered login work with iPad Safari Password AutoFill by using standard named fields and a real form-submit event. -->
 <!-- V2.41: Replace the duplicated CURRENT FLOW steps with a four-menu assignment navigator and move expired work to a shortcut badge. -->
 <!-- V2.40: Simplify remembered-login UI to one borderless checkbox row and remove recovery helper copy. -->
@@ -90,7 +91,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V2.42</title>
+<title>Cycle Count V2.43</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
@@ -25091,7 +25092,7 @@ body.page-loading-active .main-wrapper{
 <script>
 // V2.25: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.42';
+const APP_VERSION = '2.43';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -25514,6 +25515,12 @@ const LOGIN_DEVICE_ID_STORAGE_KEY = 'cycle_count_device_id_v1';
 const LOGIN_SESSION_TOKEN_STORAGE_KEY = 'cycle_count_login_token_v1';
 const LOGIN_REMEMBER_PREFERENCE_KEY = 'cycle_count_remember_login_v1';
 const LOGIN_REMEMBER_USER_KEY = 'cycle_count_remember_user_v1';
+const LOGIN_SECURE_DB_NAME = 'cycle_count_secure_login_v1';
+const LOGIN_SECURE_DB_VERSION = 1;
+const LOGIN_SECURE_STORE_NAME = 'device_vault';
+const LOGIN_SECURE_KEY_RECORD = 'remember_key';
+const LOGIN_SECURE_CREDENTIAL_RECORD = 'remembered_credential';
+const LOGIN_SECURE_AAD = 'cycle-count-remembered-login-v1';
 const LOGIN_HEARTBEAT_INTERVAL_MS = 45000;
 const LOGIN_SESSION_TTL_SECONDS = 300;
 const SUPABASE_REQUEST_TIMEOUT_MS = 15000;
@@ -34421,12 +34428,166 @@ function persistRememberLoginChoice(enabled,userId='') {
   } catch (_) {}
 }
 
+function openSecureRememberedLoginDb() {
+  return new Promise((resolve,reject) => {
+    if (!window.indexedDB || !window.crypto?.subtle) {
+      reject(new Error('Secure device storage is unavailable'));
+      return;
+    }
+    let request;
+    try {
+      request = indexedDB.open(LOGIN_SECURE_DB_NAME,LOGIN_SECURE_DB_VERSION);
+    } catch (error) {
+      reject(error);
+      return;
+    }
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(LOGIN_SECURE_STORE_NAME)) {
+        db.createObjectStore(LOGIN_SECURE_STORE_NAME);
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error('เปิดพื้นที่จัดเก็บข้อมูลเข้าสู่ระบบไม่สำเร็จ'));
+    request.onblocked = () => reject(new Error('พื้นที่จัดเก็บข้อมูลเข้าสู่ระบบกำลังถูกใช้งาน'));
+  });
+}
+
+async function secureRememberedLoginGet(recordKey) {
+  const db = await openSecureRememberedLoginDb();
+  try {
+    return await new Promise((resolve,reject) => {
+      const transaction = db.transaction(LOGIN_SECURE_STORE_NAME,'readonly');
+      const request = transaction.objectStore(LOGIN_SECURE_STORE_NAME).get(recordKey);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error || transaction.error);
+      transaction.onabort = () => reject(transaction.error || new Error('อ่านข้อมูลเข้าสู่ระบบไม่สำเร็จ'));
+    });
+  } finally {
+    db.close();
+  }
+}
+
+async function secureRememberedLoginPut(recordKey,value) {
+  const db = await openSecureRememberedLoginDb();
+  try {
+    await new Promise((resolve,reject) => {
+      const transaction = db.transaction(LOGIN_SECURE_STORE_NAME,'readwrite');
+      transaction.objectStore(LOGIN_SECURE_STORE_NAME).put(value,recordKey);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error || new Error('บันทึกข้อมูลเข้าสู่ระบบไม่สำเร็จ'));
+      transaction.onabort = () => reject(transaction.error || new Error('บันทึกข้อมูลเข้าสู่ระบบไม่สำเร็จ'));
+    });
+  } finally {
+    db.close();
+  }
+}
+
+async function clearSecureRememberedLogin() {
+  try {
+    const db = await openSecureRememberedLoginDb();
+    try {
+      await new Promise((resolve,reject) => {
+        const transaction = db.transaction(LOGIN_SECURE_STORE_NAME,'readwrite');
+        const store = transaction.objectStore(LOGIN_SECURE_STORE_NAME);
+        store.delete(LOGIN_SECURE_CREDENTIAL_RECORD);
+        store.delete(LOGIN_SECURE_KEY_RECORD);
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error || new Error('ล้างข้อมูลเข้าสู่ระบบไม่สำเร็จ'));
+        transaction.onabort = () => reject(transaction.error || new Error('ล้างข้อมูลเข้าสู่ระบบไม่สำเร็จ'));
+      });
+    } finally {
+      db.close();
+    }
+  } catch (_) {
+    // The checkbox preference and saved User ID are still removed even when
+    // private browsing or storage restrictions make IndexedDB unavailable.
+  }
+}
+
+async function secureRememberedLoginKey() {
+  const savedKey = await secureRememberedLoginGet(LOGIN_SECURE_KEY_RECORD);
+  if (savedKey?.type === 'secret' && savedKey?.algorithm?.name === 'AES-GCM') return savedKey;
+  const key = await crypto.subtle.generateKey(
+    { name:'AES-GCM',length:256 },
+    false,
+    ['encrypt','decrypt'],
+  );
+  await secureRememberedLoginPut(LOGIN_SECURE_KEY_RECORD,key);
+  return key;
+}
+
+async function saveSecureRememberedLogin(loginId,password) {
+  const normalizedId = String(loginId || '').trim().toLowerCase();
+  const secret = String(password || '');
+  if (!normalizedId || !secret || !window.crypto?.subtle) return false;
+  try {
+    const key = await secureRememberedLoginKey();
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const additionalData = new TextEncoder().encode(LOGIN_SECURE_AAD);
+    const plaintext = new TextEncoder().encode(JSON.stringify({
+      loginId:normalizedId,
+      password:secret,
+      savedAt:new Date().toISOString(),
+    }));
+    const ciphertext = await crypto.subtle.encrypt(
+      { name:'AES-GCM',iv,additionalData,tagLength:128 },
+      key,
+      plaintext,
+    );
+    await secureRememberedLoginPut(LOGIN_SECURE_CREDENTIAL_RECORD,{
+      version:1,
+      algorithm:'AES-GCM',
+      iv:Array.from(iv),
+      ciphertext:Array.from(new Uint8Array(ciphertext)),
+    });
+    try { await navigator.storage?.persist?.(); } catch (_) {}
+    return true;
+  } catch (error) {
+    console.warn('Secure remembered login could not be saved:',error);
+    return false;
+  }
+}
+
+async function readSecureRememberedLogin() {
+  if (!window.crypto?.subtle) return null;
+  try {
+    // Keep the two IndexedDB reads sequential. This is slightly slower, but is
+    // more reliable in older iPadOS WebViews that can race parallel database
+    // connections while an installed web app is resuming.
+    const key = await secureRememberedLoginGet(LOGIN_SECURE_KEY_RECORD);
+    const record = await secureRememberedLoginGet(LOGIN_SECURE_CREDENTIAL_RECORD);
+    if (!key || !record || record.version !== 1 || record.algorithm !== 'AES-GCM') return null;
+    const iv = Uint8Array.from(record.iv || []);
+    const ciphertext = Uint8Array.from(record.ciphertext || []);
+    if (iv.length !== 12 || !ciphertext.length) return null;
+    const plaintext = await crypto.subtle.decrypt(
+      {
+        name:'AES-GCM',
+        iv,
+        additionalData:new TextEncoder().encode(LOGIN_SECURE_AAD),
+        tagLength:128,
+      },
+      key,
+      ciphertext,
+    );
+    const payload = JSON.parse(new TextDecoder().decode(plaintext));
+    const loginId = String(payload?.loginId || '').trim().toLowerCase();
+    const password = String(payload?.password || '');
+    return loginId && password ? { loginId,password } : null;
+  } catch (error) {
+    console.warn('Secure remembered login could not be restored:',error);
+    return null;
+  }
+}
+
 function syncRememberLoginChoice() {
   const checkbox = Q('login-remember');
   const enabled = Boolean(checkbox?.checked);
   persistRememberLoginChoice(enabled,enabled ? Q('le')?.value : '');
   const passwordInput = Q('lp');
   if (passwordInput) passwordInput.autocomplete = enabled ? 'current-password' : 'off';
+  if (!enabled) clearSecureRememberedLogin();
 }
 
 function syncLoginAutofillState() {
@@ -34470,6 +34631,21 @@ async function restoreRememberedLogin() {
   const savedUserId = rememberedLoginUserId();
   if (!userInput.value && savedUserId) userInput.value = savedUserId;
   try {
+    const savedCredential = await readSecureRememberedLogin();
+    if (savedCredential) {
+      const currentUserId = String(userInput.value || '').trim().toLowerCase();
+      const matchesSavedUser = !savedUserId || savedCredential.loginId === savedUserId;
+      const matchesCurrentUser = !currentUserId || savedCredential.loginId === currentUserId;
+      if (matchesSavedUser && matchesCurrentUser) {
+        if (!userInput.value) userInput.value = savedCredential.loginId;
+        if (!passwordInput.value) passwordInput.value = savedCredential.password;
+        return;
+      }
+    }
+
+    // Keep native Password Manager support as an additional path for browsers
+    // that implement the Credential Management API. Safari/iPad uses the
+    // encrypted device vault above instead.
     if (!navigator.credentials?.get || typeof window.PasswordCredential !== 'function') return;
     const credential = await navigator.credentials.get({ password:true,mediation:'optional' });
     if (!credential || credential.type !== 'password' || !credential.password) return;
@@ -34490,22 +34666,27 @@ async function restoreRememberedLogin() {
 async function rememberSuccessfulLogin(loginId,password) {
   const enabled = Boolean(Q('login-remember')?.checked);
   persistRememberLoginChoice(enabled,enabled ? loginId : '');
-  if (!enabled) return false;
-  try {
-    if (!navigator.credentials?.store || typeof window.PasswordCredential !== 'function') return false;
-    const credential = new PasswordCredential({
-      id:String(loginId || '').trim().toLowerCase(),
-      name:String(loginId || '').trim().toLowerCase(),
-      password:String(password || ''),
-    });
-    await navigator.credentials.store(credential);
-    return true;
-  } catch (_) {
-    // Never fall back to localStorage/sessionStorage for a password. Browsers
-    // without the Credential Management API may still save the submitted form
-    // through their built-in Password Manager.
+  if (!enabled) {
+    await clearSecureRememberedLogin();
     return false;
   }
+  const secureSaved = await saveSecureRememberedLogin(loginId,password);
+  let browserSaved = false;
+  try {
+    if (navigator.credentials?.store && typeof window.PasswordCredential === 'function') {
+      const credential = new PasswordCredential({
+        id:String(loginId || '').trim().toLowerCase(),
+        name:String(loginId || '').trim().toLowerCase(),
+        password:String(password || ''),
+      });
+      await navigator.credentials.store(credential);
+      browserSaved = true;
+    }
+  } catch (_) {
+    // Native Password Manager storage is optional. Safari/iPad uses the secure
+    // IndexedDB vault and never stores a plaintext password in web storage.
+  }
+  return secureSaved || browserSaved;
 }
 
 function handleVespaLoginFormSubmit(event) {
