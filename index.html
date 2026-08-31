@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V2.45: Stop assignment sticky-panel expand/collapse loops by disabling scroll anchoring in the workspace and sizing hysteresis from the panel's real height change. -->
 <!-- V2.44: Rename the final confirmed quantity label to "Final Count" throughout the interface. -->
 <!-- V2.43: Add an opt-in encrypted device vault so remembered login works in Safari and installed iPad web apps without plaintext password storage. -->
 <!-- V2.42: Make remembered login work with iPad Safari Password AutoFill by using standard named fields and a real form-submit event. -->
@@ -92,7 +93,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V2.44</title>
+<title>Cycle Count V2.45</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
@@ -24383,6 +24384,15 @@ body.page-loading-active .main-wrapper{
   margin-bottom:-1px;
   pointer-events:none;
 }
+/* The panel changes height when it becomes compact. If a JOB row below it is
+   allowed to become the browser's scroll anchor, Chrome compensates for that
+   height change by moving scrollTop. That artificial movement crosses the
+   compact boundary again and creates an endless expand/collapse loop. Keep
+   anchoring disabled only inside this workspace; normal page scrolling is
+   otherwise unchanged. */
+#app .assign-bento-shell {
+  overflow-anchor:none;
+}
 #app :is(.annual-job-sticky-panel,.normal-assignment-sticky-panel) {
   gap:6px !important;
   padding:7px !important;
@@ -25093,7 +25103,7 @@ body.page-loading-active .main-wrapper{
 <script>
 // V2.25: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.44';
+const APP_VERSION = '2.45';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -57873,12 +57883,26 @@ function syncAssignmentStickyCompactState() {
     const stickyTop = Number.parseFloat(getComputedStyle(panel).top) || 0;
     const sentinelTop = sentinel.getBoundingClientRect().top;
     const stickyThreshold = wrapperTop + stickyTop;
-    // Separate the enter/exit thresholds. Without this hysteresis the panel's
-    // own height change can put the sentinel on the opposite side of one exact
-    // pixel boundary, producing the expand/compact flicker seen in the video.
-    const compact = panel.classList.contains('is-compact')
-      ? sentinelTop <= stickyThreshold + 32
-      : sentinelTop <= stickyThreshold - 2;
+    const wasCompact = panel.classList.contains('is-compact');
+    const panelHeight = Math.ceil(panel.getBoundingClientRect().height || 0);
+    if (!wasCompact && panelHeight > 0) {
+      panel.dataset.assignmentExpandedHeight = String(panelHeight);
+    }
+    const expandedHeight = Math.max(
+      panelHeight,
+      Number.parseFloat(panel.dataset.assignmentExpandedHeight || '') || 0,
+    );
+    const collapsedHeightDelta = wasCompact
+      ? Math.max(0,expandedHeight - panelHeight)
+      : 0;
+    // A fixed 32px gap was smaller than the real 70–140px layout change on
+    // desktop/iPad. Size the release boundary from the measured height loss,
+    // plus a deliberate user-scroll margin. Browser anchoring or sub-pixel
+    // layout changes can no longer reverse the state by themselves.
+    const releaseHysteresis = Math.max(96,collapsedHeightDelta + 56);
+    const compact = wasCompact
+      ? sentinelTop <= stickyThreshold + releaseHysteresis
+      : sentinelTop <= stickyThreshold - 4;
     panel.classList.toggle('is-compact',compact);
   });
 }
