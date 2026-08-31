@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V2.42: Make remembered login work with iPad Safari Password AutoFill by using standard named fields and a real form-submit event. -->
 <!-- V2.41: Replace the duplicated CURRENT FLOW steps with a four-menu assignment navigator and move expired work to a shortcut badge. -->
 <!-- V2.40: Simplify remembered-login UI to one borderless checkbox row and remove recovery helper copy. -->
 <!-- V2.36: Allow an unfinished Annual JOB Location to be selected in Normal reassignment, then safely switch it to Normal while preserving Count history. -->
@@ -89,7 +90,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V2.41</title>
+<title>Cycle Count V2.42</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
@@ -25090,7 +25091,7 @@ body.page-loading-active .main-wrapper{
 <script>
 // V2.25: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.41';
+const APP_VERSION = '2.42';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -34258,8 +34259,8 @@ function paintLogin() {
           <div class="vespa-login-header-meta"><span>PARTS AUTHENTICATION</span><span>${APP_VERSION_LABEL}</span></div>
         </header>
         <div class="vespa-login-body">
-          <form class="vespa-login-form-panel" id="vespa-login-form" autocomplete="on"
-            onsubmit="event.preventDefault();commitVespaLoginSlider(Q('lb'))">
+          <form class="vespa-login-form-panel" id="vespa-login-form" name="cycle-count-login"
+            autocomplete="on" novalidate onsubmit="handleVespaLoginFormSubmit(event)">
             <div class="vespa-login-panel-head">
               <div>
                 <span class="vespa-login-step">WORK ORDER · LOGIN</span>
@@ -34272,16 +34273,19 @@ function paintLogin() {
             <div class="vespa-login-field">
               <label for="le">User ID <span>PART 01</span></label>
               <div class="vespa-login-input-shell">
-                <input type="text" id="le" maxlength="40" autocomplete="username" autocapitalize="none"
+                <input type="text" id="le" name="username" maxlength="40" autocomplete="username"
+                  autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="next"
                   placeholder="เช่น VPW64054" oninput="updateVespaLoginMachine()"
                   onfocus="setVespaLoginFocus('user',true)" onblur="setVespaLoginFocus('user',false)"
-                  onkeydown="if(event.key==='Enter')Q('lp')?.focus()">
+                  onkeydown="if(event.key==='Enter'){event.preventDefault();Q('lp')?.focus()}">
               </div>
             </div>
             <div class="vespa-login-field">
               <label for="lp">รหัสผ่าน <span>PART 02</span></label>
               <div class="vespa-login-input-shell password-input-wrap">
-                <input type="password" id="lp" maxlength="72" autocomplete="current-password"
+                <input type="password" id="lp" name="password" maxlength="72"
+                  autocomplete="current-password" autocapitalize="none" autocorrect="off"
+                  spellcheck="false" enterkeyhint="go"
                   placeholder="••••••••" oninput="updateVespaLoginMachine()"
                   onfocus="setVespaLoginFocus('password',true)" onblur="setVespaLoginFocus('password',false)"
                   onkeydown="if(event.key==='Enter'){event.preventDefault();commitVespaLoginSlider(Q('lb'))}">
@@ -34290,7 +34294,7 @@ function paintLogin() {
             </div>
             <div class="vespa-login-options">
               <label class="vespa-login-remember" for="login-remember">
-                <input type="checkbox" id="login-remember" onchange="syncRememberLoginChoice()">
+                <input type="checkbox" id="login-remember" name="remember" onchange="syncRememberLoginChoice()">
                 <span class="vespa-login-remember-check" aria-hidden="true"></span>
                 <span class="vespa-login-remember-copy">
                   <strong>จดจำ User ID และรหัสผ่าน</strong>
@@ -34390,6 +34394,7 @@ function paintLogin() {
     </div>`;
   updateVespaLoginMachine();
   initVespaLoginSlider();
+  bindLoginAutofillObservers();
   restoreRememberedLogin();
 }
 
@@ -34422,6 +34427,32 @@ function syncRememberLoginChoice() {
   persistRememberLoginChoice(enabled,enabled ? Q('le')?.value : '');
   const passwordInput = Q('lp');
   if (passwordInput) passwordInput.autocomplete = enabled ? 'current-password' : 'off';
+}
+
+function syncLoginAutofillState() {
+  const checkbox = Q('login-remember');
+  const userInput = Q('le');
+  if (checkbox?.checked && userInput?.value) {
+    persistRememberLoginChoice(true,userInput.value);
+  }
+  updateVespaLoginMachine();
+}
+
+function bindLoginAutofillObservers() {
+  const form = Q('vespa-login-form');
+  const userInput = Q('le');
+  const passwordInput = Q('lp');
+  if (!form || !userInput || !passwordInput || form.dataset.autofillBound === 'true') return;
+  form.dataset.autofillBound = 'true';
+  [userInput,passwordInput].forEach(input => {
+    input.addEventListener('input',syncLoginAutofillState,{ passive:true });
+    input.addEventListener('change',syncLoginAutofillState,{ passive:true });
+  });
+  // Safari may restore Password AutoFill values after the login view is painted
+  // without firing an input event. Re-check during the first render window.
+  [0,120,450,1200].forEach(delay => window.setTimeout(() => {
+    if (form.isConnected) syncLoginAutofillState();
+  },delay));
 }
 
 async function restoreRememberedLogin() {
@@ -34475,6 +34506,20 @@ async function rememberSuccessfulLogin(loginId,password) {
     // through their built-in Password Manager.
     return false;
   }
+}
+
+function handleVespaLoginFormSubmit(event) {
+  event?.preventDefault();
+  const slider = Q('lb');
+  if (!slider || slider.disabled) return;
+  // All entry methods (tap, slide, Enter and assistive activation) converge on
+  // one native submit event so Safari/iPad Password AutoFill can recognize the form.
+  if (!slider._vespaCommitted) {
+    slider._vespaCommitted = true;
+    slider.classList.add('is-ready','is-committed');
+    setVespaLoginSliderProgress(slider,1);
+  }
+  doLogin();
 }
 
 function updateVespaLoginMachine() {
@@ -34552,9 +34597,12 @@ function commitVespaLoginSlider(slider) {
   slider.classList.add('is-ready','is-committed');
   setVespaLoginSliderProgress(slider, 1);
   if (navigator.vibrate) navigator.vibrate(35);
-  window.setTimeout(() => {
-    if (slider.isConnected && slider._vespaCommitted) doLogin();
-  }, 280);
+  if (!slider.isConnected || !slider._vespaCommitted) return;
+  const form = Q('vespa-login-form');
+  // Keep the submit inside the user's tap/slide gesture. This is important for
+  // iPad Safari and third-party password managers that require user activation.
+  if (typeof form?.requestSubmit === 'function') form.requestSubmit(slider);
+  else handleVespaLoginFormSubmit({ preventDefault(){} });
 }
 
 function initVespaLoginSlider() {
