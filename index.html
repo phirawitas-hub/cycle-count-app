@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V2.46: Synchronize completed Assignment/Annual JOB caches after Count save so the live Work progress advances immediately instead of remaining 0/total. -->
 <!-- V2.45: Stop assignment sticky-panel expand/collapse loops by disabling scroll anchoring in the workspace and sizing hysteresis from the panel's real height change. -->
 <!-- V2.44: Rename the final confirmed quantity label to "Final Count" throughout the interface. -->
 <!-- V2.43: Add an opt-in encrypted device vault so remembered login works in Safari and installed iPad web apps without plaintext password storage. -->
@@ -93,7 +94,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V2.45</title>
+<title>Cycle Count V2.46</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
@@ -25103,7 +25104,7 @@ body.page-loading-active .main-wrapper{
 <script>
 // V2.25: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.45';
+const APP_VERSION = '2.46';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -34010,12 +34011,18 @@ function assignmentPhysicalCountFinished(assignmentOrStatus) {
   const assignment = assignmentOrStatus && typeof assignmentOrStatus === 'object'
     ? assignmentOrStatus
     : null;
+  const status = String(assignment?.status || assignmentOrStatus || '');
+  // The status written after a successful Count save is newer than the
+  // workflow snapshot cached when My Tasks was first opened. Previously the
+  // stale itemStatuses below won, so a completed task still displayed 0/N on
+  // the next Count page. A durable terminal status must take precedence.
+  if (['round3_done','completed','approved'].includes(status)) return true;
+  if (typeof assignment?._countFinished === 'boolean') return assignment._countFinished;
   const itemStatuses = assignment?._workflow?.itemStatuses;
   if (Array.isArray(itemStatuses) && itemStatuses.length) {
     return itemStatuses.every(status => status === 'OK' || status === 'Diff');
   }
-  const status = String(assignment?.status || assignmentOrStatus || '');
-  return ['round3_done','completed','approved'].includes(status);
+  return false;
 }
 
 function assignmentPendingVarianceReview(assignmentOrStatus) {
@@ -35169,6 +35176,64 @@ function assignedCountWorkProgressV217(assignments=[],annualJobs=[]) {
   };
 }
 
+function refreshCachedCountWorkProgressV246() {
+  const progress = assignedCountWorkProgressV217(
+    window._myTasks || [],
+    window._myAnnualJobs || [],
+  );
+  if (progress.total > 0) {
+    window._countAssignedWorkProgressV217 = {
+      ...progress,
+      dateMode:currentMyTaskDateMode(),
+      dateValue:currentMyTaskDateValue(),
+    };
+  }
+  const target = Q('countProgressWork');
+  if (target && progress.total > 0) target.textContent = `${progress.done}/${progress.total}`;
+  return progress;
+}
+
+function syncCachedAssignmentStatusV246(assignmentId,status) {
+  const targetId = String(assignmentId || '');
+  const nextStatus = String(status || '');
+  if (!targetId || !nextStatus) return refreshCachedCountWorkProgressV246();
+  const finished = ['round3_done','completed','approved'].includes(nextStatus);
+  const visited = new Set();
+  [window._myTasks,window._myTasksAllDates].forEach(rows => {
+    (Array.isArray(rows) ? rows : []).forEach(assignment => {
+      if (!assignment || visited.has(assignment) || String(assignment.id) !== targetId) return;
+      visited.add(assignment);
+      assignment.status = nextStatus;
+      assignment._storedStatus = nextStatus;
+      assignment._countFinished = finished;
+      if (assignment._workflow && typeof assignment._workflow === 'object') {
+        assignment._workflow.effectiveStatus = nextStatus;
+        if (finished) assignment._workflow.nextRound = null;
+      }
+    });
+  });
+  if (String(window._countFoundContext?.assignmentId || '') === targetId) {
+    window._countFoundContext.assignmentStatus = nextStatus;
+  }
+  return refreshCachedCountWorkProgressV246();
+}
+
+function syncCachedAnnualJobStatusV246(jobId,status) {
+  const targetId = String(jobId || '');
+  const nextStatus = String(status || '');
+  if (!targetId || !nextStatus) return refreshCachedCountWorkProgressV246();
+  const visited = new Set();
+  [window._myAnnualJobs,window._myAnnualJobsAllDates].forEach(rows => {
+    (Array.isArray(rows) ? rows : []).forEach(job => {
+      if (!job || visited.has(job) || String(job.id) !== targetId) return;
+      visited.add(job);
+      job.status = nextStatus;
+      job._countFinished = nextStatus === 'completed';
+    });
+  });
+  return refreshCachedCountWorkProgressV246();
+}
+
 function setMyTaskDateFilter(mode,dateValue='') {
   S._mtDateMode = MY_TASK_DATE_MODES.has(mode) ? mode : 'today';
   if (S._mtDateMode === 'date') S._mtDateValue = dateValue || currentMyTaskDateValue();
@@ -36035,6 +36100,10 @@ function buildNextCountNavigationRequest(aid,assignment,annualJobId='') {
 }
 
 async function openNextCountFromCachedTasks(aid,assignment,newStatus,annualJobId='') {
+  // Update every in-memory view before rendering the next Location. The task
+  // rows also carry a workflow snapshot from the previous My Tasks load; only
+  // mutating .status left that stale snapshot in control of the Work KPI.
+  syncCachedAssignmentStatusV246(aid,newStatus);
   const cachedTasks = window._myTasks || [];
   if (!cachedTasks.length) return false;
 
@@ -36042,8 +36111,6 @@ async function openNextCountFromCachedTasks(aid,assignment,newStatus,annualJobId
   // path avoids the expensive full task-list reload that can time out on a
   // rugged Handheld; loadCCount still revalidates the chosen Assignment and
   // its Count rows against the server before showing the next form.
-  const currentTask = cachedTasks.find(task => String(task.id) === String(aid));
-  if (currentTask) currentTask.status = newStatus;
   const request = buildNextCountNavigationRequest(aid,assignment,annualJobId);
   const target = nextCountNavigationTarget(request);
   if (!target) return false;
@@ -41233,6 +41300,9 @@ async function resolveCountWorkflowAfterSave({
       aid,
     );
   }
+  // Keep the current Count header and the next Location in step with the
+  // durable Assignment update without waiting for a full My Tasks reload.
+  syncCachedAssignmentStatusV246(aid,desiredStatus);
 
   if (annualJobId) {
     try {
@@ -42487,6 +42557,7 @@ async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
       restoreButton(); return;
     }
   }
+  syncCachedAssignmentStatusV246(aid,newStatus);
   await logAudit(
     asgn.session_id,
     asgn.location_id,
@@ -42559,7 +42630,7 @@ async function refreshAnnualJobProgress(jobId) {
     }
     const job = jobResult.data;
     const items = itemResult.data || [];
-    if (!items.length) return;
+    if (!items.length) return null;
     const locationIds = [...new Set(items.map(item => item.location_id).filter(Boolean))];
     const assignmentsResult = await fetchSupabaseRowsByValues(
       'assignments',
@@ -42653,6 +42724,8 @@ async function refreshAnnualJobProgress(jobId) {
       if (['admin','supervisor'].includes(prof?.role)) throw updateError;
       console.warn('Annual JOB status update skipped:',updateError.message);
     }
+    syncCachedAnnualJobStatusV246(jobId,nextStatus);
+    return nextStatus;
   } catch (error) {
     console.warn('Annual JOB progress update failed:',error?.message || error);
     throw error;
