@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V2.47: Security hardening — remove the app-managed password vault, enforce a strong reset policy, isolate sensitive caches, sanitize error/media output and constrain browser resource origins. -->
 <!-- V2.46: Synchronize completed Assignment/Annual JOB caches after Count save so the live Work progress advances immediately instead of remaining 0/total. -->
 <!-- V2.45: Stop assignment sticky-panel expand/collapse loops by disabling scroll anchoring in the workspace and sizing hysteresis from the panel's real height change. -->
 <!-- V2.44: Rename the final confirmed quantity label to "Final Count" throughout the interface. -->
@@ -94,7 +95,12 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cycle Count V2.46</title>
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<!-- Compatibility CSP for the current single-file application. Server headers in
+     the V2.47 deployment pack must also be enabled; a future bundle should remove
+     'unsafe-inline' after inline handlers have been migrated. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-src 'none'; manifest-src 'self'; worker-src 'self' blob:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.sheetjs.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://uiuaboxsfepyftqjlwil.supabase.co; media-src 'self' blob: https://uiuaboxsfepyftqjlwil.supabase.co; connect-src 'self' https://uiuaboxsfepyftqjlwil.supabase.co wss://uiuaboxsfepyftqjlwil.supabase.co;">
+<title>Cycle Count V2.47</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
@@ -117,7 +123,7 @@ if (['http:','https:'].includes(location.protocol)) {
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <!-- Supabase -->
-<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.min.js"></script>
+<script defer crossorigin="anonymous" referrerpolicy="no-referrer" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.min.js"></script>
 <!-- V1.87: แก้ iPad แนวตั้ง/แนวนอนไม่ให้กรอบล้น และป้องกันป๊อปอัพหลักฐานปิดเองบนหน้าจอสัมผัส -->
 <!-- V1.88: เมนูทั่วไปใช้หน้าจอโหลดเดียวจนข้อมูลจริงพร้อม พร้อมเร่งการเปิดซ้ำด้วย stale-while-revalidate cache -->
 <!-- V1.89: เพิ่ม Location/Item/Pcs ในกล่อง Variance และ WMS พร้อมย้าย Profile/Logout ไปท้าย Sidebar -->
@@ -25104,7 +25110,7 @@ body.page-loading-active .main-wrapper{
 <script>
 // V2.25: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.46';
+const APP_VERSION = '2.47';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -25129,11 +25135,22 @@ const OPTIONAL_LIBRARY_SOURCES = Object.freeze({
     label:'ระบบสแกน Barcode',
   },
 });
+const OPTIONAL_LIBRARY_ALLOWED_ORIGINS = new Set([
+  'https://cdn.sheetjs.com',
+  'https://cdn.jsdelivr.net',
+  'https://unpkg.com',
+]);
 const _optionalLibraryPromises = new Map();
 
 function loadOptionalLibrary(name) {
   const config = OPTIONAL_LIBRARY_SOURCES[name];
   if (!config) return Promise.reject(new Error(`ไม่รู้จัก Library: ${name}`));
+  let libraryUrl;
+  try { libraryUrl = new URL(config.src,location.href); }
+  catch (_) { return Promise.reject(new Error('ที่อยู่ Library ไม่ถูกต้อง')); }
+  if (libraryUrl.protocol !== 'https:' || !OPTIONAL_LIBRARY_ALLOWED_ORIGINS.has(libraryUrl.origin)) {
+    return Promise.reject(new Error('แหล่ง Library ไม่ได้รับอนุญาต'));
+  }
   if (config.ready()) return Promise.resolve(true);
   if (_optionalLibraryPromises.has(name)) return _optionalLibraryPromises.get(name);
   const pending = new Promise((resolve,reject) => {
@@ -25152,7 +25169,9 @@ function loadOptionalLibrary(name) {
     script.addEventListener('error',() => finish(new Error(`${config.label} โหลดไม่สำเร็จ กรุณาตรวจอินเทอร์เน็ตแล้วลองใหม่`)),{ once:true });
     timeoutId = setTimeout(() => finish(new Error(`${config.label} ใช้เวลาโหลดนานเกินไป กรุณาลองใหม่`)),20000);
     if (!existing) {
-      script.src = config.src;
+    script.src = libraryUrl.href;
+    script.crossOrigin = 'anonymous';
+    script.referrerPolicy = 'no-referrer';
       script.async = true;
       script.dataset.cycleLibrary = name;
       document.head.appendChild(script);
@@ -25527,12 +25546,9 @@ const LOGIN_DEVICE_ID_STORAGE_KEY = 'cycle_count_device_id_v1';
 const LOGIN_SESSION_TOKEN_STORAGE_KEY = 'cycle_count_login_token_v1';
 const LOGIN_REMEMBER_PREFERENCE_KEY = 'cycle_count_remember_login_v1';
 const LOGIN_REMEMBER_USER_KEY = 'cycle_count_remember_user_v1';
-const LOGIN_SECURE_DB_NAME = 'cycle_count_secure_login_v1';
-const LOGIN_SECURE_DB_VERSION = 1;
-const LOGIN_SECURE_STORE_NAME = 'device_vault';
-const LOGIN_SECURE_KEY_RECORD = 'remember_key';
-const LOGIN_SECURE_CREDENTIAL_RECORD = 'remembered_credential';
-const LOGIN_SECURE_AAD = 'cycle-count-remembered-login-v1';
+// V2.47 never stores passwords in application-controlled storage. Keep only
+// the old database name so previously saved credentials can be erased once.
+const LEGACY_LOGIN_SECURE_DB_NAME = 'cycle_count_secure_login_v1';
 const LOGIN_HEARTBEAT_INTERVAL_MS = 45000;
 const LOGIN_SESSION_TTL_SECONDS = 300;
 const SUPABASE_REQUEST_TIMEOUT_MS = 15000;
@@ -28608,6 +28624,8 @@ async function ensureDashboardCaptureLibrary() {
     }
     const script = document.createElement('script');
     script.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+    script.crossOrigin = 'anonymous';
+    script.referrerPolicy = 'no-referrer';
     script.dataset.dashboardCapture = 'true';
     script.onload = resolve;
     script.onerror = () => reject(new Error('โหลดระบบสร้างภาพไม่สำเร็จ'));
@@ -28630,6 +28648,8 @@ async function ensureDashboardPdfLibrary() {
     }
     const script = document.createElement('script');
     script.src = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js';
+    script.crossOrigin = 'anonymous';
+    script.referrerPolicy = 'no-referrer';
     script.dataset.dashboardPdf = 'true';
     script.onload = resolve;
     script.onerror = () => reject(new Error('โหลดระบบสร้าง PDF ไม่สำเร็จ'));
@@ -28655,6 +28675,8 @@ async function ensureDashboardDomImageLibrary() {
     }
     const script = document.createElement('script');
     script.src = 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js';
+    script.crossOrigin = 'anonymous';
+    script.referrerPolicy = 'no-referrer';
     script.dataset.dashboardDomImage = 'true';
     script.onload = resolve;
     script.onerror = () => reject(new Error('โหลดระบบเรนเดอร์ PDF แบบตรงกับหน้าจอไม่สำเร็จ'));
@@ -30250,8 +30272,28 @@ async function clearLocalAuthSession() {
   } catch (_) {
     try { localStorage.removeItem(AUTH_STORAGE_KEY); } catch (_) {}
   }
+  clearSensitiveClientData();
   me = null;
   prof = null;
+}
+
+function clearSensitiveClientData() {
+  const sensitiveKey = key =>
+    key.includes(':wms-workspace:')
+    || key.startsWith('cycle_count_admin_form_draft_v1:')
+    || key.startsWith('cycle_count_dashboard_session_v1:')
+    || key.startsWith('cycle_count_auth_session_')
+    || key.startsWith('sb-uiuaboxsfepyftqjlwil-auth-token')
+    || key.includes(':page-view:');
+  [localStorage,sessionStorage].forEach(storage => {
+    try {
+      for (let index=storage.length-1;index>=0;index--) {
+        const key = String(storage.key(index) || '');
+        if (sensitiveKey(key)) storage.removeItem(key);
+      }
+    } catch (_) {}
+  });
+  try { _wmsFastRequestsV179?.clear?.(); } catch (_) {}
 }
 
 async function requireNewLogin(message = 'Session หมดอายุ กรุณาเข้าสู่ระบบใหม่') {
@@ -30555,7 +30597,7 @@ async function boot() {
       if (e === 'PASSWORD_RECOVERY') { me = session?.user || me; go('reset-password'); }
     });
   } catch (err) {
-    Q('app').innerHTML = `<div class="lbox"><div class="lcard"><div class="alert alert-red">ระบบมีปัญหาตอนเริ่มต้น: ${err.message || err}</div></div></div>`;
+    Q('app').innerHTML = `<div class="lbox"><div class="lcard"><div class="alert alert-red">ระบบมีปัญหาตอนเริ่มต้น: ${escapeWmsText(safeClientErrorMessage(err))}</div></div></div>`;
   }
 }
 
@@ -31785,6 +31827,39 @@ function escapeWmsText(value='') {
   return String(value).replace(/[&<>"']/g, ch => ({
     '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
   }[ch]));
+}
+
+function safeClientErrorMessage(value, fallback='ระบบไม่สามารถทำรายการได้ กรุณาลองใหม่') {
+  const raw = String(value?.message || value || '').replace(/[\r\n\t]+/g,' ').trim();
+  if (!raw) return fallback;
+  // Do not reveal database objects, JWT details, SQL hints or server internals
+  // to an unauthenticated/user-facing screen. Full details belong in protected
+  // server logs with a correlation ID.
+  if (/(?:postgres|postgrest|permission denied|relation\s|column\s|schema\s|sqlstate|stack|jwt|refresh token|service[_ -]?role|function\s.+does not exist|details:|hint:)/i.test(raw)) {
+    console.warn('Server operation failed; technical detail hidden from UI:',raw);
+    return fallback;
+  }
+  return raw.slice(0,240);
+}
+
+function trustedMediaUrl(value='') {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  try {
+    const url = new URL(raw,location.href);
+    const allowedHosts = new Set([
+      location.hostname,
+      new URL(SUPA_URL).hostname,
+    ].filter(Boolean));
+    if (url.protocol !== 'https:' || !allowedHosts.has(url.hostname)) return '';
+    return url.href;
+  } catch (_) {
+    return '';
+  }
+}
+
+function safeMediaUrlAttr(value='') {
+  return escapeWmsText(trustedMediaUrl(value));
 }
 
 const _multiFilterCallbacks = new Map();
@@ -33163,7 +33238,9 @@ function clearWmsLocationSearchOnlyV24() {
 
 function cnt() { return Q('cnt'); }
 function rLabel(r) { return {admin:'Admin',counter:'User',supervisor:'Supervisor'}[r] || (r||''); }
-function errBox(msg) { return `<div class="card"><div class="alert alert-red">❌ ${msg}</div></div>`; }
+function errBox(msg) {
+  return `<div class="card"><div class="alert alert-red">❌ ${escapeWmsText(safeClientErrorMessage(msg))}</div></div>`;
+}
 
 function computeZone(locCode, desc) {
   if (!locCode) return '';
@@ -34322,7 +34399,7 @@ function paintLogin() {
                 <input type="checkbox" id="login-remember" name="remember" onchange="syncRememberLoginChoice()">
                 <span class="vespa-login-remember-check" aria-hidden="true"></span>
                 <span class="vespa-login-remember-copy">
-                  <strong>จดจำ User ID และรหัสผ่าน</strong>
+                  <strong>จดจำ User ID</strong>
                 </span>
               </label>
             </div>
@@ -34446,165 +34523,34 @@ function persistRememberLoginChoice(enabled,userId='') {
   } catch (_) {}
 }
 
-function openSecureRememberedLoginDb() {
-  return new Promise((resolve,reject) => {
-    if (!window.indexedDB || !window.crypto?.subtle) {
-      reject(new Error('Secure device storage is unavailable'));
-      return;
-    }
-    let request;
-    try {
-      request = indexedDB.open(LOGIN_SECURE_DB_NAME,LOGIN_SECURE_DB_VERSION);
-    } catch (error) {
-      reject(error);
-      return;
-    }
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains(LOGIN_SECURE_STORE_NAME)) {
-        db.createObjectStore(LOGIN_SECURE_STORE_NAME);
-      }
-    };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error || new Error('เปิดพื้นที่จัดเก็บข้อมูลเข้าสู่ระบบไม่สำเร็จ'));
-    request.onblocked = () => reject(new Error('พื้นที่จัดเก็บข้อมูลเข้าสู่ระบบกำลังถูกใช้งาน'));
-  });
-}
-
-async function secureRememberedLoginGet(recordKey) {
-  const db = await openSecureRememberedLoginDb();
-  try {
-    return await new Promise((resolve,reject) => {
-      const transaction = db.transaction(LOGIN_SECURE_STORE_NAME,'readonly');
-      const request = transaction.objectStore(LOGIN_SECURE_STORE_NAME).get(recordKey);
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error || transaction.error);
-      transaction.onabort = () => reject(transaction.error || new Error('อ่านข้อมูลเข้าสู่ระบบไม่สำเร็จ'));
-    });
-  } finally {
-    db.close();
-  }
-}
-
-async function secureRememberedLoginPut(recordKey,value) {
-  const db = await openSecureRememberedLoginDb();
-  try {
-    await new Promise((resolve,reject) => {
-      const transaction = db.transaction(LOGIN_SECURE_STORE_NAME,'readwrite');
-      transaction.objectStore(LOGIN_SECURE_STORE_NAME).put(value,recordKey);
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error || new Error('บันทึกข้อมูลเข้าสู่ระบบไม่สำเร็จ'));
-      transaction.onabort = () => reject(transaction.error || new Error('บันทึกข้อมูลเข้าสู่ระบบไม่สำเร็จ'));
-    });
-  } finally {
-    db.close();
-  }
-}
-
 async function clearSecureRememberedLogin() {
-  try {
-    const db = await openSecureRememberedLoginDb();
+  // Migration cleanup for V2.43–V2.46. Password material must never remain in
+  // an application database, even when encrypted with a same-origin key.
+  if (!window.indexedDB) return;
+  await new Promise(resolve => {
+    let settled = false;
+    const finish = () => { if (!settled) { settled = true; resolve(); } };
     try {
-      await new Promise((resolve,reject) => {
-        const transaction = db.transaction(LOGIN_SECURE_STORE_NAME,'readwrite');
-        const store = transaction.objectStore(LOGIN_SECURE_STORE_NAME);
-        store.delete(LOGIN_SECURE_CREDENTIAL_RECORD);
-        store.delete(LOGIN_SECURE_KEY_RECORD);
-        transaction.oncomplete = () => resolve();
-        transaction.onerror = () => reject(transaction.error || new Error('ล้างข้อมูลเข้าสู่ระบบไม่สำเร็จ'));
-        transaction.onabort = () => reject(transaction.error || new Error('ล้างข้อมูลเข้าสู่ระบบไม่สำเร็จ'));
-      });
-    } finally {
-      db.close();
+      const request = indexedDB.deleteDatabase(LEGACY_LOGIN_SECURE_DB_NAME);
+      request.onsuccess = finish;
+      request.onerror = finish;
+      request.onblocked = finish;
+      window.setTimeout(finish,1500);
+    } catch (_) {
+      finish();
     }
-  } catch (_) {
-    // The checkbox preference and saved User ID are still removed even when
-    // private browsing or storage restrictions make IndexedDB unavailable.
-  }
-}
-
-async function secureRememberedLoginKey() {
-  const savedKey = await secureRememberedLoginGet(LOGIN_SECURE_KEY_RECORD);
-  if (savedKey?.type === 'secret' && savedKey?.algorithm?.name === 'AES-GCM') return savedKey;
-  const key = await crypto.subtle.generateKey(
-    { name:'AES-GCM',length:256 },
-    false,
-    ['encrypt','decrypt'],
-  );
-  await secureRememberedLoginPut(LOGIN_SECURE_KEY_RECORD,key);
-  return key;
-}
-
-async function saveSecureRememberedLogin(loginId,password) {
-  const normalizedId = String(loginId || '').trim().toLowerCase();
-  const secret = String(password || '');
-  if (!normalizedId || !secret || !window.crypto?.subtle) return false;
-  try {
-    const key = await secureRememberedLoginKey();
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const additionalData = new TextEncoder().encode(LOGIN_SECURE_AAD);
-    const plaintext = new TextEncoder().encode(JSON.stringify({
-      loginId:normalizedId,
-      password:secret,
-      savedAt:new Date().toISOString(),
-    }));
-    const ciphertext = await crypto.subtle.encrypt(
-      { name:'AES-GCM',iv,additionalData,tagLength:128 },
-      key,
-      plaintext,
-    );
-    await secureRememberedLoginPut(LOGIN_SECURE_CREDENTIAL_RECORD,{
-      version:1,
-      algorithm:'AES-GCM',
-      iv:Array.from(iv),
-      ciphertext:Array.from(new Uint8Array(ciphertext)),
-    });
-    try { await navigator.storage?.persist?.(); } catch (_) {}
-    return true;
-  } catch (error) {
-    console.warn('Secure remembered login could not be saved:',error);
-    return false;
-  }
-}
-
-async function readSecureRememberedLogin() {
-  if (!window.crypto?.subtle) return null;
-  try {
-    // Keep the two IndexedDB reads sequential. This is slightly slower, but is
-    // more reliable in older iPadOS WebViews that can race parallel database
-    // connections while an installed web app is resuming.
-    const key = await secureRememberedLoginGet(LOGIN_SECURE_KEY_RECORD);
-    const record = await secureRememberedLoginGet(LOGIN_SECURE_CREDENTIAL_RECORD);
-    if (!key || !record || record.version !== 1 || record.algorithm !== 'AES-GCM') return null;
-    const iv = Uint8Array.from(record.iv || []);
-    const ciphertext = Uint8Array.from(record.ciphertext || []);
-    if (iv.length !== 12 || !ciphertext.length) return null;
-    const plaintext = await crypto.subtle.decrypt(
-      {
-        name:'AES-GCM',
-        iv,
-        additionalData:new TextEncoder().encode(LOGIN_SECURE_AAD),
-        tagLength:128,
-      },
-      key,
-      ciphertext,
-    );
-    const payload = JSON.parse(new TextDecoder().decode(plaintext));
-    const loginId = String(payload?.loginId || '').trim().toLowerCase();
-    const password = String(payload?.password || '');
-    return loginId && password ? { loginId,password } : null;
-  } catch (error) {
-    console.warn('Secure remembered login could not be restored:',error);
-    return null;
-  }
+  });
 }
 
 function syncRememberLoginChoice() {
   const checkbox = Q('login-remember');
   const enabled = Boolean(checkbox?.checked);
   persistRememberLoginChoice(enabled,enabled ? Q('le')?.value : '');
+  // Password persistence belongs to the browser/OS Password Manager. Keeping
+  // autocomplete enabled lets Safari and enterprise password managers work
+  // without giving the application its own reusable credential copy.
   const passwordInput = Q('lp');
-  if (passwordInput) passwordInput.autocomplete = enabled ? 'current-password' : 'off';
+  if (passwordInput) passwordInput.autocomplete = 'current-password';
   if (!enabled) clearSecureRememberedLogin();
 }
 
@@ -34641,44 +34587,17 @@ async function restoreRememberedLogin() {
   if (!checkbox || !userInput || !passwordInput) return;
   const enabled = rememberedLoginPreference();
   checkbox.checked = enabled;
-  passwordInput.autocomplete = enabled ? 'current-password' : 'off';
+  passwordInput.autocomplete = 'current-password';
+  // Always remove the discontinued V2.43–V2.46 device vault. This also runs
+  // for users who never enable the new User-ID-only preference.
+  clearSecureRememberedLogin();
   if (!enabled) {
     updateVespaLoginMachine();
     return;
   }
   const savedUserId = rememberedLoginUserId();
   if (!userInput.value && savedUserId) userInput.value = savedUserId;
-  try {
-    const savedCredential = await readSecureRememberedLogin();
-    if (savedCredential) {
-      const currentUserId = String(userInput.value || '').trim().toLowerCase();
-      const matchesSavedUser = !savedUserId || savedCredential.loginId === savedUserId;
-      const matchesCurrentUser = !currentUserId || savedCredential.loginId === currentUserId;
-      if (matchesSavedUser && matchesCurrentUser) {
-        if (!userInput.value) userInput.value = savedCredential.loginId;
-        if (!passwordInput.value) passwordInput.value = savedCredential.password;
-        return;
-      }
-    }
-
-    // Keep native Password Manager support as an additional path for browsers
-    // that implement the Credential Management API. Safari/iPad uses the
-    // encrypted device vault above instead.
-    if (!navigator.credentials?.get || typeof window.PasswordCredential !== 'function') return;
-    const credential = await navigator.credentials.get({ password:true,mediation:'optional' });
-    if (!credential || credential.type !== 'password' || !credential.password) return;
-    const credentialId = String(credential.id || '').trim().toLowerCase();
-    const currentUserId = String(userInput.value || '').trim().toLowerCase();
-    if (savedUserId && credentialId && credentialId !== savedUserId) return;
-    if (currentUserId && credentialId && credentialId !== currentUserId) return;
-    if (!userInput.value && credentialId) userInput.value = credentialId;
-    if (!passwordInput.value) passwordInput.value = credential.password;
-  } catch (_) {
-    // Password Manager access is optional. The browser can still offer its
-    // native autocomplete UI and the saved User ID remains available.
-  } finally {
-    updateVespaLoginMachine();
-  }
+  updateVespaLoginMachine();
 }
 
 async function rememberSuccessfulLogin(loginId,password) {
@@ -34688,7 +34607,6 @@ async function rememberSuccessfulLogin(loginId,password) {
     await clearSecureRememberedLogin();
     return false;
   }
-  const secureSaved = await saveSecureRememberedLogin(loginId,password);
   let browserSaved = false;
   try {
     if (navigator.credentials?.store && typeof window.PasswordCredential === 'function') {
@@ -34701,10 +34619,11 @@ async function rememberSuccessfulLogin(loginId,password) {
       browserSaved = true;
     }
   } catch (_) {
-    // Native Password Manager storage is optional. Safari/iPad uses the secure
-    // IndexedDB vault and never stores a plaintext password in web storage.
+    // Browser Password Manager integration is optional; the application keeps
+    // only the User ID and never falls back to storing a password itself.
   }
-  return secureSaved || browserSaved;
+  await clearSecureRememberedLogin();
+  return browserSaved;
 }
 
 function handleVespaLoginFormSubmit(event) {
@@ -34898,19 +34817,18 @@ function togglePasswordInput(inputId, button) {
 }
 
 function passwordRequirementText(role) {
-  return role === 'admin'
-    ? 'Admin: อย่างน้อย 12 ตัว มี A-Z, a-z, ตัวเลข และอักขระพิเศษ'
-    : 'User/Supervisor: อย่างน้อย 10 ตัว มี A-Z, a-z และตัวเลข';
+  const accountType = role === 'admin' ? 'Admin' : 'User/Supervisor';
+  return `${accountType}: อย่างน้อย 12 ตัว มี A-Z, a-z, ตัวเลข และอักขระพิเศษ`;
 }
 
 function validateManagedPassword(password, role) {
   const value = String(password || '');
-  const minimum = role === 'admin' ? 12 : 10;
+  const minimum = 12;
   if (value.length < minimum || value.length > 72) return passwordRequirementText(role);
   if (!/[a-z]/.test(value) || !/[A-Z]/.test(value) || !/[0-9]/.test(value)) {
     return passwordRequirementText(role);
   }
-  if (role === 'admin' && !/[^A-Za-z0-9]/.test(value)) return passwordRequirementText(role);
+  if (!/[^A-Za-z0-9]/.test(value)) return passwordRequirementText(role);
   if (/^(password|password123|admin123|qwerty|12345678|123456789|welcome)$/i.test(value)) {
     return 'รหัสผ่านนี้เดาง่ายเกินไป กรุณาใช้รหัสผ่านอื่น';
   }
@@ -34921,10 +34839,10 @@ async function doForgotPassword() {
   const email = Q('le')?.value.trim();
   const al = Q('la');
   if (!email) { al.innerHTML = `<div class="alert alert-amber">กรุณากรอกอีเมล แล้วเลือก “ลืมรหัสผ่าน?” อีกครั้ง</div>`; return; }
-  al.innerHTML = `<div class="alert alert-blue">⏳ กำลังส่งลิงก์รีเซ็ตรหัสผ่านไปที่ ${email}...</div>`;
+  al.innerHTML = `<div class="alert alert-blue">⏳ กำลังส่งลิงก์รีเซ็ตรหัสผ่านไปที่ ${escapeWmsText(email)}...</div>`;
   const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.href.split('#')[0] });
-  if (error) { al.innerHTML = `<div class="alert alert-red">${error.message}</div>`; return; }
-  al.innerHTML = `<div class="alert alert-green">✅ ส่งลิงก์ตั้งรหัสผ่านใหม่ไปยัง ${email} เรียบร้อยแล้ว กรุณาตรวจสอบอีเมล</div>`;
+  if (error) { al.innerHTML = `<div class="alert alert-red">ไม่สามารถส่งลิงก์ได้ กรุณาตรวจสอบข้อมูลแล้วลองใหม่</div>`; return; }
+  al.innerHTML = `<div class="alert alert-green">✅ ส่งลิงก์ตั้งรหัสผ่านใหม่เรียบร้อยแล้ว กรุณาตรวจสอบอีเมล</div>`;
   showActionSuccess('ส่งลิงก์รีเซ็ตรหัสผ่านแล้ว', {
     title:'ส่งอีเมลสำเร็จ',
     detail:`กรุณาตรวจสอบกล่องจดหมายของ ${email}`,
@@ -34941,12 +34859,12 @@ function paintResetPassword() {
         </div>
         <div id="rpa"></div>
         <div class="fg" style="text-align:left">
-          <label>รหัสผ่านใหม่ (อย่างน้อย 6 ตัว)</label>
-          <input type="password" id="rp1" placeholder="••••••••">
+          <label>รหัสผ่านใหม่ (อย่างน้อย 12 ตัว มี A-Z, a-z, ตัวเลข และอักขระพิเศษ)</label>
+          <input type="password" id="rp1" minlength="12" maxlength="72" autocomplete="new-password" placeholder="••••••••••••">
         </div>
         <div class="fg" style="text-align:left">
           <label>ยืนยันรหัสผ่านใหม่</label>
-          <input type="password" id="rp2" placeholder="••••••••" onkeydown="if(event.key==='Enter')doResetPassword()">
+          <input type="password" id="rp2" minlength="12" maxlength="72" autocomplete="new-password" placeholder="••••••••••••" onkeydown="if(event.key==='Enter')doResetPassword()">
         </div>
         <button class="btn btn-blue" onclick="doResetPassword()" style="width:100%">✓ บันทึกรหัสผ่านใหม่</button>
       </div>
@@ -34956,11 +34874,12 @@ function paintResetPassword() {
 async function doResetPassword() {
   const p1 = Q('rp1')?.value, p2 = Q('rp2')?.value;
   const al = Q('rpa');
-  if (!p1 || p1.length < 6) { al.innerHTML = `<div class="alert alert-red">รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร</div>`; return; }
+  const passwordError = validateManagedPassword(p1,'admin');
+  if (passwordError) { al.innerHTML = `<div class="alert alert-red">${escapeWmsText(passwordError)}</div>`; return; }
   if (p1 !== p2) { al.innerHTML = `<div class="alert alert-red">รหัสผ่านทั้งสองช่องไม่ตรงกัน</div>`; return; }
   al.innerHTML = `<div class="alert alert-blue">⏳ กำลังบันทึก...</div>`;
   const { error } = await sb.auth.updateUser({ password: p1 });
-  if (error) { al.innerHTML = `<div class="alert alert-red">${error.message}</div>`; return; }
+  if (error) { al.innerHTML = `<div class="alert alert-red">ไม่สามารถตั้งรหัสผ่านใหม่ได้ กรุณาขอลิงก์ใหม่หรือติดต่อ Admin</div>`; return; }
   al.innerHTML = `<div class="alert alert-green">✅ ตั้งรหัสผ่านใหม่สำเร็จ กำลังเข้าสู่ระบบ...</div>`;
   showActionSuccessToast('ตั้งรหัสผ่านใหม่แล้ว กำลังเข้าสู่ระบบ', { title:'อัปเดตรหัสผ่านสำเร็จ' });
   setTimeout(async () => {
@@ -35001,14 +34920,8 @@ async function doLogin() {
     },
   });
   if (data?.code === 'LOGIN_ALREADY_ACTIVE') {
-    const active = data.active_session || {};
-    const loginAt = active.login_at ? new Date(active.login_at).toLocaleString(uiLocale()) : '—';
-    const lastSeen = active.last_seen_at ? new Date(active.last_seen_at).toLocaleString(uiLocale()) : '—';
     Q('la').innerHTML = `<div class="alert alert-amber" style="line-height:1.7;text-align:left">
       <strong>บัญชีนี้กำลังใช้งานอยู่</strong><br>
-      อุปกรณ์: <span data-i18n-skip>${escapeWmsText(active.device_name || 'อุปกรณ์อื่น')}</span><br>
-      เข้าระบบเมื่อ: ${escapeWmsText(loginAt)}<br>
-      ใช้งานล่าสุด: ${escapeWmsText(lastSeen)}<br>
       กรุณาออกจากระบบที่เครื่องเดิม หรือติดต่อ Admin เพื่อบังคับออก
     </div>`;
     setVespaLoginButtonState(false);
@@ -35017,7 +34930,7 @@ async function doLogin() {
   }
   if (error || !data?.ok || !data?.session?.access_token || !data?.session?.refresh_token) {
     const safeMessage = data?.code === 'LOGIN_LOCK_UNAVAILABLE' || data?.code === 'INVALID_DEVICE'
-      ? (data.error || 'ระบบล็อกการเข้าใช้งานยังไม่พร้อม กรุณาลองใหม่')
+      ? 'ระบบล็อกการเข้าใช้งานยังไม่พร้อม กรุณาลองใหม่'
       : 'User ID หรือรหัสผ่านไม่ถูกต้อง';
     Q('la').innerHTML = `<div class="alert alert-red">${escapeWmsText(safeMessage)}</div>`;
     setVespaLoginButtonState(false);
@@ -36328,11 +36241,11 @@ function renderMyTasks() {
     const si  = tagInfo(a.status);
     const can = assignmentCanOpenCount(a.status);
     const sub = [l.zone, l.area, l.row_no && 'Row '+l.row_no, l.level && 'Level '+l.level].filter(Boolean).join(' · ');
-    html += `<div class="row ${can?'click':''}" data-location-sort-code="${escapeWmsText(l.code || '')}" ${can?`onclick="go('c-count',{aid:'${a.id}'})"`:''}>
+    html += `<div class="row ${can?'click':''}" data-location-sort-code="${escapeWmsText(l.code || '')}" ${can?`onclick="go('c-count',{aid:${escapeWmsText(inlineJson(a.id))}})"`:''}>
       <div class="row-body">
-        <div class="row-title mono">${l.code}</div>
-        <div class="row-sub">${sub}</div>
-        <div class="row-sub" style="margin-top:4px; font-weight:700; color:var(--primary-blue)">${a.count_sessions.name}</div>
+        <div class="row-title mono">${escapeWmsText(l.code)}</div>
+        <div class="row-sub">${escapeWmsText(sub)}</div>
+        <div class="row-sub" style="margin-top:4px; font-weight:700; color:var(--primary-blue)">${escapeWmsText(a.count_sessions?.name || '')}</div>
       </div>
       <span class="tag ${si.cls}">${si.lbl}</span>
       ${can ? '<span class="caret">›</span>' : ''}
@@ -39336,8 +39249,8 @@ function varianceIssueEditorHtml(roundMap, key, item, context={}) {
           </div>
           <input type="file" id="cam_${safeKey}" accept="image/*" capture="environment" hidden onchange="handlePhoto('${safeKey}',this)">
           <input type="file" id="gal_${safeKey}" accept="image/*" hidden onchange="handlePhoto('${safeKey}',this)">
-          <img id="thumb_${safeKey}" src="${escapeWmsText(evidence.photo_url || '')}" alt="รูปประกอบ"
-            style="${evidence.photo_url?'':'display:none;'}margin-top:10px;width:96px;height:96px;object-fit:cover;border-radius:16px;border:1px solid var(--theme-border-color)">
+          <img id="thumb_${safeKey}" src="${safeMediaUrlAttr(evidence.photo_url)}" alt="รูปประกอบ"
+            style="${trustedMediaUrl(evidence.photo_url)?'':'display:none;'}margin-top:10px;width:96px;height:96px;object-fit:cover;border-radius:16px;border:1px solid var(--theme-border-color)">
         </div>
       </div>
       <footer class="count-issue-modal-foot">
@@ -40747,7 +40660,7 @@ async function loadCCount() {
               </div>
               <input type="file" accept="image/*" capture="environment" id="cam_${it.id}" hidden onchange="handlePhoto('${it.id}',this)">
               <input type="file" accept="image/*" id="gal_${it.id}" hidden onchange="handlePhoto('${it.id}',this)">
-              <img id="thumb_${it.id}" class="photo-thumb" src="${photoUrl||''}" style="${photoUrl?'':'display:none'}">
+              <img id="thumb_${it.id}" class="photo-thumb" src="${safeMediaUrlAttr(photoUrl)}" style="${trustedMediaUrl(photoUrl)?'':'display:none'}">
             </div>
           </div>
           <footer class="count-issue-modal-foot">
@@ -42110,8 +42023,8 @@ function prepareCountPhoto(file, maxSide = 1600, quality = .82) {
       reject(new Error('กรุณาเลือกไฟล์รูปภาพ'));
       return;
     }
-    if (file.size > 25 * 1024 * 1024) {
-      reject(new Error('รูปภาพต้องมีขนาดไม่เกิน 25 MB'));
+    if (file.size > 12 * 1024 * 1024) {
+      reject(new Error('รูปภาพต้องมีขนาดไม่เกิน 12 MB'));
       return;
     }
     const objectUrl = URL.createObjectURL(file);
@@ -42753,7 +42666,9 @@ function adminFormCountDraftKey(assignmentId,round) {
 
 function readAdminFormCountDraft(assignmentId,round) {
   try {
-    const parsed = JSON.parse(localStorage.getItem(adminFormCountDraftKey(assignmentId,round)) || '{}');
+    const key = adminFormCountDraftKey(assignmentId,round);
+    localStorage.removeItem(key);
+    const parsed = JSON.parse(sessionStorage.getItem(key) || '{}');
     return parsed && typeof parsed === 'object' ? parsed : {};
   } catch (_) {
     return {};
@@ -42761,7 +42676,11 @@ function readAdminFormCountDraft(assignmentId,round) {
 }
 
 function clearAdminFormCountDraft(assignmentId,round) {
-  try { localStorage.removeItem(adminFormCountDraftKey(assignmentId,round)); } catch (_) {}
+  try {
+    const key = adminFormCountDraftKey(assignmentId,round);
+    sessionStorage.removeItem(key);
+    localStorage.removeItem(key);
+  } catch (_) {}
 }
 
 function adminFormCountStatusFilterMatch(assignment,statusFilter) {
@@ -43227,7 +43146,7 @@ function rememberAdminFormCountDraft() {
     updatedAt:new Date().toISOString(),
   };
   current.draft = payload;
-  try { localStorage.setItem(adminFormCountDraftKey(current.assignment.id,current.round),JSON.stringify(payload)); } catch (_) {}
+  try { sessionStorage.setItem(adminFormCountDraftKey(current.assignment.id,current.round),JSON.stringify(payload)); } catch (_) {}
 }
 
 function updateAdminFormCountProgress() {
@@ -44753,7 +44672,7 @@ function workTrackerCountCell(record,round) {
     <span>${escapeWmsText(workTrackerDate(record.counted_at))}</span>
     ${record._countedByName ? `<span data-i18n-skip>${uiCopy('บันทึกโดย','Recorded By')}: ${escapeWmsText(record._countedByName)}</span>` : ''}
     ${record.remark ? `<span class="work-tracker-round-note" data-i18n-skip>📝 ${escapeWmsText(record.remark)}</span>` : ''}
-    ${record.photo_url ? `<a class="work-tracker-photo-link" href="${escapeWmsText(record.photo_url)}" target="_blank" rel="noopener">📷 ${uiCopy('ดูรูป','View Photo')}</a>` : ''}
+    ${trustedMediaUrl(record.photo_url) ? `<a class="work-tracker-photo-link" href="${safeMediaUrlAttr(record.photo_url)}" target="_blank" rel="noopener noreferrer">📷 ${uiCopy('ดูรูป','View Photo')}</a>` : ''}
   </div>`;
 }
 
@@ -46767,6 +46686,11 @@ async function importWarehouseLayoutExcel(event) {
   const input = event?.target;
   const file = input?.files?.[0];
   if (!file || _warehouseLayoutExcelBusy) return;
+  if (Number(file.size || 0) > 20 * 1024 * 1024) {
+    if (input) input.value = '';
+    showWarehouseLayoutToast('ไฟล์ผัง Excel ต้องมีขนาดไม่เกิน 20 MB','error');
+    return;
+  }
   try { await ensureXlsxLibrary(); }
   catch (error) {
     if (input) input.value = '';
@@ -50172,7 +50096,7 @@ function executiveV150IssueBars(groups,emptyText) {
 function executiveV150EvidenceHtml(analytics) {
   const source = analytics.evidence.slice(0,8);
   if (!source.length) return `<div class="exec-v150-empty exec-v150-photo-empty"><span>▧</span><strong>ยังไม่มีรูปหลักฐาน</strong><small>เมื่อผู้ตรวจนับแนบรูป รูปจะปรากฏใน Executive Issue Report อัตโนมัติ</small></div>`;
-  return `<div class="exec-v150-evidence-grid">${source.map(issue => `<a href="${escapeWmsText(issue.photoUrl)}" target="_blank" rel="noopener" class="exec-v150-evidence"><img src="${escapeWmsText(issue.photoUrl)}" alt="หลักฐาน ${escapeWmsText(issue.typeIssue || '')}" loading="lazy" onerror="this.closest('a').classList.add('image-error')"><div><span>${escapeWmsText(issue.zone || 'ไม่ระบุ Zone')} · ${escapeWmsText(issue.location || '—')}</span><strong>${escapeWmsText(typeIssueDisplayLabel(issue.typeIssue) || issue.typeIssue || 'ไม่ระบุ Issue')}</strong><small>${escapeWmsText(issue.item || '—')}${issue.remark?` · ${escapeWmsText(issue.remark)}`:''}</small></div></a>`).join('')}</div>`;
+  return `<div class="exec-v150-evidence-grid">${source.filter(issue => trustedMediaUrl(issue.photoUrl)).map(issue => `<a href="${safeMediaUrlAttr(issue.photoUrl)}" target="_blank" rel="noopener noreferrer" class="exec-v150-evidence"><img src="${safeMediaUrlAttr(issue.photoUrl)}" alt="หลักฐาน ${escapeWmsText(issue.typeIssue || '')}" loading="lazy" onerror="this.closest('a').classList.add('image-error')"><div><span>${escapeWmsText(issue.zone || 'ไม่ระบุ Zone')} · ${escapeWmsText(issue.location || '—')}</span><strong>${escapeWmsText(typeIssueDisplayLabel(issue.typeIssue) || issue.typeIssue || 'ไม่ระบุ Issue')}</strong><small>${escapeWmsText(issue.item || '—')}${issue.remark?` · ${escapeWmsText(issue.remark)}`:''}</small></div></a>`).join('')}</div>`;
 }
 
 function renderExecutiveDashboard() {
@@ -50255,7 +50179,7 @@ function executiveV151TopDiffHtml(analytics) {
 function executiveV151PhotoStripHtml(analytics) {
   const source = analytics.evidence.slice(0,5);
   if (!source.length) return `<div class="exec-v151-no-photo"><span>▧</span><div><strong>ยังไม่มีรูปหลักฐาน</strong><small>รูปจากงานตรวจนับและงานพบเพิ่มจะแสดงที่นี่โดยอัตโนมัติ</small></div></div>`;
-  return `<div class="exec-v151-photo-strip">${source.map((issue,index) => `<a href="${escapeWmsText(issue.photoUrl)}" target="_blank" rel="noopener" class="${index===0?'featured':''}"><img src="${escapeWmsText(issue.photoUrl)}" alt="${escapeWmsText(issue.typeIssue || 'Issue')}" loading="lazy" onerror="this.closest('a').classList.add('image-error')"><div><span>${escapeWmsText(issue.zone || 'ไม่ระบุ Zone')} · ${escapeWmsText(issue.location || '—')}</span><strong>${escapeWmsText(typeIssueDisplayLabel(issue.typeIssue) || issue.typeIssue || 'ไม่ระบุ Issue')}</strong><small>${escapeWmsText(issue.item || '—')}${issue.remark?` · ${escapeWmsText(issue.remark)}`:''}</small></div></a>`).join('')}</div>`;
+  return `<div class="exec-v151-photo-strip">${source.filter(issue => trustedMediaUrl(issue.photoUrl)).map((issue,index) => `<a href="${safeMediaUrlAttr(issue.photoUrl)}" target="_blank" rel="noopener noreferrer" class="${index===0?'featured':''}"><img src="${safeMediaUrlAttr(issue.photoUrl)}" alt="${escapeWmsText(issue.typeIssue || 'Issue')}" loading="lazy" onerror="this.closest('a').classList.add('image-error')"><div><span>${escapeWmsText(issue.zone || 'ไม่ระบุ Zone')} · ${escapeWmsText(issue.location || '—')}</span><strong>${escapeWmsText(typeIssueDisplayLabel(issue.typeIssue) || issue.typeIssue || 'ไม่ระบุ Issue')}</strong><small>${escapeWmsText(issue.item || '—')}${issue.remark?` · ${escapeWmsText(issue.remark)}`:''}</small></div></a>`).join('')}</div>`;
 }
 
 function renderExecutiveDashboard() {
@@ -50396,7 +50320,9 @@ function executiveV152TableHtml(groups,zoneFilter='') {
 function executiveV152EvidenceHtml(analytics) {
   const issue = analytics.evidence[0];
   if (!issue) return `<div class="exec-v152-assistant-empty"><div class="orb"></div><strong>Issue Evidence</strong><span>ยังไม่มีรูปหลักฐานในตัวกรองนี้</span><button type="button">Waiting for evidence</button></div>`;
-  return `<a class="exec-v152-evidence" href="${escapeWmsText(issue.photoUrl)}" target="_blank" rel="noopener"><img src="${escapeWmsText(issue.photoUrl)}" alt="หลักฐาน ${escapeWmsText(issue.typeIssue || '')}" onerror="this.closest('a').classList.add('image-error')"><div><span>${escapeWmsText(issue.zone || 'ไม่ระบุ Zone')} · ${escapeWmsText(issue.location || '—')}</span><strong>${escapeWmsText(typeIssueDisplayLabel(issue.typeIssue) || issue.typeIssue || 'ไม่ระบุ Issue')}</strong><small>${escapeWmsText(issue.item || '—')}${issue.remark?` · ${escapeWmsText(issue.remark)}`:''}</small><button type="button">เปิดรูปหลักฐาน ↗</button></div></a>`;
+  const safePhotoUrl = safeMediaUrlAttr(issue.photoUrl);
+  if (!safePhotoUrl) return '';
+  return `<a class="exec-v152-evidence" href="${safePhotoUrl}" target="_blank" rel="noopener noreferrer"><img src="${safePhotoUrl}" alt="หลักฐาน ${escapeWmsText(issue.typeIssue || '')}" onerror="this.closest('a').classList.add('image-error')"><div><span>${escapeWmsText(issue.zone || 'ไม่ระบุ Zone')} · ${escapeWmsText(issue.location || '—')}</span><strong>${escapeWmsText(typeIssueDisplayLabel(issue.typeIssue) || issue.typeIssue || 'ไม่ระบุ Issue')}</strong><small>${escapeWmsText(issue.item || '—')}${issue.remark?` · ${escapeWmsText(issue.remark)}`:''}</small><button type="button">เปิดรูปหลักฐาน ↗</button></div></a>`;
 }
 
 function renderExecutiveDashboard() {
@@ -50451,11 +50377,11 @@ function executivePresentationSlidesHtml(dataset) {
   const analytics = buildExecutiveTrueDiffAnalytics(dataset,_executiveFilters);
   const dateLabel = selectedDateFrom ? dashboardDateRangeLabel() : 'ทุกวันที่ใน Session';
   const sub = `${dataset.sessionName || 'Session'} · ${dateLabel}`;
-  const topIssues = analytics.evidence.slice(0,4);
+  const topIssues = analytics.evidence.filter(issue => trustedMediaUrl(issue.photoUrl)).slice(0,4);
   return `<section class="exec-present-slide ${_executivePresentationSlide===0?'active':''}" data-exec-slide="0">${executivePresentationHead('Executive Stock Accuracy','True Item Diff · KPI 99.50%',dataset,'01')}<div class="exec-v150-present-hero"><article class="${executiveV150Tone(analytics.accuracy)}"><span>TRUE ITEM ACCURACY</span><strong>${executiveFormatPercent(analytics.accuracy)}</strong><p>${executiveFormatNumber(analytics.trueDiffCount)} True Diff จาก ${executiveFormatNumber(analytics.totalItems)} Item</p></article><div><article><span>KPI TARGET</span><strong>${EXECUTIVE_ACCURACY_TARGET.toFixed(2)}%</strong></article><article><span>COMPENSATED</span><strong>${executiveFormatNumber(analytics.compensatedCount)}</strong><small>Item ที่ +/- หักล้างกัน</small></article><article><span>ISSUE / PHOTO</span><strong>${executiveFormatNumber(analytics.issues.length)} / ${executiveFormatNumber(analytics.photoCount)}</strong></article></div></div></section>
   <section class="exec-present-slide ${_executivePresentationSlide===1?'active':''}" data-exec-slide="1">${executivePresentationHead('%Accuracy by Zone','True Diff คำนวณรวมข้าม Location และ Zone ก่อน',dataset,'02')}<div class="exec-v150-present-panel">${executiveV150BulletRows(analytics.zones,{ limit:14 })}</div></section>
   <section class="exec-present-slide ${_executivePresentationSlide===2?'active':''}" data-exec-slide="2">${executivePresentationHead('%Accuracy by Zone & Category','Category จาก Item Master',dataset,'03')}<div class="exec-v150-present-panel">${executiveV150BulletRows(analytics.zoneCategories,{ category:true,limit:15 })}</div></section>
-  <section class="exec-present-slide ${_executivePresentationSlide===3?'active':''}" data-exec-slide="3">${executivePresentationHead('Issue Intelligence','Zone, Issue และภาพหลักฐานสำหรับตัดสินใจ',dataset,'04')}<div class="exec-v150-present-issues"><article>${executiveV150IssueBars(analytics.issueZones,'ไม่มี Issue')}</article><article>${executiveV150IssueBars(analytics.issueTypes,'ไม่มี Issue')}</article><div class="exec-v150-present-photos">${topIssues.length?topIssues.map(issue => `<figure><img src="${escapeWmsText(issue.photoUrl)}"><figcaption>${escapeWmsText(issue.zone)} · ${escapeWmsText(typeIssueDisplayLabel(issue.typeIssue) || issue.typeIssue)}</figcaption></figure>`).join(''):'<div class="exec-v150-empty">ยังไม่มีรูปหลักฐาน</div>'}</div></div></section>`;
+  <section class="exec-present-slide ${_executivePresentationSlide===3?'active':''}" data-exec-slide="3">${executivePresentationHead('Issue Intelligence','Zone, Issue และภาพหลักฐานสำหรับตัดสินใจ',dataset,'04')}<div class="exec-v150-present-issues"><article>${executiveV150IssueBars(analytics.issueZones,'ไม่มี Issue')}</article><article>${executiveV150IssueBars(analytics.issueTypes,'ไม่มี Issue')}</article><div class="exec-v150-present-photos">${topIssues.length?topIssues.map(issue => `<figure><img src="${safeMediaUrlAttr(issue.photoUrl)}"><figcaption>${escapeWmsText(issue.zone)} · ${escapeWmsText(typeIssueDisplayLabel(issue.typeIssue) || issue.typeIssue)}</figcaption></figure>`).join(''):'<div class="exec-v150-empty">ยังไม่มีรูปหลักฐาน</div>'}</div></div></section>`;
 }
 
 function renderExecutivePresentation() {
@@ -50484,6 +50410,8 @@ async function ensureExecutivePptxLibrary() {
     }
     const script = document.createElement('script');
     script.src = 'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';
+    script.crossOrigin = 'anonymous';
+    script.referrerPolicy = 'no-referrer';
     script.dataset.executivePptx = '1';
     script.onload = resolve;
     script.onerror = () => reject(new Error('โหลดตัวสร้าง PowerPoint ไม่สำเร็จ'));
@@ -50687,7 +50615,7 @@ function handleSummaryZonePicker(value) {
 
 const WMS_FAST_RPC_NAME_V179 = 'get_wms_workspace_v179';
 const WMS_FAST_CACHE_PREFIX_V179 = `${APP_BUILD_ID}:wms-workspace:`;
-const WMS_FAST_CACHE_TTL_MS_V179 = 12 * 60 * 60 * 1000;
+const WMS_FAST_CACHE_TTL_MS_V179 = 30 * 60 * 1000;
 const _wmsFastRequestsV179 = new Map();
 
 function wmsFastCacheKeyV179(sessionId) {
@@ -50696,7 +50624,9 @@ function wmsFastCacheKeyV179(sessionId) {
 
 function readWmsFastCacheV179(sessionId) {
   try {
-    const raw = localStorage.getItem(wmsFastCacheKeyV179(sessionId));
+    // Remove legacy persistent copies before reading the tab-scoped cache.
+    localStorage.removeItem(wmsFastCacheKeyV179(sessionId));
+    const raw = sessionStorage.getItem(wmsFastCacheKeyV179(sessionId));
     if (!raw) return null;
     const cached = JSON.parse(raw);
     if (
@@ -50705,7 +50635,7 @@ function readWmsFastCacheV179(sessionId) {
       || !cached?.payload
       || (Date.now() - Number(cached.savedAt || 0)) > WMS_FAST_CACHE_TTL_MS_V179
     ) {
-      localStorage.removeItem(wmsFastCacheKeyV179(sessionId));
+      sessionStorage.removeItem(wmsFastCacheKeyV179(sessionId));
       return null;
     }
     return cached;
@@ -50717,7 +50647,7 @@ function readWmsFastCacheV179(sessionId) {
 
 function writeWmsFastCacheV179(sessionId,payload) {
   try {
-    localStorage.setItem(wmsFastCacheKeyV179(sessionId),JSON.stringify({
+    sessionStorage.setItem(wmsFastCacheKeyV179(sessionId),JSON.stringify({
       version:'1.83',
       sessionId:String(sessionId || ''),
       userId:String(me?.id || ''),
@@ -50733,7 +50663,10 @@ function writeWmsFastCacheV179(sessionId,payload) {
 
 function invalidateWmsFastCacheV179(sessionId=S?._dashSid) {
   try {
-    if (sessionId) localStorage.removeItem(wmsFastCacheKeyV179(sessionId));
+    if (sessionId) {
+      sessionStorage.removeItem(wmsFastCacheKeyV179(sessionId));
+      localStorage.removeItem(wmsFastCacheKeyV179(sessionId));
+    }
   } catch (_) {}
 }
 
@@ -55494,8 +55427,8 @@ async function loadSvList() {
     const l = a.locations, si = tagInfo(a.status);
     html += `<div class="row click" data-location-sort-code="${escapeWmsText(l?.code || '')}" onclick="go('sv-detail',{aid:'${a.id}'})">
       <div class="row-body">
-        <div class="row-title mono">${l.code}</div>
-        <div class="row-sub"><span data-i18n-skip>${[l.zone,l.area].filter(Boolean).join(' · ')}</span> · <span style="font-weight:700; color:var(--primary-blue)">ผู้ตรวจนับ: <span data-i18n-skip>${escapeWmsText((counterMap[a.id] || []).join(', ') || translateUiText('ไม่ระบุผู้ตรวจนับ'))}</span></span></div>
+        <div class="row-title mono">${escapeWmsText(l.code)}</div>
+        <div class="row-sub"><span data-i18n-skip>${escapeWmsText([l.zone,l.area].filter(Boolean).join(' · '))}</span> · <span style="font-weight:700; color:var(--primary-blue)">ผู้ตรวจนับ: <span data-i18n-skip>${escapeWmsText((counterMap[a.id] || []).join(', ') || translateUiText('ไม่ระบุผู้ตรวจนับ'))}</span></span></div>
       </div>
       ${a._varianceReview?.total ? `<span class="tag tag-blue">ยืนยัน ${a._varianceReview.confirmed.toLocaleString(uiLocale())}/${a._varianceReview.total.toLocaleString(uiLocale())} Item</span>` : ''}
       <span class="tag ${si.cls}">${si.lbl}</span>
@@ -55599,9 +55532,9 @@ async function loadSvFound() {
         <textarea id="found_review_remark" rows="3" placeholder="เพิ่มหรือแก้ไข Remark">${escapeWmsText(row.remark || '')}</textarea>
         <small style="display:block;margin-top:6px;color:var(--theme-muted-text-color)">Supervisor / Admin แก้ไขได้ โดยข้อมูลเดิมยังตรวจสอบย้อนหลังจาก Audit Log ได้</small>
       </div>
-      ${row.photo_url ? `<div style="margin-top:16px">
-        <a href="${escapeWmsText(row.photo_url)}" target="_blank" rel="noopener">
-          <img src="${escapeWmsText(row.photo_url)}" alt="รูปงานพบเพิ่ม" style="width:min(100%,420px);max-height:320px;object-fit:cover;border-radius:18px">
+      ${trustedMediaUrl(row.photo_url) ? `<div style="margin-top:16px">
+        <a href="${safeMediaUrlAttr(row.photo_url)}" target="_blank" rel="noopener noreferrer">
+          <img src="${safeMediaUrlAttr(row.photo_url)}" alt="รูปงานพบเพิ่ม" style="width:min(100%,420px);max-height:320px;object-fit:cover;border-radius:18px">
         </a>
       </div>` : ''}
       <div class="fg" style="margin-top:16px;margin-bottom:0">
@@ -55946,9 +55879,9 @@ async function loadSvDetail() {
 
   cnt().innerHTML = `
     <div class="card">
-      <div class="mono" style="font-size:22px;font-weight:800;color:var(--text-main)">${l.code}</div>
+      <div class="mono" style="font-size:22px;font-weight:800;color:var(--text-main)">${escapeWmsText(l.code)}</div>
       <div style="font-size:14px;color:var(--text-muted);margin-top:6px; font-weight:600;">
-        ${[l.zone,l.area].filter(Boolean).join(' · ')} · ผู้ตรวจนับ: <span style="color:var(--primary-blue)">${actualCounterDisplay}</span>
+        ${escapeWmsText([l.zone,l.area].filter(Boolean).join(' · '))} · ผู้ตรวจนับ: <span style="color:var(--primary-blue)">${escapeWmsText(actualCounterDisplay)}</span>
       </div>
       <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
         <span class="tag tag-blue">รอบที่ ${roundNum}</span>
@@ -60782,8 +60715,8 @@ async function readDataInfoFile(event) {
     if (preview) preview.innerHTML = '';
     return;
   }
-  if (file.size > 80 * 1024 * 1024) {
-    if (preview) preview.innerHTML = errBox('ไฟล์ Item Master ต้องมีขนาดไม่เกิน 80 MB');
+  if (file.size > 40 * 1024 * 1024) {
+    if (preview) preview.innerHTML = errBox('ไฟล์ Item Master ต้องมีขนาดไม่เกิน 40 MB');
     return;
   }
   try { await ensureXlsxLibrary(); }
@@ -62573,7 +62506,7 @@ async function doBulkAssign() {
   const BATCH = 200;
   for (let i = 0; i < toAssign.length; i += BATCH) {
     const { error } = await sb.from('assignments').upsert(toAssign.slice(i, i+BATCH), { onConflict:'session_id,location_id' });
-    if (error) { al.innerHTML = `<div class="alert alert-red">❌ ${error.message}</div>`; btn.disabled=false; return; }
+    if (error) { al.innerHTML = `<div class="alert alert-red">❌ ${escapeWmsText(safeClientErrorMessage(error))}</div>`; btn.disabled=false; return; }
   }
   const userName = Q('bulk-user')?.options?.[Q('bulk-user').selectedIndex]?.textContent || 'User';
   const locationIds = toAssign.map(assignment => assignment.location_id);
@@ -63091,7 +63024,7 @@ async function refreshLocs() {
   if (sel) {
     sel.setAttribute('data-location-sort-select','');
     sel.innerHTML = free.length
-      ? free.map(l => `<option value="${l.id}" data-location-code="${escapeWmsText(l.code || '')}">${l.code}${l.zone?' · '+l.zone:''}</option>`).join('')
+      ? free.map(l => `<option value="${escapeWmsText(l.id)}" data-location-code="${escapeWmsText(l.code || '')}">${escapeWmsText(l.code)}${l.zone?' · '+escapeWmsText(l.zone):''}</option>`).join('')
       : '<option value="" data-location-sort-fixed="true">ทุก Location ถูก Assign แล้ว</option>';
   }
 
@@ -63281,7 +63214,7 @@ async function doAssign() {
   const al = Q('aa');
   if (!sid || !uid || !locId) { al.innerHTML = `<div class="alert alert-amber">กรุณาเลือกให้ครบถ้วน</div>`; return; }
   const { error } = await sb.from('assignments').insert({ session_id: sid, location_id: locId, assigned_to: uid });
-  if (error) { al.innerHTML = `<div class="alert alert-red">${error.message}</div>`; return; }
+  if (error) { al.innerHTML = `<div class="alert alert-red">${escapeWmsText(safeClientErrorMessage(error))}</div>`; return; }
   const userName = Q('as-user')?.options?.[Q('as-user').selectedIndex]?.textContent || 'User';
   al.innerHTML = '';
   invalidateAssignmentWorkspaceCache(sid);
@@ -64371,7 +64304,7 @@ async function loadAdTxLog() {
     if (ev.type === 'count') {
       const r = ev.data; const ohInfo = ohMap[r.item_id];
       const itemLabel = isEmptyLocationItem(r.items?.code) ? 'Location ว่าง' : escapeWmsText(r.items?.code || '');
-      rows += `<div class="row" style="cursor:default;flex-wrap:wrap"><div class="row-body"><div class="row-title mono" style="font-size:14px">${itemLabel}</div><div class="row-sub" data-i18n-skip>${escapeWmsText(r.items?.description||'')}</div><div class="row-sub">รอบ ${r.round} · ผู้ตรวจนับ: <span data-i18n-skip>${escapeWmsText(r.actual_counter_name || translateUiText('ไม่ระบุผู้ตรวจนับ'))}</span></div><div class="row-sub">${r.counted_at ? new Date(r.counted_at).toLocaleString(uiLocale()) : ''}</div>${r.type_issue ? `<div class="row-sub" data-i18n-skip style="font-weight:800;color:var(--theme-danger-color)">Type Issue: ${escapeWmsText(typeIssueDisplayLabel(r.type_issue))}</div>` : ''}${r.remark ? `<div class="row-sub" data-i18n-skip style="color:var(--primary-blue); font-weight:600;">📝 ${escapeWmsText(r.remark)}</div>` : ''}${r.photo_url ? `<a href="${r.photo_url}" target="_blank" style="color:var(--accent-red)">📷 ดูรูป</a>` : ''}</div><div style="text-align:right;flex-shrink:0"><div style="font-size:32px;font-weight:800;font-family:'Fredoka';color:var(--text-main)">${r.count_qty}</div><span class="tag tag-blue" style="font-size:10px">R${r.round}</span>${ohInfo ? `<div class="oh-chip" style="margin-top:8px;font-size:12px;padding:4px 10px">OH: ${ohInfo.oh}${ohInfo.al!=null?` <span class="al-part">· AL ${ohInfo.al}</span>`:''}</div>` : ''}</div></div>`;
+      rows += `<div class="row" style="cursor:default;flex-wrap:wrap"><div class="row-body"><div class="row-title mono" style="font-size:14px">${itemLabel}</div><div class="row-sub" data-i18n-skip>${escapeWmsText(r.items?.description||'')}</div><div class="row-sub">รอบ ${escapeWmsText(r.round)} · ผู้ตรวจนับ: <span data-i18n-skip>${escapeWmsText(r.actual_counter_name || translateUiText('ไม่ระบุผู้ตรวจนับ'))}</span></div><div class="row-sub">${r.counted_at ? escapeWmsText(new Date(r.counted_at).toLocaleString(uiLocale())) : ''}</div>${r.type_issue ? `<div class="row-sub" data-i18n-skip style="font-weight:800;color:var(--theme-danger-color)">Type Issue: ${escapeWmsText(typeIssueDisplayLabel(r.type_issue))}</div>` : ''}${r.remark ? `<div class="row-sub" data-i18n-skip style="color:var(--primary-blue); font-weight:600;">📝 ${escapeWmsText(r.remark)}</div>` : ''}${trustedMediaUrl(r.photo_url) ? `<a href="${safeMediaUrlAttr(r.photo_url)}" target="_blank" rel="noopener noreferrer" style="color:var(--accent-red)">📷 ดูรูป</a>` : ''}</div><div style="text-align:right;flex-shrink:0"><div style="font-size:32px;font-weight:800;font-family:'Fredoka';color:var(--text-main)">${escapeWmsText(r.count_qty)}</div><span class="tag tag-blue" style="font-size:10px">R${escapeWmsText(r.round)}</span>${ohInfo ? `<div class="oh-chip" style="margin-top:8px;font-size:12px;padding:4px 10px">OH: ${escapeWmsText(ohInfo.oh)}${ohInfo.al!=null?` <span class="al-part">· AL ${escapeWmsText(ohInfo.al)}</span>`:''}</div>` : ''}</div></div>`;
     } else if (ev.type === 'approval') {
       const a = ev.data; const isOk = a.resolution === 'ok';
       const itemLabel = isEmptyLocationItem(a.items?.code) ? 'Location ว่าง' : escapeWmsText(a.items?.code || '');
@@ -65241,6 +65174,14 @@ async function readXlsxFile(e) {
   if (btn) btn.disabled = true;
   if (!file) {
     if (prev) prev.style.display = 'none';
+    return;
+  }
+  if (Number(file.size || 0) > 40 * 1024 * 1024) {
+    if (prev) {
+      prev.style.display = 'block';
+      prev.innerHTML = errBox('ไฟล์ WMS Excel ต้องมีขนาดไม่เกิน 40 MB');
+    }
+    e.target.value = '';
     return;
   }
   try { await ensureXlsxLibrary(); }
@@ -68792,7 +68733,7 @@ async function readBackupExcelFile(event) {
     if (!isZip && !isExcel) throw new Error('รองรับเฉพาะไฟล์ .zip หรือ .xlsx จากเมนู Backup');
     await ensureXlsxLibrary();
     if (isZip) await ensureZipLibrary();
-    const maxSize = isZip ? 1200 * 1024 * 1024 : 250 * 1024 * 1024;
+    const maxSize = isZip ? 300 * 1024 * 1024 : 100 * 1024 * 1024;
     if (Number(file.size || 0) > maxSize) throw new Error('ไฟล์ใหญ่เกินขีดจำกัด กรุณา Backup/Restore แยก Session');
     if (preview) preview.innerHTML = `<div class="load" style="padding:18px">กำลังตรวจไฟล์และ checksum...</div>`;
     setBackupProgress(3,isZip ? 'กำลังเปิด ZIP และตรวจ Manifest...' : 'กำลังอ่านไฟล์ Excel...');
@@ -68882,8 +68823,8 @@ async function readBackupExcelFile(event) {
         throw new Error(`${spec.sheet} ระบุจำนวนแถวไม่ถูกต้อง`);
       }
       manifestTotalRows += expectedRows;
-      if (manifestTotalRows > 2000000) {
-        throw new Error('ไฟล์มีข้อมูลรวมเกิน 2,000,000 แถว กรุณา Restore แยก Session');
+      if (manifestTotalRows > 500000) {
+        throw new Error('ไฟล์มีข้อมูลรวมเกิน 500,000 แถว กรุณา Restore แยก Session');
       }
       const physicalDataRows = Math.max(0, sheetRange.e.r - sheetRange.s.r);
       if (physicalDataRows !== expectedRows) {
@@ -70396,12 +70337,12 @@ async function loadAdUsers() {
         <div class="admin-user-field">
           <label for="admin_user_password_${u.id}">ตั้งรหัสผ่านใหม่</label>
           <div class="password-input-wrap">
-            <input type="password" id="admin_user_password_${u.id}" minlength="10" maxlength="72"
+            <input type="password" id="admin_user_password_${u.id}" minlength="12" maxlength="72"
               placeholder="กรอกเมื่อต้องการเปลี่ยน"
               onkeydown="if(event.key==='Enter')resetLoginUserPassword('${u.id}')">
             ${passwordEyeButtonHtml(`admin_user_password_${u.id}`,'แสดงรหัสผ่านใหม่')}
           </div>
-          <div class="admin-user-meta">ขั้นต่ำ 10 ตัว · Admin ขั้นต่ำ 12 ตัวและต้องมีอักขระพิเศษ</div>
+          <div class="admin-user-meta">ขั้นต่ำ 12 ตัว · ต้องมี A-Z, a-z, ตัวเลข และอักขระพิเศษ</div>
         </div>
         <div class="admin-user-field">
           <label>รูปประจำตัว</label>
@@ -70505,12 +70446,12 @@ async function loadAdUsers() {
         <div class="admin-user-field">
           <label for="admin_user_new_password">รหัสผ่านเริ่มต้น</label>
           <div class="password-input-wrap">
-            <input type="password" id="admin_user_new_password" minlength="10" maxlength="72"
-              placeholder="อย่างน้อย 10 ตัว มี A-Z, a-z และตัวเลข"
+            <input type="password" id="admin_user_new_password" minlength="12" maxlength="72"
+              placeholder="อย่างน้อย 12 ตัว มี A-Z, a-z, ตัวเลข และอักขระพิเศษ"
               onkeydown="if(event.key==='Enter')createLoginUser()">
             ${passwordEyeButtonHtml('admin_user_new_password','แสดงรหัสผ่านเริ่มต้น')}
           </div>
-          <div class="admin-user-meta" id="admin_user_new_password_hint">User/Supervisor: อย่างน้อย 10 ตัว มี A-Z, a-z และตัวเลข</div>
+          <div class="admin-user-meta" id="admin_user_new_password_hint">User/Supervisor: อย่างน้อย 12 ตัว มี A-Z, a-z, ตัวเลข และอักขระพิเศษ</div>
         </div>
         <div class="admin-user-field">
           <label>รูปประจำตัว</label>
@@ -70546,9 +70487,7 @@ function updateNewUserPasswordHint() {
   const hint = Q('admin_user_new_password_hint');
   const input = Q('admin_user_new_password');
   if (hint) hint.textContent = passwordRequirementText(role);
-  if (input) input.placeholder = role === 'admin'
-    ? 'อย่างน้อย 12 ตัว มี A-Z, a-z, ตัวเลข และอักขระพิเศษ'
-    : 'อย่างน้อย 10 ตัว มี A-Z, a-z และตัวเลข';
+  if (input) input.placeholder = 'อย่างน้อย 12 ตัว มี A-Z, a-z, ตัวเลข และอักขระพิเศษ';
 }
 
 async function createLoginUser() {
