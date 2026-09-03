@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V2.50: Compact the calculator on small handheld screens so every control fits without page-level scrolling. -->
+<!-- V2.49: Stack Remark and Calculator actions vertically and show a label below each icon. -->
+<!-- V2.48: Add a Count calculator popup beside Remark and allow its result to fill the active COUNT field. -->
 <!-- V2.47: Security hardening — remove the app-managed password vault, enforce a strong reset policy, isolate sensitive caches, sanitize error/media output and constrain browser resource origins. -->
 <!-- V2.46: Synchronize completed Assignment/Annual JOB caches after Count save so the live Work progress advances immediately instead of remaining 0/total. -->
 <!-- V2.45: Stop assignment sticky-panel expand/collapse loops by disabling scroll anchoring in the workspace and sizing hysteresis from the panel's real height change. -->
@@ -100,7 +103,7 @@
      the V2.47 deployment pack must also be enabled; a future bundle should remove
      'unsafe-inline' after inline handlers have been migrated. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-src 'none'; manifest-src 'self'; worker-src 'self' blob:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.sheetjs.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://uiuaboxsfepyftqjlwil.supabase.co; media-src 'self' blob: https://uiuaboxsfepyftqjlwil.supabase.co; connect-src 'self' https://uiuaboxsfepyftqjlwil.supabase.co wss://uiuaboxsfepyftqjlwil.supabase.co;">
-<title>Cycle Count V2.47</title>
+<title>Cycle Count V2.50</title>
 <script>
 // A PWA manifest is valid only on HTTP(S). Adding it while this HTML is opened
 // directly through file:// creates CORS/opaque-origin errors in Chrome Preview.
@@ -25102,15 +25105,276 @@ body.page-loading-active .main-wrapper{
   #app .assign-bento-nav-meta { align-items:flex-start;flex-direction:row;justify-content:space-between; }
   #app .assign-expired-shortcut { max-width:100%;white-space:normal;text-align:left; }
 }
+
+/* V2.49 — vertical, labelled Remark and Calculator actions beside COUNT. */
+.count-item-quick-actions {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  width:64px;
+  flex:0 0 auto;
+}
+.count-item-quick-actions .item-toggle {
+  width:64px;
+  min-width:64px;
+  height:58px;
+  padding:7px 4px 5px !important;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  border-radius:14px;
+}
+.count-item-action-icon {
+  display:grid;
+  min-height:20px;
+  place-items:center;
+  font-size:17px;
+  line-height:1;
+  pointer-events:none;
+}
+.count-item-action-label {
+  display:block;
+  max-width:100%;
+  overflow:hidden;
+  color:var(--theme-heading-color);
+  font:850 7.5px/1 'Mitr','Sarabun',sans-serif;
+  letter-spacing:-.01em;
+  text-overflow:clip;
+  white-space:nowrap;
+  pointer-events:none;
+}
+.count-calculator-trigger {
+  color:var(--theme-primary-color);
+  touch-action:manipulation;
+}
+.count-calculator-trigger .count-item-action-label { color:var(--theme-primary-color); }
+.count-calculator-trigger svg {
+  width:20px;
+  height:20px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.9;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  pointer-events:none;
+}
+body.count-calculator-open { overflow:hidden !important; }
+.count-calculator-backdrop {
+  position:fixed;
+  z-index:2147483400;
+  inset:0;
+  display:grid;
+  place-items:center;
+  padding:18px;
+  background:rgba(16,31,35,.58);
+  backdrop-filter:blur(8px);
+}
+.count-calculator-backdrop[hidden] { display:none !important; }
+.count-calculator-dialog {
+  width:min(390px,calc(100vw - 24px));
+  max-height:calc(100dvh - 24px);
+  padding:18px;
+  overflow:auto;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 24%,transparent);
+  border-radius:24px;
+  box-sizing:border-box;
+  color:var(--theme-body-text-color);
+  background:var(--theme-card-bg);
+  box-shadow:0 24px 70px rgba(0,0,0,.28);
+}
+.count-calculator-head {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+}
+.count-calculator-title { min-width:0; }
+.count-calculator-title span {
+  display:block;
+  color:var(--theme-muted-text-color);
+  font-size:9px;
+  font-weight:850;
+  letter-spacing:.07em;
+}
+.count-calculator-title strong {
+  display:block;
+  margin-top:3px;
+  overflow:hidden;
+  color:var(--theme-heading-color);
+  font-size:19px;
+  font-weight:900;
+  line-height:1.25;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.count-calculator-close {
+  width:38px;
+  min-width:38px;
+  height:38px;
+  padding:0;
+  border:0;
+  border-radius:12px;
+  color:var(--theme-heading-color);
+  background:color-mix(in srgb,var(--theme-danger-color) 9%,var(--theme-card-bg));
+  font:800 21px/1 inherit;
+  cursor:pointer;
+}
+.count-calculator-screen {
+  margin:15px 0 12px;
+  padding:13px 15px;
+  overflow:hidden;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 18%,transparent);
+  border-radius:17px;
+  background:color-mix(in srgb,var(--theme-primary-color) 6%,var(--theme-card-bg));
+  text-align:right;
+}
+.count-calculator-expression {
+  min-height:18px;
+  overflow:hidden;
+  color:var(--theme-muted-text-color);
+  font-size:10px;
+  font-weight:750;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.count-calculator-display {
+  display:block;
+  width:100%;
+  margin-top:3px;
+  overflow:hidden;
+  color:var(--theme-heading-color);
+  font-family:'Fredoka','Mitr','Sarabun',sans-serif;
+  font-size:36px;
+  font-weight:900;
+  line-height:1.15;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.count-calculator-display.is-error { color:var(--theme-danger-color);font-size:25px; }
+.count-calculator-grid {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:8px;
+}
+.count-calculator-key {
+  min-width:0;
+  min-height:54px;
+  padding:8px;
+  border:1px solid color-mix(in srgb,var(--theme-primary-color) 12%,transparent);
+  border-radius:15px;
+  color:var(--theme-heading-color);
+  background:color-mix(in srgb,var(--theme-primary-color) 4%,var(--theme-card-bg));
+  box-shadow:0 6px 14px color-mix(in srgb,var(--theme-heading-color) 8%,transparent);
+  font:900 18px/1 'Mitr','Sarabun',sans-serif;
+  cursor:pointer;
+  touch-action:manipulation;
+}
+.count-calculator-key:active { transform:translateY(1px);box-shadow:none; }
+.count-calculator-key.is-tool {
+  color:var(--theme-warning-color);
+  background:color-mix(in srgb,var(--theme-warning-color) 9%,var(--theme-card-bg));
+}
+.count-calculator-key.is-operator {
+  color:var(--theme-primary-color);
+  background:color-mix(in srgb,var(--theme-primary-color) 11%,var(--theme-card-bg));
+}
+.count-calculator-key.is-equals {
+  grid-row:span 2;
+  color:var(--theme-primary-text);
+  background:var(--theme-primary-color);
+  font-size:23px;
+}
+.count-calculator-key.is-zero { grid-column:span 2; }
+.count-calculator-foot {
+  display:grid;
+  grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);
+  gap:9px;
+  margin-top:12px;
+}
+.count-calculator-foot .btn {
+  min-width:0;
+  min-height:46px;
+  padding:9px 11px;
+  border-radius:14px;
+  font-size:11px;
+  font-weight:900;
+  white-space:normal;
+}
+@media (max-width:480px), (max-width:600px) and (max-height:760px) {
+  .citem { grid-template-columns:minmax(0,1fr) 58px 88px !important; }
+  .count-item-quick-actions {
+    display:flex;
+    flex-direction:column;
+    width:58px;
+    gap:6px;
+  }
+  .count-item-quick-actions .item-toggle {
+    width:58px;
+    min-width:58px;
+    height:54px;
+    padding:6px 3px 4px !important;
+  }
+  .count-item-action-label { font-size:7px; }
+  .count-calculator-backdrop { padding:6px; }
+  .count-calculator-dialog {
+    width:calc(100vw - 12px);
+    max-height:calc(100dvh - 12px);
+    padding:10px;
+    border-radius:18px;
+    overflow:auto;
+    overscroll-behavior:contain;
+  }
+  .count-calculator-head { align-items:center;gap:8px; }
+  .count-calculator-title span { display:none; }
+  .count-calculator-title strong { margin-top:0;font-size:15px;line-height:1.15; }
+  .count-calculator-close {
+    width:32px;
+    min-width:32px;
+    height:32px;
+    border-radius:10px;
+    font-size:18px;
+  }
+  .count-calculator-screen { margin:7px 0;padding:7px 10px;border-radius:13px; }
+  .count-calculator-expression { min-height:14px;font-size:9px;line-height:14px; }
+  .count-calculator-display { margin-top:2px;font-size:26px;line-height:1.05; }
+  .count-calculator-display.is-error { font-size:19px; }
+  .count-calculator-grid { gap:5px; }
+  .count-calculator-key {
+    min-height:39px;
+    padding:4px;
+    border-radius:11px;
+    font-size:15px;
+  }
+  .count-calculator-key.is-equals { font-size:20px; }
+  .count-calculator-foot {
+    position:sticky;
+    z-index:2;
+    bottom:-10px;
+    gap:6px;
+    margin-top:6px;
+    padding-top:6px;
+    background:var(--theme-card-bg);
+  }
+  .count-calculator-foot .btn {
+    min-height:40px;
+    padding:5px 7px;
+    border-radius:11px;
+    font-size:9.5px;
+  }
+}
 </style>
 </head>
 <body data-build="v1-190">
 <div id="app"></div>
 
 <script>
-// V2.25: one authoritative application version for the browser title,
+// V2.50: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.47';
+const APP_VERSION = '2.50';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -31379,7 +31643,10 @@ function render() {
   if (page !== 'c-count') {
     teardownCountTouchControls();
     _pendingCountViewportAnchorV128 = null;
-  } else removeCountNumericKeypad();
+  } else {
+    removeCountNumericKeypad();
+    removeCountCalculator();
+  }
   const renderRequestId = ++_renderRequestSerial;
   const pageRequestScope = beginPageRequestScope();
   const tabletUi = syncTabletUiClass();
@@ -37261,7 +37528,7 @@ function focusMatchedCountItemV222(match,qtyInput=null) {
 function countEntryAutofocusBlocked() {
   if (Q('scanOverlay') || Q('count-pause-backdrop')) return true;
   return [...document.querySelectorAll(
-    '.counter-picker-menu:not([hidden]),.count-remark-menu:not([hidden]),.count-issue-backdrop',
+    '.counter-picker-menu:not([hidden]),.count-remark-menu:not([hidden]),.count-issue-backdrop,.count-calculator-backdrop:not([hidden])',
   )].some(node => node.offsetParent !== null);
 }
 
@@ -40572,7 +40839,19 @@ async function loadCCount() {
         </div>
         ${resolvedBeforeRound
           ? `<span class="count-resolved-check" aria-label="${countEntryRow.inactiveText}">${countEntryRow.itemStatus === 'OK' ? '✓' : countEntryRow.itemStatus === 'Diff' ? '!' : '…'}</span>`
-          : `<button class="item-toggle ${hasExtra?'has':''}" id="tg_${it.id}" onclick="toggleExtra(event,'${it.id}')" title="หมายเหตุ/รูป">📝</button>`}
+          : `<div class="count-item-quick-actions" aria-label="เครื่องมือ Item">
+              <button type="button" class="item-toggle ${hasExtra?'has':''}" id="tg_${it.id}"
+                onclick="toggleExtra(event,'${it.id}')" title="REMARK / รูปถ่าย" aria-label="เปิด REMARK และรูปถ่าย">
+                <span class="count-item-action-icon" aria-hidden="true">📝</span>
+                <span class="count-item-action-label" aria-hidden="true">Remark</span>
+              </button>
+              <button type="button" class="item-toggle count-calculator-trigger"
+                onclick="openCountCalculator(event,'q_${it.id}')"
+                title="เครื่องคิดเลข" aria-label="เปิดเครื่องคิดเลขสำหรับ ${escapeWmsText(it?.code || 'Location ว่าง')}">
+                <span class="count-item-action-icon" aria-hidden="true">${countCalculatorIconSvg()}</span>
+                <span class="count-item-action-label" aria-hidden="true">Calculator</span>
+              </button>
+            </div>`}
         <div class="count-value-stack">
           ${resolvedBeforeRound
             ? `<span class="count-qty-label">COUNT R${countEntryRow.resolvedRound}</span>
@@ -41458,6 +41737,273 @@ function removeCountNumericKeypad() {
   Q('countNumericKeypad')?.remove();
 }
 
+function countCalculatorIconSvg() {
+  return `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <rect x="5" y="2.8" width="14" height="18.4" rx="2.2"></rect>
+    <rect x="8" y="5.5" width="8" height="3.6" rx=".7"></rect>
+    <path d="M8.3 12.4h.1M12 12.4h.1M15.7 12.4h.1M8.3 16.2h.1M12 16.2h.1M15.7 16.2h.1"></path>
+  </svg>`;
+}
+
+let _countCalculatorState = {
+  targetInputId:'',
+  itemLabel:'ITEM',
+  display:'0',
+  accumulator:null,
+  operator:null,
+  waitingForOperand:false,
+  expression:'',
+  error:'',
+};
+let _countCalculatorPreviousOverflow = '';
+
+function countCalculatorHtml() {
+  const key = (label,value,extraClass='') =>
+    `<button type="button" class="count-calculator-key ${extraClass}" onclick="pressCountCalculatorKey('${value}')">${label}</button>`;
+  return `<div class="count-calculator-backdrop" id="countCalculatorModal" hidden
+      role="dialog" aria-modal="true" aria-labelledby="countCalculatorTitle"
+      onclick="if(event.target===this)closeCountCalculator()">
+    <section class="count-calculator-dialog" tabindex="-1" onclick="event.stopPropagation()">
+      <header class="count-calculator-head">
+        <div class="count-calculator-title">
+          <span>COUNT CALCULATOR</span>
+          <strong id="countCalculatorTitle">เครื่องคิดเลข</strong>
+        </div>
+        <button type="button" class="count-calculator-close" onclick="closeCountCalculator()" aria-label="ปิดเครื่องคิดเลข">×</button>
+      </header>
+      <div class="count-calculator-screen" aria-live="polite">
+        <div class="count-calculator-expression" id="countCalculatorExpression">พร้อมคำนวณ</div>
+        <output class="count-calculator-display" id="countCalculatorDisplay">0</output>
+      </div>
+      <div class="count-calculator-grid" aria-label="ปุ่มเครื่องคิดเลข">
+        ${key('C','clear','is-tool')}
+        ${key('⌫','backspace','is-tool')}
+        ${key('÷','divide','is-operator')}
+        ${key('×','multiply','is-operator')}
+        ${key('7','7')}${key('8','8')}${key('9','9')}${key('−','subtract','is-operator')}
+        ${key('4','4')}${key('5','5')}${key('6','6')}${key('+','add','is-operator')}
+        ${key('1','1')}${key('2','2')}${key('3','3')}${key('=','equals','is-equals')}
+        ${key('0','0','is-zero')}${key('.','decimal')}
+      </div>
+      <footer class="count-calculator-foot">
+        <button type="button" class="btn btn-ghost" onclick="closeCountCalculator()">ยกเลิก</button>
+        <button type="button" class="btn btn-green" id="countCalculatorUseButton" onclick="useCountCalculatorResult()">ใช้ผลลัพธ์กับ COUNT</button>
+      </footer>
+    </section>
+  </div>`;
+}
+
+function ensureCountCalculator() {
+  let modal = Q('countCalculatorModal');
+  if (modal) return modal;
+  document.body.insertAdjacentHTML('beforeend',countCalculatorHtml());
+  return Q('countCalculatorModal');
+}
+
+function countCalculatorOperatorSymbol(operator) {
+  return ({ add:'+',subtract:'−',multiply:'×',divide:'÷' })[operator] || '';
+}
+
+function countCalculatorFormatNumber(value) {
+  if (!Number.isFinite(value)) return null;
+  const rounded = Math.round((value + Number.EPSILON) * 1e10) / 1e10;
+  const normalized = Object.is(rounded,-0) ? 0 : rounded;
+  const text = String(normalized);
+  if (text.length <= 18) return text;
+  return normalized.toPrecision(12).replace(/(?:\.0+|(?:(\.\d*?)0+))(?=e|$)/,'$1');
+}
+
+function calculateCountCalculatorValue(left,right,operator) {
+  if (operator === 'add') return left + right;
+  if (operator === 'subtract') return left - right;
+  if (operator === 'multiply') return left * right;
+  if (operator === 'divide') return right === 0 ? null : left / right;
+  return right;
+}
+
+function updateCountCalculatorUi() {
+  const display = Q('countCalculatorDisplay');
+  const expression = Q('countCalculatorExpression');
+  const useButton = Q('countCalculatorUseButton');
+  if (display) {
+    display.textContent = _countCalculatorState.error || _countCalculatorState.display || '0';
+    display.classList.toggle('is-error',Boolean(_countCalculatorState.error));
+  }
+  if (expression) expression.textContent = _countCalculatorState.expression || 'พร้อมคำนวณ';
+  if (useButton) useButton.disabled = Boolean(_countCalculatorState.error);
+}
+
+function resetCountCalculator(display='0') {
+  _countCalculatorState.display = display || '0';
+  _countCalculatorState.accumulator = null;
+  _countCalculatorState.operator = null;
+  _countCalculatorState.waitingForOperand = false;
+  _countCalculatorState.expression = '';
+  _countCalculatorState.error = '';
+  updateCountCalculatorUi();
+}
+
+function openCountCalculator(event,inputId,itemLabel='') {
+  event?.preventDefault();
+  event?.stopPropagation();
+  const target = Q(inputId);
+  if (!target || target.disabled) return false;
+  clearHandheldCountFocusTimers();
+  closeCountNumericKeypad({ blur:true });
+  const initialRaw = String(target.value || '').trim();
+  const initialValue = initialRaw !== '' && Number.isFinite(Number(initialRaw)) ? initialRaw : '0';
+  const derivedItemLabel = target.closest('.citem-wrap')?.querySelector('.citem-code')?.textContent?.trim()
+    || 'Location ว่าง';
+  _countCalculatorState = {
+    targetInputId:String(inputId || ''),
+    itemLabel:String(itemLabel || derivedItemLabel || 'ITEM'),
+    display:initialValue,
+    accumulator:null,
+    operator:null,
+    waitingForOperand:false,
+    expression:initialRaw !== '' ? `ค่าปัจจุบัน ${initialRaw}` : '',
+    error:'',
+  };
+  const modal = ensureCountCalculator();
+  const title = Q('countCalculatorTitle');
+  if (title) title.textContent = `เครื่องคิดเลข · ${_countCalculatorState.itemLabel}`;
+  _countCalculatorPreviousOverflow = document.body.style.overflow;
+  document.body.style.overflow = 'hidden';
+  document.body.classList.add('count-calculator-open');
+  modal.hidden = false;
+  updateCountCalculatorUi();
+  modal.querySelector('.count-calculator-dialog')?.focus({ preventScroll:true });
+  return true;
+}
+
+function closeCountCalculator() {
+  const modal = Q('countCalculatorModal');
+  if (modal) modal.hidden = true;
+  document.body.classList.remove('count-calculator-open');
+  document.body.style.overflow = _countCalculatorPreviousOverflow;
+}
+
+function removeCountCalculator() {
+  closeCountCalculator();
+  Q('countCalculatorModal')?.remove();
+  _countCalculatorState.targetInputId = '';
+}
+
+function pressCountCalculatorKey(key) {
+  const state = _countCalculatorState;
+  if (key === 'clear') return resetCountCalculator('0');
+  if (state.error) resetCountCalculator('0');
+
+  if (/^\d$/.test(key)) {
+    if (state.waitingForOperand || state.display === '0') state.display = key;
+    else if (state.display.length < 18) state.display += key;
+    state.waitingForOperand = false;
+    state.error = '';
+    updateCountCalculatorUi();
+    return;
+  }
+  if (key === 'decimal') {
+    if (state.waitingForOperand) {
+      state.display = '0.';
+      state.waitingForOperand = false;
+    } else if (!state.display.includes('.') && state.display.length < 18) {
+      state.display += '.';
+    }
+    updateCountCalculatorUi();
+    return;
+  }
+  if (key === 'backspace') {
+    if (!state.waitingForOperand) state.display = state.display.length > 1 ? state.display.slice(0,-1) : '0';
+    updateCountCalculatorUi();
+    return;
+  }
+
+  const operators = new Set(['add','subtract','multiply','divide']);
+  if (operators.has(key)) {
+    const current = Number(state.display);
+    if (state.operator && !state.waitingForOperand) {
+      const result = calculateCountCalculatorValue(state.accumulator,current,state.operator);
+      const formatted = result === null ? null : countCalculatorFormatNumber(result);
+      if (formatted === null) {
+        state.error = state.operator === 'divide' ? 'หารด้วย 0 ไม่ได้' : 'คำนวณไม่ได้';
+        state.expression = '';
+        updateCountCalculatorUi();
+        return;
+      }
+      state.display = formatted;
+      state.accumulator = Number(formatted);
+    } else if (state.accumulator === null) {
+      state.accumulator = current;
+    }
+    state.operator = key;
+    state.waitingForOperand = true;
+    state.expression = `${state.display} ${countCalculatorOperatorSymbol(key)}`;
+    updateCountCalculatorUi();
+    return;
+  }
+
+  if (key === 'equals' && state.operator && state.accumulator !== null) {
+    const right = Number(state.display);
+    const left = state.accumulator;
+    const operator = state.operator;
+    const result = calculateCountCalculatorValue(left,right,operator);
+    const formatted = result === null ? null : countCalculatorFormatNumber(result);
+    state.expression = `${left} ${countCalculatorOperatorSymbol(operator)} ${right} =`;
+    state.operator = null;
+    state.accumulator = null;
+    state.waitingForOperand = true;
+    if (formatted === null) state.error = operator === 'divide' ? 'หารด้วย 0 ไม่ได้' : 'คำนวณไม่ได้';
+    else state.display = formatted;
+    updateCountCalculatorUi();
+  }
+}
+
+function useCountCalculatorResult() {
+  const state = _countCalculatorState;
+  const value = Number(state.display);
+  if (state.error || !Number.isFinite(value)) return;
+  if (value < 0) {
+    alert('ยอด COUNT ต้องไม่ติดลบ กรุณาตรวจสูตรอีกครั้ง');
+    return;
+  }
+  const input = Q(state.targetInputId);
+  if (!input || input.disabled) {
+    closeCountCalculator();
+    return;
+  }
+  input.value = countCalculatorFormatNumber(value) || '0';
+  input.dispatchEvent(new Event('input',{ bubbles:true }));
+  closeCountCalculator();
+  scrollCountEntryWithLocation(input,{ behavior:'smooth' });
+  input.closest('.count-input-frame')?.animate?.([
+    { boxShadow:'0 0 0 0 rgba(0,109,119,0)' },
+    { boxShadow:'0 0 0 5px rgba(0,109,119,.22)' },
+    { boxShadow:'0 0 0 0 rgba(0,109,119,0)' },
+  ],{ duration:650,easing:'ease-out' });
+}
+
+function handleCountCalculatorKeyboard(event) {
+  const modal = Q('countCalculatorModal');
+  if (!modal || modal.hidden) return;
+  const keyMap = {
+    '+':'add','-':'subtract','*':'multiply','x':'multiply','X':'multiply','/':'divide',
+    Enter:'equals','=':'equals',Backspace:'backspace',Delete:'clear','.':'decimal',',':'decimal',
+  };
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    closeCountCalculator();
+    return;
+  }
+  const action = /^\d$/.test(event.key) ? event.key : keyMap[event.key];
+  if (!action) return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  pressCountCalculatorKey(action);
+}
+
+document.addEventListener('keydown',handleCountCalculatorKeyboard);
+
 function initializeCountTouchControls() {
   updateCountScreenLockUi();
   applyCountNumericKeypadMode();
@@ -41465,6 +42011,7 @@ function initializeCountTouchControls() {
 
 function teardownCountTouchControls() {
   removeCountNumericKeypad();
+  removeCountCalculator();
   document.body.classList.remove('count-screen-locked');
   document.body.classList.remove('count-keypad-enabled');
 }
