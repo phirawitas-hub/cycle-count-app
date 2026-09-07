@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
+<!-- V2.54: retain the original baseline membership across subsequent WMS imports and disclose later stock separately. -->
 <!-- V2.53: disclose unmatched count history; never infer or transfer a count between Items. -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -25381,7 +25382,7 @@ body.count-calculator-open { overflow:hidden !important; }
 <script>
 // V2.50: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.53';
+const APP_VERSION = '2.54';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -34315,8 +34316,42 @@ function wmsCountBaselineMap(auditRows=[]) {
 // Keep live WMS OH in `_liveOnhandQty`, then expose the frozen Count baseline
 // to existing Count/DIFF/Layout code. This avoids rewriting historical logic
 // while still letting every Import update stock_snapshot with today's OH.
+// The first durable baseline event fixes the snapshot membership of a job.
+// Later imports may update live stock, but must not add members to that baseline.
+function wmsBaselineStartedAtV254(auditRows=[]) {
+  const result = new Map();
+  for (const row of auditRows || []) {
+    if (row?.action !== WMS_COUNT_BASELINE_ACTION || !row.assignment_id) continue;
+    const at = Date.parse(row.created_at || '');
+    if (!Number.isFinite(at)) continue;
+    const key = String(row.assignment_id);
+    if (!result.has(key) || at < result.get(key)) result.set(key,at);
+  }
+  return result;
+}
+
+function warehouseLaterStockHtmlV254(detail) {
+  const data = window._warehouseLayoutSessionData || {};
+  const locationId = String(detail.assignment?.location_id || detail.imported?.id || '');
+  const rows = (data.snapshots || []).filter(row => String(row.location_id || '') === locationId
+    && row._baselineAddedLaterV254);
+  if (!rows.length) return '';
+  return `<div class="alert alert-blue" style="margin:14px 0;line-height:1.7">
+    <strong>Snapshot ที่เพิ่มหลังล็อกขอบเขตนับเดิม ${rows.length} รายการ</strong><br>
+    ผลนับในตารางหลักเป็นของงานเดิม สินค้าด้านล่างแสดงแยกไว้และไม่ได้รับยอดนับจาก Item เดิม
+    <div class="warehouse-location-items-table-shell"><table class="warehouse-location-items-table">
+      <thead><tr><th>Item</th><th>OH ปัจจุบัน</th><th>AL ปัจจุบัน</th><th>สร้าง Snapshot เมื่อ</th><th>ขอบเขต</th></tr></thead>
+      <tbody>${rows.map(row => `<tr><td>${escapeWmsText(row.items?.code || row.item_id || '')}</td>
+        <td>${escapeWmsText(warehouseLayoutQuantityText(row._liveOnhandQty ?? row.onhand_qty))}</td>
+        <td>${escapeWmsText(warehouseLayoutQuantityText(row.al_qty))}</td>
+        <td>${escapeWmsText(workTrackerDate(row.created_at))}</td><td>เพิ่มภายหลัง · อยู่นอกขอบเขตนับเดิม</td></tr>`).join('')}</tbody>
+    </table></div>
+  </div>`;
+}
+
 function applyWmsCountBaselines(snapshotRows=[],assignments=[],auditRows=[]) {
   const baselines = wmsCountBaselineMap(auditRows);
+  const baselineStartedAt = wmsBaselineStartedAtV254(auditRows);
   if (!baselines.size) return { applied:0,excluded:0,baselines };
   const assignmentByLocation = new Map((assignments || []).map(row => [String(row.location_id || ''),row]));
   const assignmentsWithBaseline = new Set(
@@ -34328,6 +34363,17 @@ function applyWmsCountBaselines(snapshotRows=[],assignments=[],auditRows=[]) {
     const assignment = assignmentByLocation.get(String(snapshot.location_id || ''));
     if (!assignment || !assignmentsWithBaseline.has(String(assignment.id || ''))) return;
     const key = wmsCountBaselineKey(assignment.id,snapshot.item_id);
+    const firstBaselineAt = baselineStartedAt.get(String(assignment.id));
+    const snapshotCreatedAt = Date.parse(snapshot.created_at || '');
+    // A later baseline row is not proof that this Item belonged to the original
+    // job: older import code appended one on the next import (reported B-CJ-011-E).
+    if (Number.isFinite(firstBaselineAt) && Number.isFinite(snapshotCreatedAt)
+      && snapshotCreatedAt > firstBaselineAt) {
+      snapshot._countBaselineExcluded = true;
+      snapshot._baselineAddedLaterV254 = true;
+      excluded += 1;
+      return;
+    }
     if (!baselines.has(key)) {
       snapshot._countBaselineExcluded = true;
       excluded += 1;
@@ -46376,7 +46422,7 @@ async function fetchWarehouseLayoutLiveSessionData(sessionId,sessionName='') {
     ),
     fetchPagedSupabaseRows(
       'stock_snapshot',
-      'id,location_id,item_id,onhand_qty,al_qty,locations(code,zone,row_no,level),items(code,description,uom,category)',
+      'id,session_id,created_at,location_id,item_id,onhand_qty,al_qty,locations(code,zone,row_no,level),items(code,description,uom,category)',
       query => query.eq('session_id',sessionId).order('id'),
     ),
     getSessionRules(sessionId),
@@ -48286,8 +48332,8 @@ function warehouseLayoutSnapshotAuditAlertHtml(runtime,zoneId='') {
   const orphanCount = (audit.orphanRows || []).length;
   if (!mixedCount && !orphanCount) return '';
   return `<div class="alert alert-amber" style="margin:0 0 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-    <div><strong>⚠️ ${orphanCount ? `พบข้อมูล Item ที่ต้องตรวจ ${Number(mixedCount + orphanCount).toLocaleString(uiLocale())} แถว` : `พบแถว Location ว่างซ้ำ ${mixedCount.toLocaleString(uiLocale())} แถว — ไม่นำมาคำนวณงานนับแล้ว`}</strong><br>
-    <span style="font-size:10px">ระบบไม่นำแถว Location ว่างที่ซ้ำกับ Item จริงมาคำนวณงานแล้ว · Item ว่างซ้ำ ${mixedCount.toLocaleString(uiLocale())} · Item Master ไม่พบ ${orphanCount.toLocaleString(uiLocale())}</span></div>
+    <div><strong>⚠️ ${orphanCount ? `พบข้อมูล Item ที่ต้องตรวจ ${Number(mixedCount + orphanCount).toLocaleString(uiLocale())} แถว` : `พบแถว Location ว่างร่วมกับสินค้าจริง ${mixedCount.toLocaleString(uiLocale())} แถว`}</strong><br>
+    <span style="font-size:10px">ระบบแยกขอบเขตนับเดิมออกจาก Snapshot ที่เพิ่มภายหลังแล้ว · แถว Location ว่างร่วมกับสินค้า ${mixedCount.toLocaleString(uiLocale())} · Item Master ไม่พบ ${orphanCount.toLocaleString(uiLocale())}</span></div>
     <button class="btn btn-ghost btn-sm" type="button" onclick="showWarehouseSnapshotAuditReport('${escapeWmsText(zoneId)}')">ตรวจ Zone นี้</button>
   </div>`;
 }
@@ -48834,9 +48880,10 @@ function showWarehouseLocationDetail(code) {
     <div class="warehouse-location-current-stage"><span>ขั้นตอนปัจจุบัน</span><strong>${escapeWmsText(statusInfo.label)}</strong><p>${escapeWmsText(stageReason)}</p></div>
     ${warehouseLayoutLocationStageFlowHtml(detail,itemRows)}
     ${warehouseCountHistoryHtmlV253(detail.countHistory)}
+    ${warehouseLaterStockHtmlV254(detail)}
     <div class="warehouse-location-summary">
-      <div class="warehouse-location-summary-card"><span>Item ทั้งหมด</span><strong>${itemRows.length.toLocaleString(uiLocale())}</strong></div>
-      <div class="warehouse-location-summary-card"><span>Item ปัจจุบันที่พบผลนับ</span><strong>${countedCount.toLocaleString(uiLocale())}</strong></div>
+      <div class="warehouse-location-summary-card"><span>Item ในขอบเขตนับเดิม</span><strong>${itemRows.length.toLocaleString(uiLocale())}</strong></div>
+      <div class="warehouse-location-summary-card"><span>Item ในงานนี้ที่พบผลนับ</span><strong>${countedCount.toLocaleString(uiLocale())}</strong></div>
       <div class="warehouse-location-summary-card match"><span>ยอดตรง</span><strong>${matchedCount.toLocaleString(uiLocale())}</strong></div>
       <div class="warehouse-location-summary-card diff"><span>ยอดต่าง</span><strong>${diffCount.toLocaleString(uiLocale())}</strong></div>
       <div class="warehouse-location-summary-card pending"><span>ยังไม่จบขั้นตอน</span><strong>${pendingCount.toLocaleString(uiLocale())}</strong></div>
@@ -52042,7 +52089,7 @@ async function loadSvDash() {
     )),
     fetchPagedSupabaseRows(
       'stock_snapshot',
-      'id,location_id,item_id,onhand_qty,al_qty,locations(code,zone,row_no,level),items(code,description,uom,category)',
+      'id,session_id,created_at,location_id,item_id,onhand_qty,al_qty,locations(code,zone,row_no,level),items(code,description,uom,category)',
       query => query.eq('session_id', curSid).order('id'),
     ),
     ['tracker','layout'].includes(tab)
@@ -66316,6 +66363,7 @@ function buildWmsCountBaselineAuditRows({
   existingAuditRows=[],
 }={}) {
   const existingBaselines = wmsCountBaselineMap(existingAuditRows);
+  const baselineStartedAt = wmsBaselineStartedAtV254(existingAuditRows);
   const assignmentByLocation = new Map((assignments || []).map(row => [row.location_id,row]));
   const incomingByKey = new Map((incomingSnapshots || []).map(row => [
     `${row.location_id}|${row.item_id}`,
@@ -66329,6 +66377,14 @@ function buildWmsCountBaselineAuditRows({
     if (!assignment?.id || !snapshot.item_id) return;
     const baselineKey = wmsCountBaselineKey(assignment.id,snapshot.item_id);
     if (existingBaselines.has(baselineKey)) return;
+    const firstBaselineAt = baselineStartedAt.get(String(assignment.id));
+    if (Number.isFinite(firstBaselineAt)) {
+      const snapshotCreatedAt = Date.parse(snapshot.created_at || '');
+      if (!Number.isFinite(snapshotCreatedAt)) {
+        throw new Error('ไม่พบเวลาสร้าง Stock Snapshot จึงยังยืนยันขอบเขตนับเดิมก่อน Import ไม่ได้');
+      }
+      if (snapshotCreatedAt > firstBaselineAt) return;
+    }
     const currentOh = Number(snapshot.onhand_qty);
     const incoming = incomingByKey.get(`${snapshot.location_id}|${snapshot.item_id}`);
     const incomingOh = Number(incoming?.onhand_qty);
@@ -66517,7 +66573,7 @@ async function doImportXlsx() {
     const BATCH = 200;
     al.innerHTML = `<div class="alert alert-blue">⏳ กำลังตรวจข้อมูลเดิมและสถานะการนับ...</div>`;
     const [existingSnapshots,existingDetails,existingAssignments,existingAnnualItems] = await Promise.all([
-      fetchImportedScopeRows('stock_snapshot',['id','session_id','location_id','item_id','onhand_qty','al_qty','items(code)'],sid,importScopeLocationIds),
+      fetchImportedScopeRows('stock_snapshot',['id','session_id','created_at','location_id','item_id','onhand_qty','al_qty','items(code)'],sid,importScopeLocationIds),
       fetchImportedScopeRows('stock_snapshot_detail',['id','session_id','location_id','item_id','license_plate','lot','inventory_status','qty','uom'],sid,importScopeLocationIds),
       fetchImportedScopeRows('assignments',['id','session_id','location_id','status'],sid,importScopeLocationIds),
       fetchImportedScopeRows('annual_count_job_items',['job_id','location_id'],sid,importScopeLocationIds),
