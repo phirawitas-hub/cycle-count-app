@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V2.51: Protect save workflows across navigation, update confirmed WMS rows without a full reload, and bound parallel ID-batch reads. -->
 <!-- V2.50: Compact the calculator on small handheld screens so every control fits without page-level scrolling. -->
 <!-- V2.49: Stack Remark and Calculator actions vertically and show a label below each icon. -->
 <!-- V2.48: Add a Count calculator popup beside Remark and allow its result to fill the active COUNT field. -->
@@ -25374,7 +25375,7 @@ body.count-calculator-open { overflow:hidden !important; }
 <script>
 // V2.50: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.50';
+const APP_VERSION = '2.51';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -25836,9 +25837,66 @@ function beginPageRequestScope() {
   return _activePageRequestController;
 }
 
+
+// V2.51: a save includes validation, persistence, audit and status updates.
+const _activeSaveWorkflowsV251 = new Map();
+let _pendingSaveNavigationV251 = null;
+let _saveNavigationNoticeV251 = false;
+
+function deferNavigationDuringSaveV251(navigate, priority = 1) {
+  if (!_activeSaveWorkflowsV251.size) return false;
+  // A post-save refresh must not replace a menu the user already selected.
+  if (!_pendingSaveNavigationV251 || priority >= _pendingSaveNavigationV251.priority) {
+    _pendingSaveNavigationV251 = { navigate,priority };
+  }
+  if (!_saveNavigationNoticeV251) {
+    _saveNavigationNoticeV251 = true;
+    showActionSuccessToast('กำลังบันทึกข้อมูล ระบบจะเปลี่ยนหน้าเมื่อเสร็จแล้ว', { title:'กรุณารอสักครู่' });
+  }
+  return true;
+}
+
+function protectSaveWorkflowV251(name, operation, keyForArgs) {
+  return function(...args) {
+    const key = `${name}|${keyForArgs(...args) || ''}`;
+    if (_activeSaveWorkflowsV251.has(key)) return _activeSaveWorkflowsV251.get(key);
+    if (!_activeSaveWorkflowsV251.size) {
+      // An older dashboard response must not overwrite the just-saved row.
+      beginPageRequestScope();
+      _dashboardLoadInFlight = null;
+    }
+    const pending = Promise.resolve().then(() => operation.apply(this,args));
+    _activeSaveWorkflowsV251.set(key,pending);
+    const finish = () => {
+      _activeSaveWorkflowsV251.delete(key);
+      invalidateDashboardCache();
+      invalidatePageViewCache();
+      if (_activeSaveWorkflowsV251.size) return;
+      const navigate = _pendingSaveNavigationV251;
+      _pendingSaveNavigationV251 = null;
+      _saveNavigationNoticeV251 = false;
+      if (navigate) queueMicrotask(navigate.navigate);
+    };
+    pending.then(finish,finish);
+    return pending;
+  };
+}
+
+window.addEventListener('beforeunload',event => {
+  if (!_activeSaveWorkflowsV251.size) return;
+  event.preventDefault();
+  event.returnValue = '';
+});
+
 async function supabaseFetchWithTimeout(input, init = {}) {
   const requestController = new AbortController();
-  const pageSignal = _activePageRequestController?.signal;
+  // Only ordinary database reads belong to a page. POST/PATCH/DELETE,
+  // RPCs and Auth can commit server-side even when the browser stops waiting.
+  const requestMethod = String(init.method || (typeof Request !== 'undefined' && input instanceof Request ? input.method : 'GET')).toUpperCase();
+  const requestUrl = String(typeof Request !== 'undefined' && input instanceof Request ? input.url : input);
+  const isPageRead = ['GET','HEAD'].includes(requestMethod)
+    && requestUrl.startsWith(`${SUPA_URL}/rest/v1/`);
+  const pageSignal = isPageRead ? _activePageRequestController?.signal : null;
   const sourceSignal = init.signal || (typeof Request !== 'undefined' && input instanceof Request ? input.signal : null);
   let didTimeout = false;
 
@@ -25861,7 +25919,9 @@ async function supabaseFetchWithTimeout(input, init = {}) {
     return await fetch(input, { ...init, signal:requestController.signal });
   } catch (error) {
     if (didTimeout) {
-      const timeoutError = new Error('การเชื่อมต่อฐานข้อมูลเกิน 15 วินาที กรุณาลองใหม่');
+      const timeoutError = new Error(isPageRead
+        ? 'การเชื่อมต่อฐานข้อมูลเกิน 15 วินาที กรุณาลองใหม่'
+        : 'ยังยืนยันผลจากฐานข้อมูลไม่ได้ กรุณาตรวจสอบรายการล่าสุดก่อนบันทึกซ้ำ');
       timeoutError.code = 'REQUEST_TIMEOUT';
       throw timeoutError;
     }
@@ -30346,11 +30406,12 @@ async function runPageLoaderWithTimeout(loader,pageRequestScope) {
   });
   try {
     const result = await Promise.race([Promise.resolve().then(loader),timeout]);
+    if (pageRequestScope !== _activePageRequestController || pageRequestScope?.signal?.aborted) return result;
     markCurrentPageViewReady();
     finishPageLoadingVisual(pageRequestScope?._loadingVisualToken);
     return result;
   } catch (error) {
-    failPageLoadingVisual(pageRequestScope?._loadingVisualToken);
+    if (pageRequestScope === _activePageRequestController) failPageLoadingVisual(pageRequestScope?._loadingVisualToken);
     throw error;
   } finally {
     clearTimeout(timeoutId);
@@ -30358,6 +30419,7 @@ async function runPageLoaderWithTimeout(loader,pageRequestScope) {
 }
 
 function changeDashboardSession(sessionId) {
+  if (deferNavigationDuringSaveV251(() => changeDashboardSession(sessionId))) return;
   const nextSessionId = String(sessionId || '');
   S._dashSid = nextSessionId;
   rememberDashboardSession(nextSessionId);
@@ -30371,6 +30433,7 @@ function changeDashboardSession(sessionId) {
 }
 
 function refreshDashboardData() {
+  if (deferNavigationDuringSaveV251(() => refreshDashboardData(),0)) return;
   invalidateDashboardCache(S._dashTab || _dashTab || 'summary');
   if (_dashboardLoadInFlight) return _dashboardLoadInFlight;
   const loadingToken = startPageLoadingVisual({
@@ -30958,6 +31021,7 @@ function syncNavigationStateGlobals() {
 }
 
 function go(page, extra = {}, navOptions = {}) {
+  if (deferNavigationDuringSaveV251(() => go(page,extra,navOptions))) return;
   document.body.classList.remove('counter-picker-open');
   const currentPage = S?.page || '';
   if (currentPage === 'ad-branding' && page !== 'ad-branding' && S._brandingSavedSnapshot) {
@@ -31012,6 +31076,7 @@ function goPrimary(page) {
 }
 
 function goBack() {
+  if (deferNavigationDuringSaveV251(() => goBack())) return;
   const previousState = _navStack.pop();
   if (previousState?.page) {
     cacheCurrentPageView();
@@ -31635,6 +31700,7 @@ window.addEventListener('orientationchange',syncCountStickyHeaderOffset,{ passiv
 window.visualViewport?.addEventListener('resize',syncCountStickyHeaderOffset,{ passive:true });
 
 function render() {
+  if (deferNavigationDuringSaveV251(() => render(),0)) return;
   const normalizedRoute = normalizeRoleNavigation(S?.page || home(),S || {});
   S = { ...S, ...normalizedRoute.extra, page:normalizedRoute.page };
   syncNavigationStateGlobals();
@@ -32032,6 +32098,7 @@ function toggleNavGroup(group) {
   document.querySelectorAll('.nav-group').forEach(el => el.classList.toggle('open', el.dataset.group === window._openNavGroup));
 }
 function openDashboardMenu(tab) {
+  if (deferNavigationDuringSaveV251(() => openDashboardMenu(tab))) return;
   // V1.166: old buttons, saved state and bookmarks that still request the
   // former Variance tab must open the single combined operational workspace.
   if (tab === 'variance') tab = 'wms';
@@ -32077,6 +32144,7 @@ function openDashboardMenu(tab) {
   render();
 }
 function openManageMenu(tab) {
+  if (deferNavigationDuringSaveV251(() => openManageMenu(tab))) return;
   if (prof?.role === 'supervisor' && !SUPERVISOR_ALLOWED_MANAGE_TABS.has(tab)) {
     alert('บัญชี Supervisor ไม่มีสิทธิ์เข้าถึงเมนูนี้');
     return;
@@ -35224,6 +35292,7 @@ async function doLogin() {
 }
 
 async function doLogout() {
+  if (deferNavigationDuringSaveV251(() => doLogout())) return;
   const token = activeLoginSessionToken();
   if (sb && me?.id && token) {
     try {
@@ -44837,18 +44906,36 @@ async function fetchSupabaseRowsByValues(table, columns, filterColumn, values, a
   const uniqueValues = [...new Set((values || []).filter(Boolean))];
   if (!uniqueValues.length) return { data: [], error: null };
 
-  const rows = [];
-  for (let start = 0; start < uniqueValues.length; start += SUPABASE_IN_BATCH_SIZE) {
-    const batch = uniqueValues.slice(start, start + SUPABASE_IN_BATCH_SIZE);
-    const result = await fetchPagedSupabaseRows(
-      table,
-      columns,
-      query => applyExtraFilters(query.in(filterColumn, batch)),
-    );
-    if (result.error) return result;
-    rows.push(...(result.data || []));
+  const scope = _activePageRequestController;
+  const batchCount = Math.ceil(uniqueValues.length / SUPABASE_IN_BATCH_SIZE);
+  const results = new Array(batchCount);
+  let nextBatch = 0;
+  let failure = null;
+  const worker = async () => {
+    while (!failure) {
+      if (scope !== _activePageRequestController || scope?.signal?.aborted) {
+        failure = Object.assign(new Error('การโหลดถูกยกเลิก'), { name:'AbortError' });
+        return;
+      }
+      const index = nextBatch++;
+      if (index >= batchCount) return;
+      const start = index * SUPABASE_IN_BATCH_SIZE;
+      const batch = uniqueValues.slice(start,start + SUPABASE_IN_BATCH_SIZE);
+      try {
+        const result = await fetchPagedSupabaseRows(table,columns,
+          query => applyExtraFilters(query.in(filterColumn,batch)));
+        if (result.error) { failure = result.error; return; }
+        results[index] = result.data || [];
+      } catch (error) { failure = error; }
+    }
+  };
+  // Two ID batches at a time; each retains complete paginated reads.
+  // Keep result order independent of response timing and reject partial data.
+  await Promise.all(Array.from({ length:Math.min(2,batchCount) },worker));
+  if (scope !== _activePageRequestController || scope?.signal?.aborted) {
+    failure = Object.assign(new Error('การโหลดถูกยกเลิก'), { name:'AbortError' });
   }
-  return { data: rows, error: null };
+  return failure ? { data:null,error:failure } : { data:results.flat(),error:null };
 }
 
 async function fetchSnapshotsForAssignmentScopes(assignments,columns='session_id,location_id,item_id,onhand_qty') {
@@ -51610,16 +51697,9 @@ async function loadSvDash() {
   }
   // Load menu-specific settings only.  V1.77 fetched both Layout documents in
   // front of almost every Dashboard tab even when they were never rendered.
-  if (tab === 'layout') {
-    await Promise.all([
-      loadWarehouseLayoutConfig(true,true),
-      loadPlanLocationConfig(true,true),
-    ]);
-    if (isStaleLoad()) return;
-  } else if (tab === 'summary') {
-    await loadPlanLocationConfig(false);
-    if (isStaleLoad()) return;
-  }
+  const dashboardSettingsPromise = tab === 'layout'
+    ? Promise.all([loadWarehouseLayoutConfig(true,true),loadPlanLocationConfig(true,true)])
+    : tab === 'summary' ? loadPlanLocationConfig(false) : Promise.resolve();
 
   const [
     { data: asgns, error:assignmentsError },
@@ -51649,6 +51729,7 @@ async function loadSvDash() {
           .eq('status','pending_review')
           .order('discovered_at',{ ascending:true })
       : Promise.resolve({ data:[],error:null }),
+    dashboardSettingsPromise,
   ]);
   if (isStaleLoad()) return;
   if (assignmentsError) throw assignmentsError;
@@ -51682,7 +51763,7 @@ async function loadSvDash() {
       'id,assignment_id,item_id,round,count_qty,counted_by,counted_at,actual_counter_name,type_issue,remark,photo_url',
       'assignment_id',
       allAsgnIds,
-      query => tab === 'layout' ? query.order('id') : query,
+      query => query.order('id'),
     ),
     fetchPagedSupabaseRows(
       'stock_snapshot',
@@ -51727,7 +51808,7 @@ async function loadSvDash() {
       '*',
       'assignment_id',
       allAsgnIds,
-      query => tab === 'layout' ? query.order('id') : query,
+      query => query.order('id'),
     ),
     fetchSupabaseRowsByValues(
       'audit_log',
@@ -51990,34 +52071,7 @@ async function loadSvDash() {
   let trackerApprovalRows = [];
   let workTrackerApprovalRows = [];
   let vaError = null;
-  const normalizeVarianceApprovalRow = value => {
-    const row = value || {};
-    // Historical deployments sometimes saved only wms_fixed=true and did not
-    // yet have the audit columns wms_fixed_at / wms_fixed_by. The persisted
-    // status remains authoritative; missing audit metadata must not reopen it.
-    const rawFixed = row.wms_fixed;
-    const fixedFlag = wmsStoredBooleanTrue(rawFixed);
-    const rawReleased = row.released_to_wms;
-    const releasedFlag = rawReleased === undefined || rawReleased === null
-      ? true
-      : rawReleased === true || rawReleased === 1
-        || ['true','t','1','yes','y'].includes(String(rawReleased).trim().toLowerCase());
-    const reviewStatus = row.review_status || (row.approved_at ? 'confirmed' : 'draft');
-    return {
-      ...row,
-      review_status:reviewStatus,
-      // A confirmed Item has completed Variance review and therefore belongs
-      // in the WMS queue. This also repairs V1.111 rows already stored with
-      // released_to_wms=false without asking the user to confirm them again.
-      released_to_wms:reviewStatus === 'confirmed' ? true : releasedFlag,
-      wms_fixed:fixedFlag,
-      _legacyWmsFixedWithoutAudit:Boolean(fixedFlag && !row.wms_fixed_at && !row.wms_fixed_by),
-      wms_fixed_at:row.wms_fixed_at ?? null,
-      wms_fixed_by:row.wms_fixed_by ?? null,
-      approved_at:row.approved_at ?? row.created_at ?? null,
-      created_at:row.created_at ?? row.approved_at ?? null,
-    };
-  };
+
 
   try {
     // This request was started together with Counts and Snapshots above. Keep
@@ -53569,10 +53623,10 @@ async function toggleWmsFixed(vaId, checked, button) {
     const updates = { wms_fixed: checked };
     if (checked) { updates.wms_fixed_at = new Date().toISOString(); updates.wms_fixed_by = me.id; } 
     else { updates.wms_fixed_at = null; updates.wms_fixed_by = null; }
-    const { data, error } = await sb.from('variance_approvals').update(updates).eq('id', vaId).select('id,wms_fixed');
+    const { data, error } = await sb.from('variance_approvals').update(updates).eq('id', vaId).select('id,wms_fixed,wms_fixed_at,wms_fixed_by');
     if (error) throw error;
     if (!data || data.length === 0) throw new Error('ไม่พบรายการที่ต้องการอัปเดต');
-    if (target) Object.assign(target, updates);
+    if (target) Object.assign(target, data[0]);
     await logAudit(
       assignment?.session_id || S._dashSid,
       assignment?.location_id,
@@ -53600,7 +53654,7 @@ async function toggleWmsFixed(vaId, checked, button) {
       : 'เปิดแก้ไขอีกครั้งแล้ว: รายการย้ายกลับไปที่ “ยังไม่ได้ตรวจสอบ”');
     invalidateWmsFastCacheV179();
     invalidateDashboardCache();
-    refreshDashboardData();
+    refreshWmsDependentFilters();
   } catch (e) {
     if (locationClosureCleared && assignment && previousLocationClose?.wms_closed_at) {
       const restoreClose = {
@@ -54374,8 +54428,7 @@ async function closeWmsLocation(assignmentId,button) {
       .select('id,wms_closed_at,wms_closed_by');
     if (closeError) throw closeError;
     if (!closedRows?.length) throw new Error('ปิดงาน WMS Location ไม่สำเร็จ');
-    assignment.wms_closed_at = closedAt;
-    assignment.wms_closed_by = me.id;
+    Object.assign(assignment,closedRows[0]);
     await logAudit(
       assignment.session_id || S._dashSid,
       assignment.location_id,
@@ -54393,16 +54446,8 @@ async function closeWmsLocation(assignmentId,button) {
     showWmsFeedback(`ปิดงาน ${locationCode} แล้ว · ตรวจครบ ${serverRows.length.toLocaleString(uiLocale())}/${serverRows.length.toLocaleString(uiLocale())} Item`);
     invalidateWmsFastCacheV179();
     invalidateDashboardCache();
-    try {
-      const dashboardRefresh = refreshDashboardData();
-      Promise.resolve(dashboardRefresh).then(
-        () => clearWmsLocationSearchOnlyV24(),
-        () => clearWmsLocationSearchOnlyV24(),
-      );
-    } catch (refreshError) {
-      console.warn('โหลดหน้า WMS หลังปิด Location ไม่สำเร็จ:',refreshError);
-      clearWmsLocationSearchOnlyV24();
-    }
+    updateWmsOverview();
+    refreshWmsDependentFilters();
   } catch (error) {
     console.error(error);
     if (error?.code === 'WMS_NOTE_SAVE_FAILED') {
@@ -55249,6 +55294,7 @@ function varianceLocationCloseHtml({ aid,total,confirmed,mode='detail',inlineInd
 }
 
 function openCombinedWmsLocationFlow({ aid,sessionId,locationCode,focus=true }={}) {
+  if (deferNavigationDuringSaveV251(() => openCombinedWmsLocationFlow({aid,sessionId,locationCode,focus}))) return;
   const safeSessionId = String(sessionId || '');
   const safeAssignmentId = String(aid || '');
   const safeLocationCode = String(locationCode || '').trim();
@@ -55583,7 +55629,7 @@ async function persistVarianceReviewRows(aid,itemIds,status) {
   }
   const { data,error } = await sb.from('variance_approvals')
     .upsert(payloads,{ onConflict:'assignment_id,item_id' })
-    .select('id,item_id,final_qty,variance,resolution,review_status,approved_at');
+    .select('*');
   if (error) throw error;
   if ((data || []).length !== payloads.length) {
     throw new Error(`บันทึกไม่ครบ: ต้องได้ ${payloads.length} แต่ได้ ${(data || []).length}`);
@@ -55615,12 +55661,71 @@ async function refreshVarianceReviewView(aid,mode='detail',inlineIndex='') {
   }
 }
 
+function normalizeVarianceApprovalRow(value) {
+  const row = value || {};
+  // Historical deployments sometimes saved only wms_fixed=true and did not
+  // yet have the audit columns wms_fixed_at / wms_fixed_by. The persisted
+  // status remains authoritative; missing audit metadata must not reopen it.
+  const rawFixed = row.wms_fixed;
+  const fixedFlag = wmsStoredBooleanTrue(rawFixed);
+  const rawReleased = row.released_to_wms;
+  const releasedFlag = rawReleased === undefined || rawReleased === null
+    ? true
+    : rawReleased === true || rawReleased === 1
+      || ['true','t','1','yes','y'].includes(String(rawReleased).trim().toLowerCase());
+  const reviewStatus = row.review_status || (row.approved_at ? 'confirmed' : 'draft');
+  return {
+    ...row,
+    review_status:reviewStatus,
+    // A confirmed Item has completed Variance review and therefore belongs
+    // in the WMS queue. This also repairs V1.111 rows already stored with
+    // released_to_wms=false without asking the user to confirm them again.
+    released_to_wms:reviewStatus === 'confirmed' ? true : releasedFlag,
+    wms_fixed:fixedFlag,
+    _legacyWmsFixedWithoutAudit:Boolean(fixedFlag && !row.wms_fixed_at && !row.wms_fixed_by),
+    wms_fixed_at:row.wms_fixed_at ?? null,
+    wms_fixed_by:row.wms_fixed_by ?? null,
+    approved_at:row.approved_at ?? row.created_at ?? null,
+    created_at:row.created_at ?? row.approved_at ?? null,
+  };
+}
+
+function applyConfirmedVarianceRowsV251(saved) {
+  if (S?.page !== 'sv-dash' || (S._dashTab || _dashTab) !== 'wms' || !Q('wms-list')) return false;
+  if (String(saved?.assignment?.session_id || '') !== String(S._dashSid || '')) return false;
+  const current = window._wmsRows || [];
+  const rows = saved?.rows || [];
+  if (!rows.length || rows.some(row =>
+    row.assignment_id !== saved.assignment.id || varianceReviewState(row) !== 'confirmed'
+    || !current.some(old => old.assignment_id === row.assignment_id && old.item_id === row.item_id)
+  )) return false;
+  const replacements = new Map(rows.map(row => [String(row.item_id),normalizeVarianceApprovalRow(row)]));
+  window._wmsRows = current.flatMap(old => {
+    if (old.assignment_id !== saved.assignment.id) return [old];
+    const persisted = replacements.get(String(old.item_id));
+    if (!persisted) return [old];
+    if (persisted.released_to_wms === false || Number(persisted.variance) === 0) return [];
+    const next = { ...old,...persisted,_isPending:false,_fromVA:true,
+      profiles:persisted.approved_by === me?.id ? { name:prof?.name || '?' } : old.profiles };
+    delete next._persistedReviewFallback;
+    delete next._persistedReviewReason;
+    delete next._wmsFixedRecoveredFromAudit;
+    return [next];
+  });
+  invalidateDashboardCache();
+  invalidateWmsFastCacheV179(saved.assignment.session_id);
+  updateWmsOverview();
+  refreshWmsDependentFilters();
+  renderWmsList();
+  return true;
+}
+
 async function saveVarianceReviewItem(aid,itemId,mode,inlineIndex,status,button) {
   const alertBox = varianceReviewAlertElement(mode,inlineIndex);
   if (button) button.disabled = true;
   if (alertBox) alertBox.innerHTML = '<div class="alert alert-blue">⏳ กำลังบันทึก Item...</div>';
   try {
-    await persistVarianceReviewRows(aid,[itemId],status);
+    const saved = await persistVarianceReviewRows(aid,[itemId],status);
     if (status === 'confirmed') {
       const state = await loadVarianceLocationReviewState(aid);
       if (state.requiredItemIds.length > 0 && state.missingItemIds.length === 0) {
@@ -55632,7 +55737,9 @@ async function saveVarianceReviewItem(aid,itemId,mode,inlineIndex,status,button)
       status === 'confirmed' ? 'ยืนยัน Item แล้ว' : 'บันทึกร่าง Item แล้ว',
       { title:status === 'confirmed' ? 'ยืนยันสำเร็จ' : 'บันทึกร่างสำเร็จ' },
     );
-    if (status === 'confirmed' && mode === 'inline') await refreshDashboardData();
+    if (status === 'confirmed' && mode === 'inline') {
+      if (!applyConfirmedVarianceRowsV251(saved)) await refreshDashboardData();
+    }
     else await refreshVarianceReviewView(aid,mode,inlineIndex);
   } catch (error) {
     if (alertBox) alertBox.innerHTML = `<div class="alert alert-red">❌ ${escapeWmsText(error.message || error)}</div>`;
@@ -55647,14 +55754,16 @@ async function confirmSelectedVarianceReviewItems(aid,mode,inlineIndex,button) {
   if (button) button.disabled = true;
   if (alertBox) alertBox.innerHTML = `<div class="alert alert-blue">⏳ กำลังยืนยัน ${itemIds.length.toLocaleString(uiLocale())} Item...</div>`;
   try {
-    await persistVarianceReviewRows(aid,itemIds,'confirmed');
+    const saved = await persistVarianceReviewRows(aid,itemIds,'confirmed');
     const state = await loadVarianceLocationReviewState(aid);
     if (state.requiredItemIds.length > 0 && state.missingItemIds.length === 0) {
       await finalizeVarianceLocation(aid,mode,inlineIndex,'continue',button);
       return;
     }
     showActionSuccessToast(`ยืนยัน ${itemIds.length.toLocaleString(uiLocale())} Item แล้ว`,{ title:'ยืนยันรายการสำเร็จ' });
-    if (mode === 'inline') await refreshDashboardData();
+    if (mode === 'inline') {
+      if (!applyConfirmedVarianceRowsV251(saved)) await refreshDashboardData();
+    }
     else await refreshVarianceReviewView(aid,mode,inlineIndex);
   } catch (error) {
     if (alertBox) alertBox.innerHTML = `<div class="alert alert-red">❌ ${escapeWmsText(error.message || error)}</div>`;
@@ -71280,6 +71389,18 @@ async function deleteRemarkOption(id) {
     alert('ลบหมายเหตุไม่สำเร็จ: ' + error.message);
   }
 }
+
+// V2.51: wrap user save entry points once, including nested save phases.
+saveCountItemFromKeypad = protectSaveWorkflowV251('count-item',saveCountItemFromKeypad,input => `${window._countFoundContext?.assignmentId}|${input?.dataset?.itemId}`);
+submitCount = protectSaveWorkflowV251('count-submit',submitCount,aid => aid);
+saveVarianceReviewItem = protectSaveWorkflowV251('variance-item',saveVarianceReviewItem,(aid,itemId) => `${aid}|${itemId}`);
+confirmSelectedVarianceReviewItems = protectSaveWorkflowV251('variance-selection',confirmSelectedVarianceReviewItems,aid => aid);
+reopenVarianceReviewItem = protectSaveWorkflowV251('variance-reopen',reopenVarianceReviewItem,(aid,itemId) => `${aid}|${itemId}`);
+finalizeVarianceLocation = protectSaveWorkflowV251('variance-close',finalizeVarianceLocation,aid => aid);
+toggleWmsFixed = protectSaveWorkflowV251('wms-fixed',toggleWmsFixed,id => id);
+returnWmsForReview = protectSaveWorkflowV251('wms-return',returnWmsForReview,id => id);
+saveWmsNotes = protectSaveWorkflowV251('wms-notes',saveWmsNotes,(aid,itemId) => `${aid}|${itemId}`);
+closeWmsLocation = protectSaveWorkflowV251('wms-close',closeWmsLocation,aid => aid);
 
 // Start Application
 document.addEventListener('visibilitychange',loginSessionVisibilityCheck);
