@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
+<!-- V2.53: disclose unmatched count history; never infer or transfer a count between Items. -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- V2.52: Read Dashboard counts, approvals and relevant audit history in one RLS-protected Session RPC, with strict completeness checks and compatible fallback. -->
@@ -25369,6 +25370,10 @@ body.count-calculator-open { overflow:hidden !important; }
   }
 }
 </style>
+<style>
+.warehouse-location-cell.status-history_review,.warehouse-matrix-cell.status-history_review { background:#7e22ce; color:#fff; }
+.work-tracker-status.history_review { background:#f3e8ff; color:#7e22ce; }
+</style>
 </head>
 <body data-build="v1-190">
 <div id="app"></div>
@@ -25376,7 +25381,7 @@ body.count-calculator-open { overflow:hidden !important; }
 <script>
 // V2.50: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.52';
+const APP_VERSION = '2.53';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -46534,6 +46539,7 @@ async function refreshWarehouseLayoutLiveData({ reason='poll',force=false }={}) 
       refreshWarehouseLayoutRuntime();
       if (changed) renderWarehouseLayoutTabPreservingScroll();
       else updateWarehouseLayoutLiveStatus();
+      refreshOpenWarehouseLocationDetailV253();
       return changed;
     } catch (error) {
       if (requestSerial === _warehouseLayoutLiveRequestSerial && warehouseLayoutLiveViewActive(sessionId)) {
@@ -47683,11 +47689,89 @@ function generateWarehouseLayoutLocations(config=_warehouseLayoutConfig,sessionD
   return { config:normalized,locations,duplicates };
 }
 
+// V2.53: expose history outside the current snapshot without transferring counts.
+function warehouseCountHistoryV253(snapshotRows=[],countRows=[],approvalRows=[]) {
+  const visible = operationalStockSnapshotRows(snapshotRows);
+  const visibleIds = new Set(visible.map(row => String(row.item_id || '')));
+  const countedIds = new Set(countRows.filter(row => [1,2,3].includes(Number(row.round))
+    && row.count_qty !== null && row.count_qty !== undefined).map(row => String(row.item_id || '')));
+  const approvedIds = new Set(approvalRows.map(row => String(row.item_id || '')));
+  const snapshotsByItem = new Map(snapshotRows.map(row => [String(row.item_id || ''),row]));
+  const hidden = countRows.filter(row => !visibleIds.has(String(row.item_id || ''))).map(record => {
+    const snapshot = snapshotsByItem.get(String(record.item_id || ''));
+    const kind = snapshot ? stockSnapshotItemKind(snapshot) : 'absent';
+    return {
+      ...record,
+      historyItemLabel:snapshot && kind === 'empty' ? 'Location ว่าง' : snapshot?.items?.code || String(record.item_id || 'ไม่ทราบ Item'),
+      historyReason:snapshot?._countBaselineExcluded ? 'อยู่นอกขอบเขตนับเดิม'
+        : kind === 'empty' ? 'แถว Location ว่างที่ถูกตัดออกจากงานปัจจุบัน'
+        : kind === 'orphan' ? 'ไม่พบข้อมูล Item Master ในข้อมูลที่โหลด'
+        : 'ไม่อยู่ในรายการสินค้าปัจจุบันของ Location',
+    };
+  });
+  const missingItems = visible.filter(row => !countedIds.has(String(row.item_id || ''))
+    && !approvedIds.has(String(row.item_id || '')));
+  return {hidden,missingItems,needsReview:hidden.length > 0 && missingItems.length > 0};
+}
+
+function warehouseCountHistoryHtmlV253(history={}) {
+  if (!history.hidden?.length) return '';
+  return `<div class="alert alert-${history.needsReview ? 'amber' : 'blue'}" style="margin:14px 0;line-height:1.7">
+    <strong>${history.needsReview ? 'ต้องตรวจการจับคู่ผลนับ' : 'มีประวัตินับนอกชุดสินค้าปัจจุบัน'}</strong><br>
+    พบประวัตินับ ${history.hidden.length} แถวที่ไม่อยู่ในตารางสินค้าด้านล่าง${history.needsReview ? ` และมีสินค้า ${history.missingItems.length} รายการที่ยังไม่พบผลนับตรง Item` : ''}
+    <br>ประวัตินี้ยังเก็บไว้กับ Item เดิม กรุณาตรวจสอบก่อนนับซ้ำหรือเปลี่ยนยอด
+    <details ${history.needsReview ? 'open' : ''}><summary>ดูประวัตินับที่ไม่แสดงในรายการปัจจุบัน</summary>
+    <div class="warehouse-location-items-table-shell"><table class="warehouse-location-items-table">
+      <thead><tr><th>Item เดิม</th><th>รอบ</th><th>ยอดนับ</th><th>เวลาบันทึก</th><th>ผู้ตรวจนับ</th><th>เหตุผล</th></tr></thead>
+      <tbody>${history.hidden.map(row => `<tr>
+        <td>${escapeWmsText(row.historyItemLabel)}</td><td>${escapeWmsText(String(row.round))}</td>
+        <td>${escapeWmsText(warehouseLayoutQuantityText(row.count_qty))}</td>
+        <td>${escapeWmsText(row.counted_at ? workTrackerDate(row.counted_at) : '—')}</td>
+        <td>${escapeWmsText(row.actual_counter_name || 'ไม่ระบุชื่อ')}</td><td>${escapeWmsText(row.historyReason)}</td>
+      </tr>`).join('')}</tbody>
+    </table></div></details>
+  </div>`;
+}
+
+// Live refresh previously rebuilt the map but left an open detail dialog stale.
+function refreshOpenWarehouseLocationDetailV253() {
+  const backdrop = Q('warehouse-layout-dialog-backdrop');
+  const code = backdrop?.dataset?.locationCodeV253;
+  if (!code) return;
+  const runtime = window._warehouseLayoutRuntime;
+  if (String(backdrop.dataset.sessionIdV253 || '') !== String(runtime?.sessionId || '')) {
+    closeWarehouseLayoutDialog();
+    return;
+  }
+  if (!runtime?.detailsByCode?.has(warehouseLocationKey(code))) {
+    closeWarehouseLayoutDialog();
+    return;
+  }
+  const body = backdrop.querySelector('.warehouse-layout-dialog-body');
+  const scrollTop = body?.scrollTop || 0;
+  const dialogScrollTop = backdrop.querySelector('.warehouse-layout-dialog')?.scrollTop || 0;
+  const itemsOpen = Q('warehouse-location-items-panel')?.hidden === false;
+  const historyOpen = backdrop.querySelector('.alert details')?.open;
+  showWarehouseLocationDetail(code);
+  const fresh = Q('warehouse-layout-dialog-backdrop');
+  if (itemsOpen) {
+    const button = fresh?.querySelector('.warehouse-location-items-toggle');
+    if (button) toggleWarehouseLocationItems(button);
+  }
+  const history = fresh?.querySelector('.alert details');
+  if (history && historyOpen !== undefined) history.open = historyOpen;
+  const freshBody = fresh?.querySelector('.warehouse-layout-dialog-body');
+  if (freshBody) freshBody.scrollTop = scrollTop;
+  const freshDialog = fresh?.querySelector('.warehouse-layout-dialog');
+  if (freshDialog) freshDialog.scrollTop = dialogScrollTop;
+}
+
 function warehouseLayoutStatusInfo(status) {
   const map = {
     not_imported:{label:'ยังไม่ Import',className:'not_imported'},
     imported:{label:'Import แล้ว',className:'imported'},
     counting:{label:'จ่ายงาน / กำลังนับ',className:'counting'},
+    history_review:{label:'ตรวจการจับคู่ผลนับ',className:'history_review'},
     variance:{label:'รอตรวจ Variance',className:'variance'},
     wms_pending:{label:'รอปรับ / ปิด WMS',className:'wms_pending'},
     completed:{label:'เสร็จแล้ว',className:'completed'},
@@ -47855,14 +47939,31 @@ function buildWarehouseLayoutRuntime(config=_warehouseLayoutConfig,sessionData=w
     jobsByCode.get(code).add(row.jobCode);
   });
 
+  const historySnapshots = new Map();
+  const historyCounts = new Map();
+  for (const row of sessionData.snapshots || []) {
+    const key = String(row.location_id || '');
+    if (!historySnapshots.has(key)) historySnapshots.set(key,[]);
+    historySnapshots.get(key).push(row);
+  }
+  for (const row of sessionData.counts || []) {
+    const key = String(row.assignment_id || '');
+    if (!historyCounts.has(key)) historyCounts.set(key,[]);
+    historyCounts.get(key).push(row);
+  }
   const detailsByCode = new Map();
-  const statusCounts = {not_imported:0,imported:0,counting:0,variance:0,wms_pending:0,completed:0};
+  const statusCounts = {not_imported:0,imported:0,counting:0,history_review:0,variance:0,wms_pending:0,completed:0};
   layoutByCode.forEach((location,code) => {
     const imported = importedByCode.get(code) || null;
     const assignment = assignmentsByCode.get(code) || null;
     const approvals = assignment ? (approvalsByAssignment.get(assignment.id) || []) : [];
     const countInfo = assignment ? countsByAssignment.get(assignment.id) : null;
-    const status = warehouseLayoutStatusForLocation(imported,assignment,approvals);
+    const countHistory = warehouseCountHistoryV253(
+      historySnapshots.get(String(assignment?.location_id || imported?.id || '')) || [],
+      historyCounts.get(String(assignment?.id || '')) || [],approvals,
+    );
+    const workflowStatus = warehouseLayoutStatusForLocation(imported,assignment,approvals);
+    const status = workflowStatus === 'counting' && countHistory.needsReview ? 'history_review' : workflowStatus;
     statusCounts[status]++;
     detailsByCode.set(code,{
       ...location,
@@ -47870,6 +47971,7 @@ function buildWarehouseLayoutRuntime(config=_warehouseLayoutConfig,sessionData=w
       imported,
       assignment,
       approvals,
+      countHistory,
       latestRound:countInfo?.latestRound || 0,
       latestAt:countInfo?.latestAt || '',
       counters:countInfo ? [...countInfo.counters] : [],
@@ -47940,7 +48042,7 @@ function warehouseLayoutRuntimeForZone(runtime,zone) {
     return layoutCodes.has(code) || Boolean(zoneKey && importedZone === zoneKey);
   });
   const importedLocationIds = new Set(importedRows.map(location => String(location.id || '')).filter(Boolean));
-  const statusCounts = {not_imported:0,imported:0,counting:0,variance:0,wms_pending:0,completed:0};
+  const statusCounts = {not_imported:0,imported:0,counting:0,history_review:0,variance:0,wms_pending:0,completed:0};
   zoneDetails.forEach(detail => {
     const status = statusCounts[detail.status] === undefined ? 'imported' : detail.status;
     statusCounts[status] += 1;
@@ -48066,7 +48168,7 @@ function warehouseLayoutRackSummary(rack,runtime) {
     return result;
   },{pillar:0,aisle:0,disabled:0});
   const rackLocations = runtime.generatedLocations.filter(location => location.rackId === rack.id);
-  const live = {not_imported:0,imported:0,counting:0,variance:0,wms_pending:0,completed:0};
+  const live = {not_imported:0,imported:0,counting:0,history_review:0,variance:0,wms_pending:0,completed:0};
   rackLocations.forEach(location => {
     const status = runtime.detailsByCode.get(location.code)?.status || 'not_imported';
     live[status] = (live[status] || 0)+1;
@@ -48120,7 +48222,7 @@ function warehouseLayoutMatrixRackHtml(rack,zone,runtime,statusFilter,search) {
       <span>ปิดใช้ ${summary.disabled.toLocaleString(uiLocale())}</span><span>เสา ${summary.pillar.toLocaleString(uiLocale())}</span>
       <span class="warehouse-matrix-stat-label">สถานะงานปัจจุบัน</span>
       <span class="live-not-imported">ยังไม่ Import ${summary.live.not_imported.toLocaleString(uiLocale())}</span><span class="live-imported">รอจ่าย ${summary.live.imported.toLocaleString(uiLocale())}</span>
-      <span class="live-counting">กำลังนับ ${summary.live.counting.toLocaleString(uiLocale())}</span><span class="live-variance">DIFF ${summary.live.variance.toLocaleString(uiLocale())}</span>
+      <span class="live-counting">กำลังนับ ${summary.live.counting.toLocaleString(uiLocale())}</span><span style="color:#7e22ce">ตรวจผลนับ ${summary.live.history_review.toLocaleString(uiLocale())}</span><span class="live-variance">DIFF ${summary.live.variance.toLocaleString(uiLocale())}</span>
       <span class="live-wms-pending">รอ WMS ${summary.live.wms_pending.toLocaleString(uiLocale())}</span><span class="live-completed">เสร็จแล้ว ${summary.live.completed.toLocaleString(uiLocale())}</span>
     </div></div>
     <table class="warehouse-matrix-table"><thead><tr><th class="warehouse-matrix-level">LV</th>${bays.map(bay => `<th>${escapeWmsText(String(bay).padStart(rack.bayPad,'0'))}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>
@@ -48145,6 +48247,7 @@ function warehouseLayoutLegendHtml() {
     <span class="warehouse-layout-legend-item"><i class="warehouse-layout-legend-dot not_imported"></i>ยังไม่ Import</span>
     <span class="warehouse-layout-legend-item"><i class="warehouse-layout-legend-dot imported"></i>Import แล้ว</span>
     <span class="warehouse-layout-legend-item"><i class="warehouse-layout-legend-dot counting"></i>จ่ายงาน / กำลังนับ</span>
+    <span class="warehouse-layout-legend-item"><i class="warehouse-layout-legend-dot" style="background:#7e22ce"></i>ตรวจการจับคู่ผลนับ</span>
     <span class="warehouse-layout-legend-item"><i class="warehouse-layout-legend-dot variance"></i>รอตรวจ Variance</span>
     <span class="warehouse-layout-legend-item"><i class="warehouse-layout-legend-dot wms_pending"></i>รอปรับ / ปิด WMS</span>
     <span class="warehouse-layout-legend-item"><i class="warehouse-layout-legend-dot completed"></i>เสร็จแล้ว</span>
@@ -48183,7 +48286,7 @@ function warehouseLayoutSnapshotAuditAlertHtml(runtime,zoneId='') {
   const orphanCount = (audit.orphanRows || []).length;
   if (!mixedCount && !orphanCount) return '';
   return `<div class="alert alert-amber" style="margin:0 0 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-    <div><strong>⚠️ ตรวจพบข้อมูล Item ผิดปกติ ${Number(mixedCount + orphanCount).toLocaleString(uiLocale())} แถว</strong><br>
+    <div><strong>⚠️ ${orphanCount ? `พบข้อมูล Item ที่ต้องตรวจ ${Number(mixedCount + orphanCount).toLocaleString(uiLocale())} แถว` : `พบแถว Location ว่างซ้ำ ${mixedCount.toLocaleString(uiLocale())} แถว — ไม่นำมาคำนวณงานนับแล้ว`}</strong><br>
     <span style="font-size:10px">ระบบไม่นำแถว Location ว่างที่ซ้ำกับ Item จริงมาคำนวณงานแล้ว · Item ว่างซ้ำ ${mixedCount.toLocaleString(uiLocale())} · Item Master ไม่พบ ${orphanCount.toLocaleString(uiLocale())}</span></div>
     <button class="btn btn-ghost btn-sm" type="button" onclick="showWarehouseSnapshotAuditReport('${escapeWmsText(zoneId)}')">ตรวจ Zone นี้</button>
   </div>`;
@@ -48340,7 +48443,7 @@ function warehouseLayoutViewHtml(runtime) {
     : zones[0]?.id || '';
   S._layoutZone = currentZoneId;
   const zone = zones.find(item => item.id === currentZoneId);
-  const statusFilter = ['all','not_imported','imported','counting','variance','wms_pending','completed'].includes(S._layoutStatus)
+  const statusFilter = ['all','not_imported','imported','counting','history_review','variance','wms_pending','completed'].includes(S._layoutStatus)
     ? S._layoutStatus
     : 'all';
   const search = warehouseLocationKey(S._layoutSearch || '');
@@ -48397,6 +48500,7 @@ function warehouseLayoutViewHtml(runtime) {
         ${warehouseLayoutKpiHtml('ยังไม่ Import',statusCounts.not_imported.toLocaleString(uiLocale()),'missing','not_imported',statusFilter)}
         ${warehouseLayoutKpiHtml('Import แล้ว · รอจ่าย',statusCounts.imported.toLocaleString(uiLocale()),'imported','imported',statusFilter)}
         ${warehouseLayoutKpiHtml('จ่ายงาน / กำลังนับ',statusCounts.counting.toLocaleString(uiLocale()),'counting','counting',statusFilter)}
+        ${warehouseLayoutKpiHtml('ตรวจการจับคู่ผลนับ',statusCounts.history_review.toLocaleString(uiLocale()),'counting','history_review',statusFilter)}
         ${warehouseLayoutKpiHtml('รอตรวจ Variance',statusCounts.variance.toLocaleString(uiLocale()),'variance','variance',statusFilter)}
         ${warehouseLayoutKpiHtml('รอปรับ / ปิด WMS',statusCounts.wms_pending.toLocaleString(uiLocale()),'wms-pending','wms_pending',statusFilter)}
         ${warehouseLayoutKpiHtml('เสร็จแล้ว',statusCounts.completed.toLocaleString(uiLocale()),'completed','completed',statusFilter)}
@@ -48415,6 +48519,7 @@ function warehouseLayoutViewHtml(runtime) {
               <option value="not_imported" ${statusFilter==='not_imported'?'selected':''}>ยังไม่ Import</option>
               <option value="imported" ${statusFilter==='imported'?'selected':''}>Import แล้ว</option>
               <option value="counting" ${statusFilter==='counting'?'selected':''}>จ่ายงาน / กำลังนับ</option>
+              <option value="history_review" ${statusFilter==='history_review'?'selected':''}>ตรวจการจับคู่ผลนับ</option>
               <option value="variance" ${statusFilter==='variance'?'selected':''}>รอตรวจ Variance</option>
               <option value="wms_pending" ${statusFilter==='wms_pending'?'selected':''}>รอปรับ / ปิด WMS</option>
               <option value="completed" ${statusFilter==='completed'?'selected':''}>เสร็จแล้ว</option>
@@ -48581,6 +48686,7 @@ function warehouseLayoutLocationItemRows(detail) {
       : (finalQty === null ? null : finalQty - oh);
     let stageKey = 'counting';
     let stageLabel = assignment ? 'รอตรวจนับ' : 'ยังไม่จ่ายงาน';
+    if (!latestRound && detail.countHistory?.needsReview) stageLabel = 'ตรวจการจับคู่ผลนับ';
     if (latestRound && itemStatus === 'PENDING') stageLabel = 'รอนับรอบถัดไป';
     if (latestRound && itemStatus === 'Diff') { stageKey = 'variance';stageLabel = 'รอหัวหน้ายืนยัน Variance'; }
     if (latestRound && itemStatus === 'OK') { stageKey = 'completed';stageLabel = 'ยอดนับตรง'; }
@@ -48625,6 +48731,7 @@ function warehouseLayoutLocationStageReason(detail,itemRows=[]) {
   if (detail.status === 'not_imported') return 'Location นี้อยู่ในผังแม่ แต่ยังไม่พบข้อมูลใน WMS ของ Session ที่เลือก';
   if (detail.status === 'imported') return `พบ ${total.toLocaleString(uiLocale())} Item ใน WMS แล้ว แต่ยังไม่ได้จ่ายงานตรวจนับ`;
   if (detail.assignment?.wms_closed_at) return `ปิดงาน WMS ทั้ง Location แล้วเมื่อ ${workTrackerDate(detail.assignment.wms_closed_at)} สถานะนี้เป็นผลสุดท้ายของ Location`;
+  if (detail.status === 'history_review') return 'พบผลนับเดิมที่ไม่ตรงกับชุดสินค้าปัจจุบัน กรุณาตรวจประวัติด้านล่างก่อนนับซ้ำ';
   if (detail.status === 'counting') return `ยังมี ${pendingCount.toLocaleString(uiLocale())} Item ที่ต้องนับหรือนับรอบถัดไป`;
   if (detail.status === 'variance') return `ยังมี ${varianceCount.toLocaleString(uiLocale())} Item ที่รอ Supervisor ตรวจและยืนยันผลต่าง`;
   if (detail.status === 'wms_pending') {
@@ -48649,14 +48756,15 @@ function warehouseLayoutLocationStageFlowHtml(detail,itemRows=[]) {
   const importState = imported ? 'done' : 'current';
   const assignState = assigned ? 'done' : (imported ? 'current' : '');
   const countState = allCounted ? 'done' : (assigned ? 'current' : '');
+  const unresolvedCount = itemRows.some(row => row.stageKey === 'counting');
   const varianceState = waitingVariance ? 'current' : (hasVariance ? 'done' : 'skipped');
   const wmsState = closed ? 'done' : (wmsRows.length ? 'current' : 'skipped');
   return `<div class="warehouse-location-stage-flow">
     ${step('1. Import WMS',importState)}
     ${step('2. จ่ายงาน',assignState)}
-    ${step('3. ตรวจนับ',countState)}
-    ${step('4. ยืนยัน Variance',varianceState,hasVariance ? '' : 'ไม่ต้องใช้')}
-    ${step('5. ตรวจ/ปิด WMS',wmsState,closed ? 'ปิดแล้ว' : (allWmsChecked ? 'ตรวจครบ · รอปิด' : (wmsRows.length ? 'กำลังดำเนินการ' : 'ไม่ต้องใช้')))}
+    ${step(detail.status === 'history_review' ? '3. ตรวจการจับคู่ผลนับ' : '3. ตรวจนับ',countState)}
+    ${step('4. ยืนยัน Variance',varianceState,hasVariance ? '' : (unresolvedCount ? 'รอยืนยันผลนับ' : 'ไม่ต้องใช้'))}
+    ${step('5. ตรวจ/ปิด WMS',wmsState,closed ? 'ปิดแล้ว' : (allWmsChecked ? 'ตรวจครบ · รอปิด' : (wmsRows.length ? 'กำลังดำเนินการ' : (unresolvedCount ? 'รอยืนยันผลนับ' : 'ไม่ต้องใช้'))))}
   </div>`;
 }
 
@@ -48725,9 +48833,10 @@ function showWarehouseLocationDetail(code) {
     <div style="color:var(--text-muted);font-size:9px;font-weight:700">ข้อมูลล่าสุด ${escapeWmsText(runtime.loadedAt ? workTrackerDate(runtime.loadedAt) : '—')}</div></div>
     <div class="warehouse-location-current-stage"><span>ขั้นตอนปัจจุบัน</span><strong>${escapeWmsText(statusInfo.label)}</strong><p>${escapeWmsText(stageReason)}</p></div>
     ${warehouseLayoutLocationStageFlowHtml(detail,itemRows)}
+    ${warehouseCountHistoryHtmlV253(detail.countHistory)}
     <div class="warehouse-location-summary">
       <div class="warehouse-location-summary-card"><span>Item ทั้งหมด</span><strong>${itemRows.length.toLocaleString(uiLocale())}</strong></div>
-      <div class="warehouse-location-summary-card"><span>นับแล้ว</span><strong>${countedCount.toLocaleString(uiLocale())}</strong></div>
+      <div class="warehouse-location-summary-card"><span>Item ปัจจุบันที่พบผลนับ</span><strong>${countedCount.toLocaleString(uiLocale())}</strong></div>
       <div class="warehouse-location-summary-card match"><span>ยอดตรง</span><strong>${matchedCount.toLocaleString(uiLocale())}</strong></div>
       <div class="warehouse-location-summary-card diff"><span>ยอดต่าง</span><strong>${diffCount.toLocaleString(uiLocale())}</strong></div>
       <div class="warehouse-location-summary-card pending"><span>ยังไม่จบขั้นตอน</span><strong>${pendingCount.toLocaleString(uiLocale())}</strong></div>
@@ -48737,7 +48846,7 @@ function showWarehouseLocationDetail(code) {
       <div class="warehouse-layout-detail-card"><span>Zone / Rack</span><strong>${escapeWmsText(detail.zone)} · ${escapeWmsText(detail.rackCode)}</strong></div>
       <div class="warehouse-layout-detail-card"><span>ช่อง / ระดับ</span><strong>${escapeWmsText(detail.bayText)} · ${escapeWmsText(warehouseLayoutLevelLabel(detail.level))}</strong></div>
       <div class="warehouse-layout-detail-card"><span>JOB</span><strong>${escapeWmsText(jobs)}</strong></div>
-      <div class="warehouse-layout-detail-card"><span>รอบล่าสุด</span><strong>${escapeWmsText(latestRound)}</strong></div>
+      <div class="warehouse-layout-detail-card"><span>รอบล่าสุดจากประวัติทุก Item ในงานนี้</span><strong>${escapeWmsText(latestRound)}</strong></div>
       <div class="warehouse-layout-detail-card"><span>ผู้รับผิดชอบ / ผู้ตรวจนับ</span><strong>${escapeWmsText(assignmentUser)}</strong></div>
       <div class="warehouse-layout-detail-card"><span>สถานะปิดงาน WMS</span><strong>${escapeWmsText(closeText)}</strong></div>
       <div class="warehouse-layout-detail-card"><span>ผู้ตรวจนับทั้งหมด</span><strong>${escapeWmsText(allCounterNames.join(', ') || '—')}</strong></div>
@@ -48745,6 +48854,11 @@ function showWarehouseLocationDetail(code) {
     <div class="warehouse-location-items-actions"><p>แยกรายละเอียด Item เพื่อดูยอดนับ ผลต่าง ผู้ตรวจนับ และขั้นตอนของแต่ละรายการ</p><button class="warehouse-location-items-toggle" type="button" aria-expanded="false" data-closed-label="${escapeWmsText(itemButtonLabel)}" onclick="toggleWarehouseLocationItems(this)">${escapeWmsText(itemButtonLabel)}</button></div>
     <div class="warehouse-location-items-panel" id="warehouse-location-items-panel" hidden>${warehouseLayoutLocationItemsHtml(itemRows)}</div>
   `,{ wide:true });
+  const backdrop = Q('warehouse-layout-dialog-backdrop');
+  if (backdrop) {
+    backdrop.dataset.locationCodeV253 = normalizedCode;
+    backdrop.dataset.sessionIdV253 = String(runtime.sessionId || '');
+  }
 }
 
 function warehouseLayoutMatchListHtml(rows,emptyText) {
