@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- V2.52: Read Dashboard counts, approvals and relevant audit history in one RLS-protected Session RPC, with strict completeness checks and compatible fallback. -->
 <!-- V2.51: Protect save workflows across navigation, update confirmed WMS rows without a full reload, and bound parallel ID-batch reads. -->
 <!-- V2.50: Compact the calculator on small handheld screens so every control fits without page-level scrolling. -->
 <!-- V2.49: Stack Remark and Calculator actions vertically and show a label below each icon. -->
@@ -25375,7 +25376,7 @@ body.count-calculator-open { overflow:hidden !important; }
 <script>
 // V2.50: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.51';
+const APP_VERSION = '2.52';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -35556,7 +35557,7 @@ async function loadCTasks() {
   const loadToken = ++_myTasksLoadSerial;
   assertActiveMyTasksLoad(loadScope,loadToken);
   let workspace = null;
-  const workspaceResult = await sb.rpc('get_my_tasks_workspace');
+  const workspaceResult = await measureMyTasksReadV252(() => sb.rpc('get_my_tasks_workspace'));
   assertActiveMyTasksLoad(loadScope,loadToken);
   if (!workspaceResult.error && workspaceResult.data) {
     let payload = workspaceResult.data;
@@ -51619,6 +51620,164 @@ async function loadWmsFastDashboardV179(context) {
   }
 }
 
+// V2.52: a shared promise removes the ID-batch fan-out for these datasets.
+// Only absence of the new RPC enables the original complete read path.
+let _dashboardBundleUnavailableV252 = false;
+const _dashboardReadMetricsV252 = [];
+
+async function measureMyTasksReadV252(read) {
+  const startedAt=performance.now();
+  let outcome='error';
+  try {
+    const result=await read();
+    outcome=result?.error ? 'error' : 'rpc';
+    return result;
+  } finally {
+    _dashboardReadMetricsV252.push({at:new Date().toISOString(),kind:'my-tasks-rpc',outcome,
+      elapsed_ms:Math.round(performance.now()-startedAt)});
+    if (_dashboardReadMetricsV252.length>30) _dashboardReadMetricsV252.shift();
+  }
+}
+
+function dashboardReadErrorV252(message,code='DASHBOARD_DATA_INVALID') {
+  return Object.assign(new Error(message),{code});
+}
+
+function validateDashboardRulesV252(rules) {
+  if (!rules || !Number.isInteger(rules.max_rounds) || rules.max_rounds < 1 || rules.max_rounds > 3
+      || !['recount','auto_pass','send_variance'].includes(rules.repeat_match_action)) {
+    throw dashboardReadErrorV252('กติกานับของ Session ไม่ครบหรือไม่ถูกต้อง กรุณาโหลดใหม่');
+  }
+  return {maxRounds:rules.max_rounds,repeatMatchAction:rules.repeat_match_action};
+}
+
+async function loadDashboardRulesV252(sessionId) {
+  const {data,error} = await sb.from('count_sessions').select('max_rounds,repeat_match_action')
+    .eq('id',sessionId).maybeSingle();
+  if (error) throw error;
+  return validateDashboardRulesV252(data);
+}
+
+function validateDashboardReadBundleV252(payload,sessionId,assignmentIds,includeWms) {
+  if (!payload || payload.schema_version !== 1 || String(payload.session_id) !== String(sessionId)
+      || payload.include_wms !== includeWms || !Array.isArray(payload.assignment_ids)) {
+    throw dashboardReadErrorV252('ข้อมูล Dashboard ไม่ตรงกับ Session ที่เลือก กรุณาโหลดใหม่');
+  }
+  const scope = new Set(assignmentIds.map(String));
+  const returnedScope = new Set(payload.assignment_ids.map(String));
+  if (returnedScope.size !== payload.assignment_ids.length || returnedScope.size !== scope.size
+      || [...scope].some(id => !returnedScope.has(id))) {
+    throw dashboardReadErrorV252('รายการมอบหมายงานเปลี่ยนระหว่างโหลด กรุณากดโหลดอีกครั้ง','DASHBOARD_SCOPE_CHANGED');
+  }
+  for (const key of ['counts','approvals','baseline_audit','wms_audit']) {
+    const rows = payload[key];
+    if (!Array.isArray(rows) || payload.row_counts?.[key] !== rows.length) {
+      throw dashboardReadErrorV252('โหลดข้อมูล Dashboard ไม่ครบ กรุณาลองใหม่');
+    }
+    const ids = new Set();
+    for (const row of rows) {
+      if (!row || typeof row.id !== 'string' || !row.id || ids.has(row.id) || !scope.has(String(row.assignment_id))) {
+        throw dashboardReadErrorV252('พบรายการซ้ำหรือรายการนอก Session กรุณาโหลดใหม่');
+      }
+      ids.add(row.id);
+      if (key === 'baseline_audit' && (String(row.session_id) !== String(sessionId)
+          || row.action !== WMS_COUNT_BASELINE_ACTION)) {
+        throw dashboardReadErrorV252('ประวัติ OH ไม่ตรงกับ Session กรุณาโหลดใหม่');
+      }
+      if (key === 'wms_audit' && (!includeWms || !['wms_note','wms_note_removed','wms_status_change'].includes(row.action))) {
+        throw dashboardReadErrorV252('ประวัติ WMS ไม่ตรงกับหน้าที่เลือก กรุณาโหลดใหม่');
+      }
+    }
+  }
+  validateDashboardRulesV252(payload.rules);
+  return payload;
+}
+
+async function loadDashboardReadBundleV252(sessionId,assignmentIds,includeWms=false) {
+  if (_dashboardBundleUnavailableV252) return null;
+  const scope = _activePageRequestController;
+  const startedAt = performance.now();
+  let outcome = 'error';
+  try {
+    let request = sb.rpc('get_dashboard_read_bundle_v252',{
+      p_session_id:sessionId,p_include_wms:includeWms,
+    });
+    // Explicitly cancellable because this particular RPC performs reads only.
+    if (scope?.signal && typeof request.abortSignal === 'function') request=request.abortSignal(scope.signal);
+    const {data,error} = await request;
+    if (scope !== _activePageRequestController || scope?.signal?.aborted) {
+      throw Object.assign(new Error('การโหลดถูกยกเลิก'),{name:'AbortError'});
+    }
+    if (error) {
+      if (['PGRST202','42883'].includes(error.code)
+          && /get_dashboard_read_bundle_v252/.test(String(error.message || ''))) {
+        _dashboardBundleUnavailableV252=true;
+        outcome='legacy-fallback';
+        console.info('Dashboard V2.52 RPC is not installed; using complete legacy reads until the page is reloaded.');
+        return null;
+      }
+      throw error;
+    }
+    const payload=validateDashboardReadBundleV252(data,sessionId,assignmentIds,includeWms);
+    outcome='rpc';
+    return payload;
+  } finally {
+    // No user identity, quantities, notes, tokens or business records in metrics.
+    _dashboardReadMetricsV252.push({at:new Date().toISOString(),kind:'dashboard-bundle',outcome,
+      elapsed_ms:Math.round(performance.now()-startedAt),include_wms:includeWms});
+    if (_dashboardReadMetricsV252.length>30) _dashboardReadMetricsV252.shift();
+  }
+}
+
+async function dashboardBundleRowsV252(bundlePromise,key,legacyRead) {
+  const bundle=await bundlePromise;
+  return bundle ? {data:bundle[key],error:null} : legacyRead();
+}
+
+// Console-only diagnostic helper. SQL is generated for the currently signed-in
+// management user and selected Session; never enable EXPLAIN on the public API.
+function getCycleCountStockPlanSQL(offset=0) {
+  const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!['admin','supervisor'].includes(prof?.role) || !uuid.test(String(me?.id)) || !uuid.test(String(S?._dashSid))) {
+    throw new Error('กรุณาเข้าสู่ระบบด้วย Admin/Supervisor และเปิด Dashboard ของ Session ที่ต้องการตรวจ');
+  }
+  if (!Number.isSafeInteger(offset) || offset<0) throw new Error('Offset ไม่ถูกต้อง');
+  const claims=JSON.stringify({sub:me.id,role:'authenticated'});
+  return `-- Run all in Supabase SQL Editor; read-only, under this app user's RLS.
+BEGIN READ ONLY;
+SET LOCAL statement_timeout = '20s';
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claims','${claims}',true);
+SELECT set_config('request.jwt.claim.sub','${me.id}',true);
+DO $cc_plan$
+DECLARE plan json;
+BEGIN
+EXECUTE $cc_query$EXPLAIN (ANALYZE, BUFFERS, TIMING OFF, FORMAT JSON)
+WITH pgrst_source AS (
+ SELECT s.id,s.location_id,s.item_id,s.onhand_qty,s.al_qty,
+        row_to_json(l.*)::jsonb AS locations,row_to_json(i.*)::jsonb AS items
+ FROM public.stock_snapshot s
+ LEFT JOIN LATERAL (
+   SELECT code,zone,row_no,level FROM public.locations WHERE id=s.location_id LIMIT 1 OFFSET 0
+ ) l ON true
+ LEFT JOIN LATERAL (
+   SELECT code,description,uom,category FROM public.items WHERE id=s.item_id LIMIT 1 OFFSET 0
+ ) i ON true
+ WHERE s.session_id='${S._dashSid}'::uuid
+ ORDER BY s.id LIMIT 1000 OFFSET ${offset}
+)
+SELECT count(*),coalesce(json_agg(pgrst_source),'[]'::json) FROM pgrst_source$cc_query$ INTO plan;
+PERFORM set_config('cycle_count.stock_plan_v252',plan::text,false);
+END;
+$cc_plan$;
+COMMIT;
+-- SET LOCAL ROLE and JWT settings are now reset; only the diagnostic plan
+-- remains in a session setting so the SQL Editor can export a final result.
+SELECT current_setting('cycle_count.stock_plan_v252')::jsonb AS query_plan;`;
+}
+
+window.getCycleCountReadMetrics = () => _dashboardReadMetricsV252.map(row=>({...row}));
+
 async function loadSvDash() {
   if (!['admin','supervisor'].includes(prof?.role)) {
     goPrimary('c-tasks');
@@ -51747,6 +51906,7 @@ async function loadSvDash() {
   asgns.forEach(a => { asgnInfoMap[a.id] = a; });
 
   const allAsgnIds = asgns.map(a => a.id);
+  const dashboardReadBundlePromise = loadDashboardReadBundleV252(curSid,allAsgnIds,tab === 'wms');
   const [
     countResult,
     snapshotResult,
@@ -51757,14 +51917,15 @@ async function loadSvDash() {
     paperResult,
     varianceApprovalResult,
     baselineAuditResult,
+    dashboardReadBundle,
   ] = await Promise.all([
-    fetchSupabaseRowsByValues(
+    dashboardBundleRowsV252(dashboardReadBundlePromise,'counts',() => fetchSupabaseRowsByValues(
       'count_records',
       'id,assignment_id,item_id,round,count_qty,counted_by,counted_at,actual_counter_name,type_issue,remark,photo_url',
       'assignment_id',
       allAsgnIds,
       query => query.order('id'),
-    ),
+    )),
     fetchPagedSupabaseRows(
       'stock_snapshot',
       'id,location_id,item_id,onhand_qty,al_qty,locations(code,zone,row_no,level),items(code,description,uom,category)',
@@ -51793,7 +51954,9 @@ async function loadSvDash() {
             .order('sort_order').order('job_id').order('location_id').order('item_id'),
         )
       : Promise.resolve({ data:[],error:null }),
-    getSessionRules(curSid),
+    dashboardReadBundlePromise.then(bundle => bundle
+      ? validateDashboardRulesV252(bundle.rules)
+      : loadDashboardRulesV252(curSid)),
     tab === 'executive' && prof?.role === 'admin'
       ? fetchPagedSupabaseRows(
           'paper_form_counts',
@@ -51803,24 +51966,25 @@ async function loadSvDash() {
       : Promise.resolve({ data:[], error:null }),
     // Start confirmed approval history beside Counts and Snapshots instead of
     // waiting for those large reads to finish and then doing another phase.
-    fetchSupabaseRowsByValues(
+    dashboardBundleRowsV252(dashboardReadBundlePromise,'approvals',() => fetchSupabaseRowsByValues(
       'variance_approvals',
       '*',
       'assignment_id',
       allAsgnIds,
       query => query.order('id'),
-    ),
-    fetchSupabaseRowsByValues(
+    )),
+    dashboardBundleRowsV252(dashboardReadBundlePromise,'baseline_audit',() => fetchSupabaseRowsByValues(
       'audit_log',
       'id,session_id,location_id,item_id,assignment_id,action,old_value,new_value,created_at',
       'assignment_id',
       allAsgnIds,
-      query => query.eq('session_id',curSid).eq('action',WMS_COUNT_BASELINE_ACTION).order('created_at'),
-    ),
+      query => query.eq('session_id',curSid).eq('action',WMS_COUNT_BASELINE_ACTION).order('created_at').order('id'),
+    )),
+    dashboardReadBundlePromise,
   ]);
   if (isStaleLoad()) return;
-  if (countResult.error || snapshotResult.error || detailResult.error || annualJobsResult.error || annualJobItemsResult.error) {
-    cnt().innerHTML = errBox((countResult.error || snapshotResult.error || detailResult.error || annualJobsResult.error || annualJobItemsResult.error).message);
+  if (countResult.error || snapshotResult.error || detailResult.error || annualJobsResult.error || annualJobItemsResult.error || varianceApprovalResult.error || baselineAuditResult.error) {
+    cnt().innerHTML = errBox((countResult.error || snapshotResult.error || detailResult.error || annualJobsResult.error || annualJobItemsResult.error || varianceApprovalResult.error || baselineAuditResult.error).message);
     return;
   }
   if (paperResult?.error) console.warn('โหลดข้อมูล Form Count สำหรับแดชบอร์ด V.2 ไม่สำเร็จ:',paperResult.error.message);
@@ -52177,7 +52341,9 @@ async function loadSvDash() {
     // recorded before an approval row exists and must survive that transition.
     ...diffAssignments.map(v => v.id),
   ].filter(Boolean))];
-  const wmsHistoryPromise = tab === 'wms' && wmsHistoryAssignmentIds.length
+  const wmsHistoryPromise = tab === 'wms' && dashboardReadBundle
+    ? Promise.resolve({ data:dashboardReadBundle.wms_audit,error:null })
+    : tab === 'wms' && wmsHistoryAssignmentIds.length
     ? fetchSupabaseRowsByValues(
         'audit_log',
         'id,session_id,assignment_id,item_id,action,old_value,new_value,created_at',
