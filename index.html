@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
+<!-- V2.55: distinguish preserved original count scope from unresolved snapshot issues; protect referenced rows from cleanup. -->
 <!-- V2.54: retain the original baseline membership across subsequent WMS imports and disclose later stock separately. -->
 <!-- V2.53: disclose unmatched count history; never infer or transfer a count between Items. -->
 <meta charset="UTF-8">
@@ -25382,7 +25383,7 @@ body.count-calculator-open { overflow:hidden !important; }
 <script>
 // V2.50: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.54';
+const APP_VERSION = '2.55';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -34397,41 +34398,58 @@ function operationalStockSnapshotsByLocation(snapshotRows=[]) {
   return [...groups.values()].flatMap(operationalStockSnapshotRows);
 }
 
-function analyzeStockSnapshotHygiene(snapshotRows=[]) {
+function analyzeStockSnapshotHygiene(snapshotRows=[],sessionData={}) {
   const groups = new Map();
+  const assignments = new Map((sessionData.assignments || []).map(row => [String(row.id),row]));
+  const referenced = new Set();
+  for (const record of [...(sessionData.counts || []),...(sessionData.approvals || [])]) {
+    const assignment = assignments.get(String(record.assignment_id || ''));
+    if (!assignment?.location_id || !record.item_id) continue;
+    const sessionId = assignment.session_id || sessionData.sessionId || '';
+    referenced.add(`${sessionId}|${assignment.location_id}|${record.item_id}`);
+  }
   (snapshotRows || []).forEach(snapshot => {
     const locationId = snapshot?.location_id || snapshot?.locations?.id || '';
     const locationCode = snapshot?.locations?.code || locationId || 'ไม่ทราบ Location';
-    const key = `${snapshot?.session_id || ''}|${locationId || locationCode}`;
-    if (!groups.has(key)) groups.set(key,{ key,locationId,locationCode,rows:[] });
+    const sessionId = snapshot?.session_id || sessionData.sessionId || '';
+    const key = `${sessionId}|${locationId || locationCode}`;
+    if (!groups.has(key)) groups.set(key,{key,sessionId,locationId,locationCode,rows:[]});
     groups.get(key).rows.push(snapshot);
   });
-  const mixedEmptyRows = [];
-  const orphanRows = [];
-  const emptyOnlyLocations = [];
-  const issues = [];
+  const mixedEmptyRows = [],historicalEmptyRows = [],orphanRows = [],emptyOnlyLocations = [],issues = [];
   groups.forEach(group => {
     const realRows = group.rows.filter(row => stockSnapshotItemKind(row) === 'item');
     const emptyRows = group.rows.filter(row => stockSnapshotItemKind(row) === 'empty');
     const missingRows = group.rows.filter(row => stockSnapshotItemKind(row) === 'orphan');
+    const decorate = row => ({...row,_locationCode:group.locationCode,
+      _hasHistoryReferenceV255:Boolean(row._countBaselineApplied || row._countBaselineExcluded
+        || referenced.has(`${group.sessionId}|${group.locationId}|${row.item_id}`))});
     if (realRows.length && emptyRows.length) {
-      emptyRows.forEach(row => mixedEmptyRows.push({...row,_locationCode:group.locationCode}));
-      issues.push({
-        type:'mixed_empty',locationId:group.locationId,locationCode:group.locationCode,
-        count:emptyRows.length,message:`มี Item จริง ${realRows.length} รายการ แต่ยังค้างแถว Location ว่าง ${emptyRows.length} รายการ`,
-      });
+      const unresolved = [];
+      for (const row of emptyRows) {
+        const decorated = decorate(row);
+        // Only positive scope evidence makes this expected history. A Count
+        // reference alone protects deletion but does not dismiss a mismatch.
+        const isHistorical = !row._countBaselineExcluded && decorated._hasHistoryReferenceV255
+          && realRows.every(real => real._baselineAddedLaterV254 && real._countBaselineExcluded);
+        if (isHistorical) historicalEmptyRows.push(decorated);
+        else { mixedEmptyRows.push(decorated);unresolved.push(decorated); }
+      }
+      if (unresolved.length) {
+        const protectedCount = unresolved.filter(row => row._hasHistoryReferenceV255).length;
+        issues.push({type:'mixed_empty',locationId:group.locationId,locationCode:group.locationCode,
+          count:unresolved.length,message:`มีสินค้าจริง ${realRows.length} รายการ และแถว Location ว่างที่ยังต้องตรวจขอบเขต ${unresolved.length} แถว${protectedCount ? ` · มีประวัติอ้างอิง ${protectedCount} แถว ต้องเก็บไว้` : ''}`});
+      }
     } else if (!realRows.length && emptyRows.length) {
-      emptyOnlyLocations.push({ locationId:group.locationId,locationCode:group.locationCode,count:emptyRows.length });
+      emptyOnlyLocations.push({locationId:group.locationId,locationCode:group.locationCode,count:emptyRows.length});
     }
     if (missingRows.length) {
-      missingRows.forEach(row => orphanRows.push({...row,_locationCode:group.locationCode,_hasRealItem:realRows.length > 0}));
-      issues.push({
-        type:'orphan',locationId:group.locationId,locationCode:group.locationCode,
-        count:missingRows.length,message:`ไม่พบ Item Master ${missingRows.length} รายการ`,
-      });
+      missingRows.forEach(row => orphanRows.push({...decorate(row),_hasRealItem:realRows.length > 0}));
+      issues.push({type:'orphan',locationId:group.locationId,locationCode:group.locationCode,
+        count:missingRows.length,message:`ไม่พบ Item Master ในข้อมูลที่โหลด ${missingRows.length} แถว`});
     }
   });
-  return { issues,mixedEmptyRows,orphanRows,emptyOnlyLocations };
+  return {issues,mixedEmptyRows,historicalEmptyRows,orphanRows,emptyOnlyLocations};
 }
 
 function determineNextRequiredCountRound(snapshotRows,itemRounds,rules) {
@@ -47935,7 +47953,7 @@ function warehouseLayoutStatusForLocation(imported,assignment,approvals=[]) {
 function buildWarehouseLayoutRuntime(config=_warehouseLayoutConfig,sessionData=window._warehouseLayoutSessionData || {}) {
   const runtimeRepair = repairWarehouseLegacyRackIdentities(config,sessionData);
   const generated = generateWarehouseLayoutLocations(runtimeRepair.config,sessionData);
-  const snapshotAudit = analyzeStockSnapshotHygiene(sessionData.snapshots || []);
+  const snapshotAudit = analyzeStockSnapshotHygiene(sessionData.snapshots || [],sessionData);
   const layoutByCode = new Map();
   generated.locations.forEach(location => {
     if (location.code && !layoutByCode.has(location.code)) layoutByCode.set(location.code,location);
@@ -48067,6 +48085,7 @@ function warehouseLayoutAuditForZone(audit={},locationCodes=new Set(),locationId
   return {
     issues:(audit.issues || []).filter(inZone),
     mixedEmptyRows:(audit.mixedEmptyRows || []).filter(inZone),
+    historicalEmptyRows:(audit.historicalEmptyRows || []).filter(inZone),
     orphanRows:(audit.orphanRows || []).filter(inZone),
     emptyOnlyLocations:(audit.emptyOnlyLocations || []).filter(inZone),
   };
@@ -48326,44 +48345,52 @@ function warehouseLayoutEmptyHtml() {
   </div>`;
 }
 
+function warehouseSnapshotCleanupCandidatesV255(audit={}) {
+  const isZero = value => value !== null && value !== undefined && value !== '' && Number(value) === 0;
+  return [...new Map([
+    ...(audit.mixedEmptyRows || []),...(audit.orphanRows || []).filter(row => row._hasRealItem),
+  ].filter(row => row?.id && !row._hasHistoryReferenceV255 && !row._countBaselineApplied
+    && !row._countBaselineExcluded && isZero(row._liveOnhandQty ?? row.onhand_qty) && isZero(row.al_qty))
+    .map(row => [String(row.id),row])).values()];
+}
+
 function warehouseLayoutSnapshotAuditAlertHtml(runtime,zoneId='') {
-  const audit = runtime?.snapshotAudit || {};
-  const mixedCount = (audit.mixedEmptyRows || []).length;
-  const orphanCount = (audit.orphanRows || []).length;
-  if (!mixedCount && !orphanCount) return '';
-  return `<div class="alert alert-amber" style="margin:0 0 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-    <div><strong>⚠️ ${orphanCount ? `พบข้อมูล Item ที่ต้องตรวจ ${Number(mixedCount + orphanCount).toLocaleString(uiLocale())} แถว` : `พบแถว Location ว่างร่วมกับสินค้าจริง ${mixedCount.toLocaleString(uiLocale())} แถว`}</strong><br>
-    <span style="font-size:10px">ระบบแยกขอบเขตนับเดิมออกจาก Snapshot ที่เพิ่มภายหลังแล้ว · แถว Location ว่างร่วมกับสินค้า ${mixedCount.toLocaleString(uiLocale())} · Item Master ไม่พบ ${orphanCount.toLocaleString(uiLocale())}</span></div>
-    <button class="btn btn-ghost btn-sm" type="button" onclick="showWarehouseSnapshotAuditReport('${escapeWmsText(zoneId)}')">ตรวจ Zone นี้</button>
-  </div>`;
+  // User preference: this report is opened on demand, never as a map banner.
+  return '';
 }
 
 function showWarehouseSnapshotAuditReport(zoneId='') {
   const fullRuntime = window._warehouseLayoutRuntime || refreshWarehouseLayoutRuntime();
   const zone = fullRuntime.config?.zones?.find(item => String(item.id) === String(zoneId));
   const runtime = zone ? warehouseLayoutRuntimeForZone(fullRuntime,zone) : fullRuntime;
-  const audit = runtime.snapshotAudit || { issues:[],mixedEmptyRows:[],orphanRows:[],emptyOnlyLocations:[] };
-  const cleanupCandidateCount = (audit.mixedEmptyRows || []).length
-    + (audit.orphanRows || []).filter(row => row._hasRealItem).length;
-  const issueRows = (audit.issues || []).map(issue => `<div class="warehouse-match-list" style="margin-bottom:8px">
-    <div><strong>${escapeWmsText(issue.locationCode)}</strong> · ${escapeWmsText(issue.message)}</div>
-  </div>`).join('');
+  const audit = runtime.snapshotAudit || {};
+  const cleanupCandidateCount = warehouseSnapshotCleanupCandidatesV255(audit).length;
+  const issueLocationCount = new Set((audit.issues || []).map(row => String(row.locationId || row.locationCode))).size;
+  const history = audit.historicalEmptyRows || [];
+  const historyLocations = [...new Map(history.map(row => [String(row.location_id || row._locationCode),row])).values()];
+  const issueRows = (audit.issues || []).map(issue => `<div class="warehouse-match-list" style="margin-bottom:8px"><div><strong>${escapeWmsText(issue.locationCode)}</strong> · ${escapeWmsText(issue.message)}</div></div>`).join('');
+  const historyHtml = historyLocations.length ? `<div class="alert alert-blue" style="margin:14px 0;line-height:1.7">
+    <strong>ข้อมูลขอบเขตนับเดิมที่ควรเก็บ</strong><br>
+    แถว Location ว่างเหล่านี้มีประวัติอ้างอิง ส่วนสินค้าจริงถูกเพิ่มใน Snapshot หลังล็อกขอบเขตเดิม จึงเก็บแยกกันได้และไม่ใช่รายการที่ต้องล้าง
+    ${historyLocations.map(row => `<div style="margin-top:8px"><strong>${escapeWmsText(row._locationCode)}</strong> · เก็บไว้เป็นข้อมูลขอบเขตนับเดิม</div>`).join('')}
+  </div>` : '';
   openWarehouseLayoutDialog(zone ? `ตรวจข้อมูล Item · Zone ${zone.name}` : 'ตรวจข้อมูล Item ทุก Location',`
-    <div class="alert ${audit.issues?.length ? 'alert-amber' : 'alert-green'}" style="margin-bottom:13px">
-      <strong>${audit.issues?.length ? `พบ ${audit.issues.length.toLocaleString(uiLocale())} Location ที่ต้องตรวจ` : '✓ ไม่พบ Item ว่างซ้ำหรือ Item Master กำพร้า'}</strong><br>
-      ระบบตรวจ Stock Snapshot ทั้ง Session และแยก Location ว่างจริงออกจากแถวว่างที่ค้างหลังมี Item จริง
+    <div class="alert ${issueLocationCount ? 'alert-amber' : 'alert-blue'}" style="margin-bottom:13px">
+      <strong>${issueLocationCount ? `พบ ${issueLocationCount.toLocaleString(uiLocale())} Location ที่ยังต้องตรวจข้อมูล` : 'ไม่พบแถวซ้ำที่ยังต้องตรวจหรือ Item Master ที่ไม่พบในข้อมูลที่โหลด'}</strong><br>
+      รายงานข้อมูล Snapshot ${zone ? `เฉพาะ Zone ${escapeWmsText(zone.name)}` : 'ทุก Location'} ใน Session ที่เลือก — ไม่ใช่รายงานงานนับค้าง
     </div>
     <div class="warehouse-location-summary" style="margin-bottom:13px">
-      <div class="warehouse-location-summary-card pending"><span>Item ว่างซ้ำ</span><strong>${Number(audit.mixedEmptyRows?.length || 0).toLocaleString(uiLocale())}</strong></div>
+      <div class="warehouse-location-summary-card pending"><span>แถวว่างที่ต้องตรวจ</span><strong>${Number(audit.mixedEmptyRows?.length || 0).toLocaleString(uiLocale())}</strong></div>
       <div class="warehouse-location-summary-card diff"><span>Item Master ไม่พบ</span><strong>${Number(audit.orphanRows?.length || 0).toLocaleString(uiLocale())}</strong></div>
-      <div class="warehouse-location-summary-card match"><span>Location ว่างจริง</span><strong>${Number(audit.emptyOnlyLocations?.length || 0).toLocaleString(uiLocale())}</strong></div>
+      <div class="warehouse-location-summary-card match"><span>ประวัติที่ควรเก็บ (แถว)</span><strong>${history.length.toLocaleString(uiLocale())}</strong></div>
+      <div class="warehouse-location-summary-card match"><span>Location มีเฉพาะแถวว่าง</span><strong>${Number(audit.emptyOnlyLocations?.length || 0).toLocaleString(uiLocale())}</strong></div>
     </div>
-    ${issueRows || '<div class="warehouse-location-empty-items">ไม่พบข้อมูลผิดปกติ</div>'}
+    ${issueRows}${historyHtml}
     <div class="alert alert-blue" style="margin-top:13px;font-size:10px;line-height:1.6">
-      Location ว่างจริงจะยังเก็บไว้เป็น 1 งานและแสดงชื่อ “Location ว่าง” · การล้างจะลบเฉพาะ Stock Snapshot OH/AL = 0 ที่มี Item จริงใน Location เดียวกัน และไม่มี Count, Variance, LPN/Lot หรือ Annual JOB อ้างอิง
+      จำนวน Location ว่างอ้างอิงจาก Snapshot ไม่ใช่การยืนยันพื้นที่จริง แถวที่มีผลนับหรือ Baseline จะเก็บไว้ ปุ่มด้านล่างตรวจเฉพาะแถว OH/AL เป็นศูนย์ที่ยังไม่พบประวัติอ้างอิงเบื้องต้น และต้องตรวจข้อมูลอ้างอิงล่าสุดก่อนล้าง
     </div>
-    ${prof?.role === 'admin' && cleanupCandidateCount ? `<div class="warehouse-layout-dialog-actions"><button class="btn btn-red" type="button" onclick="cleanupWarehouseSnapshotIssues('${escapeWmsText(zoneId)}')">ตรวจอ้างอิงและล้างแถวที่ปลอดภัย</button></div>` : ''}
-  `,{ wide:true });
+    ${prof?.role === 'admin' && cleanupCandidateCount ? `<div class="warehouse-layout-dialog-actions"><button class="btn btn-red" type="button" onclick="cleanupWarehouseSnapshotIssues('${escapeWmsText(zoneId)}')">ตรวจอ้างอิงก่อนล้าง ${cleanupCandidateCount} แถว</button></div>` : ''}
+  `,{wide:true});
 }
 
 async function cleanupWarehouseSnapshotIssues(zoneId='') {
@@ -48375,13 +48402,7 @@ async function cleanupWarehouseSnapshotIssues(zoneId='') {
   const runtime = zone ? warehouseLayoutRuntimeForZone(fullRuntime,zone) : fullRuntime;
   const audit = runtime.snapshotAudit || {};
   if (!sessionId) return alert('กรุณาเลือก Session ก่อน');
-  const rawCandidates = [
-    ...(audit.mixedEmptyRows || []),
-    ...(audit.orphanRows || []).filter(row => row._hasRealItem),
-  ];
-  const candidates = [...new Map(rawCandidates
-    .filter(row => row?.id && Number(row.onhand_qty || 0) === 0 && Number(row.al_qty || 0) === 0)
-    .map(row => [String(row.id),row])).values()];
+  const candidates = warehouseSnapshotCleanupCandidatesV255(audit);
   if (!candidates.length) {
     alert('ไม่พบแถว OH/AL = 0 ที่เข้าเงื่อนไขล้างอย่างปลอดภัย');
     return;
@@ -48407,7 +48428,7 @@ async function cleanupWarehouseSnapshotIssues(zoneId='') {
     .filter(row => locationIds.includes(row.location_id))
     .map(row => row.id)
     .filter(Boolean);
-  const [detailResult,annualResult,approvalResult,paperResult,foundResult] = await Promise.all([
+  const [detailResult,annualResult,approvalResult,paperResult,foundResult,freshCountsResult,baselineResult] = await Promise.all([
     fetchSupabaseRowsByValues(
       'stock_snapshot_detail','id,session_id,location_id,item_id','location_id',locationIds,
       query => query.eq('session_id',sessionId),
@@ -48427,12 +48448,19 @@ async function cleanupWarehouseSnapshotIssues(zoneId='') {
       'found_items','id,session_id,location_id,item_id','location_id',locationIds,
       query => query.eq('session_id',sessionId),
     ),
+    fetchSupabaseRowsByValues(
+      'count_records','id,assignment_id,item_id','assignment_id',candidateAssignmentIds,
+    ),
+    fetchSupabaseRowsByValues(
+      'audit_log','id,assignment_id,item_id','assignment_id',candidateAssignmentIds,
+      query => query.eq('session_id',sessionId).eq('action',WMS_COUNT_BASELINE_ACTION),
+    ),
   ]);
-  if (detailResult.error || annualResult.error || approvalResult.error || paperResult.error || foundResult.error) {
-    alert(`ตรวจข้อมูลอ้างอิงไม่สำเร็จ: ${(detailResult.error || annualResult.error || approvalResult.error || paperResult.error || foundResult.error).message}`);
+  if (detailResult.error || annualResult.error || approvalResult.error || paperResult.error || foundResult.error || freshCountsResult.error || baselineResult.error) {
+    alert(`ตรวจข้อมูลอ้างอิงไม่สำเร็จ: ${(detailResult.error || annualResult.error || approvalResult.error || paperResult.error || foundResult.error || freshCountsResult.error || baselineResult.error).message}`);
     return;
   }
-  (approvalResult.data || []).forEach(record => {
+  [...(approvalResult.data || []),...(freshCountsResult.data || []),...(baselineResult.data || [])].forEach(record => {
     const assignment = assignmentById.get(String(record.assignment_id || ''));
     if (assignment?.location_id && record.item_id) protectedKeys.add(`${assignment.location_id}|${record.item_id}`);
   });
@@ -48447,11 +48475,11 @@ async function cleanupWarehouseSnapshotIssues(zoneId='') {
     return !protectedKeys.has(key) && !linkedKeys.has(key);
   });
   if (!safeRows.length) {
-    alert('ทุกแถวมี LPN/Lot หรือ Annual JOB อ้างอิง จึงไม่ลบและซ่อนจากงานปัจจุบันแทน');
+    alert('แถวที่ตรวจมีประวัติหรือข้อมูลอ้างอิง จึงเก็บไว้และไม่ลบ');
     return;
   }
   const locationCount = new Set(safeRows.map(row => row.location_id)).size;
-  if (!confirm(`ยืนยันล้าง ${safeRows.length.toLocaleString(uiLocale())} Stock Snapshot จาก ${locationCount.toLocaleString(uiLocale())} Location?\n\nระบบตรวจแล้วว่า OH/AL = 0 และไม่มี Count, Variance, LPN/Lot หรือ Annual JOB อ้างอิง\nItem Master และประวัติอื่นจะไม่ถูกลบ`)) return;
+  if (!confirm(`ยืนยันล้าง ${safeRows.length.toLocaleString(uiLocale())} Stock Snapshot จาก ${locationCount.toLocaleString(uiLocale())} Location?\n\nผลตรวจล่าสุด: OH/AL = 0 และไม่พบ Count, Baseline, Variance, LPN/Lot, Annual JOB, Paper Count หรือ Found Item อ้างอิง\nItem Master และประวัติอื่นจะไม่ถูกลบ`)) return;
 
   const deletedIds = [];
   for (let start=0; start<safeRows.length; start+=100) {
@@ -48459,6 +48487,8 @@ async function cleanupWarehouseSnapshotIssues(zoneId='') {
     const { data,error } = await sb.from('stock_snapshot')
       .delete()
       .eq('session_id',sessionId)
+      .eq('onhand_qty',0)
+      .eq('al_qty',0)
       .in('id',ids)
       .select('id');
     if (error) {
@@ -48515,6 +48545,7 @@ function warehouseLayoutViewHtml(runtime) {
       ${zones.length ? `<label class="warehouse-layout-control"><span>ค้นหา LOCATION</span><input value="${escapeWmsText(S._layoutSearch || '')}" placeholder="เช่น B-02-015-D" oninput="updateWarehouseLayoutSearch(this.value)"></label>` : ''}
       ${prof?.role === 'admin' ? `<button class="btn btn-ghost" type="button" onclick="openWarehouseLayoutEditor()">${navIconSvg('manage',17)} ตั้งค่าผังแม่</button>` : ''}
       ${zones.length ? `<button class="btn btn-blue" type="button" onclick="showWarehouseLayoutMatchReport(false,'${escapeWmsText(currentZoneId)}')">ตรวจสอบและจับคู่</button>` : ''}
+      ${zones.length ? `<button class="btn btn-ghost" type="button" onclick="showWarehouseSnapshotAuditReport('${escapeWmsText(currentZoneId)}')">ดูข้อมูล Item</button>` : ''}
     </div>
   </div>`;
   if (!zones.length || !zone) return `<div class="warehouse-layout-shell">${hero}${warehouseLayoutEmptyHtml()}</div>`;
@@ -48530,7 +48561,7 @@ function warehouseLayoutViewHtml(runtime) {
   const planPercentText = planMetrics.countPercent.toLocaleString(uiLocale(),{minimumFractionDigits:1,maximumFractionDigits:1});
   return `<div class="warehouse-layout-shell">
     ${hero}
-    ${warehouseLayoutSnapshotAuditAlertHtml(zoneRuntime,currentZoneId)}
+
     <section class="warehouse-layout-metric-section master">
       <div class="warehouse-layout-metric-heading"><span>ข้อมูลผังแม่</span><small>จำนวนช่องตามโครงสร้าง Layout</small></div>
       <div class="warehouse-layout-kpis">
