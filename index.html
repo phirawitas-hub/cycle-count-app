@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
+<!-- V2.58: concise Annual JOB progress and uppercase Location scope from the JOB original rows. -->
+<!-- V2.57: visible picker boundaries, stable Handheld panels, retained option scroll, and no scanner refocus while choosing. -->
+<!-- V2.56: serialize Count entry through handoff, close committed forms, and recover post-save failures without resubmitting quantities. -->
 <!-- V2.55: distinguish preserved original count scope from unresolved snapshot issues; protect referenced rows from cleanup. -->
 <!-- V2.54: retain the original baseline membership across subsequent WMS imports and disclose later stock separately. -->
 <!-- V2.53: disclose unmatched count history; never infer or transfer a count between Items. -->
@@ -25376,6 +25379,96 @@ body.count-calculator-open { overflow:hidden !important; }
 .warehouse-location-cell.status-history_review,.warehouse-matrix-cell.status-history_review { background:#7e22ce; color:#fff; }
 .work-tracker-status.history_review { background:#f3e8ff; color:#7e22ce; }
 </style>
+<style>
+/* V2.57: explicit form boundaries for Android WebView / rugged Handheld. */
+#app .multi-filter-trigger,
+#app .count-remark-trigger,
+body .count-remark-trigger {
+  border:1px solid #748b90 !important;
+  border-color:var(--theme-input-border,#748b90) !important;
+  background:var(--theme-input-bg,#fff) !important;
+}
+#app .multi-filter-panel,
+body .count-remark-menu,
+#app .count-remark-menu {
+  border:2px solid #718a90 !important;
+  background:#fff;
+  background:var(--theme-card-bg,#fff) !important;
+  box-shadow:0 12px 30px rgba(28,49,54,.22) !important;
+  box-sizing:border-box;
+}
+#app .multi-filter-panel .multi-filter-option input[type="checkbox"],
+#app .count-remark-option input[type="checkbox"],
+body .count-remark-option input[type="checkbox"] {
+  -webkit-appearance:none !important;
+  appearance:none !important;
+  box-sizing:border-box !important;
+  display:inline-block !important;
+  width:22px !important;height:22px !important;min-width:22px !important;min-height:22px !important;
+  flex:0 0 22px !important;
+  padding:0 !important;margin:0 !important;
+  border:2px solid #637e85 !important;border-radius:5px !important;
+  background:#fff !important;box-shadow:none !important;
+  vertical-align:middle;transition:none !important;
+}
+#app .multi-filter-panel .multi-filter-option input[type="checkbox"]:checked,
+#app .count-remark-option input[type="checkbox"]:checked,
+body .count-remark-option input[type="checkbox"]:checked {
+  border-color:#087e83 !important;
+  background-color:#087e83 !important;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M4 10l4 4 8-9' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+  background-position:center !important;background-size:18px 18px !important;background-repeat:no-repeat !important;
+}
+#app .multi-filter-option input[type="checkbox"]:focus-visible,
+body .count-remark-option input[type="checkbox"]:focus-visible {outline:3px solid #f3a930 !important;outline-offset:2px !important;}
+#app .multi-filter-panel.is-viewport-panel {
+  display:flex !important;flex-direction:column !important;
+  overflow:hidden !important;min-height:0 !important;
+  overscroll-behavior:contain;touch-action:pan-y;
+}
+#app .multi-filter-panel[hidden] {display:none !important;}
+#app .multi-filter-panel.is-viewport-panel .multi-filter-options {
+  flex:1 1 auto;min-height:0 !important;max-height:none !important;
+  overflow-y:auto !important;overflow-x:hidden !important;
+  overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;
+}
+#app .multi-filter-panel.is-viewport-panel .multi-filter-actions {flex:0 0 auto;}
+#app .multi-filter-option,body .count-remark-option {min-height:44px;box-sizing:border-box;touch-action:pan-y;}
+body .count-remark-options {
+  max-height:220px;max-height:min(260px,42vh);
+  overflow-y:auto !important;overflow-x:hidden !important;
+  overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;
+}
+body .count-issue-modal-body {touch-action:pan-y;}
+@media(max-width:760px) {
+  body .count-issue-modal input[type="text"],body .count-issue-modal select {font-size:16px !important;}
+}
+@media(forced-colors:active) {
+  #app .multi-filter-panel .multi-filter-option input[type="checkbox"],body .count-remark-option input[type="checkbox"] {
+    appearance:auto !important;-webkit-appearance:checkbox !important;background-image:none !important;
+  }
+}
+</style>
+<style>
+/* V2.58 — compact Annual JOB progress with a readable Location scope. */
+#app .annual-job-meta-v258 {
+  display:flex;
+  align-items:baseline;
+  flex-wrap:wrap;
+  column-gap:5px;
+  row-gap:2px;
+}
+#app .annual-job-location-v258 {
+  color:var(--theme-heading-color) !important;
+  font-size:13px !important;
+  font-weight:900 !important;
+  letter-spacing:.02em;
+  text-transform:uppercase;
+}
+@media(max-width:600px) {
+  #app .annual-job-location-v258 { flex-basis:100%;font-size:12px !important; }
+}
+</style>
 </head>
 <body data-build="v1-190">
 <div id="app"></div>
@@ -25383,7 +25476,7 @@ body.count-calculator-open { overflow:hidden !important; }
 <script>
 // V2.50: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.55';
+const APP_VERSION = '2.58';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -31032,6 +31125,7 @@ function go(page, extra = {}, navOptions = {}) {
   if (deferNavigationDuringSaveV251(() => go(page,extra,navOptions))) return;
   document.body.classList.remove('counter-picker-open');
   const currentPage = S?.page || '';
+  const leavingSavedCountV256 = currentPage === 'c-count' && document.querySelector('.count-handheld-page')?.dataset.countSaveLocked === 'true';
   if (currentPage === 'ad-branding' && page !== 'ad-branding' && S._brandingSavedSnapshot) {
     S._activeThemeSetId = S._brandingSavedSnapshot.activeThemeSetId || '';
     applyBrandingSettings(S._brandingSavedSnapshot, false);
@@ -31075,6 +31169,11 @@ function go(page, extra = {}, navOptions = {}) {
     window.scrollTo(0, 0);
   } catch (err) {
     console.error("Render Error:", err);
+    if (leavingSavedCountV256 && page !== 'c-tasks') {
+      go('c-tasks',{_autoOpenNextCount:null},{replace:true});
+      showActionSuccessToast('บันทึกยอดแล้ว แต่เปิดหน้าถัดไปไม่ได้ กรุณาตรวจจากรายการงาน',{title:'บันทึกยอดแล้ว'});
+      return;
+    }
     alert(`เกิดข้อผิดพลาดในการแสดงหน้าจอ: ${err.message}`);
   }
 }
@@ -32272,12 +32371,20 @@ function setMultiFilterOptions(id,options,selectedValues,onChange) {
   const selected = normalizeMultiFilterValues(selectedValues).filter(value => allowed.has(value));
   const selectedSet = new Set(selected);
   _multiFilterCallbacks.set(id,typeof onChange === 'function' ? onChange : null);
+  const scrollTop = container.scrollTop;
+  const signature = JSON.stringify(unique);
+  if (container._optionsSignatureV257 === signature) {
+    container.querySelectorAll('.multi-filter-option-input').forEach(box => { box.checked = selectedSet.has(String(box.value)); });
+  } else {
   container.innerHTML = unique.length ? unique.map(option => `<label class="multi-filter-option">
     <input class="multi-filter-option-input" type="checkbox" value="${escapeWmsText(option.value)}"
       data-label="${escapeWmsText(option.label)}" ${selectedSet.has(option.value)?'checked':''}
       onchange="commitMultiFilter('${id}')">
     <span>${escapeWmsText(option.label)}</span>
   </label>`).join('') : `<div class="multi-filter-empty">${uiCopy('ไม่มีตัวเลือก','No Options')}</div>`;
+    container._optionsSignatureV257 = signature;
+  }
+  container.scrollTop = scrollTop;
   updateMultiFilterSummary(id);
   return selected;
 }
@@ -32339,22 +32446,36 @@ function restoreMultiFilterPanel(id) {
   delete panel._multiFilterAnchor;
 }
 
+// A portalled panel is no longer a child of .multi-filter. Focus protection
+// must include the panel itself and all open Count pickers.
+function handheldPickerOpenV257() {
+  return Boolean(document.querySelector('.multi-filter.open,.multi-filter-panel:not([hidden]),.count-remark-menu:not([hidden]),.counter-picker-menu:not([hidden]),.count-issue-backdrop.open'));
+}
+function focusPickerTriggerV257(trigger) {
+  if (!trigger?.isConnected) return;
+  const scrolls = [];
+  for (let node=trigger.parentElement;node;node=node.parentElement) scrolls.push([node,node.scrollLeft,node.scrollTop]);
+  const x=window.scrollX,y=window.scrollY;
+  try { trigger.focus({preventScroll:true}); } catch (_) { trigger.focus(); }
+  for (const [node,left,top] of scrolls) { node.scrollLeft=left;node.scrollTop=top; }
+  if (window.scrollX !== x || window.scrollY !== y) window.scrollTo(x,y);
+}
 function positionMultiFilterPanel(id) {
   const panel = Q(`${id}-panel`);
   const anchor = multiFilterPanelAnchor(id);
   if (!panel || panel.hidden || !anchor) return;
-  const viewportWidth = Math.max(280,window.innerWidth || document.documentElement.clientWidth || 0);
-  const viewportHeight = Math.max(320,window.innerHeight || document.documentElement.clientHeight || 0);
-  const margin = viewportWidth <= 700 ? 12 : 14;
+  const viewport = window.visualViewport;
+  const viewportWidth = viewport?.width || window.innerWidth || document.documentElement.clientWidth;
+  const viewportHeight = viewport?.height || window.innerHeight || document.documentElement.clientHeight;
+  const offsetLeft = viewport?.offsetLeft || 0;
+  const offsetTop = viewport?.offsetTop || 0;
+  const compact = isNarrowHandheldTerminal();
+  const margin = Math.min(12,viewportWidth/10,viewportHeight/10);
   const gap = 8;
   const anchorRect = anchor.getBoundingClientRect();
-  const width = viewportWidth <= 700
-    ? viewportWidth - (margin * 2)
-    : Math.min(380,Math.max(260,anchorRect.width),viewportWidth - (margin * 2));
-  const left = viewportWidth <= 700
-    ? margin
-    : Math.max(margin,Math.min(anchorRect.left,viewportWidth - width - margin));
-
+  const availableWidth = Math.max(1,viewportWidth-2*margin);
+  const width = compact ? availableWidth : Math.min(380,Math.max(260,anchorRect.width),availableWidth);
+  const left = compact ? offsetLeft+margin : Math.max(offsetLeft+margin,Math.min(anchorRect.left,offsetLeft+viewportWidth-width-margin));
   panel.style.setProperty('position','fixed','important');
   panel.style.setProperty('z-index','10030','important');
   panel.style.setProperty('width',`${width}px`,'important');
@@ -32362,18 +32483,23 @@ function positionMultiFilterPanel(id) {
   panel.style.setProperty('right','auto','important');
   panel.style.setProperty('top','auto','important');
   panel.style.setProperty('bottom','auto','important');
-  panel.style.setProperty('max-height',`${Math.max(200,viewportHeight - (margin * 2))}px`,'important');
-
-  const naturalHeight = Math.min(panel.scrollHeight || 320,viewportHeight - (margin * 2));
-  const spaceBelow = viewportHeight - anchorRect.bottom - margin;
-  const spaceAbove = anchorRect.top - margin;
-  if (spaceBelow >= Math.min(naturalHeight,280) || spaceBelow >= spaceAbove) {
-    panel.style.setProperty('top',`${Math.max(margin,anchorRect.bottom + gap)}px`,'important');
-    panel.style.setProperty('max-height',`${Math.max(180,spaceBelow - gap)}px`,'important');
-  } else {
-    panel.style.setProperty('bottom',`${Math.max(margin,viewportHeight - anchorRect.top + gap)}px`,'important');
-    panel.style.setProperty('max-height',`${Math.max(180,spaceAbove - gap)}px`,'important');
+  if (compact) {
+    // Stable bottom sheet: choosing an option or scrolling its list cannot
+    // flip the panel above/below its trigger or cover the Done button.
+    const height = Math.max(1,Math.min(560,viewportHeight*.8,viewportHeight-2*margin));
+    const bottom = Math.max(margin,(window.innerHeight || viewportHeight)-offsetTop-viewportHeight+margin);
+    panel.style.setProperty('bottom',`${bottom}px`,'important');
+    panel.style.setProperty('max-height',`${height}px`,'important');
+    return;
   }
+  const below = offsetTop+viewportHeight-anchorRect.bottom-margin-gap;
+  const above = anchorRect.top-offsetTop-margin-gap;
+  const useBelow = below >= 280 || below >= above;
+  const height = Math.max(1,Math.min(viewportHeight-2*margin,useBelow ? below : above));
+  panel.style.setProperty('max-height',`${height}px`,'important');
+  const naturalHeight = Math.min(panel.scrollHeight || 320,height);
+  const top = useBelow ? anchorRect.bottom+gap : anchorRect.top-gap-naturalHeight;
+  panel.style.setProperty('top',`${Math.max(offsetTop+margin,Math.min(top,offsetTop+viewportHeight-naturalHeight-margin))}px`,'important');
 }
 
 function closeMultiFilter(id) {
@@ -32384,7 +32510,7 @@ function closeMultiFilter(id) {
   if (panel) panel.hidden = true;
   trigger?.setAttribute('aria-expanded','false');
   restoreMultiFilterPanel(id);
-  trigger?.focus();
+  focusPickerTriggerV257(trigger);
 }
 
 function closeAllMultiFilters(exceptId='') {
@@ -32427,13 +32553,14 @@ function toggleMultiFilter(id) {
 }
 
 document.addEventListener('click',event => {
-  if (!event.target.closest('.multi-filter')) closeAllMultiFilters();
+  if (!event.target.closest('.multi-filter,.multi-filter-panel')) closeAllMultiFilters();
 });
 document.addEventListener('keydown',event => {
   if (event.key === 'Escape' && document.querySelector('.multi-filter.open')) closeAllMultiFilters();
 });
 let _multiFilterPositionFrame = 0;
-function scheduleOpenMultiFilterPosition() {
+function scheduleOpenMultiFilterPosition(event) {
+  if (event?.target?.closest?.('.multi-filter-panel')) return;
   if (_multiFilterPositionFrame) return;
   _multiFilterPositionFrame = requestAnimationFrame(() => {
     _multiFilterPositionFrame = 0;
@@ -32444,6 +32571,8 @@ function scheduleOpenMultiFilterPosition() {
 }
 window.addEventListener('resize',scheduleOpenMultiFilterPosition);
 document.addEventListener('scroll',scheduleOpenMultiFilterPosition,true);
+window.visualViewport?.addEventListener('resize',scheduleOpenMultiFilterPosition);
+window.visualViewport?.addEventListener('scroll',scheduleOpenMultiFilterPosition);
 
 const SUCCESS_FEEDBACK_POLICY = Object.freeze({
   major: 'modal',
@@ -32522,10 +32651,9 @@ let _countResultPopupTimer = null;
 
 function closeCountResultPopup() {
   const backdrop = Q('count-result-backdrop');
-  if (!backdrop) return;
   clearTimeout(_countResultPopupTimer);
   _countResultPopupTimer = null;
-  backdrop.remove();
+  backdrop?.remove();
   document.body.style.overflow = _countResultPreviousOverflow;
   const resolve = _countResultPopupResolve;
   _countResultPopupResolve = null;
@@ -32560,7 +32688,7 @@ function showCountResultPopup(options={}) {
         ${message ? `<p class="count-result-message">${escapeWmsText(message)}</p>` : ''}
       </section>`;
     document.body.appendChild(backdrop);
-    navigator.vibrate?.(['success','info'].includes(kind) ? 55 : [55,35,55]);
+    try { navigator.vibrate?.(['success','info'].includes(kind) ? 55 : [55,35,55]); } catch (_) {}
     _countResultPopupTimer = window.setTimeout(closeCountResultPopup,duration);
   });
 }
@@ -37540,6 +37668,7 @@ function handheldScanFeedback(kind,title,value='',detail='') {
 
 function focusHardwareScanTarget(targetOrId,{ select=true }={}) {
   const target = typeof targetOrId === 'string' ? Q(targetOrId) : targetOrId;
+  if (handheldPickerOpenV257() && !target?.closest?.('.multi-filter-panel,.count-remark-menu,.counter-picker-menu,.count-issue-backdrop.open')) return false;
   if (!target || target.disabled || target.hidden || target.closest?.('[hidden]')) return false;
   try { target.focus({ preventScroll:true }); } catch (_) { target.focus(); }
   if (select) target.select?.();
@@ -37573,7 +37702,7 @@ function clearTaskLocationFocusTimers() {
 }
 
 function focusTaskLocationCapture({ force=false,reconnect=false }={}) {
-  if (S?.page !== 'c-tasks' || Q('scanOverlay')) return false;
+  if (S?.page !== 'c-tasks' || Q('scanOverlay') || handheldPickerOpenV257()) return false;
   if (!force && Date.now() < _taskLocationFocusHoldUntil) return false;
   const target = Q('task_hardware_scan');
   if (!target) return false;
@@ -37665,6 +37794,7 @@ function focusMatchedCountItemV222(match,qtyInput=null) {
 }
 
 function countEntryAutofocusBlocked() {
+  if (handheldPickerOpenV257()) return true;
   if (Q('scanOverlay') || Q('count-pause-backdrop')) return true;
   return [...document.querySelectorAll(
     '.counter-picker-menu:not([hidden]),.count-remark-menu:not([hidden]),.count-issue-backdrop,.count-calculator-backdrop:not([hidden])',
@@ -38009,7 +38139,7 @@ document.addEventListener('pointerup',event => {
   if (event.target?.closest?.('#task_hardware_scan,.handheld-laser-bar')) return;
   // Keep the filter open while the user is choosing options. Reconnect the
   // scanner only after an outside tap closes the filter.
-  if (event.target?.closest?.('.multi-filter')) return;
+  if (event.target?.closest?.('.multi-filter,.multi-filter-panel') || handheldPickerOpenV257()) return;
   // Once a tap/click has completed, reconnect the Android scanner IME to the
   // capture field. This does not close the filter; it only restores the text
   // destination used by the physical scan button.
@@ -40320,6 +40450,10 @@ function refreshCountEntrySummary() {
 }
 
 function handleCountQtyInput(input) {
+  const saving = currentCountSaveV256();
+  const entry = saving?.fields.find(entry => entry.field === input);
+  if (entry) { input.value = entry.value;return; }
+  if (input.disabled) return;
   normalizeCountQtyInput(input);
   input.classList.toggle('ok',input.value !== '');
   const savedValue = String(input.dataset.countSavedValue ?? '');
@@ -40351,6 +40485,139 @@ function isMissingCountSaveRpcV122(error) {
   the server. Keep the legacy path only for installations that have not applied
   the companion SQL yet and whose original RLS already permits the write.
 */
+// V2.56: one user operation owns Count saving AND its post-save handoff.
+const _countSaveStatesV256 = new Map();
+function currentCountSaveV256(aid=window._countFoundContext?.assignmentId) {
+  return _countSaveStatesV256.get(String(aid || '')) || null;
+}
+function lockSavedCountFormV256(state) {
+  if (!state) return;
+  state.blocked = true;
+  if (state.root) state.root.dataset.countSaveLocked = 'true';
+  for (const entry of state.fields) { entry.field.readOnly = true;entry.field.disabled = true; }
+  if (state.button) state.button.disabled = true;
+  closeCountNumericKeypad();
+}
+function markCountTerminalV256(aid,status) {
+  const state = currentCountSaveV256(aid);
+  if (!state || !['completed','approved','round3_done'].includes(String(status))) return;
+  state.terminal = true;
+  lockSavedCountFormV256(state);
+}
+function recordCountSaveErrorV256(aid,box,message) {
+  const state = currentCountSaveV256(aid);
+  if (state) state.error = new Error(String(message || 'ตรวจสอบผลบันทึกไม่สำเร็จ'));
+  if (box) box.innerHTML = errBox(message);
+}
+function countHandoffFailureV256(state,error) {
+  if (!state) return false;
+  console.warn('Count post-save handoff failed:',error?.message || error);
+  if (!state.confirmed && !state.uncertain && !state.serverClosed) {
+    recordCountSaveErrorV256(state.aid,Q('ca'),error?.message || 'บันทึกไม่สำเร็จ');
+    return false;
+  }
+  lockSavedCountFormV256(state);
+  try { if (Q('count-result-backdrop')) closeCountResultPopup(); } catch (_) {}
+  const message = state.serverClosed
+    ? 'งานนี้ส่งตรวจหรือปิดแล้ว กรุณาตรวจสถานะจากรายการงาน ไม่สามารถแก้ยอดจากหน้าเดิมได้'
+    : state.terminal
+    ? 'บันทึกสำเร็จแล้ว แต่เปิดงานถัดไปไม่ได้ กรุณาตรวจสถานะจากรายการงาน'
+    : state.confirmed
+      ? 'บันทึกยอดแล้ว แต่ขั้นตอนถัดไปยังไม่สำเร็จ กรุณาตรวจสถานะจากรายการงานก่อนทำต่อ'
+      : 'ยังยืนยันผลบันทึกไม่ได้ กรุณาตรวจประวัติจากรายการงานก่อนส่งยอดซ้ำ';
+  const box = Q('ca');
+  if (box) box.innerHTML = `<div class="alert alert-amber">${escapeWmsText(message)}<br><small>${escapeWmsText(error?.message || '')}</small><br><button type="button" class="btn btn-ghost" onclick="go('c-tasks',{_autoOpenNextCount:null}, {replace:true})">กลับรายการงาน</button></div>`;
+  // Keep partial/uncertain workflows visible: Found Item submission may still
+  // need attention, so do not discard its input by automatically leaving.
+  if (!state.terminal) return false;
+  // Respect a menu already chosen by the user. A fallback never auto-opens
+  // another Count or retries a write whose outcome is uncertain.
+  if (!_pendingSaveNavigationV251 || _pendingSaveNavigationV251.priority < 1) {
+    _pendingSaveNavigationV251 = {priority:0,navigate:() => {
+      try {
+        go('c-tasks',{_autoOpenNextCount:null}, {replace:true});
+        showActionSuccessToast(message,{title:state.confirmed ? 'บันทึกยอดแล้ว' : 'ตรวจผลบันทึก'});
+      } catch (navigationError) {
+        console.warn('Count fallback navigation failed:',navigationError);
+      }
+    }};
+  }
+  return false;
+}
+function protectCountOperationV256(operation,assignmentForArgs) {
+  const guarded = protectSaveWorkflowV251('count-workflow',async function(aid,args,receiver) {
+    const state = currentCountSaveV256(aid);
+    try {
+      const result = await operation.apply(receiver,args);
+      if (state.error && (state.confirmed || state.uncertain || state.serverClosed)) return countHandoffFailureV256(state,state.error);
+      return result;
+    } catch (error) {
+      return countHandoffFailureV256(state,error);
+    } finally {
+      // A queued route may run only after protectSaveWorkflowV251 releases.
+      // Keep the old form closed until the new form is rendered.
+      if (state.confirmed && (_pendingSaveNavigationV251 || state.terminal)) lockSavedCountFormV256(state);
+      if (!state.blocked) {
+        for (const entry of state.fields) entry.field.readOnly = entry.readOnly;
+        if (state.button) { state.button.disabled = state.buttonDisabled;state.button.textContent = state.buttonText; }
+      }
+      if (state.root) delete state.root.dataset.countSaveBusy;
+      _countSaveStatesV256.delete(aid);
+    }
+  },aid => aid);
+  return function(...args) {
+    const aid = String(assignmentForArgs(...args) || '');
+    const root = document.querySelector('.count-handheld-page');
+    // Do not enqueue a second operation with a different value or entry point.
+    if (!aid || _countSaveStatesV256.has(aid) || root?.dataset.countSaveLocked === 'true') return Promise.resolve(false);
+    const fields = [...document.querySelectorAll('.count-handheld-page .cqty')].map(field => ({field,readOnly:field.readOnly,value:field.value}));
+    const button = Q('cb');
+    const state = {aid,root,fields,button,buttonDisabled:button?.disabled,buttonText:button?.textContent,
+      confirmed:false,terminal:false,uncertain:false,blocked:false,error:null};
+    _countSaveStatesV256.set(aid,state);
+    if (root) root.dataset.countSaveBusy = 'true';
+    for (const entry of fields) entry.field.readOnly = true;
+    if (button) button.disabled = true;
+    return guarded.call(this,aid,args,this);
+  };
+}
+function protectCountWriteV256(save) {
+  return async function(records) {
+    const state = currentCountSaveV256(records?.[0]?.assignment_id);
+    try {
+      const result = await save.apply(this,arguments);
+      if (state) {
+        if (!result?.error) {
+          const rows = Array.isArray(result?.data) ? result.data : [];
+          const confirmed = (records || []).every(record => rows.some(row =>
+            String(row.assignment_id) === String(record.assignment_id) && String(row.item_id) === String(record.item_id)
+            && row.count_qty !== null && row.count_qty !== undefined
+            && Number(row.round) === Number(record.round) && Number(row.count_qty) === Number(record.count_qty)));
+          if (!confirmed) {
+            state.uncertain = true;
+            state.error = new Error('ยังยืนยันผลบันทึกแต่ละรายการจากเซิร์ฟเวอร์ไม่ได้');
+            return {data:null,error:state.error};
+          }
+          state.confirmed = true;
+        } else {
+          state.error = result.error;
+          if (result.error.code === '42501' && String(result.error.message || '').includes('Location นี้ส่งตรวจหรือปิดงานแล้ว')) {
+            state.serverClosed = true;
+            state.terminal = true;
+          }
+          // Server validation rejections have SQL/PostgREST codes. A failed
+          // transport response without a code must be checked before retrying.
+          state.uncertain = !result.error.code || ['57014'].includes(result.error.code);
+        }
+      }
+      return result;
+    } catch (error) {
+      if (state) { state.uncertain = true;state.error = error; }
+      throw error;
+    }
+  };
+}
+
 async function saveCountRecordsV122(records) {
   const cleanRecords = (records || []).map(record => ({
     assignment_id:record.assignment_id,
@@ -40602,7 +40869,7 @@ async function loadCCount() {
 
   const [{ data: rawSnaps }, { data: rawDetails }, { data: sessInfo }, { data: counterNames }, { data: countRemarkRows }, rules, existingCountsResult, baselineAuditResult] = await Promise.all([
     sb.from('stock_snapshot')
-      .select('item_id,onhand_qty,al_qty,items(id,code,description)')
+      .select('session_id,location_id,created_at,item_id,onhand_qty,al_qty,items(id,code,description)')
       .eq('session_id', asgn.session_id)
       .eq('location_id', asgn.location_id),
     sb.from('stock_snapshot_detail')
@@ -41500,6 +41767,7 @@ function openCountNumericKeypad(input) {
 }
 
 function setCountKeypadValue(nextValue) {
+  if (currentCountSaveV256() || document.querySelector('.count-handheld-page')?.dataset.countSaveLocked === 'true') return;
   const input = _countKeypadInput;
   if (!input) return;
   input.value = String(nextValue || '').slice(0,18);
@@ -41561,7 +41829,7 @@ async function resolveCountWorkflowAfterSave({
 
   const [snapshotResult,countResult,rules,baselineAuditResult] = await Promise.all([
     sb.from('stock_snapshot')
-      .select('item_id,onhand_qty,items(code)')
+      .select('session_id,location_id,created_at,item_id,onhand_qty,items(code)')
       .eq('session_id',assignment.session_id)
       .eq('location_id',assignment.location_id),
     sb.from('count_records')
@@ -41578,6 +41846,7 @@ async function resolveCountWorkflowAfterSave({
   if (snapshotResult.error || countResult.error || baselineAuditResult.error) {
     const error = snapshotResult.error || countResult.error || baselineAuditResult.error;
     if (alertBox) alertBox.innerHTML = errBox(`บันทึก Count แล้ว แต่ตรวจสอบ DIFF ไม่สำเร็จ: ${error.message}`);
+    if (currentCountSaveV256(aid)) currentCountSaveV256(aid).error = error;
     return { handled:true,error };
   }
 
@@ -41620,6 +41889,7 @@ async function resolveCountWorkflowAfterSave({
       return { handled:true,error:statusResult.error || new Error('Assignment status was not updated') };
     }
     assignment.status = desiredStatus;
+    markCountTerminalV256(aid,desiredStatus);
     if (window._countFoundContext) window._countFoundContext.assignmentStatus = desiredStatus;
     await logAudit(
       assignment.session_id,
@@ -41631,6 +41901,7 @@ async function resolveCountWorkflowAfterSave({
       aid,
     );
   }
+  markCountTerminalV256(aid,desiredStatus);
   // Keep the current Count header and the next Location in step with the
   // durable Assignment update without waiting for a full My Tasks reload.
   syncCachedAssignmentStatusV246(aid,desiredStatus);
@@ -41640,7 +41911,8 @@ async function resolveCountWorkflowAfterSave({
       await refreshAnnualJobsForLocation(assignment.session_id,assignment.location_id,annualJobId);
     } catch (error) {
       if (alertBox) alertBox.innerHTML = errBox(`บันทึก Count แล้ว แต่สรุปสถานะ JOB ไม่สำเร็จ: ${error.message || error}`);
-      return { handled:true,error };
+      if (currentCountSaveV256(aid)) currentCountSaveV256(aid).error = error;
+    return { handled:true,error };
     }
   }
 
@@ -41748,7 +42020,10 @@ async function confirmAndAdvanceCountInput(input,{ source='screen-keypad' }={}) 
         annualJobId:window._countEntryAnnualJobId || '',
         source,
       });
-      if (workflowResult.handled) return !workflowResult.error;
+      if (workflowResult.handled) {
+        if (workflowResult.error && currentCountSaveV256()) currentCountSaveV256().error = workflowResult.error;
+        return !workflowResult.error;
+      }
     }
 
     input.dispatchEvent(new Event('change',{ bubbles:true }));
@@ -41756,9 +42031,9 @@ async function confirmAndAdvanceCountInput(input,{ source='screen-keypad' }={}) 
     const allCountsComplete = inputs.length > 0
       && inputs.every(field => String(field.value || '').trim() !== '');
     const submitButton = Q('cb');
-    if (allCountsComplete && submitButton && !submitButton.disabled) {
+    if (allCountsComplete && submitButton && (!submitButton.disabled || currentCountSaveV256())) {
       closeCountNumericKeypad();
-      submitButton.click();
+      await submitCountCoreV256(window._countFoundContext?.assignmentId,window._countEntryRound || 1,inputs.map(field => field.dataset.itemId).join(','),window._countEntryAnnualJobId || '');
       return true;
     }
 
@@ -42190,7 +42465,7 @@ document.addEventListener('touchmove',event => {
 document.addEventListener('touchend',event => {
   if (!document.body.classList.contains('count-screen-locked')) return;
   const target = event.target instanceof Element ? event.target : event.target?.parentElement;
-  if (target?.closest('button,input,textarea,select,a,.count-numeric-keypad')) return;
+  if (target?.closest('button,input,textarea,select,a,.count-numeric-keypad,.count-remark-menu,.multi-filter-panel,.count-issue-modal')) return;
   const touch = event.changedTouches?.[0];
   if (!touch) return;
   const now = Date.now();
@@ -42373,6 +42648,7 @@ function toggleCountRemarkDropdown(event, itemId) {
   const trigger = Q(`count_remark_trigger_${itemId}`);
   if (!menu || !trigger) return;
   const willOpen = menu.hidden;
+  if (willOpen) { clearHandheldCountFocusTimers();clearTaskLocationFocusTimers();closeCountNumericKeypad({blur:false}); }
   closeCountRemarkDropdowns(itemId);
   menu.hidden = !willOpen;
   trigger.setAttribute('aria-expanded', String(willOpen));
@@ -42793,6 +43069,7 @@ async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
   const defaultButtonText = btn?.dataset?.defaultLabel || 'ยืนยันยอด';
   const restoreButton = () => {
     if (!btn) return;
+    if (currentCountSaveV256(aid)?.blocked) return;
     btn.disabled = false;
     btn.textContent = defaultButtonText;
   };
@@ -42817,7 +43094,7 @@ async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
     const { data:asgn,error:assignmentReadError } = await sb.from('assignments')
       .select('location_id,session_id,status').eq('id',aid).single();
     if (assignmentReadError || !asgn) {
-      al.innerHTML = errBox(assignmentReadError?.message || 'ไม่พบ Assignment ที่ต้องการพัก');
+      recordCountSaveErrorV256(aid,al,assignmentReadError?.message || 'ไม่พบ Assignment ที่ต้องการพัก');
       restoreButton();
       return;
     }
@@ -42826,7 +43103,7 @@ async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
       .eq('id',aid)
       .select('id,status');
     if (progressError || !progressRows?.length) {
-      al.innerHTML = errBox(progressError?.message || 'พักงานไม่สำเร็จ');
+      recordCountSaveErrorV256(aid,al,progressError?.message || 'พักงานไม่สำเร็จ');
       restoreButton();
       return;
     }
@@ -42900,7 +43177,7 @@ async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
         const itemCode = importCodeKey(info?.item_code || rawItemCode);
         const itemResult = await sb.from('items').select('id,code,description,uom').eq('code',itemCode).maybeSingle();
         if (itemResult.error) {
-          al.innerHTML = errBox(itemResult.error.message);
+          recordCountSaveErrorV256(aid,al,itemResult.error.message);
           return;
         }
         foundPayloads.push({
@@ -42937,7 +43214,7 @@ async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
     .eq('assignment_id',aid)
     .in('item_id',filledIds);
   if (previousResult.error) {
-    al.innerHTML = errBox(previousResult.error.message);
+    recordCountSaveErrorV256(aid,al,previousResult.error.message);
     return;
   }
   const previousCountMap = new Map(
@@ -42953,7 +43230,7 @@ async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
 
   if (error) {
     filledIds.forEach(iid => setCountEntryItemResult(iid,'warning','บันทึกไม่สำเร็จ'));
-    al.innerHTML = errBox(error.message);
+    recordCountSaveErrorV256(aid,al,error.message);
     restoreButton(); return;
   }
 
@@ -42970,7 +43247,7 @@ async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
   try {
     for (const payload of foundPayloads) await createFoundItemRecord(payload);
   } catch (foundError) {
-    al.innerHTML = errBox(`บันทึกยอดว่างแล้ว แต่ส่งงานที่พบเพิ่มไม่สำเร็จ: ${foundError.message || foundError}`);
+    recordCountSaveErrorV256(aid,al,`บันทึกยอดว่างแล้ว แต่ส่งงานที่พบเพิ่มไม่สำเร็จ: ${foundError.message || foundError}`);
     restoreButton();
     return;
   }
@@ -42978,7 +43255,7 @@ async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
   const { data: asgn, error:assignmentReadError } = await sb.from('assignments')
     .select('location_id,session_id,status').eq('id', aid).single();
   if (assignmentReadError || !asgn) {
-    al.innerHTML = errBox(assignmentReadError?.message || 'ไม่พบ Assignment หลังบันทึกยอด');
+    recordCountSaveErrorV256(aid,al,assignmentReadError?.message || 'ไม่พบ Assignment หลังบันทึกยอด');
     restoreButton(); return;
   }
 
@@ -43014,7 +43291,10 @@ async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
       source:'page-save-button',
     });
     if (workflowResult.handled) {
-      if (workflowResult.error) restoreButton();
+      if (workflowResult.error) {
+        if (currentCountSaveV256(aid)) currentCountSaveV256(aid).error = workflowResult.error;
+        restoreButton();
+      }
       return;
     }
   }
@@ -43028,7 +43308,7 @@ async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
       .eq('id',aid)
       .select('id,status');
     if (progressError || !progressRows?.length) {
-      al.innerHTML = errBox(progressError?.message || 'บันทึก Count แล้ว แต่ปรับสถานะงานระหว่างนับไม่สำเร็จ');
+      recordCountSaveErrorV256(aid,al,progressError?.message || 'บันทึก Count แล้ว แต่ปรับสถานะงานระหว่างนับไม่สำเร็จ');
       restoreButton();
       return;
     }
@@ -43081,7 +43361,7 @@ async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
   }
 
   const [snapshotResult,roundResult,rules,baselineAuditResult] = await Promise.all([
-    sb.from('stock_snapshot').select('item_id,onhand_qty')
+    sb.from('stock_snapshot').select('session_id,location_id,created_at,item_id,onhand_qty,items(code)')
       .eq('session_id', asgn.session_id).eq('location_id', asgn.location_id),
     sb.from('count_records').select('item_id,round,count_qty').eq('assignment_id', aid),
     getSessionRules(asgn.session_id),
@@ -43092,7 +43372,7 @@ async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
       .order('created_at'),
   ]);
   if (snapshotResult.error || roundResult.error || baselineAuditResult.error) {
-    al.innerHTML = errBox((snapshotResult.error || roundResult.error || baselineAuditResult.error).message);
+    recordCountSaveErrorV256(aid,al,(snapshotResult.error || roundResult.error || baselineAuditResult.error).message);
     restoreButton(); return;
   }
   const rawSnaps = snapshotResult.data;
@@ -43137,13 +43417,13 @@ async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
       .eq('id',aid)
       .select('id,status');
     if (startError || !startedRows?.length) {
-      al.innerHTML = errBox(startError?.message || 'อัปเดตสถานะ Assignment ไม่สำเร็จ');
+      recordCountSaveErrorV256(aid,al,startError?.message || 'อัปเดตสถานะ Assignment ไม่สำเร็จ');
       restoreButton(); return;
     }
     try {
       await refreshAnnualJobsForLocation(asgn.session_id,asgn.location_id,annualJobId);
     } catch (statusError) {
-      al.innerHTML = errBox(`บันทึกยอดแล้ว แต่สรุปสถานะงานไม่สำเร็จ: ${statusError.message || statusError}`);
+      recordCountSaveErrorV256(aid,al,`บันทึกยอดแล้ว แต่สรุปสถานะงานไม่สำเร็จ: ${statusError.message || statusError}`);
       restoreButton(); return;
     }
   } else {
@@ -43152,10 +43432,11 @@ async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
       .eq('id',aid)
       .select('id,status');
     if (updateError || !updatedRows?.length) {
-      al.innerHTML = errBox(updateError?.message || 'อัปเดตสถานะ Assignment ไม่สำเร็จ');
+      recordCountSaveErrorV256(aid,al,updateError?.message || 'อัปเดตสถานะ Assignment ไม่สำเร็จ');
       restoreButton(); return;
     }
   }
+  markCountTerminalV256(aid,newStatus);
   syncCachedAssignmentStatusV246(aid,newStatus);
   await logAudit(
     asgn.session_id,
@@ -59492,6 +59773,7 @@ async function annualUnfinishedJobItemRows(rows=[],sessionId='') {
 let _annualWorkspaceJobs = [];
 let _annualWorkspaceItemCounts = {};
 let _annualWorkspaceTotalItemCounts = {};
+let _annualWorkspaceLocationSummariesV258 = {};
 let _annualWorkspaceActiveJobIds = new Set();
 let _annualNormalTransferSummaries = new Map();
 let _annualMidnightExpiryTimer = null;
@@ -59790,7 +60072,7 @@ async function loadAnnualJobWorkspace() {
     ),
     fetchPagedSupabaseRows(
       'annual_count_job_items',
-      'id,job_id,session_id,stock_snapshot_id,location_id,item_id,sort_order',
+      'id,job_id,session_id,stock_snapshot_id,location_id,item_id,sort_order,locations(code,row_no,level)',
       query => query.eq('session_id',config.sessionId),
     ),
     loadAssignmentWorkspaceData(config.sessionId)
@@ -59816,6 +60098,7 @@ async function loadAnnualJobWorkspace() {
   _annualWorkspaceJobs = annualJobs;
   _annualWorkspaceItemCounts = {};
   _annualWorkspaceTotalItemCounts = {};
+  _annualWorkspaceLocationSummariesV258 = buildAnnualJobLocationSummariesV258(annualItems);
   annualItems.forEach(row => {
     _annualWorkspaceTotalItemCounts[row.job_id] = (_annualWorkspaceTotalItemCounts[row.job_id] || 0) + 1;
   });
@@ -59897,6 +60180,63 @@ async function loadAnnualJobWorkspace() {
   scheduleAnnualMidnightExpiryCheck();
 }
 
+function annualJobCompactLocationValuesV258(values=[],limit=8) {
+  const unique = [...new Set((values || []).map(value => String(value || '').trim().toUpperCase()).filter(Boolean))]
+    .sort((left,right) => left.localeCompare(right,'en',{ numeric:true,sensitivity:'base' }));
+  if (unique.length <= limit) return unique.join(', ');
+  return `${unique.slice(0,limit).join(', ')} +${unique.length-limit}`;
+}
+
+function annualJobBayRangeV258(values=[]) {
+  const unique = [...new Set((values || []).map(value => String(value || '').trim().toUpperCase()).filter(Boolean))]
+    .sort((left,right) => left.localeCompare(right,'en',{ numeric:true,sensitivity:'base' }));
+  if (!unique.length) return '';
+  if (!unique.every(value => /^\d+$/.test(value))) return annualJobCompactLocationValuesV258(unique,8);
+  if (unique.length === 1) return unique[0];
+  const width = Math.max(...unique.map(value => value.length));
+  const first = String(Math.min(...unique.map(Number))).padStart(width,'0');
+  const last = String(Math.max(...unique.map(Number))).padStart(width,'0');
+  return first === last ? first : `${first}-${last}`;
+}
+
+function annualJobLocationSummaryV258(rows=[]) {
+  const locations = new Map();
+  (rows || []).forEach(row => {
+    const location = row?.locations || {};
+    const code = String(location.code || '').trim();
+    const key = String(row?.location_id || code || '');
+    if (!key || locations.has(key)) return;
+    const parsed = warehouseLocationCodeParts(code);
+    locations.set(key,{
+      rack:String(parsed.row || location.row_no || '').trim().toUpperCase(),
+      bay:String(parsed.bayText || '').trim().toUpperCase(),
+      level:String((parsed.hasLevel ? parsed.level : location.level) || '').trim().toUpperCase(),
+    });
+  });
+  const values = [...locations.values()];
+  return [
+    annualJobCompactLocationValuesV258(values.map(value => value.rack))
+      ? `RACK ${annualJobCompactLocationValuesV258(values.map(value => value.rack))}` : '',
+    annualJobBayRangeV258(values.map(value => value.bay))
+      ? `ช่อง ${annualJobBayRangeV258(values.map(value => value.bay))}` : '',
+    annualJobCompactLocationValuesV258(values.map(value => value.level))
+      ? `ชั้น ${annualJobCompactLocationValuesV258(values.map(value => value.level))}` : '',
+  ].filter(Boolean).join(' · ');
+}
+
+function buildAnnualJobLocationSummariesV258(rows=[]) {
+  const byJob = new Map();
+  (rows || []).forEach(row => {
+    const jobId = String(row?.job_id || '');
+    if (!jobId) return;
+    if (!byJob.has(jobId)) byJob.set(jobId,[]);
+    byJob.get(jobId).push(row);
+  });
+  return Object.fromEntries(
+    [...byJob.entries()].map(([jobId,jobRows]) => [jobId,annualJobLocationSummaryV258(jobRows)])
+  );
+}
+
 function renderAnnualJobList() {
   const list = Q('annual-job-list');
   if (!list) return;
@@ -59950,9 +60290,8 @@ function renderAnnualJobList() {
     const restorable = isAnnualJobRestorableFromNormal(job);
     const itemSummary = transferOnly
       ? `ย้ายไปจ่ายแบบปกติแล้ว ${transferredLocationCount.toLocaleString(uiLocale())} Location · ${restorable ? 'เลือก “จ่ายงานซ้ำ” เพื่อนำกลับเข้า JOB เดิมได้' : 'ไม่มีงานที่ยังไม่เสร็จให้นำกลับ'}`
-      : completed
-      ? `เสร็จแล้ว ${totalItems} / ทั้งหมด ${totalItems} รายการ Location + Item`
-      : `นับแล้ว ${completedItems} / ${totalItems} · คงเหลือ ${remainingItems} รายการ Location + Item${transferredLocationCount ? ` · ย้ายปกติ ${transferredLocationCount} Location` : ''}`;
+      : `นับแล้ว ${completedItems} / ${totalItems}`;
+    const locationSummary = transferOnly ? '' : String(_annualWorkspaceLocationSummariesV258[job.id] || '');
     const transferUserLabel = transferSummary?.userNames?.length
       ? transferSummary.userNames.join(', ')
       : 'ไม่ระบุผู้รับ';
@@ -59961,7 +60300,7 @@ function renderAnnualJobList() {
         onchange="syncAnnualJobSelection()" aria-label="เลือก ${escapeWmsText(job.job_code)}">
       <div>
         <div class="annual-job-code">${escapeWmsText(job.job_code)}</div>
-        <div class="annual-job-meta">${itemSummary}</div>
+        <div class="annual-job-meta annual-job-meta-v258"><span>${escapeWmsText(itemSummary)}</span>${locationSummary ? `<span class="annual-job-location-v258">· ${escapeWmsText(locationSummary)}</span>` : ''}</div>
         ${transferredLocationCount ? `<span class="annual-normal-transfer-badge" title="Location เหล่านี้ถูกย้ายออกจาก Annual JOB และจ่ายแบบปกติแล้ว">📍 ปกติ → ${escapeWmsText(transferUserLabel)}</span>` : ''}
       </div>
       <div class="annual-job-user">${transferOnly
@@ -71758,8 +72097,10 @@ async function deleteRemarkOption(id) {
 }
 
 // V2.51: wrap user save entry points once, including nested save phases.
-saveCountItemFromKeypad = protectSaveWorkflowV251('count-item',saveCountItemFromKeypad,input => `${window._countFoundContext?.assignmentId}|${input?.dataset?.itemId}`);
-submitCount = protectSaveWorkflowV251('count-submit',submitCount,aid => aid);
+saveCountRecordsV122 = protectCountWriteV256(saveCountRecordsV122);
+const submitCountCoreV256 = submitCount;
+confirmAndAdvanceCountInput = protectCountOperationV256(confirmAndAdvanceCountInput,() => window._countFoundContext?.assignmentId);
+submitCount = protectCountOperationV256(submitCount,aid => aid);
 saveVarianceReviewItem = protectSaveWorkflowV251('variance-item',saveVarianceReviewItem,(aid,itemId) => `${aid}|${itemId}`);
 confirmSelectedVarianceReviewItems = protectSaveWorkflowV251('variance-selection',confirmSelectedVarianceReviewItems,aid => aid);
 reopenVarianceReviewItem = protectSaveWorkflowV251('variance-reopen',reopenVarianceReviewItem,(aid,itemId) => `${aid}|${itemId}`);
