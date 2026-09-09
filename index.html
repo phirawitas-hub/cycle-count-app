@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
+<!-- V2.61: scoped Annual JOB reads and fresh, optional Count read bundles. -->
 <!-- V2.60: server-confirmed Match, DIFF and whole-work completion sounds on every device. -->
 <!-- V2.59: Handheld Count cards move Remark and Calculator above License Plate and expand long Item names. -->
 <!-- V2.58: concise Annual JOB progress and uppercase Location scope from the JOB original rows. -->
@@ -25608,7 +25609,7 @@ body.count-page-active #app .count-handheld-page.is-narrow-handheld-v259 .citem-
 <script>
 // V2.50: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.60';
+const APP_VERSION = '2.61';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -41422,6 +41423,181 @@ async function saveCountItemFromKeypad(input) {
   return true;
 }
 
+// V2.61: fresh Count reads, with one optional read-only RPC per Location.
+// Never reuse these quantities for a later load or retry a write here.
+let _countReadRpcUnavailableV261 = false;
+const _countReadMetricsV261 = [];
+
+function countReadErrorV261(message,code='COUNT_READ_INVALID') {
+  return Object.assign(new Error(message),{code});
+}
+
+function assertCountReadScopeV261(scope,actorId) {
+  if (scope !== _activePageRequestController || scope?.signal?.aborted || actorId !== me?.id) {
+    throw Object.assign(new Error('การโหลดถูกยกเลิก'),{name:'AbortError'});
+  }
+}
+
+function validateCountReadBundleV261(payload,aid,includeEntry,actorId) {
+  const a = payload?.assignment;
+  if (!payload || payload.schema_version !== 1 || payload.include_entry !== includeEntry
+      || payload.actor_id !== actorId || !a || String(a.id) !== String(aid)
+      || !a.session_id || !a.location_id || String(payload.session?.id) !== String(a.session_id)) {
+    throw countReadErrorV261('ข้อมูล Count ไม่ตรงกับ Assignment หรือ Session กรุณาเปิดงานใหม่');
+  }
+  validateDashboardRulesV252(payload.session);
+  if (includeEntry && (!a.locations || typeof a.locations.code !== 'string')) {
+    throw countReadErrorV261('โหลดรายละเอียด Location ไม่สำเร็จ กรุณาเปิดงานใหม่');
+  }
+  const extraKeys = ['details','counter_names','remark_options','type_issue_options'];
+  for (const key of ['snapshots','counts','baseline_audit',...extraKeys]) {
+    const rows = payload[key];
+    if (!Array.isArray(rows) || rows.length !== payload.row_counts?.[key]
+        || (!includeEntry && extraKeys.includes(key) && rows.length)) {
+      throw countReadErrorV261('โหลดข้อมูล Count ไม่ครบ กรุณาลองใหม่');
+    }
+    const ids = new Set();
+    const itemKeys = new Set();
+    for (const row of rows) {
+      if (!row || !row.id || ids.has(String(row.id))) {
+        throw countReadErrorV261('พบรายการซ้ำหรือข้อมูล Count ไม่ครบ กรุณาลองใหม่');
+      }
+      ids.add(String(row.id));
+      if (['snapshots','details'].includes(key)
+          && (String(row.session_id) !== String(a.session_id) || String(row.location_id) !== String(a.location_id))) {
+        throw countReadErrorV261('Stock Snapshot ไม่ตรงกับ Session และ Location ที่เปิด');
+      }
+      if (['counts','baseline_audit'].includes(key) && String(row.assignment_id) !== String(aid)) {
+        throw countReadErrorV261('ผลนับหรือประวัติ OH ไม่ตรงกับ Assignment ที่เปิด');
+      }
+      if (key === 'baseline_audit' && row.action !== WMS_COUNT_BASELINE_ACTION) {
+        throw countReadErrorV261('ประวัติ OH ไม่ตรงกับชนิดข้อมูลที่ร้องขอ');
+      }
+      // A duplicated Item/round or non-number must not silently overwrite a
+      // previous row and make an incomplete Location look finished.
+      if (key === 'counts') {
+        const itemKey = `${row.item_id}|${row.round}`;
+        if (!row.item_id || !Number.isInteger(row.round) || row.round < 1 || row.round > 3
+            || row.count_qty === null || row.count_qty === '' || !Number.isFinite(Number(row.count_qty))
+            || itemKeys.has(itemKey)) {
+          throw countReadErrorV261('ผลนับซ้ำหรือจำนวนไม่ถูกต้อง กรุณาตรวจสอบก่อนนับต่อ');
+        }
+        itemKeys.add(itemKey);
+      }
+      if (key === 'snapshots') {
+        if (!row.item_id || itemKeys.has(String(row.item_id)) || row.onhand_qty === null
+            || row.onhand_qty === '' || !Number.isFinite(Number(row.onhand_qty))) {
+          throw countReadErrorV261('Stock Snapshot ซ้ำหรือ OH ไม่ถูกต้อง กรุณาตรวจสอบก่อนนับต่อ');
+        }
+        itemKeys.add(String(row.item_id));
+      }
+    }
+  }
+  return payload;
+}
+
+async function loadCountReadFallbackV261(aid,includeEntry,scope,actorId) {
+  // Compatibility for projects that have not installed the optional RPC.
+  // Every collection is paginated, scoped, ordered, and checked for errors.
+  const assignmentResult = await sb.from('assignments')
+    .select(includeEntry
+      ? 'id,status,location_id,session_id,assigned_at,locations(code,zone,area,row_no,level),count_sessions(name)'
+      : 'id,status,location_id,session_id,assigned_at')
+    .eq('id',aid).single();
+  assertCountReadScopeV261(scope,actorId);
+  if (assignmentResult.error) throw assignmentResult.error;
+  const a = assignmentResult.data;
+  if (!a || String(a.id) !== String(aid) || !a.session_id || !a.location_id) {
+    throw countReadErrorV261('ไม่พบ Assignment หรือไม่มีสิทธิ์เปิดงานนี้');
+  }
+  const byLocation = query => query.eq('session_id',a.session_id).eq('location_id',a.location_id).order('id');
+  const empty = () => Promise.resolve({data:[],error:null});
+  const keys = ['snapshots','counts','baseline_audit','details','counter_names','remark_options','type_issue_options'];
+  const [sessionResult,...results] = await Promise.all([
+    sb.from('count_sessions').select('id,show_oh,max_rounds,repeat_match_action').eq('id',a.session_id).single(),
+    fetchPagedSupabaseRows('stock_snapshot',
+      'id,session_id,location_id,created_at,item_id,onhand_qty,al_qty,items(id,code,description)',byLocation),
+    fetchPagedSupabaseRows('count_records',
+      'id,assignment_id,item_id,round,count_qty,actual_counter_name,remark,photo_url,type_issue,counted_at',
+      query => query.eq('assignment_id',aid).order('round').order('id')),
+    fetchPagedSupabaseRows('audit_log',
+      'id,assignment_id,item_id,action,old_value,new_value,created_at',
+      query => query.eq('assignment_id',aid).eq('action',WMS_COUNT_BASELINE_ACTION).order('created_at').order('id')),
+    includeEntry ? fetchPagedSupabaseRows('stock_snapshot_detail',
+      'id,session_id,location_id,item_id,license_plate,lot,inventory_status,qty,uom',byLocation) : empty(),
+    includeEntry ? fetchPagedSupabaseRows('counter_names','id,name',
+      query => query.eq('active',true).order('name').order('id')) : empty(),
+    includeEntry ? fetchPagedSupabaseRows('remark_options','id,label',
+      query => query.eq('context','count').eq('active',true).order('label').order('id')) : empty(),
+    includeEntry ? fetchPagedSupabaseRows('type_issue_options','id,value,label,sort_order,active',
+      query => query.order('sort_order').order('label').order('id')) : empty(),
+  ]);
+  assertCountReadScopeV261(scope,actorId);
+  const failed = [sessionResult,...results].find(result => result.error);
+  if (failed) throw failed.error;
+  const payload = {schema_version:1,actor_id:actorId,include_entry:includeEntry,
+    assignment:a,session:sessionResult.data,row_counts:{}};
+  keys.forEach((key,index) => {
+    payload[key] = results[index].data || [];
+    payload.row_counts[key] = payload[key].length;
+  });
+  return payload;
+}
+
+async function loadCountReadBundleV261(aid,includeEntry=true) {
+  const scope = _activePageRequestController;
+  const actorId = me?.id;
+  const startedAt = performance.now();
+  let mode = 'rpc';
+  let outcome = 'error';
+  let rowCounts = null;
+  try {
+    if (!actorId || !aid) throw countReadErrorV261('กรุณาเข้าสู่ระบบและเลือก Assignment ใหม่');
+    let payload;
+    if (!_countReadRpcUnavailableV261) {
+      let request = sb.rpc('get_count_read_bundle_v261',{
+        p_assignment_id:aid,p_include_entry:includeEntry,
+      });
+      // This RPC is SELECT-only. Count saves keep their existing write guard.
+      if (scope?.signal && typeof request.abortSignal === 'function') request = request.abortSignal(scope.signal);
+      const {data,error} = await request;
+      assertCountReadScopeV261(scope,actorId);
+      if (error) {
+        if (['PGRST202','42883'].includes(error.code)
+            && /get_count_read_bundle_v261/.test(String(error.message || ''))) {
+          _countReadRpcUnavailableV261 = true;
+        } else {
+          // A denied, timed-out, or broken RPC must never trigger a second
+          // full read or silently fall back to cached quantities.
+          throw error;
+        }
+      } else {
+        payload = data;
+      }
+    }
+    if (_countReadRpcUnavailableV261) {
+      mode = 'paged-fallback';
+      payload = await loadCountReadFallbackV261(aid,includeEntry,scope,actorId);
+    }
+    assertCountReadScopeV261(scope,actorId);
+    validateCountReadBundleV261(payload,aid,includeEntry,actorId);
+    rowCounts = {...payload.row_counts};
+    outcome = 'ok';
+    return payload;
+  } finally {
+    // Diagnostic timings contain no IDs, quantities, notes, URLs, or tokens.
+    _countReadMetricsV261.push({at:new Date().toISOString(),kind:includeEntry ? 'count-entry' : 'count-after-save',
+      mode,outcome,elapsed_ms:Math.round(performance.now()-startedAt),row_counts:rowCounts});
+    if (_countReadMetricsV261.length > 40) _countReadMetricsV261.shift();
+  }
+}
+
+window.getCycleCountPerformanceV261 = () => ({
+  build:APP_VERSION_LABEL,
+  count_reads:_countReadMetricsV261.map(row => ({...row,row_counts:row.row_counts && {...row.row_counts}})),
+  menu_reads:typeof window.getCycleCountReadMetrics === 'function' ? window.getCycleCountReadMetrics() : [],
+});
+
 async function loadCCount() {
   window._hardwareScanReturnInputId = '';
   _countLaserModeV127 = 'qty';
@@ -41431,24 +41607,17 @@ async function loadCCount() {
   let jitemid = S.jitemid || '';
   let annualMode = Boolean(jid && jitemid);
 
-  const assignmentResult = await sb.from('assignments')
-    .select('id,status,location_id,session_id,assigned_at,locations(code,zone,area,row_no,level),count_sessions(name)')
-    .eq('id', aid).single();
-  let asgn = assignmentResult.data;
-  if (!asgn) {
-    // Assigned Work has already been loaded for the authenticated user. Keep
-    // that safe copy as a fallback for a brief direct-read/RLS delay instead
-    // of bouncing a successful Location scan back to the task list.
-    asgn = (window._myTasks || []).find(task => String(task.id) === String(aid)) || null;
-  }
-
-  if (!asgn) {
-    cnt().innerHTML = `<div class="card">
-      <div class="alert alert-red">เปิด Assignment นี้ไม่ได้ กรุณากลับไปสแกน Location อีกครั้ง</div>
-      <button type="button" class="btn btn-blue" style="margin-top:14px" onclick="go('c-tasks')">กลับไปงานที่ได้รับมอบหมาย</button>
-    </div>`;
+  let countReadV261;
+  try {
+    countReadV261 = await loadCountReadBundleV261(aid,true);
+  } catch (error) {
+    if (isAbortLikeError(error)) return;
+    cnt().innerHTML = `<div class="card">${errBox(`เปิดงานนับไม่สำเร็จ: ${error.message || error}`)}
+      <button type="button" class="btn btn-blue" style="margin-top:14px" onclick="go('c-tasks')">กลับไปงานที่ได้รับมอบหมาย</button></div>`;
     return;
   }
+  // Editable forms always use a fresh authorized Assignment; never the task-list cache.
+  const asgn = countReadV261.assignment;
 
   // ป้องกัน route ของ JOB หลุดเมื่อย้อนกลับ/สแกน/รีโหลด:
   // ตรวจจากฐานข้อมูลซ้ำว่า Location นี้อยู่ใน JOB ของ User ปัจจุบันหรือไม่
@@ -41458,6 +41627,7 @@ async function loadCCount() {
       'id,job_id,session_id,location_id,item_id,sort_order',
       query => query.eq('session_id',asgn.session_id).eq('location_id',asgn.location_id).order('sort_order'),
     );
+    if (itemResult.error) { cnt().innerHTML = errBox(itemResult.error.message); return; }
     const candidateItems = itemResult.data || [];
     if (!itemResult.error && candidateItems.length) {
       const jobResult = await fetchSupabaseRowsByValues(
@@ -41466,6 +41636,7 @@ async function loadCCount() {
         'id',
         candidateItems.map(item => item.job_id),
       );
+      if (jobResult.error) { cnt().innerHTML = errBox(jobResult.error.message); return; }
       const allowedJobs = (jobResult.data || []).filter(job =>
         job.session_id === asgn.session_id &&
         (job.assigned_to === me?.id || ['admin','supervisor'].includes(prof?.role))
@@ -41489,11 +41660,10 @@ async function loadCCount() {
       sb.from('annual_count_jobs')
         .select('id,job_code,assigned_to,status,session_id')
         .eq('id',jid).maybeSingle(),
-      sb.from('annual_count_job_items')
-        .select('id,job_id,session_id,location_id,item_id,sort_order')
-        .eq('job_id',jid)
-        .eq('location_id',asgn.location_id)
-        .order('sort_order'),
+      fetchPagedSupabaseRows('annual_count_job_items',
+        'id,job_id,session_id,location_id,item_id,sort_order',
+        query => query.eq('job_id',jid).eq('session_id',asgn.session_id)
+          .eq('location_id',asgn.location_id).order('sort_order').order('id')),
     ]);
     if (jobResult.error || itemResult.error) {
       cnt().innerHTML = errBox((jobResult.error || itemResult.error).message);
@@ -41520,30 +41690,16 @@ async function loadCCount() {
   const l   = asgn.locations;
   const sub = [l.zone, l.area, l.row_no && 'Row '+l.row_no, l.level && 'Level '+l.level].filter(Boolean).join(' · ');
 
-  const [{ data: rawSnaps }, { data: rawDetails }, { data: sessInfo }, { data: counterNames }, { data: countRemarkRows }, rules, existingCountsResult, baselineAuditResult] = await Promise.all([
-    sb.from('stock_snapshot')
-      .select('session_id,location_id,created_at,item_id,onhand_qty,al_qty,items(id,code,description)')
-      .eq('session_id', asgn.session_id)
-      .eq('location_id', asgn.location_id),
-    sb.from('stock_snapshot_detail')
-      .select('item_id,license_plate,lot,inventory_status,qty,uom')
-      .eq('session_id', asgn.session_id)
-      .eq('location_id', asgn.location_id),
-    sb.from('count_sessions').select('show_oh').eq('id', asgn.session_id).single(),
-    sb.from('counter_names').select('id,name').eq('active',true).order('name'),
-    sb.from('remark_options').select('id,label').eq('context','count').eq('active',true).order('label'),
-    getSessionRules(asgn.session_id),
-    sb.from('count_records')
-      .select('item_id,round,count_qty,actual_counter_name,remark,photo_url,type_issue,counted_at')
-      .eq('assignment_id',aid)
-      .order('round'),
-    sb.from('audit_log')
-      .select('id,assignment_id,item_id,action,old_value,new_value,created_at')
-      .eq('assignment_id',aid)
-      .eq('action',WMS_COUNT_BASELINE_ACTION)
-      .order('created_at'),
-    loadCountTypeIssueOptions(),
-  ]);
+  const {snapshots:rawSnaps,details:rawDetails,session:sessInfo,
+    counter_names:counterNames,remark_options:countRemarkRows} = countReadV261;
+  const rules = validateDashboardRulesV252(sessInfo);
+  const existingCountsResult = {data:countReadV261.counts,error:null};
+  const baselineAuditResult = {data:countReadV261.baseline_audit,error:null};
+  const typeIssueRowsV261 = countReadV261.type_issue_options;
+  window._countTypeIssueOptionsAll = typeIssueRowsV261.length ? typeIssueRowsV261 : COUNT_TYPE_ISSUES;
+  window._countTypeIssueOptions = typeIssueRowsV261.length
+    ? typeIssueRowsV261.filter(option => option.active !== false) : COUNT_TYPE_ISSUES;
+
   // การนับแบบ JOB ใช้ขอบเขตงานระดับ Location เหมือนงานปกติ:
   // โหลดสินค้ากับรายละเอียดทั้งหมดของ Location ไม่ตัดเหลือเฉพาะ ITEM ที่ใช้แบ่ง JOB
   if (baselineAuditResult?.error) {
@@ -42470,38 +42626,19 @@ async function resolveCountWorkflowAfterSave({
 }={}) {
   const alertBox = Q('ca');
   const candidateKeys = [...new Set((candidateItemIds || []).map(String).filter(Boolean))];
-  const assignmentResult = await sb.from('assignments')
-    .select('id,location_id,session_id,status')
-    .eq('id',aid)
-    .single();
-  const assignment = assignmentResult.data;
-  if (assignmentResult.error || !assignment) {
-    if (alertBox) alertBox.innerHTML = errBox(assignmentResult.error?.message || 'ไม่พบ Assignment หลังบันทึก Count');
-    return { handled:true,error:assignmentResult.error || new Error('Assignment not found') };
-  }
-
-  const [snapshotResult,countResult,rules,baselineAuditResult] = await Promise.all([
-    sb.from('stock_snapshot')
-      .select('session_id,location_id,created_at,item_id,onhand_qty,items(code)')
-      .eq('session_id',assignment.session_id)
-      .eq('location_id',assignment.location_id),
-    sb.from('count_records')
-      .select('item_id,round,count_qty')
-      .eq('assignment_id',aid)
-      .order('round'),
-    getSessionRules(assignment.session_id),
-    sb.from('audit_log')
-      .select('id,assignment_id,item_id,action,old_value,new_value,created_at')
-      .eq('assignment_id',aid)
-      .eq('action',WMS_COUNT_BASELINE_ACTION)
-      .order('created_at'),
-  ]);
-  if (snapshotResult.error || countResult.error || baselineAuditResult.error) {
-    const error = snapshotResult.error || countResult.error || baselineAuditResult.error;
-    if (alertBox) alertBox.innerHTML = errBox(`บันทึก Count แล้ว แต่ตรวจสอบ DIFF ไม่สำเร็จ: ${error.message}`);
+  let countReadV261;
+  try {
+    countReadV261 = await loadCountReadBundleV261(aid,false);
+  } catch (error) {
+    if (alertBox) alertBox.innerHTML = errBox(`บันทึก Count แล้ว แต่ตรวจสอบผลล่าสุดไม่สำเร็จ: ${error.message || error}`);
     if (currentCountSaveV256(aid)) currentCountSaveV256(aid).error = error;
-    return { handled:true,error };
+    return {handled:true,error};
   }
+  const assignment = countReadV261.assignment;
+  const snapshotResult = {data:countReadV261.snapshots,error:null};
+  const countResult = {data:countReadV261.counts,error:null};
+  const baselineAuditResult = {data:countReadV261.baseline_audit,error:null};
+  const rules = validateDashboardRulesV252(countReadV261.session);
 
   applyWmsCountBaselines(snapshotResult.data || [],[assignment],baselineAuditResult.data || []);
   const snapshots = operationalStockSnapshotRows(snapshotResult.data || []);
@@ -44156,6 +44293,7 @@ async function refreshAnnualJobsForLocation(sessionId,locationId,fallbackJobId='
     'job_id,session_id,location_id',
     query => query.eq('session_id',sessionId).eq('location_id',locationId),
   );
+  if (result.error) throw result.error;
   const jobIds = new Set([fallbackJobId].filter(Boolean));
   if (!result.error) {
     (result.data || []).forEach(item => { if (item.job_id) jobIds.add(item.job_id); });
@@ -44187,6 +44325,7 @@ async function refreshAnnualJobProgress(jobId) {
       'id,session_id,location_id,status',
       'location_id',
       locationIds,
+      query => query.eq('session_id',job.session_id).order('id'),
     );
     if (assignmentsResult.error) throw assignmentsResult.error;
     const assignments = (assignmentsResult.data || []).filter(row => row.session_id === job.session_id);
@@ -44195,9 +44334,10 @@ async function refreshAnnualJobProgress(jobId) {
     const [snapshotResult,countResult,rules,baselineAuditResult] = await Promise.all([
       fetchSupabaseRowsByValues(
         'stock_snapshot',
-        'session_id,location_id,item_id,onhand_qty,items(code)',
+        'session_id,location_id,created_at,item_id,onhand_qty,items(code)',
         'location_id',
         locationIds,
+        query => query.eq('session_id',job.session_id).order('id'),
       ),
       fetchSupabaseRowsByValues(
         'count_records',
@@ -44205,7 +44345,7 @@ async function refreshAnnualJobProgress(jobId) {
         'assignment_id',
         assignmentIds,
       ),
-      getSessionRules(job.session_id),
+      loadDashboardRulesV252(job.session_id),
       fetchSupabaseRowsByValues(
         'audit_log',
         'id,assignment_id,item_id,action,old_value,new_value,created_at',
@@ -45968,21 +46108,39 @@ async function fetchSnapshotsForAssignmentScopes(assignments,columns='session_id
   });
   if (!locationsBySession.size) return { data:[],error:null };
 
-  const rows = [];
+  const scope = _activePageRequestController;
+  const batches = [];
   for (const [sessionId,locationSet] of locationsBySession) {
-    const locationIds = [...locationSet];
-    for (let start=0; start<locationIds.length; start+=SUPABASE_IN_BATCH_SIZE) {
-      const locationBatch = locationIds.slice(start,start+SUPABASE_IN_BATCH_SIZE);
-      const result = await fetchPagedSupabaseRows(
-        'stock_snapshot',
-        columns,
-        query => query.eq('session_id',sessionId).in('location_id',locationBatch),
-      );
-      if (result.error) return result;
-      rows.push(...(result.data || []));
+    const ids = [...locationSet];
+    for (let start=0; start<ids.length; start+=SUPABASE_IN_BATCH_SIZE) {
+      batches.push({sessionId,locationIds:ids.slice(start,start+SUPABASE_IN_BATCH_SIZE)});
     }
   }
-  return { data:rows,error:null };
+  const results = new Array(batches.length);
+  let nextBatch = 0;
+  let failure = null;
+  const isStale = () => scope !== _activePageRequestController || scope?.signal?.aborted;
+  const cancelled = () => Object.assign(new Error('การโหลดถูกยกเลิก'),{name:'AbortError'});
+  const worker = async () => {
+    while (!failure) {
+      if (isStale()) { failure = cancelled(); return; }
+      const index = nextBatch++;
+      if (index >= batches.length) return;
+      const {sessionId,locationIds} = batches[index];
+      try {
+        const result = await fetchPagedSupabaseRows('stock_snapshot',columns,
+          query => query.eq('session_id',sessionId).in('location_id',locationIds).order('id'));
+        if (isStale()) { failure = cancelled(); return; }
+        if (result.error) { failure = result.error; return; }
+        results[index] = result.data || [];
+      } catch (error) { failure = error; }
+    }
+  };
+  // Two batches instead of serial session/location reads. Keep deterministic
+  // order and return no partial dataset if any batch or page failed.
+  await Promise.all(Array.from({length:Math.min(2,batches.length)},worker));
+  if (isStale()) failure = cancelled();
+  return failure ? {data:null,error:failure} : {data:results.flat(),error:null};
 }
 
 const WORK_TRACKER_FILTERS = {
