@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
+<!-- V2.60: server-confirmed Match, DIFF and whole-work completion sounds on every device. -->
 <!-- V2.59: Handheld Count cards move Remark and Calculator above License Plate and expand long Item names. -->
 <!-- V2.58: concise Annual JOB progress and uppercase Location scope from the JOB original rows. -->
 <!-- V2.57: visible picker boundaries, stable Handheld panels, retained option scroll, and no scanner refocus while choosing. -->
@@ -25565,6 +25566,41 @@ body.count-page-active #app .count-handheld-page.is-narrow-handheld-v259 .citem-
     .count-item-quick-actions .count-item-action-label { font-size:7px !important; }
 }
 </style>
+<style>
+/* V2.60 — system-wide Count result sounds. */
+.count-sound-settings-v260{display:grid;gap:16px}
+.count-sound-grid-v260{display:grid;gap:12px}
+.count-sound-card-v260{display:grid;grid-template-columns:52px minmax(0,1fr);gap:13px;padding:15px;border:1px solid var(--theme-border-color);border-radius:16px;background:var(--theme-card-bg)}
+.count-sound-card-icon-v260{width:52px;height:52px;display:grid;place-items:center;border-radius:15px;color:var(--theme-primary-text);background:var(--theme-primary-color);font-size:24px;font-weight:900}
+.count-sound-card-copy-v260{min-width:0}
+.count-sound-card-title-v260{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.count-sound-card-title-v260 strong{display:block;color:var(--theme-heading-color);font-size:16px;font-weight:900}
+.count-sound-card-title-v260 span{display:block;margin-top:3px;color:var(--theme-muted-text-color);font-size:11px;font-weight:650;line-height:1.45}
+.count-sound-switch-v260,.count-sound-master-v260{display:flex;align-items:center;gap:7px;flex:0 0 auto;color:var(--theme-heading-color);font-size:11px;font-weight:900}
+.count-sound-switch-v260 input,.count-sound-master-v260 input{width:20px;height:20px;accent-color:var(--theme-primary-color)}
+.count-sound-file-v260{display:grid;grid-template-columns:minmax(170px,1fr) minmax(210px,.85fr);align-items:center;gap:10px;margin-top:12px}
+.count-sound-file-v260>span{min-height:42px;display:flex;align-items:center;padding:8px 11px;border:1px solid var(--theme-input-border);border-radius:12px;background:var(--theme-input-bg);color:var(--theme-body-text-color);font-size:11px;font-weight:800;overflow-wrap:anywhere}
+.count-sound-file-v260 input{min-width:0;padding:7px!important;border:1px solid var(--theme-input-border)!important;background:var(--theme-input-bg)!important;font-size:10px!important}
+.count-sound-controls-v260{display:grid;grid-template-columns:minmax(220px,1fr) auto auto;align-items:end;gap:9px;margin-top:10px}
+.count-sound-controls-v260 label{display:grid;grid-template-columns:1fr auto;gap:5px;color:var(--theme-muted-text-color);font-size:10px;font-weight:800}
+.count-sound-controls-v260 label input{grid-column:1/-1;width:100%;padding:0;box-shadow:none}
+.count-sound-controls-v260 output{color:var(--theme-primary-color);font-weight:900}
+.count-sound-rule-v260{display:flex;align-items:flex-start;gap:10px;margin-top:14px;padding:12px;border-radius:13px;background:var(--theme-secondary-bg);color:var(--theme-secondary-text);font-size:11px;line-height:1.5}
+.count-sound-rule-v260 strong{flex:0 0 auto;color:var(--theme-heading-color)}
+.count-sound-savebar-v260{position:sticky;z-index:20;bottom:0;display:flex;justify-content:flex-end;padding:12px;border:1px solid var(--theme-border-color);border-radius:16px;background:color-mix(in srgb,var(--theme-card-bg) 94%,transparent);box-shadow:0 -8px 25px rgba(20,50,54,.10);backdrop-filter:blur(10px)}
+.count-sound-savebar-v260 .btn{min-width:260px}
+@media(max-width:760px){
+ .count-sound-card-v260{grid-template-columns:42px minmax(0,1fr);gap:9px;padding:12px}
+ .count-sound-card-icon-v260{width:42px;height:42px;border-radius:12px;font-size:19px}
+ .count-sound-card-title-v260{display:grid}
+ .count-sound-switch-v260{justify-self:start}
+ .count-sound-file-v260,.count-sound-controls-v260{grid-template-columns:1fr}
+ .count-sound-controls-v260 .btn{width:100%}
+ .count-sound-master-v260{margin-top:8px}
+ .count-sound-rule-v260{display:grid}
+ .count-sound-savebar-v260 .btn{width:100%;min-width:0}
+}
+</style>
 </head>
 <body data-build="v1-190">
 <div id="app"></div>
@@ -25572,7 +25608,7 @@ body.count-page-active #app .count-handheld-page.is-narrow-handheld-v259 .citem-
 <script>
 // V2.50: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.59';
+const APP_VERSION = '2.60';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -26137,6 +26173,520 @@ const BRANDING_SYNC_VERSION = 3;
 const THEME_SETS_STORAGE_KEY = 'cycle_count_theme_sets_v1';
 const THEME_SETS_SETTING_KEY = 'ui_theme_sets_v1';
 const THEME_SET_LIMIT = 24;
+const COUNT_SOUND_SETTING_KEY_V260 = 'count_sound_settings_v1';
+const COUNT_SOUND_STORAGE_KEY_V260 = 'cycle_count_sound_settings_v1';
+const COUNT_SOUND_BUCKET_V260 = 'count-photos';
+const COUNT_SOUND_TYPES_V260 = ['match','diff','complete'];
+const COUNT_SOUND_DEFAULTS_V260 = Object.freeze({
+  enabled:true,
+  sounds:{
+    match:{ enabled:true,volume:.72,url:'',name:'เสียงเริ่มต้น · ยอดตรง' },
+    diff:{ enabled:true,volume:.78,url:'',name:'เสียงเริ่มต้น · DIFF' },
+    complete:{ enabled:true,volume:.82,url:'',name:'เสียงเริ่มต้น · จบงาน' },
+  },
+  updatedAt:'',updatedBy:'',version:1,
+});
+
+let _countSoundSettingsV260 = null;
+let _countSoundLoadedV260 = false;
+let _countSoundContextV260 = null;
+let _countSoundCurrentSourceV260 = null;
+let _countSoundFallbackAudioV260 = null;
+let _countSoundPlaySerialV260 = 0;
+let _countSoundDeferredEventV260 = null;
+const _countSoundBufferPromisesV260 = new Map();
+const _countSoundPendingKeysV260 = new Set();
+let _countSoundDraftV260 = null;
+let _countSoundDraftFilesV260 = {};
+let _countSoundPreviewAudioV260 = null;
+
+function countSoundSafeUrlV260(value='') {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  try {
+    const parsed = new URL(raw,window.location?.href || SUPA_URL);
+    const allowedOrigins = new Set([
+      new URL(SUPA_URL).origin,
+      window.location?.origin,
+    ].filter(Boolean));
+    if (parsed.protocol !== 'https:' && parsed.origin !== window.location?.origin) return '';
+    return allowedOrigins.has(parsed.origin) ? parsed.href : '';
+  } catch (_) {
+    return '';
+  }
+}
+
+function normalizeCountSoundSettingsV260(input={}) {
+  const source = input && typeof input === 'object' ? input : {};
+  const sourceSounds = source.sounds && typeof source.sounds === 'object' ? source.sounds : source;
+  const sounds = {};
+  COUNT_SOUND_TYPES_V260.forEach(type => {
+    const fallback = COUNT_SOUND_DEFAULTS_V260.sounds[type];
+    const row = sourceSounds?.[type] && typeof sourceSounds[type] === 'object' ? sourceSounds[type] : {};
+    const volumeNumber = Number(row.volume);
+    sounds[type] = {
+      enabled:row.enabled !== false,
+      volume:Number.isFinite(volumeNumber) ? Math.max(0,Math.min(1,volumeNumber)) : fallback.volume,
+      url:countSoundSafeUrlV260(row.url),
+      name:String(row.name || '').trim().slice(0,180) || fallback.name,
+    };
+  });
+  return {
+    enabled:source.enabled !== false,
+    sounds,
+    updatedAt:String(source.updatedAt || ''),
+    updatedBy:String(source.updatedBy || '').slice(0,120),
+    version:1,
+  };
+}
+
+function readLocalCountSoundSettingsV260() {
+  try {
+    const raw = localStorage.getItem(COUNT_SOUND_STORAGE_KEY_V260);
+    return normalizeCountSoundSettingsV260(raw ? JSON.parse(raw) : COUNT_SOUND_DEFAULTS_V260);
+  } catch (_) {
+    return normalizeCountSoundSettingsV260(COUNT_SOUND_DEFAULTS_V260);
+  }
+}
+
+function persistLocalCountSoundSettingsV260(settings) {
+  try {
+    localStorage.setItem(COUNT_SOUND_STORAGE_KEY_V260,JSON.stringify(settings));
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function applyCountSoundSettingsV260(input,persistLocal=true) {
+  _countSoundSettingsV260 = normalizeCountSoundSettingsV260(input);
+  if (persistLocal) persistLocalCountSoundSettingsV260(_countSoundSettingsV260);
+  preloadCountSoundsV260();
+  return _countSoundSettingsV260;
+}
+
+function applyCentralCountSoundSettingsV260(value) {
+  if (!value) return false;
+  const remote = normalizeCountSoundSettingsV260(value);
+  const current = normalizeCountSoundSettingsV260(_countSoundSettingsV260 || COUNT_SOUND_DEFAULTS_V260);
+  if (JSON.stringify(remote) === JSON.stringify(current)) return false;
+  applyCountSoundSettingsV260(remote);
+  _countSoundLoadedV260 = true;
+  return true;
+}
+
+async function loadCountSoundSettingsV260(force=false) {
+  if (_countSoundLoadedV260 && !force) return _countSoundSettingsV260;
+  const localSettings = readLocalCountSoundSettingsV260();
+  let selected = localSettings;
+  if (sb) {
+    try {
+      const {data,error} = await sb.from('app_settings')
+        .select('value').eq('key',COUNT_SOUND_SETTING_KEY_V260).maybeSingle();
+      if (error) throw error;
+      if (data?.value) selected = normalizeCountSoundSettingsV260(data.value);
+    } catch (error) {
+      console.warn('โหลดเสียงแจ้งเตือนส่วนกลางไม่สำเร็จ ใช้ค่าที่บันทึกในอุปกรณ์นี้:',error?.message || error);
+    }
+  }
+  _countSoundLoadedV260 = true;
+  return applyCountSoundSettingsV260(selected);
+}
+
+function ensureCountSoundContextV260() {
+  if (_countSoundContextV260 && _countSoundContextV260.state !== 'closed') return _countSoundContextV260;
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) return null;
+  try {
+    _countSoundContextV260 = new AudioContextClass();
+    return _countSoundContextV260;
+  } catch (_) {
+    return null;
+  }
+}
+
+function unlockCountSoundAudioV260() {
+  const context = ensureCountSoundContextV260();
+  let resumeTask = null;
+  try { resumeTask = context?.resume?.(); } catch (_) {}
+  const deferred = _countSoundDeferredEventV260;
+  if (deferred) {
+    _countSoundDeferredEventV260 = null;
+    Promise.resolve(resumeTask).finally(() => playCountResultSoundV260(deferred.kind,deferred.key));
+  }
+}
+
+document.addEventListener('pointerdown',unlockCountSoundAudioV260,true);
+document.addEventListener('keydown',event => {
+  if (['Enter',' ','NumpadEnter'].includes(event.key) || event.code === 'NumpadEnter') unlockCountSoundAudioV260();
+},true);
+
+async function countSoundBufferV260(url) {
+  const safeUrl = countSoundSafeUrlV260(url);
+  if (!safeUrl) return null;
+  if (_countSoundBufferPromisesV260.has(safeUrl)) return _countSoundBufferPromisesV260.get(safeUrl);
+  const promise = (async() => {
+    const context = ensureCountSoundContextV260();
+    if (!context) return null;
+    const response = await fetch(safeUrl,{ cache:'force-cache' });
+    if (!response.ok) throw new Error(`โหลดเสียง HTTP ${response.status}`);
+    const bytes = await response.arrayBuffer();
+    return context.decodeAudioData(bytes.slice(0));
+  })().catch(error => {
+    _countSoundBufferPromisesV260.delete(safeUrl);
+    console.warn('เตรียมไฟล์เสียงไม่สำเร็จ:',error?.message || error);
+    return null;
+  });
+  _countSoundBufferPromisesV260.set(safeUrl,promise);
+  return promise;
+}
+
+function preloadCountSoundsV260() {
+  const settings = _countSoundSettingsV260 || readLocalCountSoundSettingsV260();
+  if (!settings.enabled) return;
+  COUNT_SOUND_TYPES_V260.forEach(type => {
+    const row = settings.sounds[type];
+    if (row?.enabled && row.url) void countSoundBufferV260(row.url);
+  });
+}
+
+function stopCountSoundV260() {
+  try { _countSoundCurrentSourceV260?.stop?.(); } catch (_) {}
+  try { _countSoundCurrentSourceV260?.disconnect?.(); } catch (_) {}
+  _countSoundCurrentSourceV260 = null;
+  try { _countSoundFallbackAudioV260?.pause?.(); } catch (_) {}
+  _countSoundFallbackAudioV260 = null;
+}
+
+function playDefaultCountToneV260(type,volume=1) {
+  const context = ensureCountSoundContextV260();
+  if (!context || context.state !== 'running') return false;
+  const melodies = {
+    match:[[660,0,.09],[880,.10,.16]],
+    diff:[[330,0,.14],[260,.16,.22]],
+    complete:[[523,0,.11],[659,.12,.11],[784,.24,.14],[1047,.39,.30]],
+  };
+  const notes = melodies[type] || melodies.match;
+  const output = context.createGain();
+  output.gain.value = Math.max(.02,Math.min(1,Number(volume) || .7)) * .22;
+  output.connect(context.destination);
+  const sources = [];
+  notes.forEach(([frequency,start,duration]) => {
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = type === 'diff' ? 'triangle' : 'sine';
+    oscillator.frequency.value = frequency;
+    gain.gain.setValueAtTime(.0001,context.currentTime+start);
+    gain.gain.exponentialRampToValueAtTime(1,context.currentTime+start+.012);
+    gain.gain.exponentialRampToValueAtTime(.0001,context.currentTime+start+duration);
+    oscillator.connect(gain);gain.connect(output);
+    oscillator.start(context.currentTime+start);
+    oscillator.stop(context.currentTime+start+duration+.03);
+    sources.push(oscillator);
+  });
+  _countSoundCurrentSourceV260 = { stop:() => sources.forEach(source => { try { source.stop(); } catch (_) {} }),disconnect:() => output.disconnect() };
+  setTimeout(() => { try { output.disconnect(); } catch (_) {} },1000);
+  return true;
+}
+
+async function playCountSoundV260(type,{ force=false,override=null }={}) {
+  if (!COUNT_SOUND_TYPES_V260.includes(type)) return false;
+  const settings = _countSoundSettingsV260 || readLocalCountSoundSettingsV260();
+  const sound = override || settings.sounds[type];
+  if (!force && (!settings.enabled || !sound?.enabled)) return false;
+  const volume = Math.max(0,Math.min(1,Number(sound?.volume) || 0));
+  if (volume <= 0) return false;
+  const requestSerial = ++_countSoundPlaySerialV260;
+  stopCountSoundV260();
+  const context = ensureCountSoundContextV260();
+  try { await context?.resume?.(); } catch (_) {}
+  if (sound?.url && context) {
+    const buffer = await countSoundBufferV260(sound.url);
+    if (requestSerial !== _countSoundPlaySerialV260) return false;
+    if (buffer && context.state === 'running') {
+      const source = context.createBufferSource();
+      const gain = context.createGain();
+      source.buffer = buffer;gain.gain.value = volume;
+      source.connect(gain);gain.connect(context.destination);
+      source.onended = () => { try { source.disconnect();gain.disconnect(); } catch (_) {} };
+      source.start(0);
+      _countSoundCurrentSourceV260 = source;
+      return true;
+    }
+  }
+  if (context?.state === 'running') return playDefaultCountToneV260(type,volume);
+  if (sound?.url && typeof Audio === 'function') {
+    try {
+      const audio = new Audio(sound.url);audio.volume=volume;audio.preload='auto';
+      await audio.play();_countSoundFallbackAudioV260=audio;return true;
+    } catch (_) {}
+  }
+  return false;
+}
+
+function countSoundDedupeKeyV260(key='') {
+  return `cycle-count-sound-v260:${String(key || '').slice(0,500)}`;
+}
+
+function countSoundWasPlayedV260(key='') {
+  try { return sessionStorage.getItem(countSoundDedupeKeyV260(key)) === '1'; }
+  catch (_) { return false; }
+}
+
+function markCountSoundPlayedV260(key='') {
+  try { sessionStorage.setItem(countSoundDedupeKeyV260(key),'1'); } catch (_) {}
+}
+
+async function playCountResultSoundV260(kind,key='') {
+  const settings = _countSoundSettingsV260 || readLocalCountSoundSettingsV260();
+  if (!settings.enabled || !settings.sounds?.[kind]?.enabled) return false;
+  const stableKey = String(key || `${kind}:${Date.now()}`);
+  if (countSoundWasPlayedV260(stableKey) || _countSoundPendingKeysV260.has(stableKey)) return false;
+  _countSoundPendingKeysV260.add(stableKey);
+  try {
+    const started = await playCountSoundV260(kind);
+    if (started) markCountSoundPlayedV260(stableKey);
+    else _countSoundDeferredEventV260 = { kind,key:stableKey };
+    return started;
+  } catch (error) {
+    console.warn('เล่นเสียงผลตรวจนับไม่สำเร็จ:',error?.message || error);
+    _countSoundDeferredEventV260 = { kind,key:stableKey };
+    return false;
+  } finally {
+    _countSoundPendingKeysV260.delete(stableKey);
+  }
+}
+
+function countDecisionBatchSoundKindV260(decisions=[]) {
+  const results = (decisions || []).map(decision => {
+    const rounds = decision?.rounds || {};
+    const numbers = Object.keys(rounds).map(Number).filter(Number.isFinite).sort((a,b) => b-a);
+    if (!decision?.snapshot || !numbers.length) return '';
+    const latestQty = Number(rounds[numbers[0]]);
+    const onhandQty = Number(decision.snapshot.onhand_qty);
+    if (!Number.isFinite(latestQty) || !Number.isFinite(onhandQty)) return '';
+    return latestQty === onhandQty ? 'match' : 'diff';
+  }).filter(Boolean);
+  return results.includes('diff') ? 'diff' : results.length ? 'match' : '';
+}
+
+function countDecisionReceiptKeyV260(aid,decisions=[]) {
+  const rows = (decisions || []).map(decision => {
+    const rounds = decision?.rounds || {};
+    const number = Object.keys(rounds).map(Number).filter(Number.isFinite).sort((a,b) => b-a)[0] || 0;
+    return `${String(decision?.itemId || '')}:${number}:${String(rounds[number] ?? '')}`;
+  }).sort();
+  return `count:${String(aid || '')}:${rows.join('|')}`;
+}
+
+function countSoundLabelV260(type) {
+  return ({match:'ยอดตรง',diff:'ยอด DIFF',complete:'จบงาน'})[type] || type;
+}
+
+function countSoundIconV260(type) {
+  return ({match:'✓',diff:'!',complete:'♫'})[type] || '♪';
+}
+
+function countSoundDescriptionV260(type) {
+  return ({
+    match:'เล่นหลัง Supabase ยืนยันว่า Count ล่าสุดตรงกับ OH',
+    diff:'เล่นหลัง Supabase ยืนยันว่า Count ล่าสุดต่างจาก OH รวม Blind Count',
+    complete:'เล่นเมื่อจบ Location ปกติ หรือเมื่อ Annual JOB ครบทั้ง JOB',
+  })[type] || '';
+}
+
+function countSoundSettingCardV260(type,settings) {
+  const row = settings.sounds[type];
+  const volume = Math.round(Number(row.volume || 0)*100);
+  return `<article class="count-sound-card-v260" data-sound-type="${type}">
+    <div class="count-sound-card-icon-v260" aria-hidden="true">${countSoundIconV260(type)}</div>
+    <div class="count-sound-card-copy-v260">
+      <div class="count-sound-card-title-v260">
+        <div><strong>${countSoundLabelV260(type)}</strong><span>${countSoundDescriptionV260(type)}</span></div>
+        <label class="count-sound-switch-v260"><input id="count_sound_enabled_${type}" type="checkbox" ${row.enabled?'checked':''}><span>เปิดใช้</span></label>
+      </div>
+      <div class="count-sound-file-v260">
+        <span id="count_sound_name_${type}">${escapeWmsText(row.name)}</span>
+        <input id="count_sound_file_${type}" type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/aac,.mp3,.wav,.ogg,.m4a,.aac"
+          onchange="selectCountSoundFileV260('${type}',this)">
+      </div>
+      <div class="count-sound-controls-v260">
+        <label>ความดัง <output id="count_sound_volume_value_${type}">${volume}%</output>
+          <input id="count_sound_volume_${type}" type="range" min="0" max="100" step="5" value="${volume}"
+            oninput="Q('count_sound_volume_value_${type}').textContent=this.value+'%'">
+        </label>
+        <button class="btn btn-blue btn-sm" type="button" onclick="previewCountSoundV260('${type}')">▶ ทดลองฟัง</button>
+        <button class="btn btn-ghost btn-sm" type="button" onclick="resetCountSoundDraftV260('${type}')">ใช้เสียงเริ่มต้น</button>
+      </div>
+    </div>
+  </article>`;
+}
+
+function cleanupCountSoundDraftFilesV260() {
+  Object.values(_countSoundDraftFilesV260 || {}).forEach(entry => {
+    try { if (entry?.objectUrl) URL.revokeObjectURL(entry.objectUrl); } catch (_) {}
+  });
+  _countSoundDraftFilesV260 = {};
+}
+
+async function loadAdCountSoundsV260() {
+  if (prof?.role !== 'admin') { go(home());return; }
+  cleanupCountSoundDraftFilesV260();
+  const settings = await loadCountSoundSettingsV260(true);
+  _countSoundDraftV260 = normalizeCountSoundSettingsV260(settings);
+  cnt().innerHTML = `<div class="admin-settings-shell count-sound-settings-v260">
+    <div class="alert alert-blue">🔊 เสียงนี้ใช้กับคอมพิวเตอร์ มือถือ แท็บเล็ต และ Handheld ทุกเครื่อง และซิงก์ค่าระหว่างเครื่องเมื่อออนไลน์</div>
+    <section class="admin-settings-card">
+      <div class="admin-settings-head"><div><h2>เสียงแจ้งเตือนการตรวจนับ</h2>
+        <p>รองรับ MP3, WAV, OGG, M4A หรือ AAC ไม่เกิน 8 MB ต่อไฟล์ · ถ้าไม่เลือกไฟล์ ระบบใช้เสียงเริ่มต้น</p></div>
+        <label class="count-sound-master-v260"><input id="count_sound_master_enabled" type="checkbox" ${settings.enabled?'checked':''}><span>เปิดเสียงทั้งระบบ</span></label>
+      </div>
+      <div class="count-sound-grid-v260">${COUNT_SOUND_TYPES_V260.map(type => countSoundSettingCardV260(type,settings)).join('')}</div>
+      <div class="count-sound-rule-v260"><strong>ลำดับเสียง</strong><span>ถ้ารายการสุดท้ายทำให้งานจบ ระบบเล่นเสียง “จบงาน” เพียงเสียงเดียว เพื่อไม่ให้เสียงซ้อน</span></div>
+    </section>
+    <div id="count-sound-settings-alert"></div>
+    <div class="count-sound-savebar-v260">
+      <button class="btn btn-blue" id="count-sound-save-v260" type="button" onclick="saveCountSoundSettingsV260()">💾 บันทึกและซิงก์ทุกอุปกรณ์</button>
+    </div>
+  </div>`;
+}
+
+function validateCountSoundFileV260(file) {
+  if (!file) throw new Error('กรุณาเลือกไฟล์เสียง');
+  if (Number(file.size || 0) > 8*1024*1024) throw new Error('ไฟล์เสียงต้องมีขนาดไม่เกิน 8 MB');
+  const extension = String(file.name || '').split('.').pop().toLowerCase();
+  if (!['mp3','wav','ogg','m4a','aac'].includes(extension)) throw new Error('รองรับเฉพาะ MP3, WAV, OGG, M4A หรือ AAC');
+  return extension;
+}
+
+function selectCountSoundFileV260(type,input) {
+  if (!COUNT_SOUND_TYPES_V260.includes(type)) return;
+  const file = input?.files?.[0];
+  if (!file) return;
+  try {
+    validateCountSoundFileV260(file);
+    const previous = _countSoundDraftFilesV260[type];
+    if (previous?.objectUrl) URL.revokeObjectURL(previous.objectUrl);
+    const objectUrl = URL.createObjectURL(file);
+    _countSoundDraftFilesV260[type] = {file,objectUrl};
+    const name = Q(`count_sound_name_${type}`);
+    if (name) name.textContent = file.name;
+    showCountSoundSettingsAlertV260(`เลือกไฟล์ “${file.name}” แล้ว · กดทดลองฟังหรือลงบันทึก`,'blue');
+  } catch (error) {
+    input.value='';
+    showCountSoundSettingsAlertV260(error.message || String(error),'red');
+  }
+}
+
+function readCountSoundDraftV260() {
+  const base = normalizeCountSoundSettingsV260(_countSoundDraftV260 || _countSoundSettingsV260 || COUNT_SOUND_DEFAULTS_V260);
+  const sounds = {};
+  COUNT_SOUND_TYPES_V260.forEach(type => {
+    sounds[type] = {
+      ...base.sounds[type],
+      enabled:Q(`count_sound_enabled_${type}`)?.checked !== false,
+      volume:Math.max(0,Math.min(1,Number(Q(`count_sound_volume_${type}`)?.value || 0)/100)),
+      name:String(Q(`count_sound_name_${type}`)?.textContent || base.sounds[type].name),
+    };
+  });
+  return normalizeCountSoundSettingsV260({
+    ...base,enabled:Q('count_sound_master_enabled')?.checked !== false,sounds,
+  });
+}
+
+function resetCountSoundDraftV260(type) {
+  if (!COUNT_SOUND_TYPES_V260.includes(type)) return;
+  const previous = _countSoundDraftFilesV260[type];
+  if (previous?.objectUrl) URL.revokeObjectURL(previous.objectUrl);
+  delete _countSoundDraftFilesV260[type];
+  const defaults = COUNT_SOUND_DEFAULTS_V260.sounds[type];
+  _countSoundDraftV260 = readCountSoundDraftV260();
+  _countSoundDraftV260.sounds[type] = {..._countSoundDraftV260.sounds[type],url:'',name:defaults.name};
+  const name = Q(`count_sound_name_${type}`);if(name) name.textContent=defaults.name;
+  const file = Q(`count_sound_file_${type}`);if(file) file.value='';
+  showCountSoundSettingsAlertV260(`เปลี่ยน “${countSoundLabelV260(type)}” เป็นเสียงเริ่มต้นแล้ว · กดบันทึกเพื่อซิงก์`,'blue');
+}
+
+async function previewCountSoundV260(type) {
+  if (!COUNT_SOUND_TYPES_V260.includes(type)) return;
+  unlockCountSoundAudioV260();
+  const draft = readCountSoundDraftV260();
+  const fileEntry = _countSoundDraftFilesV260[type];
+  if (fileEntry?.objectUrl) {
+    try {
+      _countSoundPreviewAudioV260?.pause?.();
+      const audio = new Audio(fileEntry.objectUrl);
+      audio.volume=draft.sounds[type].volume;_countSoundPreviewAudioV260=audio;
+      await audio.play();return;
+    } catch (error) {
+      showCountSoundSettingsAlertV260(`ทดลองเสียงไม่สำเร็จ: ${error.message || error}`,'red');return;
+    }
+  }
+  const started = await playCountSoundV260(type,{force:true,override:draft.sounds[type]});
+  if (!started) showCountSoundSettingsAlertV260('เครื่องนี้ยังไม่อนุญาตให้เล่นเสียง กรุณาแตะหน้าจอแล้วลองอีกครั้ง','amber');
+}
+
+function countSoundFileContentTypeV260(extension,file) {
+  return file?.type || ({mp3:'audio/mpeg',wav:'audio/wav',ogg:'audio/ogg',m4a:'audio/mp4',aac:'audio/aac'})[extension] || 'audio/mpeg';
+}
+
+async function uploadCountSoundFileV260(type,file) {
+  if (!me?.id) throw new Error('Session หมดอายุ กรุณาเข้าสู่ระบบใหม่');
+  const extension = validateCountSoundFileV260(file);
+  const nonce = Math.random().toString(36).slice(2,9);
+  const path = `${me.id}/system-sounds/${type}_${Date.now()}_${nonce}.${extension}`;
+  const {error} = await sb.storage.from(COUNT_SOUND_BUCKET_V260).upload(path,file,{
+    upsert:false,contentType:countSoundFileContentTypeV260(extension,file),cacheControl:'31536000',
+  });
+  if (error) throw error;
+  const {data} = sb.storage.from(COUNT_SOUND_BUCKET_V260).getPublicUrl(path);
+  const url = countSoundSafeUrlV260(data?.publicUrl);
+  if (!url) throw new Error('สร้าง URL ไฟล์เสียงไม่สำเร็จ');
+  return {url,name:String(file.name || countSoundLabelV260(type)).slice(0,180)};
+}
+
+function showCountSoundSettingsAlertV260(message,type='blue') {
+  const box=Q('count-sound-settings-alert');if(!box)return;
+  const safe=['blue','green','amber','red'].includes(type)?type:'blue';
+  box.innerHTML=`<div class="alert alert-${safe}">${escapeWmsText(message)}</div>`;
+}
+
+async function saveCountSoundSettingsV260() {
+  if (prof?.role !== 'admin') { adminOnlyMessage();return; }
+  const button=Q('count-sound-save-v260');
+  try {
+    if(button){button.disabled=true;button.textContent='กำลังอัปโหลดและบันทึก...';}
+    showCountSoundSettingsAlertV260('กำลังบันทึกเสียงสำหรับทุกอุปกรณ์...','blue');
+    const draft=readCountSoundDraftV260();
+    for(const type of COUNT_SOUND_TYPES_V260){
+      const entry=_countSoundDraftFilesV260[type];
+      if(!entry?.file)continue;
+      const uploaded=await uploadCountSoundFileV260(type,entry.file);
+      draft.sounds[type]={...draft.sounds[type],...uploaded};
+    }
+    draft.updatedAt=new Date().toISOString();draft.updatedBy=prof?.name||'';draft.version=1;
+    const normalized=normalizeCountSoundSettingsV260(draft);
+    const {data,error}=await sb.from('app_settings').upsert({
+      key:COUNT_SOUND_SETTING_KEY_V260,value:normalized,
+    },{onConflict:'key'}).select('key,value').maybeSingle();
+    if(error)throw error;
+    if(!data?.value)throw new Error('บันทึกแล้วแต่ตรวจสอบค่าจากระบบไม่ได้');
+    applyCountSoundSettingsV260(data.value);
+    _countSoundLoadedV260=true;_countSoundDraftV260=normalizeCountSoundSettingsV260(data.value);
+    cleanupCountSoundDraftFilesV260();
+    showActionSuccess('ตั้งค่าเสียงยอดตรง, DIFF และจบงานแล้ว',{title:'บันทึกเสียงเรียบร้อย',facts:[
+      {label:'อุปกรณ์',value:'คอมพิวเตอร์ · มือถือ · แท็บเล็ต · Handheld'},
+      {label:'Blind Count',value:'เปิดใช้เสียงตามผล'},
+      {label:'การซิงก์',value:'ทุกเครื่องที่ออนไลน์'},
+    ]});
+    setTimeout(()=>loadAdCountSoundsV260(),350);
+  } catch(error) {
+    showCountSoundSettingsAlertV260(`บันทึกเสียงไม่สำเร็จ: ${error.message || error}`,'red');
+    if(button){button.disabled=false;button.textContent='💾 บันทึกและซิงก์ทุกอุปกรณ์';}
+  }
+}
+
+_countSoundSettingsV260 = readLocalCountSoundSettingsV260();
 const DEFAULT_BRANDING = Object.freeze({
   systemName: 'Cycle Count',
   systemSubtitle: APP_DEFAULT_SUBTITLE,
@@ -28795,7 +29345,7 @@ async function syncUiSettingsAfterLogin() {
   // app_settings request during every login.
   /* V1.19: the master warehouse layout is shared state. Load the central copy
      after authentication and keep this device subscribed to future changes. */
-  await Promise.all([loadWarehouseLayoutConfig(true),loadPlanLocationConfig(true)]);
+  await Promise.all([loadWarehouseLayoutConfig(true),loadPlanLocationConfig(true),loadCountSoundSettingsV260(false)]);
   startWarehouseLayoutRealtimeSync();
   return { branding:{ ...uiBranding },themeSets:_themeSetsConfig };
 }
@@ -31172,6 +31722,9 @@ function normalizeRoleNavigation(page, extra={}) {
   if (page === 'ad-form-count' && prof?.role !== 'admin') {
     return { page:home(), extra:{} };
   }
+  if (page === 'ad-sounds' && prof?.role !== 'admin') {
+    return { page:home(), extra:{} };
+  }
   // The executive dashboard contains management-level inventory exposure.
   // Enforce the role at the route boundary too, not only on the menu button.
   const requestedDashboardTab = normalizedExtra._dashTab || S?._dashTab || _dashTab || 'summary';
@@ -31945,6 +32498,7 @@ function render() {
     'ad-users':   uiCopy('ผู้ใช้งานและข้อมูลระบบ','Users and System Data'),
     'ad-language':uiCopy('ภาษา','Language'),
     'ad-branding':uiCopy('ธีมและโลโก้','Theme and Logo'),
+    'ad-sounds': uiCopy('เสียงแจ้งเตือน','Count Sounds'),
     'ad-paper':   uiCopy('แบบฟอร์มและกระดาษ','Forms and Paper'),
     'ad-form-count':uiCopy('กรอกผลจากเอกสาร','Count Form Quick Entry'),
     'ad-plan-location':uiCopy('Plan Location','Plan Location'),
@@ -31998,6 +32552,7 @@ function render() {
       { group: 'system', name: 'ตั้งค่าระบบ', icon: navIconSvg('theme'), children: [
         { id:'system-language', name:'ภาษา', icon:navIconSvg('log'), action:"goPrimary('ad-language')" },
         { id:'system-branding', name:'ธีมและโลโก้', icon:navIconSvg('theme'), action:"goPrimary('ad-branding')" },
+        { id:'system-sounds', name:'เสียงแจ้งเตือน', icon:navIconSvg('jobs'), action:"goPrimary('ad-sounds')" },
         { id:'system-paper', name:'แบบฟอร์มและกระดาษ', icon:navIconSvg('jobs'), action:"goPrimary('ad-paper')" },
         { id:'system-plan-location', name:'Plan Location', icon:navIconSvg('layout'), action:"goPrimary('ad-plan-location')" },
         { id:'system-users', name:'ผู้ใช้งานและข้อมูลระบบ', icon:navIconSvg('users'), action:"goPrimary('ad-users')" }
@@ -32013,7 +32568,7 @@ function render() {
     || ['sv-list','sv-detail','sv-found'].includes(page)
     || (page === 'sv-dash' && ['variance','wms'].includes(activeDashTab));
   const manageActive = ['ad-manage','ad-new','ad-sessions','ad-assign','ad-import'].includes(page);
-  const systemActive = ['ad-language','ad-branding','ad-paper','ad-plan-location','ad-users'].includes(page);
+  const systemActive = ['ad-language','ad-branding','ad-sounds','ad-paper','ad-plan-location','ad-users'].includes(page);
 
   const sidebarNavHtml = userNavs.map(item => {
     if (item.children) {
@@ -32043,6 +32598,7 @@ function render() {
         if (item.group === 'system') childActive =
           (child.id === 'system-language' && page === 'ad-language') ||
           (child.id === 'system-branding' && page === 'ad-branding') ||
+          (child.id === 'system-sounds' && page === 'ad-sounds') ||
           (child.id === 'system-paper' && page === 'ad-paper') ||
           (child.id === 'system-plan-location' && page === 'ad-plan-location') ||
           (child.id === 'system-users' && page === 'ad-users');
@@ -32201,6 +32757,7 @@ function render() {
     'ad-users':   loadAdUsers,
     'ad-language':loadAdLanguage,
     'ad-branding':loadAdBranding,
+    'ad-sounds': loadAdCountSoundsV260,
     'ad-paper':   loadAdPaperSettings,
     'ad-form-count':loadAdminFormCountEntry,
     'ad-plan-location':loadAdPlanLocation,
@@ -41969,6 +42526,14 @@ async function resolveCountWorkflowAfterSave({
     };
   };
   const candidateDecisions = candidateKeys.map(itemDecision).filter(decision => decision.snapshot);
+  const candidateSoundKindV260 = countDecisionBatchSoundKindV260(candidateDecisions);
+  const soundReceiptKeyV260 = countDecisionReceiptKeyV260(aid,candidateDecisions);
+  const playSavedResultSoundV260 = kind => {
+    if (!kind) return;
+    void globalThis.playCountResultSoundV260?.(kind,kind === 'complete'
+      ? (annualJobId ? `complete:annual:${annualJobId}` : `complete:assignment:${aid}`)
+      : `${soundReceiptKeyV260}:${kind}`);
+  };
   const immediateRecount = candidateDecisions.find(decision => decision.nextRound && decision.nextRound > 1);
   const allTerminal = workflow.itemStatuses.length > 0
     && workflow.itemStatuses.every(status => status === 'OK' || status === 'Diff');
@@ -42002,9 +42567,11 @@ async function resolveCountWorkflowAfterSave({
   // durable Assignment update without waiting for a full My Tasks reload.
   syncCachedAssignmentStatusV246(aid,desiredStatus);
 
+  let annualJobCompletedV260 = false;
   if (annualJobId) {
     try {
-      await refreshAnnualJobsForLocation(assignment.session_id,assignment.location_id,annualJobId);
+      const annualStatusesV260 = await refreshAnnualJobsForLocation(assignment.session_id,assignment.location_id,annualJobId);
+      annualJobCompletedV260 = annualStatusesV260?.[annualJobId] === 'completed';
     } catch (error) {
       if (alertBox) alertBox.innerHTML = errBox(`บันทึก Count แล้ว แต่สรุปสถานะ JOB ไม่สำเร็จ: ${error.message || error}`);
       if (currentCountSaveV256(aid)) currentCountSaveV256(aid).error = error;
@@ -42020,6 +42587,7 @@ async function resolveCountWorkflowAfterSave({
     const varianceMessage = window._countEntryShowOH && Number.isFinite(variance)
       ? `DIFF ${countEntryVarianceText(variance)} · เปิด Count ${immediateRecount.nextRound} ของ Item เดิม`
       : `ยอดไม่ตรง · เปิด Count ${immediateRecount.nextRound} ของ Item เดิม`;
+    playSavedResultSoundV260('diff');
     await showCountResultPopup({
       kind:'warning',
       title:'พบยอด DIFF',
@@ -42032,6 +42600,8 @@ async function resolveCountWorkflowAfterSave({
 
   if (allTerminal) {
     window._photoMap = {};
+    const wholeWorkCompletedV260 = annualJobId ? annualJobCompletedV260 : true;
+    playSavedResultSoundV260(wholeWorkCompletedV260 ? 'complete' : (candidateSoundKindV260 || (workflow.hasDiff ? 'diff' : 'match')));
     if (workflow.hasDiff) {
       await showCountResultPopup({ kind:'danger',title:'ยอดยังไม่ตรง',message:'นับครบแล้ว · ส่งให้หัวหน้างานตรวจสอบ' });
     } else {
@@ -42052,14 +42622,16 @@ async function resolveCountWorkflowAfterSave({
     .find(decision => decision.nextRound);
   const terminalDiff = candidateDecisions.find(decision => decision.status === 'Diff');
   if (terminalDiff) {
+    playSavedResultSoundV260('diff');
     await showCountResultPopup({
       kind:'danger',
       title:'ยอดยังไม่ตรง',
       message:'Item นี้นับครบรอบแล้ว · ทำ Item ถัดไป',
       duration:1550,
     });
-  } else if (source === 'handheld-ok') {
-    handheldScanFeedback(
+  } else {
+    playSavedResultSoundV260(candidateSoundKindV260);
+    if (source === 'handheld-ok') handheldScanFeedback(
       'success',
       uiCopy('บันทึกและตรวจสอบแล้ว','Saved and Checked'),
       '',
@@ -43588,7 +44160,9 @@ async function refreshAnnualJobsForLocation(sessionId,locationId,fallbackJobId='
   if (!result.error) {
     (result.data || []).forEach(item => { if (item.job_id) jobIds.add(item.job_id); });
   }
-  for (const jobId of jobIds) await refreshAnnualJobProgress(jobId);
+  const statuses = {};
+  for (const jobId of jobIds) statuses[jobId] = await refreshAnnualJobProgress(jobId);
+  return statuses;
 }
 
 async function refreshAnnualJobProgress(jobId) {
@@ -46759,6 +47333,12 @@ function startWarehouseLayoutRealtimeSync() {
       .on('postgres_changes',{
         event:'UPDATE',schema:'public',table:'app_settings',filter:`key=eq.${PLAN_LOCATION_SETTING_KEY}`,
       },payload => applyCentralPlanLocation(payload?.new?.value))
+      .on('postgres_changes',{
+        event:'INSERT',schema:'public',table:'app_settings',filter:`key=eq.${COUNT_SOUND_SETTING_KEY_V260}`,
+      },payload => applyCentralCountSoundSettingsV260(payload?.new?.value))
+      .on('postgres_changes',{
+        event:'UPDATE',schema:'public',table:'app_settings',filter:`key=eq.${COUNT_SOUND_SETTING_KEY_V260}`,
+      },payload => applyCentralCountSoundSettingsV260(payload?.new?.value))
       .subscribe(status => {
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           console.warn('Warehouse Layout Realtime unavailable:',status);
