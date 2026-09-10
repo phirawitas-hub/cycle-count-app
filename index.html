@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
+<!-- V2.62: bounded read-only network recovery and retry consistent Dashboard scopes. -->
 <!-- V2.61: scoped Annual JOB reads and fresh, optional Count read bundles. -->
 <!-- V2.60: server-confirmed Match, DIFF and whole-work completion sounds on every device. -->
 <!-- V2.59: Handheld Count cards move Remark and Calculator above License Plate and expand long Item names. -->
@@ -25609,7 +25610,7 @@ body.count-page-active #app .count-handheld-page.is-narrow-handheld-v259 .citem-
 <script>
 // V2.50: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.61';
+const APP_VERSION = '2.63';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -26124,46 +26125,73 @@ window.addEventListener('beforeunload',event => {
 
 async function supabaseFetchWithTimeout(input, init = {}) {
   const requestController = new AbortController();
-  // Only ordinary database reads belong to a page. POST/PATCH/DELETE,
-  // RPCs and Auth can commit server-side even when the browser stops waiting.
-  const requestMethod = String(init.method || (typeof Request !== 'undefined' && input instanceof Request ? input.method : 'GET')).toUpperCase();
-  const requestUrl = String(typeof Request !== 'undefined' && input instanceof Request ? input.url : input);
-  const isPageRead = ['GET','HEAD'].includes(requestMethod)
-    && requestUrl.startsWith(`${SUPA_URL}/rest/v1/`);
+  const isRequest = typeof Request !== 'undefined' && input instanceof Request;
+  const requestMethod = String(init.method || (isRequest ? input.method : 'GET')).toUpperCase();
+  const requestUrl = String(isRequest ? input.url : input);
+  const restPrefix = `${SUPA_URL}/rest/v1/`;
+  const rpcName = requestUrl.startsWith(`${restPrefix}rpc/`)
+    ? requestUrl.slice(`${restPrefix}rpc/`.length).split('?')[0] : '';
+  // Explicit list: a POST RPC is retryable only when its installed contract
+  // is read-only. Auth, uploads, ordinary writes and all other RPCs run once.
+  const readRpcNames = new Set(['get_count_read_bundle_v261','get_dashboard_read_bundle_v252',
+    'get_management_read_bundle_v263']);
+  const isPageRead = requestUrl.startsWith(restPrefix)
+    && (rpcName ? readRpcNames.has(rpcName) : ['GET','HEAD'].includes(requestMethod));
   const pageSignal = isPageRead ? _activePageRequestController?.signal : null;
-  const sourceSignal = init.signal || (typeof Request !== 'undefined' && input instanceof Request ? input.signal : null);
+  const sourceSignal = init.signal || (isRequest ? input.signal : null);
   let didTimeout = false;
-
   const forwardAbort = () => requestController.abort();
-  if (pageSignal) {
-    if (pageSignal.aborted) requestController.abort();
-    else pageSignal.addEventListener('abort', forwardAbort, { once:true });
+  for (const signal of [pageSignal,sourceSignal]) {
+    if (signal?.aborted) requestController.abort();
+    else signal?.addEventListener('abort',forwardAbort,{once:true});
   }
-  if (sourceSignal) {
-    if (sourceSignal.aborted) requestController.abort();
-    else sourceSignal.addEventListener('abort', forwardAbort, { once:true });
-  }
-
-  const timeoutId = setTimeout(() => {
-    didTimeout = true;
-    requestController.abort();
-  }, SUPABASE_REQUEST_TIMEOUT_MS);
-
+  // One deadline covers all attempts, including backoff. A bad connection
+  // cannot turn three reads into three 15-second waits.
+  const timeoutId = setTimeout(() => { didTimeout = true;requestController.abort(); },SUPABASE_REQUEST_TIMEOUT_MS);
+  const pause = ms => new Promise((resolve,reject) => {
+    const signal = requestController.signal;
+    let timer;
+    const abort = () => { clearTimeout(timer);signal.removeEventListener('abort',abort);
+      reject(Object.assign(new Error('การโหลดถูกยกเลิก'),{name:'AbortError'})); };
+    if (signal.aborted) { abort();return; }
+    signal.addEventListener('abort',abort,{once:true});
+    timer = setTimeout(() => { signal.removeEventListener('abort',abort);resolve(); },ms);
+  });
   try {
-    return await fetch(input, { ...init, signal:requestController.signal });
+    const requestTemplate = isRequest && isPageRead ? input.clone() : null;
+    for (let attempt=0; ; attempt++) {
+      let response;
+      let networkError;
+      try {
+        response = await fetch(requestTemplate ? requestTemplate.clone() : input,{...init,signal:requestController.signal});
+      } catch (error) { networkError = error; }
+      const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+      const transient = networkError
+        ? networkError.name === 'TypeError' || /network|failed to fetch|load failed/i.test(String(networkError.message || ''))
+        : [429,502,503,504].includes(response?.status);
+      const retry = isPageRead && !offline && !requestController.signal.aborted
+        && !didTimeout && attempt < 2 && transient;
+      if (!retry) {
+        if (networkError) throw networkError;
+        return response;
+      }
+      let waitMs = [250,800][attempt] + Math.floor(Math.random()*150);
+      const retryAfter = Number(response?.headers?.get?.('retry-after'));
+      if (Number.isFinite(retryAfter) && retryAfter > 0) waitMs = Math.max(waitMs,Math.min(2000,retryAfter*1000));
+      if (response?.body?.cancel) { try { await response.body.cancel(); } catch (_) {} }
+      await pause(waitMs);
+    }
   } catch (error) {
     if (didTimeout) {
-      const timeoutError = new Error(isPageRead
-        ? 'การเชื่อมต่อฐานข้อมูลเกิน 15 วินาที กรุณาลองใหม่'
-        : 'ยังยืนยันผลจากฐานข้อมูลไม่ได้ กรุณาตรวจสอบรายการล่าสุดก่อนบันทึกซ้ำ');
-      timeoutError.code = 'REQUEST_TIMEOUT';
-      throw timeoutError;
+      throw Object.assign(new Error(isPageRead
+        ? 'การเชื่อมต่อฐานข้อมูลเกิน 15 วินาที กรุณาลองโหลดอีกครั้ง'
+        : 'ยังยืนยันผลจากฐานข้อมูลไม่ได้ กรุณาตรวจสอบรายการล่าสุดก่อนบันทึกซ้ำ'),{code:'REQUEST_TIMEOUT'});
     }
     throw error;
   } finally {
     clearTimeout(timeoutId);
-    pageSignal?.removeEventListener('abort', forwardAbort);
-    sourceSignal?.removeEventListener('abort', forwardAbort);
+    pageSignal?.removeEventListener('abort',forwardAbort);
+    sourceSignal?.removeEventListener('abort',forwardAbort);
   }
 }
 
@@ -30692,21 +30720,9 @@ function paintDashboardView(tab, cache = _dashboardViewCache) {
 }
 
 function paintCachedDashboardView(tab) {
-  // Layout, Variance and WMS are operational views of the current database state.
-  // Never repaint their five-minute Dashboard cache: accuracy and a complete
-  // fresh paginated read take priority over opening speed on these pages.
-  if (['layout','variance','wms'].includes(tab)) return false;
-  const cache = _dashboardViewCacheStore.get(dashboardViewCacheKey(tab)) || _dashboardViewCache;
-  if (!cache || cache.sessionId !== S._dashSid) return false;
-  if (cache.userId !== (me?.id || '') || cache.role !== (prof?.role || '')) return false;
-  if (cache.dateFrom !== selectedDateFrom || cache.dateTo !== selectedDateTo) return false;
-  if ((Date.now() - cache.loadedAt) > DASHBOARD_CACHE_TTL_MS) {
-    _dashboardViewCacheStore.delete(dashboardViewCacheKey(tab));
-    if (_dashboardViewCache === cache) _dashboardViewCache = null;
-    return false;
-  }
-  _dashboardViewCache = cache;
-  return paintDashboardView(tab, cache);
+  // V2.63: reuse a Dashboard only after its authorized server revision check.
+  // paintVerifiedManagementCacheV263 handles that check in the page loader.
+  return false;
 }
 
 let _pageLoadingVisualToken = 0;
@@ -31104,21 +31120,40 @@ function dashboardLoadingHtml() {
   return `<div class="page-loading-inline-placeholder" aria-hidden="true">${uiCopy('กำลังเตรียมข้อมูล...','Preparing data...')}</div>`;
 }
 
+let _pageReadRecoveryV262 = null;
+
+function retryPageReadV262(automatic=false) {
+  const state = _pageReadRecoveryV262;
+  if (!state || state.scope !== _activePageRequestController || state.page !== S?.page
+      || _activeSaveWorkflowsV251.size || !cnt()?.querySelector('[data-page-read-error]')) return false;
+  if (automatic && !state.networkProblem) return false;
+  _pageReadRecoveryV262 = null;
+  render();
+  return true;
+}
+
+window.addEventListener('online',() => retryPageReadV262(true));
+
 function renderPageLoadError(error) {
   if (error?.name === 'AbortError') return;
-  console.error('Page Load Error:', error);
+  console.error('Page Load Error:',error);
   const message = String(error?.message || error || 'ไม่ทราบสาเหตุ');
-  const networkProblem = /failed to fetch|network|name_not_resolved|เกิน \d+ วินาที|เชื่อมต่อ/i.test(message);
+  const networkProblem = /failed to fetch|network|load failed|name_not_resolved|เกิน \d+ วินาที|เชื่อมต่อ/i.test(message);
+  const scopeProblem = error?.code === 'DASHBOARD_SCOPE_CHANGED';
   const friendly = networkProblem
-    ? 'เชื่อมต่อฐานข้อมูลไม่สำเร็จ กรุณาตรวจอินเทอร์เน็ตหรือ VPN แล้วลองใหม่'
-    : `เกิดข้อผิดพลาดในการโหลดข้อมูล: ${escapeWmsText(message)}`;
+    ? 'เชื่อมต่อฐานข้อมูลไม่สำเร็จชั่วคราว ตรวจ Wi-Fi หรือ VPN แล้วกดโหลดงานนี้อีกครั้ง'
+    : scopeProblem
+      ? 'มีการเปลี่ยนรายการงานระหว่างโหลด กรุณาโหลดชุดข้อมูลล่าสุดอีกครั้ง'
+      : `โหลดข้อมูลไม่สำเร็จ: ${escapeWmsText(message)}`;
   const target = cnt();
-  if (target) {
-    target.innerHTML = `<div class="card">
-      <div class="alert alert-red">${friendly}</div>
-      <button class="btn btn-blue" style="margin-top:14px" onclick="render()">ลองโหลดอีกครั้ง</button>
-    </div>`;
-  }
+  if (!target) return;
+  _pageReadRecoveryV262 = {scope:_activePageRequestController,page:S?.page,networkProblem};
+  target.innerHTML = `<div class="card" data-page-read-error="true">
+    <div class="alert alert-red" role="status">${friendly}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:18px">
+      <button type="button" class="btn btn-blue" onclick="retryPageReadV262()">โหลดงานนี้อีกครั้ง</button>
+      ${S?.page === 'c-count' ? '<button type="button" class="btn btn-ghost" onclick="go(\'c-tasks\')">กลับรายการงาน</button>' : ''}
+    </div></div>`;
 }
 
 function recoverPageLoadingFromUnhandledFailure(error) {
@@ -41612,8 +41647,7 @@ async function loadCCount() {
     countReadV261 = await loadCountReadBundleV261(aid,true);
   } catch (error) {
     if (isAbortLikeError(error)) return;
-    cnt().innerHTML = `<div class="card">${errBox(`เปิดงานนับไม่สำเร็จ: ${error.message || error}`)}
-      <button type="button" class="btn btn-blue" style="margin-top:14px" onclick="go('c-tasks')">กลับไปงานที่ได้รับมอบหมาย</button></div>`;
+    renderPageLoadError(error);
     return;
   }
   // Editable forms always use a fresh authorized Assignment; never the task-list cache.
@@ -47529,6 +47563,55 @@ function warehouseLayoutLiveDataSignature(data={}) {
   });
 }
 
+function layoutSessionFromManagementV263(bundle,sessionName='') {
+  applyManagementSettingsV263(bundle);
+  const {snapshots,assignments,counts,approvals,audit,details} = bundle;
+  const rules = validateDashboardRulesV252(bundle.rules);
+  const sessionId = String(bundle.session_id);
+  applyWmsCountBaselines(snapshots,assignments,audit.filter(row =>
+    row.action === WMS_COUNT_BASELINE_ACTION && String(row.session_id) === sessionId));
+  recoverHistoricalOhInMemory(snapshots,assignments,approvals,sessionId);
+  recoverHistoricalOhFromCompletedCountsInMemory(snapshots,assignments,counts,rules,sessionId);
+  recoverHistoricalOhFromAuditInMemory(snapshots,assignments,audit,sessionId);
+  const auditedCompleted = new Set([...historicalAssignmentStatusByAudit(audit).entries()]
+    .filter(([,status]) => status === 'completed').map(([id]) => id));
+  recoverHistoricalOhFromCompletedCountsInMemory(snapshots,assignments,counts,rules,sessionId,auditedCompleted);
+  recoverHistoricalOhFromStockDetailsInMemory(snapshots,details,assignments,sessionId);
+  recoverCompletedAssignmentStatusesInMemory(snapshots,assignments,counts,approvals,rules,audit);
+  const snapshotMap = new Map();
+  snapshots.forEach(row => {
+    if (!snapshotMap.has(row.location_id)) snapshotMap.set(row.location_id,[]);
+    snapshotMap.get(row.location_id).push(row);
+  });
+  const countMap = new Map();
+  counts.forEach(row => {
+    if (!countMap.has(row.assignment_id)) countMap.set(row.assignment_id,{});
+    const items = countMap.get(row.assignment_id);
+    if (!items[row.item_id]) items[row.item_id] = {};
+    items[row.item_id][row.round] = Number(row.count_qty);
+  });
+  const normalizedAssignments = assignments.map(row => {
+    const historical = row._historicalStatus || row.status;
+    const workflow = deriveAssignmentWorkflowStatus(snapshotMap.get(row.location_id) || [],
+      countMap.get(row.id) || {},rules,historical === 'approved' ? 'pending' : historical);
+    return {...row,_storedStatus:historical,_workflow:workflow,status:workflow.effectiveStatus};
+  });
+  const actorNames = new Map(bundle.profiles.map(row => [row.id,row.name]));
+  counts.forEach(row => { row._countedByName = actorNames.get(row.counted_by) || ''; });
+  const normalizedApprovals = approvals.map(normalizeWarehouseLayoutLiveApproval);
+  normalizedApprovals.forEach(row => {
+    row._approvedByName = actorNames.get(row.approved_by) || '';
+    row._wmsFixedByName = actorNames.get(row.wms_fixed_by) || '';
+  });
+  return {sessionId,sessionName,snapshots,assignments:normalizedAssignments,counts,
+    approvals:normalizedApprovals.filter(row => row.review_status === 'confirmed'),rules,
+    loadedAt:bundle.generated_at,_revisionV263:bundle.revision,_catalogRevisionV263:bundle.catalog_revision,
+    _trackerRowsV263:buildWorkTrackerRows({snapshots,details,assignments:normalizedAssignments,counts,
+      approvals:normalizedApprovals,jobs:bundle.jobs,jobItems:bundle.job_items,rules}),
+  };
+}
+
+
 function normalizeWarehouseLayoutLiveApproval(value={}) {
   const reviewStatus = value.review_status || (value.approved_at ? 'confirmed' : 'draft');
   const rawReleased = value.released_to_wms;
@@ -47546,7 +47629,7 @@ function normalizeWarehouseLayoutLiveApproval(value={}) {
   };
 }
 
-async function fetchWarehouseLayoutLiveSessionData(sessionId,sessionName='') {
+async function fetchWarehouseLayoutLiveSessionDataLegacyV263(sessionId,sessionName='') {
   const [assignmentResult,snapshotResult,rules] = await Promise.all([
     fetchPagedSupabaseRows(
       'assignments',
@@ -47558,7 +47641,7 @@ async function fetchWarehouseLayoutLiveSessionData(sessionId,sessionName='') {
       'id,session_id,created_at,location_id,item_id,onhand_qty,al_qty,locations(code,zone,row_no,level),items(code,description,uom,category)',
       query => query.eq('session_id',sessionId).order('id'),
     ),
-    getSessionRules(sessionId),
+    loadDashboardRulesV252(sessionId),
   ]);
   if (assignmentResult.error || snapshotResult.error) throw assignmentResult.error || snapshotResult.error;
 
@@ -47598,15 +47681,12 @@ async function fetchWarehouseLayoutLiveSessionData(sessionId,sessionName='') {
   );
   // The restored values are already present in this in-memory page model.
   // Persist them asynchronously so Layout never waits for thousands of writes.
-  persistRecoveredHistoricalOhInBackground([
-    ...liveApprovalRepairs,
-    ...liveCompletedRepairs,
-  ]);
+  // V2.63: do not write stock during a display refresh.
   const liveAssignmentStatusRepairs = recoverCompletedAssignmentStatusesInMemory(
     snapshots,assignments,counts,approvalResult.data || [],rules,[],
   );
   if (liveAssignmentStatusRepairs.length) {
-    persistRecoveredAssignmentStatusesInBackground(liveAssignmentStatusRepairs);
+    // V2.63: no background status write from a read.
   }
   const snapshotsByLocation = {};
   snapshots.forEach(snapshot => {
@@ -47642,6 +47722,21 @@ async function fetchWarehouseLayoutLiveSessionData(sessionId,sessionName='') {
     rules,
     loadedAt:new Date().toISOString(),
   };
+}
+
+async function fetchWarehouseLayoutLiveSessionData(sessionId,sessionName='') {
+  const bundle = await loadManagementBundleV263(sessionId,'layout',{metadataWhenUnchanged:true});
+  if (!bundle) return fetchWarehouseLayoutLiveSessionDataLegacyV263(sessionId,sessionName);
+  const current = window._warehouseLayoutSessionData;
+  if (bundle._unchangedV263 && String(current?.sessionId) === String(sessionId)
+      && current._revisionV263 === bundle.revision && current._catalogRevisionV263 === bundle.catalog_revision) {
+    return {...current,loadedAt:bundle.generated_at,_unchangedV263:true};
+  }
+  // A previous response might have updated the raw cache while its view was
+  // replaced. Only a matching rendered revision can skip recomputation.
+  const rows = bundle._unchangedV263
+    ? await loadManagementBundleV263(sessionId,'layout') : bundle;
+  return layoutSessionFromManagementV263(rows,sessionName);
 }
 
 function captureWarehouseLayoutViewScrollState() {
@@ -47712,13 +47807,22 @@ async function refreshWarehouseLayoutLiveData({ reason='poll',force=false }={}) 
     try {
       const freshData = await fetchWarehouseLayoutLiveSessionData(sessionId,sessionName);
       if (requestSerial !== _warehouseLayoutLiveRequestSerial || !warehouseLayoutLiveViewActive(sessionId)) return false;
-      const changed = force || warehouseLayoutLiveDataSignature(freshData) !== warehouseLayoutLiveDataSignature(window._warehouseLayoutSessionData || {});
+      const current = window._warehouseLayoutSessionData || {};
+      const changed = force || (freshData._revisionV263 !== undefined && freshData._revisionV263 !== null
+        ? freshData._revisionV263 !== current._revisionV263 || freshData._catalogRevisionV263 !== current._catalogRevisionV263
+        : warehouseLayoutLiveDataSignature(freshData) !== warehouseLayoutLiveDataSignature(current));
+      // Settings are part of the same SQL snapshot in the V2.63 response.
       window._warehouseLayoutSessionData = freshData;
+      if (freshData._trackerRowsV263) window._workTrackerRows = freshData._trackerRowsV263;
       _warehouseLayoutLiveError = '';
-      refreshWarehouseLayoutRuntime();
-      if (changed) renderWarehouseLayoutTabPreservingScroll();
-      else updateWarehouseLayoutLiveStatus();
-      refreshOpenWarehouseLocationDetailV253();
+      if (changed) {
+        refreshWarehouseLayoutRuntime();
+        renderWarehouseLayoutTabPreservingScroll();
+        refreshOpenWarehouseLocationDetailV253();
+      } else {
+        if (window._warehouseLayoutRuntime) window._warehouseLayoutRuntime.loadedAt = freshData.loadedAt;
+        updateWarehouseLayoutLiveStatus();
+      }
       return changed;
     } catch (error) {
       if (requestSerial === _warehouseLayoutLiveRequestSerial && warehouseLayoutLiveViewActive(sessionId)) {
@@ -53086,6 +53190,264 @@ SELECT current_setting('cycle_count.stock_plan_v252')::jsonb AS query_plan;`;
 window.getCycleCountReadMetrics = () => _dashboardReadMetricsV252.map(row=>({...row}));
 
 async function loadSvDash() {
+  const scope = _activePageRequestController;
+  for (let attempt=0; ; attempt++) {
+    try { return await loadSvDashCoreV262(); }
+    catch (error) {
+      if (error?.code !== 'DASHBOARD_SCOPE_CHANGED' || attempt >= 1
+          || scope !== _activePageRequestController || scope?.signal?.aborted || S?.page !== 'sv-dash') throw error;
+      // Discard the inconsistent set and start a new complete read. Never
+      // accept mismatched IDs or use counts from the first failed attempt.
+      await new Promise(resolve => setTimeout(resolve,120));
+      if (scope !== _activePageRequestController || scope?.signal?.aborted) {
+        throw Object.assign(new Error('การโหลดถูกยกเลิก'),{name:'AbortError'});
+      }
+    }
+  }
+}
+
+// V2.63: one consistent management read, with per-Location change versions.
+// Cached rows are reusable only after a fresh authorized revision check.
+let _managementRpcMissingV263 = false;
+const _managementRawCacheV263 = new Map();
+const _managementMetricsV263 = [];
+const MANAGEMENT_ARRAYS_V263 = ['assignments','snapshots','counts','approvals','audit','details','jobs','job_items',
+  'found','paper','items','locations','profiles','remarks','master','settings'];
+
+function managementErrorV263(message,code='MANAGEMENT_READ_INVALID') {
+  return Object.assign(new Error(message),{code});
+}
+
+function managementCacheKeyV263(sessionId,tab) {
+  return [APP_BUILD_ID,me?.id || '',prof?.role || '',sessionId,tab].join('|');
+}
+
+function validateManagementBundleV263(p,sessionId,tab,actorId,cached=null,locationId='') {
+  if (!p || p.schema_version !== 1 || p.actor_id !== actorId || String(p.session_id) !== String(sessionId)
+      || p.tab !== tab || !Number.isSafeInteger(p.revision) || p.revision < 0
+      || !Number.isSafeInteger(p.catalog_revision) || p.catalog_revision < 0) {
+    throw managementErrorV263('ข้อมูลที่โหลดไม่ตรงกับผู้ใช้หรือ Session กรุณาโหลดใหม่');
+  }
+  if (p.unchanged === true) {
+    if (!cached || locationId || cached.revision !== p.revision || cached.catalog_revision !== p.catalog_revision) {
+      throw managementErrorV263('ยังไม่มีชุดข้อมูลที่ตรวจยืนยันไว้ กรุณาโหลดใหม่');
+    }
+    return p;
+  }
+  if (p.unchanged !== false || typeof p.delta !== 'boolean' || !Array.isArray(p.location_ids)) {
+    throw managementErrorV263('ข้อมูลบริหารไม่ครบ กรุณาโหลดใหม่');
+  }
+  validateDashboardRulesV252(p.rules);
+  const locationIds = new Set(p.location_ids.map(String));
+  if (locationIds.size !== p.location_ids.length || (p.delta && !locationIds.size)
+      || (locationId && (!p.delta || locationIds.size !== 1 || !locationIds.has(String(locationId))))
+      || (p.delta && !locationId && (!cached || p.catalog_revision !== cached.catalog_revision
+        || p.revision <= cached.revision))) {
+    throw managementErrorV263('ขอบเขต Location เปลี่ยนระหว่างโหลด กรุณาโหลดใหม่');
+  }
+  for (const key of MANAGEMENT_ARRAYS_V263) {
+    if (!Array.isArray(p[key]) || p.row_counts?.[key] !== p[key].length) {
+      throw managementErrorV263(`โหลดข้อมูล ${key} ไม่ครบ กรุณาโหลดใหม่`);
+    }
+    const ids = new Set();
+    for (const row of p[key]) {
+      if (!row?.id || ids.has(String(row.id))) throw managementErrorV263('พบรายการซ้ำในชุดข้อมูล กรุณาโหลดใหม่');
+      ids.add(String(row.id));
+      if (['assignments','snapshots','details','job_items'].includes(key)
+          && (String(row.session_id) !== String(sessionId) || (p.delta && !locationIds.has(String(row.location_id))))) {
+        throw managementErrorV263('พบข้อมูลนอก Session หรือ Location ที่ร้องขอ');
+      }
+      if (['jobs','found','paper'].includes(key) && String(row.session_id) !== String(sessionId)) {
+        throw managementErrorV263('พบข้อมูลนอก Session ที่ร้องขอ');
+      }
+    }
+  }
+  const assignmentIds = new Set(p.assignments.map(row => String(row.id)));
+  const snapshotKeys = new Set();
+  for (const row of p.snapshots) {
+    const key = `${row.location_id}|${row.item_id}`;
+    if (!row.item_id || snapshotKeys.has(key) || row.onhand_qty === null || !Number.isFinite(Number(row.onhand_qty))
+        || (row.al_qty != null && !Number.isFinite(Number(row.al_qty)))) {
+      throw managementErrorV263('ข้อมูล Stock Snapshot ซ้ำหรือยอดไม่ถูกต้อง');
+    }
+    snapshotKeys.add(key);
+  }
+  const countKeys = new Set();
+  for (const row of p.counts) {
+    const key = `${row.assignment_id}|${row.item_id}|${row.round}`;
+    if (!row.item_id || ![1,2,3].includes(Number(row.round)) || row.count_qty === null
+        || !Number.isFinite(Number(row.count_qty)) || countKeys.has(key)) {
+      throw managementErrorV263('ผลนับซ้ำหรือยอดนับไม่ถูกต้อง');
+    }
+    countKeys.add(key);
+  }
+  for (const key of ['counts','approvals','audit']) {
+    if (p[key].some(row => !assignmentIds.has(String(row.assignment_id)))) {
+      throw managementErrorV263('ประวัติหรือผลนับไม่ตรงกับรายการมอบหมายของชุดข้อมูล');
+    }
+  }
+  return p;
+}
+
+function mergeManagementBundleV263(cached,incoming) {
+  if (!incoming.delta) return incoming;
+  if (!cached) throw managementErrorV263('ไม่มีข้อมูลเดิมสำหรับอัปเดตเฉพาะ Location');
+  const locations = new Set(incoming.location_ids.map(String));
+  const assignmentIds = new Set([
+    ...cached.assignments.filter(row => locations.has(String(row.location_id))).map(row => String(row.id)),
+    ...incoming.assignments.map(row => String(row.id)),
+  ]);
+  const merged = {...incoming,delta:false,location_ids:[],row_counts:{}};
+  for (const key of MANAGEMENT_ARRAYS_V263) {
+    let retained = [];
+    if (['assignments','snapshots','details','job_items'].includes(key)) {
+      retained = cached[key].filter(row => !locations.has(String(row.location_id)));
+    } else if (['counts','approvals','audit'].includes(key)) {
+      retained = cached[key].filter(row => !assignmentIds.has(String(row.assignment_id)));
+    } else if (['items','locations','profiles','master'].includes(key)) {
+      // Dictionaries are unchanged at this catalog revision. Updates replace
+      // matching IDs; a catalog change always causes a full response.
+      const replacements = new Set(incoming[key].map(row => String(row.id)));
+      retained = cached[key].filter(row => !replacements.has(String(row.id)));
+    }
+    // Jobs, Found Items, paper and reusable remarks are complete small sets
+    // within the returned Session, even for a Location delta.
+    merged[key] = [...retained,...incoming[key]];
+    merged.row_counts[key] = merged[key].length;
+  }
+  return merged;
+}
+
+function cloneManagementBundleV263(raw) {
+  const p = {...raw,row_counts:{...raw.row_counts}};
+  for (const key of MANAGEMENT_ARRAYS_V263) p[key] = raw[key].map(row => ({...row}));
+  p.settings = raw.settings.map(row => ({...row,value:row.value == null ? row.value : JSON.parse(JSON.stringify(row.value))}));
+  const items = new Map(p.items.map(row => [String(row.id),row]));
+  const locations = new Map(p.locations.map(row => [String(row.id),row]));
+  const profiles = new Map(p.profiles.map(row => [String(row.id),row]));
+  p.assignments.forEach(row => { row.locations = locations.get(String(row.location_id)) || null;
+    row.profiles = profiles.get(String(row.assigned_to)) || null; });
+  p.snapshots.forEach(row => { row.locations = locations.get(String(row.location_id)) || null;
+    row.items = items.get(String(row.item_id)) || null; });
+  p.jobs.forEach(row => { row.profiles = profiles.get(String(row.assigned_to)) || null; });
+  p.found.forEach(row => { row.profiles = profiles.get(String(row.discovered_by)) || null; });
+  return p;
+}
+
+async function loadManagementBundleV263(sessionId,tab,{allowDelta=true,locationId='',metadataWhenUnchanged=false}={}) {
+  if (_managementRpcMissingV263) return null;
+  const scope = _activePageRequestController;
+  const actorId = me?.id;
+  const role = prof?.role;
+  const key = managementCacheKeyV263(sessionId,tab);
+  const cached = !locationId && allowDelta ? _managementRawCacheV263.get(key) : null;
+  const started = performance.now();
+  let outcome = 'error';
+  let sizes = null;
+  try {
+    let query = sb.rpc('get_management_read_bundle_v263',{
+      p_session_id:sessionId,p_tab:tab,
+      p_since_revision:cached?.revision ?? null,p_since_catalog:cached?.catalog_revision ?? null,
+      p_location_id:locationId || null,
+    });
+    if (scope?.signal && typeof query.abortSignal === 'function') query = query.abortSignal(scope.signal);
+    const {data,error} = await query;
+    if (scope !== _activePageRequestController || scope?.signal?.aborted || actorId !== me?.id || role !== prof?.role) {
+      throw Object.assign(new Error('การโหลดถูกยกเลิก'),{name:'AbortError'});
+    }
+    if (error) {
+      if (['PGRST202','42883'].includes(error.code) && /get_management_read_bundle_v263/.test(String(error.message || ''))) {
+        _managementRpcMissingV263 = true;outcome = 'legacy-fallback';return null;
+      }
+      throw error;
+    }
+    validateManagementBundleV263(data,sessionId,tab,actorId,cached,locationId);
+    let raw;
+    if (data.unchanged) {
+      outcome = 'unchanged';raw = cached;
+      if (metadataWhenUnchanged) return {...data,_unchangedV263:true};
+    }
+    else {
+      outcome = data.delta ? 'location-delta' : 'full';
+      raw = locationId ? data : data.delta ? mergeManagementBundleV263(cached,data) : data;
+      sizes = {...data.row_counts};
+      if (!locationId) {
+        _managementRawCacheV263.set(key,raw);
+        // Keep the last few Session/tab datasets, scoped by actor and role.
+        while (_managementRawCacheV263.size > 4) _managementRawCacheV263.delete(_managementRawCacheV263.keys().next().value);
+      }
+    }
+    const value = cloneManagementBundleV263(raw);
+    value._unchangedV263 = data.unchanged === true;
+    value._changedLocationIdsV263 = data.delta ? [...data.location_ids] : null;
+    value.generated_at = data.generated_at;
+    return value;
+  } finally {
+    _managementMetricsV263.push({at:new Date().toISOString(),tab,outcome,elapsed_ms:Math.round(performance.now()-started),rows:sizes});
+    if (_managementMetricsV263.length > 50) _managementMetricsV263.shift();
+  }
+}
+
+function managementRowsV263(bundle,key,legacyRead) {
+  return bundle ? Promise.resolve({data:bundle[key],error:null}) : legacyRead();
+}
+
+function managementDashboardBundleV263(bundle,includeWms) {
+  const baseline = bundle.audit.filter(row => row.action === WMS_COUNT_BASELINE_ACTION && row.session_id === bundle.session_id);
+  const wms = includeWms ? bundle.audit.filter(row => ['wms_note','wms_note_removed','wms_status_change'].includes(row.action)) : [];
+  return {schema_version:1,session_id:bundle.session_id,include_wms:includeWms,
+    assignment_ids:bundle.assignments.map(row => row.id),counts:bundle.counts,approvals:bundle.approvals,
+    baseline_audit:baseline,wms_audit:wms,rules:bundle.rules,
+    row_counts:{counts:bundle.counts.length,approvals:bundle.approvals.length,baseline_audit:baseline.length,wms_audit:wms.length}};
+}
+
+function applyManagementSettingsV263(bundle) {
+  if (!bundle || !['summary','layout'].includes(bundle.tab)) return;
+  const settings = new Map(bundle.settings.map(row => [row.key,row.value]));
+  const plan = settings.get(PLAN_LOCATION_SETTING_KEY);
+  const layout = settings.get(WAREHOUSE_LAYOUT_SETTING_KEY);
+  if (bundle.tab === 'layout' && (!layout || !plan)) {
+    throw managementErrorV263('ไม่พบผังแม่หรือ Plan Location ส่วนกลาง กรุณาตรวจการตั้งค่าผังสินค้า');
+  }
+  // Use settings from the same snapshot as the stock and counting rules.
+  // Do not overlay a device's older local plan onto fresh server counts.
+  _planLocationConfig = normalizePlanLocationConfig(plan || {zones:[]});
+  _planLocationLoaded = true;
+  if (layout) {
+    _warehouseLayoutConfig = normalizeWarehouseLayoutConfig(layout);
+    _warehouseLayoutLoaded = true;
+  }
+}
+
+function paintManagementTabV263(tab,sessionId,sessionOptionsHtml,html,extra={}) {
+  const cache = {userId:me?.id || '',role:prof?.role || '',sessionId,
+    dateFrom:selectedDateFrom,dateTo:selectedDateTo,loadedAt:Date.now(),sessionOptionsHtml,
+    views:{[tab]:html},...extra};
+  _dashboardViewCache = cache;
+  _dashboardViewCacheStore.set(dashboardViewCacheKey(tab,sessionId),cache);
+  paintDashboardView(tab,cache);
+}
+
+function paintVerifiedManagementCacheV263(bundle,tab,sessionId,sessionOptionsHtml) {
+  if (!bundle?._unchangedV263 || !['summary','executive','team','log'].includes(tab)) return false;
+  const cached = _dashboardViewCacheStore.get(dashboardViewCacheKey(tab,sessionId));
+  if (!cached?.views?.[tab] || cached.userId !== me?.id || cached.role !== prof?.role
+      || cached.sessionId !== sessionId || cached.dateFrom !== selectedDateFrom || cached.dateTo !== selectedDateTo
+      || cached._revisionV263 !== bundle.revision || cached._catalogRevisionV263 !== bundle.catalog_revision) return false;
+  const fresh = {...cached,loadedAt:Date.now(),sessionOptionsHtml};
+  _dashboardViewCache = fresh;
+  _dashboardViewCacheStore.set(dashboardViewCacheKey(tab,sessionId),fresh);
+  return paintDashboardView(tab,fresh);
+}
+
+window.getCycleCountPerformanceV263 = () => ({
+  build:APP_VERSION_LABEL,
+  management:_managementMetricsV263.map(row => ({...row,rows:row.rows && {...row.rows}})),
+  count:typeof window.getCycleCountPerformanceV261 === 'function' ? window.getCycleCountPerformanceV261() : null,
+});
+
+
+async function loadSvDashCoreV262() {
   if (!['admin','supervisor'].includes(prof?.role)) {
     goPrimary('c-tasks');
     return;
@@ -53163,10 +53525,17 @@ async function loadSvDash() {
   }
   // Load menu-specific settings only.  V1.77 fetched both Layout documents in
   // front of almost every Dashboard tab even when they were never rendered.
-  const dashboardSettingsPromise = tab === 'layout'
-    ? Promise.all([loadWarehouseLayoutConfig(true,true),loadPlanLocationConfig(true,true)])
-    : tab === 'summary' ? loadPlanLocationConfig(false) : Promise.resolve();
+  const managementBundle = await loadManagementBundleV263(curSid,tab);
+  if (isStaleLoad()) return;
+  if (managementBundle) applyManagementSettingsV263(managementBundle);
+  const dashboardSettingsPromise = managementBundle ? Promise.resolve()
+    : tab === 'layout' ? Promise.all([loadWarehouseLayoutConfig(true,true),loadPlanLocationConfig(true,true)])
+    : tab === 'summary' ? loadPlanLocationConfig(true,true) : Promise.resolve();
 
+
+  await dashboardSettingsPromise;
+  if (isStaleLoad()) return;
+  if (paintVerifiedManagementCacheV263(managementBundle,tab,curSid,sessOpts)) return;
   const [
     { data: asgns, error:assignmentsError },
     { data: wmsRemarkRows, error:wmsRemarksError },
@@ -53176,7 +53545,7 @@ async function loadSvDash() {
     // pages must do the same: a direct Supabase select is capped (normally at
     // 1,000 rows), and round3_done sorts near the end, so older DIFF work could
     // disappear from both the Variance and WMS queues even while History shows it.
-    fetchPagedSupabaseRows(
+    managementRowsV263(managementBundle,'assignments',() => fetchPagedSupabaseRows(
       'assignments',
       'id,status,assigned_to,location_id,assigned_at,created_at,counter_r2_id,counter_r3_id,wms_closed_at,wms_closed_by,locations(code,zone,row_no,level),profiles!assigned_to(name)',
       query => query
@@ -53184,17 +53553,17 @@ async function loadSvDash() {
         .order('status')
         .order('created_at')
         .order('id'),
-    ),
-    tab === 'wms'
+    )),
+    managementRowsV263(managementBundle,'remarks',() => tab === 'wms'
       ? sb.from('remark_options').select('id,label').eq('context','wms').eq('active',true).order('label')
-      : Promise.resolve({ data:[],error:null }),
-    ['summary','executive','variance','wms'].includes(tab)
+      : Promise.resolve({ data:[],error:null })),
+    managementRowsV263(managementBundle,'found',() => ['summary','executive','variance','wms'].includes(tab)
       ? sb.from('found_items')
           .select('id,session_id,status,source_type,location_code,license_plate,lot,inventory_status,item_code,description,uom,qty,actual_counter_name,discovered_at,profiles!found_items_discovered_by_fkey(name)')
           .eq('session_id',curSid)
           .eq('status','pending_review')
           .order('discovered_at',{ ascending:true })
-      : Promise.resolve({ data:[],error:null }),
+      : Promise.resolve({ data:[],error:null })),
     dashboardSettingsPromise,
   ]);
   if (isStaleLoad()) return;
@@ -53213,7 +53582,9 @@ async function loadSvDash() {
   asgns.forEach(a => { asgnInfoMap[a.id] = a; });
 
   const allAsgnIds = asgns.map(a => a.id);
-  const dashboardReadBundlePromise = loadDashboardReadBundleV252(curSid,allAsgnIds,tab === 'wms');
+  const dashboardReadBundlePromise = managementBundle
+    ? Promise.resolve(managementDashboardBundleV263(managementBundle,tab === 'wms'))
+    : loadDashboardReadBundleV252(curSid,allAsgnIds,tab === 'wms');
   const [
     countResult,
     snapshotResult,
@@ -53233,44 +53604,44 @@ async function loadSvDash() {
       allAsgnIds,
       query => query.order('id'),
     )),
-    fetchPagedSupabaseRows(
+    managementRowsV263(managementBundle,'snapshots',() => fetchPagedSupabaseRows(
       'stock_snapshot',
       'id,session_id,created_at,location_id,item_id,onhand_qty,al_qty,locations(code,zone,row_no,level),items(code,description,uom,category)',
       query => query.eq('session_id', curSid).order('id'),
-    ),
-    ['tracker','layout'].includes(tab)
+    )),
+    managementRowsV263(managementBundle,'details',() => ['tracker','layout'].includes(tab)
       ? fetchPagedSupabaseRows(
           'stock_snapshot_detail',
           'location_id,item_id,license_plate,lot,inventory_status,qty,uom',
           query => query.eq('session_id',curSid)
             .order('location_id').order('item_id').order('license_plate').order('lot'),
         )
-      : Promise.resolve({ data:[],error:null }),
-    ['tracker','layout'].includes(tab)
+      : Promise.resolve({ data:[],error:null })),
+    managementRowsV263(managementBundle,'jobs',() => ['tracker','layout'].includes(tab)
       ? fetchPagedSupabaseRows(
           'annual_count_jobs',
           'id,job_code,assigned_to,status,profiles!assigned_to(name)',
           query => query.eq('session_id',curSid).order('job_no').order('id'),
         )
-      : Promise.resolve({ data:[],error:null }),
-    ['tracker','layout'].includes(tab)
+      : Promise.resolve({ data:[],error:null })),
+    managementRowsV263(managementBundle,'job_items',() => ['tracker','layout'].includes(tab)
       ? fetchPagedSupabaseRows(
           'annual_count_job_items',
           'job_id,location_id,item_id,sort_order',
           query => query.eq('session_id',curSid)
             .order('sort_order').order('job_id').order('location_id').order('item_id'),
         )
-      : Promise.resolve({ data:[],error:null }),
+      : Promise.resolve({ data:[],error:null })),
     dashboardReadBundlePromise.then(bundle => bundle
       ? validateDashboardRulesV252(bundle.rules)
       : loadDashboardRulesV252(curSid)),
-    tab === 'executive' && prof?.role === 'admin'
+    managementRowsV263(managementBundle,'paper',() => tab === 'executive' && prof?.role === 'admin'
       ? fetchPagedSupabaseRows(
           'paper_form_counts',
           'source_type,source_assignment_id,source_location_id,source_item_id,location_code,item_code,count1,count2,count3,physical_count,updated_at,created_at',
           query => query.eq('session_id',curSid).eq('source_type','paper_form'),
         )
-      : Promise.resolve({ data:[], error:null }),
+      : Promise.resolve({ data:[], error:null })),
     // Start confirmed approval history beside Counts and Snapshots instead of
     // waiting for those large reads to finish and then doing another phase.
     dashboardBundleRowsV252(dashboardReadBundlePromise,'approvals',() => fetchSupabaseRowsByValues(
@@ -53291,15 +53662,14 @@ async function loadSvDash() {
   ]);
   if (isStaleLoad()) return;
   if (countResult.error || snapshotResult.error || detailResult.error || annualJobsResult.error || annualJobItemsResult.error || varianceApprovalResult.error || baselineAuditResult.error) {
-    cnt().innerHTML = errBox((countResult.error || snapshotResult.error || detailResult.error || annualJobsResult.error || annualJobItemsResult.error || varianceApprovalResult.error || baselineAuditResult.error).message);
-    return;
+    throw (countResult.error || snapshotResult.error || detailResult.error || annualJobsResult.error || annualJobItemsResult.error || varianceApprovalResult.error || baselineAuditResult.error);
   }
   if (paperResult?.error) console.warn('โหลดข้อมูล Form Count สำหรับแดชบอร์ด V.2 ไม่สำเร็จ:',paperResult.error.message);
   const rawCounts = countResult.data || [];
   const activeDateFilter = dashboardDateRange();
   const allCounts = filterRowsByDashboardDate(rawCounts, 'counted_at');
   const visiblePendingFoundRows = filterRowsByDashboardDate(
-    pendingFoundRows || [],
+    (pendingFoundRows || []).filter(row => row.status === 'pending_review'),
     'discovered_at',
   );
   if (activeDateFilter) {
@@ -53369,14 +53739,14 @@ async function loadSvDash() {
   let recoveryDetailRows = detailResult.data || [];
   if (remainingRecoveryAssignmentIds.length) {
     const [auditRecoveryResult,detailRecoveryResult] = await Promise.all([
-      fetchSupabaseRowsByValues(
+      managementRowsV263(managementBundle,'audit',() => fetchSupabaseRowsByValues(
         'audit_log',
         'id,session_id,location_id,item_id,assignment_id,action,old_value,new_value,created_at',
         'assignment_id',
         remainingRecoveryAssignmentIds,
         query => query.eq('session_id',curSid).order('created_at'),
-      ),
-      recoveryDetailRows.length
+      )),
+      managementRowsV263(managementBundle,'details',() => recoveryDetailRows.length
         ? Promise.resolve({ data:recoveryDetailRows,error:null })
         : fetchSupabaseRowsByValues(
             'stock_snapshot_detail',
@@ -53384,12 +53754,12 @@ async function loadSvDash() {
             'location_id',
             remainingZeroLocationIds,
             query => query.eq('session_id',curSid).order('id'),
-          ),
+          )),
     ]);
     if (isStaleLoad()) return;
-    if (auditRecoveryResult.error) console.warn('โหลด Audit สำหรับกู้ OH ไม่สำเร็จ:',auditRecoveryResult.error.message);
+    if (auditRecoveryResult.error) throw auditRecoveryResult.error;
     else recoveryAuditRows = auditRecoveryResult.data || [];
-    if (detailRecoveryResult.error) console.warn('โหลด LPN/Lot สำหรับกู้ OH ไม่สำเร็จ:',detailRecoveryResult.error.message);
+    if (detailRecoveryResult.error) throw detailRecoveryResult.error;
     else recoveryDetailRows = detailRecoveryResult.data || [];
   }
 
@@ -53412,24 +53782,24 @@ async function loadSvDash() {
     allSnapshots,asgns,rawCounts,varianceApprovalResult?.data || [],rules,recoveryAuditRows,
   );
   if (dashboardOhRepairs.length) {
-    persistRecoveredHistoricalOhInBackground(dashboardOhRepairs);
+    // V2.63: derived historical OH is for display; a read does not write stock.
     invalidateWmsFastCacheV179(curSid);
     invalidatePageViewCache();
   }
   if (assignmentStatusRepairs.length) {
-    persistRecoveredAssignmentStatusesInBackground(assignmentStatusRepairs);
+    // V2.63: preserve recovered display status without background writes.
   }
   let executiveItemMasterRows = [];
   let executiveFoundRows = [];
   if (tab === 'executive') {
     const executiveItemCodes = [...new Set(allSnapshots.map(snapshot => String(snapshot.items?.code || '').trim()).filter(Boolean))];
     const [itemMasterResult,foundIssueResult] = await Promise.all([
-      fetchSupabaseRowsByValues('data_info_items','item_code,attributes','item_code',executiveItemCodes),
-      fetchPagedSupabaseRows(
+      managementRowsV263(managementBundle,'master',() => fetchSupabaseRowsByValues('data_info_items','item_code,attributes','item_code',executiveItemCodes)),
+      managementRowsV263(managementBundle,'found',() => fetchPagedSupabaseRows(
         'found_items',
         'id,session_id,assignment_id,location_id,location_code,item_id,item_code,description,qty,type_issue,remark,photo_url,status,source_type,discovered_at,reviewed_at,supervisor_note',
         query => query.eq('session_id',curSid).order('discovered_at',{ ascending:true }),
-      ),
+      )),
     ]);
     if (isStaleLoad()) return;
     if (itemMasterResult.error) console.warn('โหลด Category จาก Item Master สำหรับแดชบอร์ด V.2 ไม่สำเร็จ:',itemMasterResult.error.message);
@@ -53440,7 +53810,7 @@ async function loadSvDash() {
     const foundOnlyCodes = [...new Set(executiveFoundRows
       .map(row => String(row.item_code || '').trim())
       .filter(code => code && !loadedMasterCodes.has(code.toLocaleUpperCase('en-US'))))];
-    if (foundOnlyCodes.length) {
+    if (!managementBundle && foundOnlyCodes.length) {
       const foundMasterResult = await fetchSupabaseRowsByValues('data_info_items','item_code,attributes','item_code',foundOnlyCodes);
       if (isStaleLoad()) return;
       if (foundMasterResult.error) console.warn('โหลด Category ของงานพบเพิ่มจาก Item Master ไม่สำเร็จ:',foundMasterResult.error.message);
@@ -53580,14 +53950,14 @@ async function loadSvDash() {
     ...rawCounts.map(record => record.counted_by),
     ...workTrackerApprovalRows.flatMap(approval => [approval.approved_by,approval.wms_fixed_by,approval.draft_saved_by]),
   ].filter(Boolean))];
-  const trackerActorResult = ['tracker','layout'].includes(tab)
-    ? await fetchSupabaseRowsByValues(
+  const trackerActorResult = await managementRowsV263(managementBundle,'profiles',() => ['tracker','layout'].includes(tab)
+    ? fetchSupabaseRowsByValues(
         'profiles',
         'id,name',
         'id',
         trackerActorIds,
       )
-    : { data:[],error:null };
+    : { data:[],error:null });
   if (isStaleLoad()) return;
   if (trackerActorResult.error) console.warn('โหลดชื่อผู้ทำรายการสำหรับหน้าติดตามไม่สำเร็จ:',trackerActorResult.error.message);
   const trackerActorMap = Object.fromEntries((trackerActorResult.data || []).map(profile => [profile.id,profile.name]));
@@ -53635,10 +54005,18 @@ async function loadSvDash() {
       counts:rawCounts,
       approvals:trackerApprovalRows,
       rules,
-      loadedAt:new Date().toISOString(),
+      loadedAt:managementBundle?.generated_at || new Date().toISOString(),
+      _revisionV263:managementBundle?.revision ?? null,
+      _catalogRevisionV263:managementBundle?.catalog_revision ?? null,
     };
+    refreshWarehouseLayoutRuntime();
+    paintManagementTabV263(tab,curSid,sessOpts,'<div class="warehouse-layout-root" id="warehouse-layout-root"></div>');
+    return;
   }
-  refreshWarehouseLayoutRuntime();
+  if (tab === 'tracker') {
+    paintManagementTabV263(tab,curSid,sessOpts,workTrackerViewHtml());
+    return;
+  }
 
   const allItemIds = [...new Set(wmsRows.map(v => v.item_id).filter(Boolean))];
   const allApproverIds = [...new Set(wmsRows.map(v => v.approved_by).filter(Boolean))];
@@ -53664,8 +54042,8 @@ async function loadSvDash() {
     { data: approversData },
     { data: wmsNoteRows, error: wmsNoteError },
   ] = await Promise.all([
-    fetchSupabaseRowsByValues('items', 'id,code,description', 'id', allItemIds),
-    fetchSupabaseRowsByValues('profiles', 'id,name', 'id', allApproverIds),
+    managementRowsV263(managementBundle,'items',() => fetchSupabaseRowsByValues('items', 'id,code,description', 'id', allItemIds)),
+    managementRowsV263(managementBundle,'profiles',() => fetchSupabaseRowsByValues('profiles', 'id,name', 'id', allApproverIds)),
     // WMS Remark is part of the saved business record, not optional decoration.
     // Wait for the complete history before rendering/caching the page so a
     // quick tab switch can never preserve a note-less version of the queue.
@@ -53862,12 +54240,12 @@ async function loadSvDash() {
 
   const pendingItemIds = [...new Set(pendingWmsRows.map(v => v.item_id).filter(Boolean))];
   if (pendingItemIds.length) {
-    const { data: pendingItems } = await fetchSupabaseRowsByValues(
+    const { data: pendingItems } = await managementRowsV263(managementBundle,'items',() => fetchSupabaseRowsByValues(
       'items',
       'id,code,description',
       'id',
       pendingItemIds,
-    );
+    ));
     const pItemMap = Object.fromEntries((pendingItems||[]).map(i => [i.id, i]));
     pendingWmsRows.forEach(v => { v.items = pItemMap[v.item_id] || { code: '?', description: '' }; });
   }
@@ -53917,6 +54295,173 @@ async function loadSvDash() {
   window._actualCountersByAssignment = actualCountersByAssignment;
   window._actualCountersByWork = actualCountersByWork;
   window._wmsHistoryLoading = false;
+
+
+  if (tab === 'wms') {
+  restoreWmsPersistedFiltersV22(curSid);
+  restoreWmsActiveWorkflowV25(curSid);
+  const allowedWmsStatuses = new Set(['all','unfixed','fixed','pending']);
+  const requestedWmsFilter = S._wmsFilter || 'all';
+  const wmsFilter = allowedWmsStatuses.has(requestedWmsFilter) ? requestedWmsFilter : 'all';
+  // An empty result is valid. Never replace the User's selected status just
+  // because the last matching Item was confirmed, edited or closed.
+  S._wmsFilter = wmsFilter;
+  const wmsZone = S._wmsZone || '';
+  const wmsRow = S._wmsRow || '';
+  const wmsLevel = S._wmsLevel || '';
+  const wmsUser = S._wmsUser || '';
+  const wmsCounter = S._wmsCounter || '';
+  const wmsLocSearch = S._wmsLocSearch || '';
+
+  const wmsZones = new Set(), wmsRowsNo = new Set(), wmsLevels = new Set();
+  const wmsCounters = new Set();
+  const wmsUsersMap = {};
+  wmsWorkspaceRows.forEach(v => {
+    const loc = asgnInfoMap[v.assignment_id]?.locations || {};
+    const locationMeta = warehouseLocationFilterMeta(loc);
+    if (locationMeta.zone) wmsZones.add(locationMeta.zone);
+    if (locationMeta.row) wmsRowsNo.add(locationMeta.row);
+    if (locationMeta.level) wmsLevels.add(locationMeta.level);
+    if (v.approved_by) wmsUsersMap[v.approved_by] = v.profiles?.name || '?';
+    else if (v._isPending) wmsUsersMap['_pending'] = '(รอคอนเฟิร์ม)';
+    (actualCountersByAssignment[v.assignment_id] || []).forEach(name => {
+      const normalizedName = String(name || '').trim();
+      if (normalizedName) wmsCounters.add(normalizedName);
+    });
+  });
+
+  const wmsTotalCount = wmsWorkspaceRows.length;
+  const wmsPendingRows = wmsWorkspaceRows.filter(v => v._isPending);
+  const wmsConfirmedRows = wmsWorkspaceRows.filter(v => !v._isPending);
+  const wmsFixedRows = wmsConfirmedRows.filter(v => v.wms_fixed);
+  const wmsUnfixedRows = wmsConfirmedRows.filter(v => !v.wms_fixed);
+  const wmsPendingCount = wmsPendingRows.length;
+  const wmsFixedCount = wmsFixedRows.length;
+  const wmsUnfixedCount = wmsUnfixedRows.length;
+  const wmsFixedPercent = wmsTotalCount > 0
+    ? Math.round((wmsFixedCount / wmsTotalCount) * 100)
+    : 0;
+  const wmsPendingMetrics = workflowQuantityMetrics(wmsPendingRows,asgnInfoMap);
+  const wmsUnfixedMetrics = workflowQuantityMetrics(wmsUnfixedRows,asgnInfoMap);
+  const wmsFixedMetrics = workflowQuantityMetrics(wmsFixedRows,asgnInfoMap);
+  const wmsClosureMetrics = wmsLocationClosureMetrics(wmsWorkspaceRows,asgnInfoMap);
+
+  const errorBanner = vaError 
+    ? `<div class="alert alert-red" style="margin-bottom:14px;font-size:13px">⚠️ ไม่สามารถดึงข้อมูลคอนเฟิร์มแล้วได้</div>`
+    : '';
+
+  const wmsTabHtml = `
+    ${errorBanner}
+    <div class="wms-workspace">
+      <section class="wms-overview-shell">
+        <div class="wms-overview-head">
+          <div class="wms-overview-title">
+            <div class="wms-overview-icon">${wmsIconSvg('reviewed',25)}</div>
+            <div class="wms-overview-copy">
+              <strong>ศูนย์ยืนยันผลและปรับสต๊อกสินค้า</strong>
+              <span>ยืนยันผล DIFF ตรวจสอบรายการ และปิดงาน WMS ได้ในหน้าเดียว</span>
+            </div>
+          </div>
+          <div class="wms-overview-total">
+            <strong id="wms-total-count">${wmsTotalCount}</strong>
+            <span>DIFF ทั้งหมด</span>
+          </div>
+        </div>
+        <div class="wms-progress-row">
+          <span>ความคืบหน้าการตรวจสอบทั้งหมด</span>
+          <strong id="wms-fixed-percent">${wmsFixedPercent}%</strong>
+        </div>
+        <div class="wms-progress-track"><span id="wms-fixed-progress" style="width:${wmsFixedPercent}%"></span></div>
+        <div class="wms-kpi-grid">
+          <button type="button" class="wms-kpi-card pending ${wmsFilter==='pending'?'active':''}" data-wms-kpi="pending"
+            onclick="setWmsStatusFilter('pending')">
+            <div class="wms-kpi-icon">${wmsIconSvg('search',21)}</div>
+            <div class="wms-kpi-copy"><strong id="wms-pending-count">${wmsPendingCount}</strong><span>รอยืนยันผล</span></div>
+            ${workflowStatusDetailsHtml(wmsPendingMetrics)}
+          </button>
+          <button type="button" class="wms-kpi-card unfixed ${wmsFilter==='unfixed'?'active':''}" data-wms-kpi="unfixed"
+            onclick="setWmsStatusFilter('unfixed')">
+            <div class="wms-kpi-icon">${wmsIconSvg('pending',21)}</div>
+            <div class="wms-kpi-copy"><strong id="wms-unfixed-count">${wmsUnfixedCount}</strong><span>รอตรวจสอบ</span></div>
+            ${workflowStatusDetailsHtml(wmsUnfixedMetrics)}
+          </button>
+          <button type="button" class="wms-kpi-card fixed has-location-close-summary ${wmsFilter==='fixed'?'active':''}" data-wms-kpi="fixed"
+            onclick="setWmsStatusFilter('fixed')">
+            <div class="wms-kpi-icon">${wmsIconSvg('reviewed',21)}</div>
+            <div class="wms-kpi-copy"><strong id="wms-fixed-count">${wmsFixedCount}</strong><span>ตรวจสอบเสร็จสิ้น</span></div>
+            ${wmsClosedLocationSummaryHtml(wmsClosureMetrics)}
+            ${workflowStatusDetailsHtml(wmsFixedMetrics)}
+          </button>
+        </div>
+      </section>
+
+      ${pendingFoundVarianceHtml(visiblePendingFoundRows)}
+
+      <section class="wms-filter-panel">
+        <div class="wms-filter-heading">
+          <strong>ตัวกรองรายการ</strong>
+          <span>เลือกหลายตัวกรองร่วมกันได้</span>
+        </div>
+        <div class="wms-filter-grid">
+          <div class="wms-filter-field"><label>ZONE</label>
+            <select id="wms-zone" onchange="updateWmsFilter('Zone',this.value)">
+              <option value="">ทั้งหมด</option>
+              ${[...wmsZones].sort().map(z=>`<option value="${z}" ${wmsZone===z?'selected':''}>${z}</option>`).join('')}
+            </select>
+          </div>
+          <div class="wms-filter-field"><label>ROW</label>
+            <select id="wms-row" onchange="updateWmsFilter('Row',this.value)">
+              <option value="">ทั้งหมด</option>
+              ${[...wmsRowsNo].sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true})).map(row=>`<option value="${row}" ${String(wmsRow)===String(row)?'selected':''}>${row}</option>`).join('')}
+            </select>
+          </div>
+          <div class="wms-filter-field"><label>LEVEL</label>
+            <select id="wms-level" onchange="updateWmsFilter('Level',this.value)">
+              <option value="">ทั้งหมด</option>
+              ${[...wmsLevels].sort().map(l=>`<option value="${l}" ${wmsLevel===l?'selected':''}>${l}</option>`).join('')}
+            </select>
+          </div>
+          <div class="wms-filter-field"><label>USER ผู้คอนเฟิร์ม</label>
+            <select id="wms-user" onchange="updateWmsFilter('User',this.value)">
+              <option value="">ทั้งหมด</option>
+              <option value="_pending" ${wmsUser==='_pending'?'selected':''}>รอคอนเฟิร์ม</option>
+              ${Object.entries(wmsUsersMap).filter(([k]) => k !== '_pending').sort((a,b)=>a[1].localeCompare(b[1])).map(([id,name])=>`<option value="${id}" ${wmsUser===id?'selected':''}>${name}</option>`).join('')}
+            </select>
+          </div>
+          <div class="wms-filter-field"><label>ผู้ตรวจนับ</label>
+            <select id="wms-counter" onchange="updateWmsFilter('Counter',this.value)">
+              <option value="">ทั้งหมด</option>
+              ${[...wmsCounters].sort((a,b)=>a.localeCompare(b,'th')).map(name=>`<option value="${escapeWmsText(name)}" ${wmsCounter===name?'selected':''}>${escapeWmsText(name)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="wms-filter-field"><label>สถานะ</label>
+            <select id="wms-status" onchange="updateWmsFilter('Filter',this.value)">
+              <option value="all" ${wmsFilter==='all'?'selected':''}>ทั้งหมด</option>
+              <option value="unfixed" ${wmsFilter==='unfixed'?'selected':''}>ยังไม่ได้ตรวจสอบ</option>
+              <option value="fixed" ${wmsFilter==='fixed'?'selected':''}>ตรวจสอบแล้ว</option>
+              <option value="pending" ${wmsFilter==='pending'?'selected':''}>รอคอนเฟิร์ม</option>
+            </select>
+          </div>
+          <div class="wms-filter-field search"><label>ค้นหา LOCATION / ITEM</label>
+            <input id="wms-loc-search" value="${escapeWmsText(wmsLocSearch)}" placeholder="เช่น B-29-001-A หรือรหัส Item"
+              oninput="updateWmsFilter('LocSearch',this.value)">
+          </div>
+        </div>
+        <div class="wms-feedback" id="wms-feedback" role="status" aria-live="polite" hidden></div>
+      </section>
+
+      <section class="wms-list-shell">
+        <div class="wms-list-heading">
+          <strong>รายการปรับยอด</strong>
+          <span class="wms-list-count" id="wms-visible-count">0 รายการ</span>
+        </div>
+        <div id="wms-list" data-location-sort-group></div>
+      </section>
+    </div>`;
+
+    paintManagementTabV263(tab,curSid,sessOpts,wmsTabHtml);
+    return;
+  }
 
   // One accuracy record represents one physical Location + Item pair.
   // Counting rounds and reassignment must not create additional accuracy items.
@@ -54296,7 +54841,7 @@ async function loadSvDash() {
   });
 
   let peopleRows = '';
-  Object.values(byCounter).sort((a,b) => a.name.localeCompare(b.name, 'th')).forEach((counter, idx) => {
+  (tab === 'team' ? Object.values(byCounter) : []).sort((a,b) => a.name.localeCompare(b.name, 'th')).forEach((counter, idx) => {
     const items = sortRowsByLocation([...counter.assignmentMap.values()], assignment => assignment.locations?.code);
     const u = {
       name: counter.name,
@@ -54408,7 +54953,7 @@ async function loadSvDash() {
       </div>
     </div>
   </section>`;
-  const varianceRowsHtml = needsFollowUp.length ? needsFollowUp.map((row, i) => {
+  const varianceRowsHtml = tab === 'variance' && needsFollowUp.length ? needsFollowUp.map((row, i) => {
     const assignment = asgnInfoMap[row.assignment_id] || {};
     const l = assignment.locations;
     const locationFilterMeta = warehouseLocationFilterMeta(l || {});
@@ -54543,7 +55088,7 @@ async function loadSvDash() {
   const ohMetricValue = formatDashboardMetricValue(totalOHQty);
   const counterMetricValue = formatDashboardMetricValue(totalCounters);
 
-  const summaryTabHtml = `
+  const summaryTabHtml = tab === 'summary' ? `
     <section class="summary-dashboard-grid">
       <article class="summary-card summary-accuracy-card summary-accuracy-stack">
         <div class="summary-accuracy-layer summary-accuracy-layer-bottom"></div>
@@ -54718,9 +55263,9 @@ async function loadSvDash() {
         </div>
       </article>
     </section>
-    `;
+    ` : '';
 
-  const varianceLogTabHtml = `
+  const varianceLogTabHtml = tab === 'log' ? `
     <div>
       <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap">
         <div style="font-size:18px;font-weight:800;color:var(--text-main)">📋 รายงานผลต่าง (Variance Log)</div>
@@ -54729,15 +55274,15 @@ async function loadSvDash() {
       <div class="card card-flush" data-location-sort-group style="margin-bottom:0;box-shadow:inset 4px 4px 8px var(--neu-shadow-dark),inset -4px -4px 8px var(--neu-shadow-light);border-radius:20px">
         ${varianceReportRows}
       </div>
-    </div>`;
+    </div>` : '';
 
-  const teamProgressTabHtml = `
+  const teamProgressTabHtml = tab === 'team' ? `
     <div>
       <div style="font-size:18px;font-weight:800;color:var(--text-main);margin-bottom:18px">👥 ความคืบหน้าตามงานที่ได้รับมอบหมาย (Team Progress)</div>
       ${peopleRows || `<div style="padding:30px 0;text-align:center;color:var(--text-muted);font-size:14px;font-weight:600">ยังไม่มีงานที่ได้รับมอบหมาย</div>`}
-    </div>`;
+    </div>` : '';
 
-  const varianceTabHtml = `
+  const varianceTabHtml = tab === 'variance' ? `
     ${varianceQueueOverviewHtml}
     <section class="wms-filter-panel">
       <div class="wms-filter-heading">
@@ -54783,170 +55328,11 @@ async function loadSvDash() {
         style="padding:40px 0;text-align:center;color:var(--text-muted);font-size:14px;font-weight:600">
         ไม่พบรายการตามตัวกรองที่เลือก
       </div>
-    </section>`;
+    </section>` : '';
 
-  restoreWmsPersistedFiltersV22(curSid);
-  restoreWmsActiveWorkflowV25(curSid);
-  const allowedWmsStatuses = new Set(['all','unfixed','fixed','pending']);
-  const requestedWmsFilter = S._wmsFilter || 'all';
-  const wmsFilter = allowedWmsStatuses.has(requestedWmsFilter) ? requestedWmsFilter : 'all';
-  // An empty result is valid. Never replace the User's selected status just
-  // because the last matching Item was confirmed, edited or closed.
-  S._wmsFilter = wmsFilter;
-  const wmsZone = S._wmsZone || '';
-  const wmsRow = S._wmsRow || '';
-  const wmsLevel = S._wmsLevel || '';
-  const wmsUser = S._wmsUser || '';
-  const wmsCounter = S._wmsCounter || '';
-  const wmsLocSearch = S._wmsLocSearch || '';
+  const wmsTabHtml = '';
 
-  const wmsZones = new Set(), wmsRowsNo = new Set(), wmsLevels = new Set();
-  const wmsCounters = new Set();
-  const wmsUsersMap = {};
-  wmsWorkspaceRows.forEach(v => {
-    const loc = asgnInfoMap[v.assignment_id]?.locations || {};
-    const locationMeta = warehouseLocationFilterMeta(loc);
-    if (locationMeta.zone) wmsZones.add(locationMeta.zone);
-    if (locationMeta.row) wmsRowsNo.add(locationMeta.row);
-    if (locationMeta.level) wmsLevels.add(locationMeta.level);
-    if (v.approved_by) wmsUsersMap[v.approved_by] = v.profiles?.name || '?';
-    else if (v._isPending) wmsUsersMap['_pending'] = '(รอคอนเฟิร์ม)';
-    (actualCountersByAssignment[v.assignment_id] || []).forEach(name => {
-      const normalizedName = String(name || '').trim();
-      if (normalizedName) wmsCounters.add(normalizedName);
-    });
-  });
-
-  const wmsTotalCount = wmsWorkspaceRows.length;
-  const wmsPendingRows = wmsWorkspaceRows.filter(v => v._isPending);
-  const wmsConfirmedRows = wmsWorkspaceRows.filter(v => !v._isPending);
-  const wmsFixedRows = wmsConfirmedRows.filter(v => v.wms_fixed);
-  const wmsUnfixedRows = wmsConfirmedRows.filter(v => !v.wms_fixed);
-  const wmsPendingCount = wmsPendingRows.length;
-  const wmsFixedCount = wmsFixedRows.length;
-  const wmsUnfixedCount = wmsUnfixedRows.length;
-  const wmsFixedPercent = wmsTotalCount > 0
-    ? Math.round((wmsFixedCount / wmsTotalCount) * 100)
-    : 0;
-  const wmsPendingMetrics = workflowQuantityMetrics(wmsPendingRows,asgnInfoMap);
-  const wmsUnfixedMetrics = workflowQuantityMetrics(wmsUnfixedRows,asgnInfoMap);
-  const wmsFixedMetrics = workflowQuantityMetrics(wmsFixedRows,asgnInfoMap);
-  const wmsClosureMetrics = wmsLocationClosureMetrics(wmsWorkspaceRows,asgnInfoMap);
-
-  const errorBanner = vaError 
-    ? `<div class="alert alert-red" style="margin-bottom:14px;font-size:13px">⚠️ ไม่สามารถดึงข้อมูลคอนเฟิร์มแล้วได้</div>`
-    : '';
-
-  const wmsTabHtml = `
-    ${errorBanner}
-    <div class="wms-workspace">
-      <section class="wms-overview-shell">
-        <div class="wms-overview-head">
-          <div class="wms-overview-title">
-            <div class="wms-overview-icon">${wmsIconSvg('reviewed',25)}</div>
-            <div class="wms-overview-copy">
-              <strong>ศูนย์ยืนยันผลและปรับสต๊อกสินค้า</strong>
-              <span>ยืนยันผล DIFF ตรวจสอบรายการ และปิดงาน WMS ได้ในหน้าเดียว</span>
-            </div>
-          </div>
-          <div class="wms-overview-total">
-            <strong id="wms-total-count">${wmsTotalCount}</strong>
-            <span>DIFF ทั้งหมด</span>
-          </div>
-        </div>
-        <div class="wms-progress-row">
-          <span>ความคืบหน้าการตรวจสอบทั้งหมด</span>
-          <strong id="wms-fixed-percent">${wmsFixedPercent}%</strong>
-        </div>
-        <div class="wms-progress-track"><span id="wms-fixed-progress" style="width:${wmsFixedPercent}%"></span></div>
-        <div class="wms-kpi-grid">
-          <button type="button" class="wms-kpi-card pending ${wmsFilter==='pending'?'active':''}" data-wms-kpi="pending"
-            onclick="setWmsStatusFilter('pending')">
-            <div class="wms-kpi-icon">${wmsIconSvg('search',21)}</div>
-            <div class="wms-kpi-copy"><strong id="wms-pending-count">${wmsPendingCount}</strong><span>รอยืนยันผล</span></div>
-            ${workflowStatusDetailsHtml(wmsPendingMetrics)}
-          </button>
-          <button type="button" class="wms-kpi-card unfixed ${wmsFilter==='unfixed'?'active':''}" data-wms-kpi="unfixed"
-            onclick="setWmsStatusFilter('unfixed')">
-            <div class="wms-kpi-icon">${wmsIconSvg('pending',21)}</div>
-            <div class="wms-kpi-copy"><strong id="wms-unfixed-count">${wmsUnfixedCount}</strong><span>รอตรวจสอบ</span></div>
-            ${workflowStatusDetailsHtml(wmsUnfixedMetrics)}
-          </button>
-          <button type="button" class="wms-kpi-card fixed has-location-close-summary ${wmsFilter==='fixed'?'active':''}" data-wms-kpi="fixed"
-            onclick="setWmsStatusFilter('fixed')">
-            <div class="wms-kpi-icon">${wmsIconSvg('reviewed',21)}</div>
-            <div class="wms-kpi-copy"><strong id="wms-fixed-count">${wmsFixedCount}</strong><span>ตรวจสอบเสร็จสิ้น</span></div>
-            ${wmsClosedLocationSummaryHtml(wmsClosureMetrics)}
-            ${workflowStatusDetailsHtml(wmsFixedMetrics)}
-          </button>
-        </div>
-      </section>
-
-      ${pendingFoundVarianceHtml(visiblePendingFoundRows)}
-
-      <section class="wms-filter-panel">
-        <div class="wms-filter-heading">
-          <strong>ตัวกรองรายการ</strong>
-          <span>เลือกหลายตัวกรองร่วมกันได้</span>
-        </div>
-        <div class="wms-filter-grid">
-          <div class="wms-filter-field"><label>ZONE</label>
-            <select id="wms-zone" onchange="updateWmsFilter('Zone',this.value)">
-              <option value="">ทั้งหมด</option>
-              ${[...wmsZones].sort().map(z=>`<option value="${z}" ${wmsZone===z?'selected':''}>${z}</option>`).join('')}
-            </select>
-          </div>
-          <div class="wms-filter-field"><label>ROW</label>
-            <select id="wms-row" onchange="updateWmsFilter('Row',this.value)">
-              <option value="">ทั้งหมด</option>
-              ${[...wmsRowsNo].sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true})).map(row=>`<option value="${row}" ${String(wmsRow)===String(row)?'selected':''}>${row}</option>`).join('')}
-            </select>
-          </div>
-          <div class="wms-filter-field"><label>LEVEL</label>
-            <select id="wms-level" onchange="updateWmsFilter('Level',this.value)">
-              <option value="">ทั้งหมด</option>
-              ${[...wmsLevels].sort().map(l=>`<option value="${l}" ${wmsLevel===l?'selected':''}>${l}</option>`).join('')}
-            </select>
-          </div>
-          <div class="wms-filter-field"><label>USER ผู้คอนเฟิร์ม</label>
-            <select id="wms-user" onchange="updateWmsFilter('User',this.value)">
-              <option value="">ทั้งหมด</option>
-              <option value="_pending" ${wmsUser==='_pending'?'selected':''}>รอคอนเฟิร์ม</option>
-              ${Object.entries(wmsUsersMap).filter(([k]) => k !== '_pending').sort((a,b)=>a[1].localeCompare(b[1])).map(([id,name])=>`<option value="${id}" ${wmsUser===id?'selected':''}>${name}</option>`).join('')}
-            </select>
-          </div>
-          <div class="wms-filter-field"><label>ผู้ตรวจนับ</label>
-            <select id="wms-counter" onchange="updateWmsFilter('Counter',this.value)">
-              <option value="">ทั้งหมด</option>
-              ${[...wmsCounters].sort((a,b)=>a.localeCompare(b,'th')).map(name=>`<option value="${escapeWmsText(name)}" ${wmsCounter===name?'selected':''}>${escapeWmsText(name)}</option>`).join('')}
-            </select>
-          </div>
-          <div class="wms-filter-field"><label>สถานะ</label>
-            <select id="wms-status" onchange="updateWmsFilter('Filter',this.value)">
-              <option value="all" ${wmsFilter==='all'?'selected':''}>ทั้งหมด</option>
-              <option value="unfixed" ${wmsFilter==='unfixed'?'selected':''}>ยังไม่ได้ตรวจสอบ</option>
-              <option value="fixed" ${wmsFilter==='fixed'?'selected':''}>ตรวจสอบแล้ว</option>
-              <option value="pending" ${wmsFilter==='pending'?'selected':''}>รอคอนเฟิร์ม</option>
-            </select>
-          </div>
-          <div class="wms-filter-field search"><label>ค้นหา LOCATION / ITEM</label>
-            <input id="wms-loc-search" value="${escapeWmsText(wmsLocSearch)}" placeholder="เช่น B-29-001-A หรือรหัส Item"
-              oninput="updateWmsFilter('LocSearch',this.value)">
-          </div>
-        </div>
-        <div class="wms-feedback" id="wms-feedback" role="status" aria-live="polite" hidden></div>
-      </section>
-
-      <section class="wms-list-shell">
-        <div class="wms-list-heading">
-          <strong>รายการปรับยอด</strong>
-          <span class="wms-list-count" id="wms-visible-count">0 รายการ</span>
-        </div>
-        <div id="wms-list" data-location-sort-group></div>
-      </section>
-    </div>`;
-
-  const workTrackerTabHtml = workTrackerViewHtml();
+  const workTrackerTabHtml = ''; // V2.63: tracker rendered above only when opened.
   const executivePaperRows = activeDateFilter
     ? filterRowsByDashboardDate(
         (paperResult?.data || []).map(row => ({ ...row,_executivePaperDate:row.updated_at || row.created_at })),
@@ -54994,6 +55380,8 @@ async function loadSvDash() {
     loadedAt:Date.now(),
     sessionOptionsHtml:sessOpts,
     views:dashboardViews,
+    _revisionV263:managementBundle?.revision ?? null,
+    _catalogRevisionV263:managementBundle?.catalog_revision ?? null,
     executiveData,
   };
   _dashboardViewCacheStore.set(dashboardViewCacheKey(tab,curSid),_dashboardViewCache);
@@ -56309,6 +56697,56 @@ function mergeLoadedWmsAuditHistory(auditRows,sessionId) {
   return changed;
 }
 
+function wmsPageGroupsV263(rows,filtered,focusAssignmentId='') {
+  const all = new Map(),visible = new Map();
+  for (const row of rows) {
+    if (!all.has(row.assignment_id)) all.set(row.assignment_id,[]);
+    all.get(row.assignment_id).push(row);
+  }
+  for (const row of filtered) {
+    if (!row.assignment_id) continue;
+    if (!visible.has(row.assignment_id)) visible.set(row.assignment_id,[]);
+    visible.get(row.assignment_id).push(row);
+  }
+  const ids = [...visible.keys()];
+  const filterKey = JSON.stringify([S._dashSid,S._wmsFilter,S._wmsZone,S._wmsRow,S._wmsLevel,
+    S._wmsUser,S._wmsCounter,S._wmsLocSearch,S._wmsWorkflowAssignment]);
+  if (S._wmsPageFilterV263 !== filterKey) {S._wmsPageV263 = 0;S._wmsPageFilterV263 = filterKey;}
+  const size = 25;
+  const totalPages = Math.max(1,Math.ceil(ids.length/size));
+  const focusIndex = ids.findIndex(id => String(id) === String(focusAssignmentId || ''));
+  const requested = focusIndex >= 0 ? Math.floor(focusIndex/size) : Number(S._wmsPageV263) || 0;
+  const page = Math.max(0,Math.min(totalPages-1,Math.floor(requested)));
+  S._wmsPageV263 = page;
+  return {page,totalPages,totalLocations:ids.length,start:page*size,
+    groups:ids.slice(page*size,(page+1)*size).map(id => ({assignmentId:id,visibleRows:visible.get(id),allRows:all.get(id)}))};
+}
+
+function selectWmsPageV263(page) {
+  if (_activeSaveWorkflowsV251.size) {
+    showWmsFeedback('กำลังบันทึก กรุณารอให้บันทึกเสร็จก่อนเปลี่ยนหน้า','error');return;
+  }
+  const pendingNotes = [...document.querySelectorAll('.wms-note-menu')].some(menu =>
+    wmsNoteMenuHasUnsavedChanges(menu,String(menu.id || '').replace(/^wms_note_menu_/,'')));
+  if (pendingNotes) {
+    showWmsFeedback('มี Remark ที่ยังบันทึกไม่เสร็จ กรุณาบันทึกก่อนเปลี่ยนหน้า','error');return;
+  }
+  S._wmsPageV263 = Math.max(0,Math.floor(Number(page) || 0));
+  renderWmsList();
+  Q('wms-list')?.scrollIntoView({block:'start',behavior:'auto'});
+}
+
+function wmsPaginationHtmlV263(state) {
+  if (state.totalPages <= 1) return '';
+  const end = state.start+state.groups.length;
+  return `<div class="wms-pagination" style="display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:12px;padding:18px 0" aria-label="เปลี่ยนหน้ารายการ WMS">
+    <button type="button" class="btn btn-ghost btn-sm" ${state.page === 0 ? 'disabled' : ''} onclick="selectWmsPageV263(${state.page-1})">ก่อนหน้า</button>
+    <span role="status">หน้า ${state.page+1} / ${state.totalPages} · แสดง ${state.start+1}–${end} จาก ${state.totalLocations} Location</span>
+    <button type="button" class="btn btn-ghost btn-sm" ${state.page+1 === state.totalPages ? 'disabled' : ''} onclick="selectWmsPageV263(${state.page+1})">ถัดไป</button>
+  </div>`;
+}
+
+
 function renderWmsList() {
   closeWmsNoteMenus();
   const container = Q('wms-list');
@@ -56367,11 +56805,8 @@ function renderWmsList() {
     return;
   }
 
-  const grouped = visibleAssignmentIds.map(assignmentId => ({
-    assignmentId,
-    visibleRows:filtered.filter(row => row.assignment_id === assignmentId),
-    allRows:wmsRows.filter(row => row.assignment_id === assignmentId),
-  }));
+  const pageStateV263 = wmsPageGroupsV263(wmsRows,filtered,S._wmsFocusAssignment);
+  const grouped = pageStateV263.groups;
 
   container.classList.add('wms-location-groups');
   container.innerHTML = grouped.map(group => {
@@ -56570,7 +57005,7 @@ function renderWmsList() {
       </div>
       <div class="wms-location-items">${itemsHtml}</div>
     </section>`;
-  }).join('');
+  }).join('') + wmsPaginationHtmlV263(pageStateV263);
 
   const focusAssignmentId = String(S._wmsFocusAssignment || '');
   if (focusAssignmentId) {
@@ -57279,55 +57714,54 @@ async function reopenVarianceReviewItem(aid,itemId,mode,inlineIndex,button) {
   }
 }
 
+async function loadVarianceScopeV263(aid) {
+  const {data:initial,error} = await sb.from('assignments')
+    .select('id,session_id,location_id,status,assigned_to,wms_closed_at,locations(code,zone,area)').eq('id',aid).maybeSingle();
+  if (error || !initial) throw error || new Error('ไม่พบ Assignment หรือไม่มีสิทธิ์เปิดงานนี้');
+  const bundle = await loadManagementBundleV263(initial.session_id,'detail',{locationId:initial.location_id,allowDelta:false});
+  if (!bundle) return {assignment:initial,bundle:null};
+  const assignment = bundle.assignments.find(row => String(row.id) === String(aid));
+  if (!assignment) throw managementErrorV263('รายการมอบหมายเปลี่ยนระหว่างเปิดงาน กรุณาโหลดใหม่','DASHBOARD_SCOPE_CHANGED');
+  return {assignment,bundle};
+}
+
 async function loadVarianceLocationReviewState(aid) {
-  const { data:assignment,error:assignmentError } = await sb.from('assignments')
-    .select('id,session_id,location_id,status,locations(code)').eq('id',aid).maybeSingle();
-  if (assignmentError || !assignment) throw (assignmentError || new Error('ไม่พบ Assignment'));
+  const {assignment,bundle} = await loadVarianceScopeV263(aid);
   const [snapshotResult,countResult,approvalResult,baselineAuditResult,rules] = await Promise.all([
-    sb.from('stock_snapshot').select('item_id,onhand_qty')
-      .eq('session_id',assignment.session_id).eq('location_id',assignment.location_id),
-    sb.from('count_records').select('item_id,round,count_qty').eq('assignment_id',aid),
-    sb.from('variance_approvals').select('item_id,final_qty,variance,resolution,review_status,approved_at').eq('assignment_id',aid),
-    sb.from('audit_log')
-      .select('id,assignment_id,item_id,action,old_value,new_value,created_at')
-      .eq('assignment_id',aid)
-      .eq('action',WMS_COUNT_BASELINE_ACTION)
-      .order('created_at'),
-    getSessionRules(assignment.session_id),
+    managementRowsV263(bundle,'snapshots',() => fetchPagedSupabaseRows('stock_snapshot',
+      'id,session_id,created_at,location_id,item_id,onhand_qty,al_qty,items(id,code,description)',
+      query => query.eq('session_id',assignment.session_id).eq('location_id',assignment.location_id).order('id'))),
+    managementRowsV263(bundle,'counts',() => fetchPagedSupabaseRows('count_records','id,assignment_id,item_id,round,count_qty',
+      query => query.eq('assignment_id',aid).order('id'))),
+    managementRowsV263(bundle,'approvals',() => fetchPagedSupabaseRows('variance_approvals',
+      'id,assignment_id,item_id,final_qty,variance,resolution,review_status,approved_at',query => query.eq('assignment_id',aid).order('id'))),
+    managementRowsV263(bundle,'audit',() => fetchPagedSupabaseRows('audit_log',
+      'id,session_id,assignment_id,item_id,action,old_value,new_value,created_at',
+      query => query.eq('assignment_id',aid).eq('action',WMS_COUNT_BASELINE_ACTION).order('id'))),
+    bundle ? validateDashboardRulesV252(bundle.rules) : loadDashboardRulesV252(assignment.session_id),
   ]);
   if (snapshotResult.error || countResult.error || approvalResult.error || baselineAuditResult.error) {
-    throw (snapshotResult.error || countResult.error || approvalResult.error || baselineAuditResult.error);
+    throw snapshotResult.error || countResult.error || approvalResult.error || baselineAuditResult.error;
   }
-  applyWmsCountBaselines(snapshotResult.data || [],[assignment],baselineAuditResult.data || []);
+  applyWmsCountBaselines(snapshotResult.data || [],[assignment],(baselineAuditResult.data || [])
+    .filter(row => row.action === WMS_COUNT_BASELINE_ACTION));
   const roundsByItem = new Map();
   (countResult.data || []).forEach(record => {
     if (!roundsByItem.has(record.item_id)) roundsByItem.set(record.item_id,{});
     roundsByItem.get(record.item_id)[Number(record.round)] = Number(record.count_qty);
   });
   const approvalByItem = new Map((approvalResult.data || []).map(row => [row.item_id,row]));
-  const physicalDiffItemIds = (snapshotResult.data || []).filter(snapshot => varianceReviewEvidence({
-    snapshot,
-    rounds:roundsByItem.get(snapshot.item_id) || {},
-    rules,
-    assignmentStatus:assignment.status,
+  const physicalDiffItemIds = operationalStockSnapshotRows(snapshotResult.data || []).filter(snapshot => varianceReviewEvidence({
+    snapshot,rounds:roundsByItem.get(snapshot.item_id) || {},rules,assignmentStatus:assignment.status,
     approval:approvalByItem.get(snapshot.item_id) || null,
   }).required).map(snapshot => snapshot.item_id);
-  // A Supervisor-confirmed total is authoritative for a matched Item reopened
-  // from Work Tracking. Keep its stored variance in the same WMS queue used by
-  // a normal physical DIFF, even though the original Count still equals OH.
-  const supervisorDiffItemIds = (approvalResult.data || []).filter(row => {
-    const variance = Number(row.variance);
-    return Number.isFinite(variance) && variance !== 0;
-  }).map(row => row.item_id);
-  const confirmedVarianceItemIds = (approvalResult.data || []).filter(row => {
-    const variance = Number(row.variance);
-    return varianceReviewState(row) === 'confirmed'
-      && Number.isFinite(variance)
-      && variance !== 0;
-  }).map(row => row.item_id);
+  const supervisorDiffItemIds = (approvalResult.data || []).filter(row =>
+    Number.isFinite(Number(row.variance)) && Number(row.variance) !== 0).map(row => row.item_id);
+  const confirmedVarianceItemIds = (approvalResult.data || []).filter(row =>
+    varianceReviewState(row) === 'confirmed' && Number.isFinite(Number(row.variance)) && Number(row.variance) !== 0).map(row => row.item_id);
   const requiredItemIds = [...new Set([...physicalDiffItemIds,...supervisorDiffItemIds])];
   const missingItemIds = requiredItemIds.filter(itemId => varianceReviewState(approvalByItem.get(itemId)) !== 'confirmed');
-  return { assignment,requiredItemIds,missingItemIds,confirmedVarianceItemIds };
+  return {assignment,requiredItemIds,missingItemIds,confirmedVarianceItemIds};
 }
 
 async function finalizeVarianceLocation(aid,mode,inlineIndex,nextAction='continue',button) {
@@ -57866,8 +58300,7 @@ async function saveFoundTypeIssue(foundId) {
 
 async function loadSvDetail() {
   const { aid } = S;
-  const { data: asgn } = await sb.from('assignments').select('id,status,location_id,session_id,assigned_to,locations(code,zone,area)').eq('id', aid).single();
-  if (!asgn) { go('sv-list'); return; }
+  const {assignment:asgn,bundle:reviewBundleV263} = await loadVarianceScopeV263(aid);
   // The assignment is authoritative. Never inherit a previously viewed
   // Dashboard Session while this Location is being confirmed.
   S._dashSid = String(asgn.session_id || '');
@@ -57876,28 +58309,28 @@ async function loadSvDetail() {
   const l = asgn.locations;
   const isAdminOrSup = ['admin','supervisor'].includes(prof?.role);
 
-  const [{ data: snaps }, { data: counts }, { data: users }, { data: countRemarkRows }, rules, , approvalResult, baselineAuditResult] = await Promise.all([
-    sb.from('stock_snapshot').select('item_id,onhand_qty,al_qty,items(id,code,description)').eq('session_id', asgn.session_id).eq('location_id', asgn.location_id),
-    sb.from('count_records').select('id,item_id,round,count_qty,remark,photo_url,type_issue,actual_counter_name').eq('assignment_id', aid),
-    sb.from('profiles').select('id,name').order('name'),
+  const [snapshotResult,countResult,userResult,remarkResult,rules,,approvalResult,baselineAuditResult] = await Promise.all([
+    managementRowsV263(reviewBundleV263,'snapshots',() => fetchPagedSupabaseRows('stock_snapshot',
+      'id,session_id,created_at,location_id,item_id,onhand_qty,al_qty,items(id,code,description)',
+      q => q.eq('session_id',asgn.session_id).eq('location_id',asgn.location_id).order('id'))),
+    managementRowsV263(reviewBundleV263,'counts',() => fetchPagedSupabaseRows('count_records',
+      'id,assignment_id,item_id,round,count_qty,remark,photo_url,type_issue,actual_counter_name',q => q.eq('assignment_id',aid).order('id'))),
+    fetchPagedSupabaseRows('profiles','id,name',q => q.order('id')),
     sb.from('remark_options').select('id,label').eq('context','count').eq('active',true).order('label'),
-    getSessionRules(asgn.session_id),
+    reviewBundleV263 ? validateDashboardRulesV252(reviewBundleV263.rules) : loadDashboardRulesV252(asgn.session_id),
     loadCountTypeIssueOptions(),
-    sb.from('variance_approvals')
-      .select('id,item_id,final_qty,variance,resolution,approved_by,approved_at,review_status,draft_saved_by,draft_saved_at,updated_at')
-      .eq('assignment_id',aid),
-    sb.from('audit_log')
-      .select('id,assignment_id,item_id,action,old_value,new_value,created_at')
-      .eq('assignment_id',aid)
-      .eq('action',WMS_COUNT_BASELINE_ACTION)
-      .order('created_at'),
+    managementRowsV263(reviewBundleV263,'approvals',() => fetchPagedSupabaseRows('variance_approvals','*',q => q.eq('assignment_id',aid).order('id'))),
+    managementRowsV263(reviewBundleV263,'audit',() => fetchPagedSupabaseRows('audit_log',
+      'id,session_id,assignment_id,item_id,action,old_value,new_value,created_at',
+      q => q.eq('assignment_id',aid).eq('action',WMS_COUNT_BASELINE_ACTION).order('created_at').order('id'))),
   ]);
-
-
-  if (approvalResult.error || baselineAuditResult.error) {
-    cnt().innerHTML = errBox((approvalResult.error || baselineAuditResult.error).message);
-    return;
+  for (const result of [snapshotResult,countResult,userResult,remarkResult,approvalResult,baselineAuditResult]) {
+    if (result.error) throw result.error;
   }
+  const snaps = snapshotResult.data || [],counts = countResult.data || [];
+  const users = userResult.data || [],countRemarkRows = remarkResult.data || [];
+  baselineAuditResult.data = (baselineAuditResult.data || []).filter(row => row.action === WMS_COUNT_BASELINE_ACTION);
+
   applyWmsCountBaselines(snaps || [],[asgn],baselineAuditResult.data || []);
 
   window._countRemarkOptions = countRemarkRows || [];
@@ -57922,8 +58355,10 @@ async function loadSvDetail() {
   };
   const actualCounterDisplay = escapeWmsText(actualCounterLabel(counts || []));
 
-  for (const s of snaps || []) {
-    const it = s.items; const v = byItem[it.id] || {};
+  for (const s of operationalStockSnapshotRows(snaps || [])) {
+    const it = s.items;
+    if (!it?.id) throw new Error('ไม่พบ Item Master ของรายการนี้ กรุณาตรวจข้อมูลก่อนยืนยัน');
+    const v = byItem[it.id] || {};
     const emptyLocation = isEmptyLocationItem(it?.code);
     const r1 = v[1]?.count_qty, r2 = v[2]?.count_qty, r3 = v[3]?.count_qty;
     const approval = approvalByItem.get(it.id) || null;
