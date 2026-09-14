@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
+<!-- V2.67: keep Dashboard WMS status aligned with the confirmation page by applying authoritative status audit history. -->
 <!-- V2.66 hotfix: recover timed-out read RPCs with complete, adaptive pages; no permanent RPC disable. -->
 <!-- V2.62: bounded read-only network recovery and retry consistent Dashboard scopes. -->
 <!-- V2.61: scoped Annual JOB reads and fresh, optional Count read bundles. -->
@@ -25611,7 +25612,7 @@ body.count-page-active #app .count-handheld-page.is-narrow-handheld-v259 .citem-
 <script>
 // V2.50: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.66';
+const APP_VERSION = '2.67';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -53585,11 +53586,34 @@ function managementRowsV263(bundle,key,legacyRead) {
 
 function managementDashboardBundleV263(bundle,includeWms) {
   const baseline = bundle.audit.filter(row => row.action === WMS_COUNT_BASELINE_ACTION && row.session_id === bundle.session_id);
-  const wms = includeWms ? bundle.audit.filter(row => ['wms_note','wms_note_removed','wms_status_change'].includes(row.action)) : [];
+  // Every screen that reports WMS progress must receive status changes. Notes
+  // remain scoped to the WMS workspace because they are not needed elsewhere.
+  const wms = bundle.audit.filter(row => row.action === 'wms_status_change'
+    || (includeWms && ['wms_note','wms_note_removed'].includes(row.action)));
   return {schema_version:1,session_id:bundle.session_id,include_wms:includeWms,
     assignment_ids:bundle.assignments.map(row => row.id),counts:bundle.counts,approvals:bundle.approvals,
     baseline_audit:baseline,wms_audit:wms,rules:bundle.rules,
     row_counts:{counts:bundle.counts.length,approvals:bundle.approvals.length,baseline_audit:baseline.length,wms_audit:wms.length}};
+}
+
+function wmsStatusAuditMapV267(rows) {
+  const result = {};
+  const fixedState = value => {
+    const text = String(value ?? '').trim().toLocaleLowerCase('th');
+    if (!text) return null;
+    if (/ยังไม่ได้ตรวจสอบ|เปิดแก้ไข|not reviewed|unfixed|false/.test(text)) return false;
+    if (/ตรวจสอบแล้ว|ตรวจสอบเสร็จสิ้น|review completed|reviewed|fixed|true/.test(text)) return true;
+    return null;
+  };
+  [...(rows || [])]
+    .filter(row => row.action === 'wms_status_change')
+    .sort((a,b) => (Date.parse(a.created_at || '') || 0) - (Date.parse(b.created_at || '') || 0))
+    .forEach(row => {
+      const state = fixedState(row.new_value);
+      if (state === null || !row.assignment_id || !row.item_id) return;
+      result[`${row.assignment_id}|${row.item_id}`] = state;
+    });
+  return result;
 }
 
 function applyManagementSettingsV263(bundle) {
@@ -54217,15 +54241,18 @@ async function loadSvDashCoreV262() {
     // recorded before an approval row exists and must survive that transition.
     ...diffAssignments.map(v => v.id),
   ].filter(Boolean))];
-  const wmsHistoryPromise = tab === 'wms' && dashboardReadBundle
+  const needsWmsStatusHistory = ['summary','executive','wms'].includes(tab);
+  const wmsHistoryPromise = needsWmsStatusHistory && dashboardReadBundle && (tab === 'wms' || managementBundle)
     ? Promise.resolve({ data:dashboardReadBundle.wms_audit,error:null })
-    : tab === 'wms' && wmsHistoryAssignmentIds.length
+    : needsWmsStatusHistory && wmsHistoryAssignmentIds.length
     ? fetchSupabaseRowsByValues(
         'audit_log',
         'id,session_id,assignment_id,item_id,action,old_value,new_value,created_at',
         'assignment_id',
         wmsHistoryAssignmentIds,
-        query => query.in('action',['wms_note','wms_note_removed','wms_status_change']),
+        query => query.in('action',tab === 'wms'
+          ? ['wms_note','wms_note_removed','wms_status_change']
+          : ['wms_status_change']),
       )
     : Promise.resolve({ data:[],error:null });
   const [
@@ -54246,26 +54273,11 @@ async function loadSvDashCoreV262() {
   const wmsNoteMap = {};
   const assignmentWmsNoteMap = {};
   const countRemarkMap = {};
-  const wmsStatusAuditMap = {};
+  const wmsStatusAuditMap = wmsStatusAuditMapV267(wmsNoteRows || []);
   if (tab === 'wms' && wmsNoteError) {
     throw new Error(`โหลดหมายเหตุ WMS ไม่สำเร็จ: ${wmsNoteError.message}`);
   }
   if (wmsNoteError) console.warn('โหลดหมายเหตุ WMS ไม่สำเร็จ:', wmsNoteError.message);
-  const wmsAuditFixedState = value => {
-    const text = String(value ?? '').trim().toLocaleLowerCase('th');
-    if (!text) return null;
-    if (/ยังไม่ได้ตรวจสอบ|เปิดแก้ไข|not reviewed|unfixed|false/.test(text)) return false;
-    if (/ตรวจสอบแล้ว|ตรวจสอบเสร็จสิ้น|review completed|reviewed|fixed|true/.test(text)) return true;
-    return null;
-  };
-  [...(wmsNoteRows || [])]
-    .filter(row => row.action === 'wms_status_change')
-    .sort((a,b) => (Date.parse(a.created_at || '') || 0) - (Date.parse(b.created_at || '') || 0))
-    .forEach(row => {
-      const state = wmsAuditFixedState(row.new_value);
-      if (state === null || !row.assignment_id || !row.item_id) return;
-      wmsStatusAuditMap[`${row.assignment_id}|${row.item_id}`] = state;
-    });
   const activeWmsRemarkState = reduceActiveWmsRemarkAudit(wmsNoteRows || []);
   activeWmsRemarkState.byItem.forEach((notes,key) => { wmsNoteMap[key] = notes; });
   activeWmsRemarkState.byAssignment.forEach((notes,key) => { assignmentWmsNoteMap[key] = notes; });
