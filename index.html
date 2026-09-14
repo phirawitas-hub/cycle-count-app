@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-<!-- V2.65: bounded, cancellable Dashboard reads reduce repeated database egress without painting partial data. -->
+<!-- V2.66 hotfix: recover timed-out read RPCs with complete, adaptive pages; no permanent RPC disable. -->
 <!-- V2.62: bounded read-only network recovery and retry consistent Dashboard scopes. -->
 <!-- V2.61: scoped Annual JOB reads and fresh, optional Count read bundles. -->
 <!-- V2.60: server-confirmed Match, DIFF and whole-work completion sounds on every device. -->
@@ -25611,7 +25611,7 @@ body.count-page-active #app .count-handheld-page.is-narrow-handheld-v259 .citem-
 <script>
 // V2.50: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.65';
+const APP_VERSION = '2.66';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -46082,6 +46082,9 @@ const SUPABASE_READ_CONCURRENCY = 4;
 const SUPABASE_IN_BATCH_SIZE = 80;
 
 async function fetchPagedSupabaseRows(table, columns, applyFilters = query => query) {
+  if (typeof S !== 'undefined' && S?.page === 'sv-dash') {
+    return fetchDashboardPagedRowsV266(table,columns,applyFilters);
+  }
   const rows = [];
   const scope = _activePageRequestController;
   const assertActiveScope = () => {
@@ -46127,6 +46130,55 @@ async function fetchPagedSupabaseRows(table, columns, applyFilters = query => qu
         return { data:rows, error:null };
       }
     }
+  }
+}
+
+// V2.66: only Dashboard legacy reads use adaptive sequential pages. Preserve
+// successful rows privately, retry the failed offset, and publish only at EOF.
+async function fetchDashboardPagedRowsV266(table,columns,applyFilters) {
+  const scope = _activePageRequestController;
+  const actorId = me?.id;
+  const role = prof?.role;
+  const rows = [];
+  let from = 0;
+  let pageSize = 250;
+  let reductions = 0;
+  const assertActive = () => {
+    if (scope !== _activePageRequestController || scope?.signal?.aborted
+        || S?.page !== 'sv-dash' || actorId !== me?.id || role !== prof?.role) {
+      throw Object.assign(new Error('การโหลดถูกยกเลิก'),{name:'AbortError'});
+    }
+  };
+  while (true) {
+    assertActive();
+    let query = applyFilters(sb.from(table).select(columns));
+    query = query.range(from,from + pageSize - 1);
+    if (scope?.signal && typeof query.abortSignal === 'function') query = query.abortSignal(scope.signal);
+    const result = await query;
+    assertActive();
+    if (result.error) {
+      if (isStatementTimeoutErrorV264(result.error)) {
+        if (reductions < 2) {
+          reductions++;
+          pageSize = Math.floor(pageSize / 2);
+          updateDashboardTimeoutLoadingV264(reductions);
+          await waitForDashboardRetryV265(350 * reductions,scope);
+          continue;
+        }
+        // Do not restart and re-download the already-read pages on exhaustion.
+        const error = Object.assign(new Error(result.error.message || 'statement timeout'),result.error,
+          {_dashboardPagingExhaustedV266:true});
+        return {data:null,error};
+      }
+      return {data:null,error:result.error};
+    }
+    if (!Array.isArray(result.data)) {
+      return {data:null,error:Object.assign(new Error('โหลดชุดข้อมูลไม่ครบ กรุณาโหลดใหม่'),
+        {code:'DASHBOARD_PAGE_INVALID'})};
+    }
+    rows.push(...result.data);
+    if (result.data.length < pageSize) return {data:rows,error:null};
+    from += result.data.length;
   }
 }
 
@@ -53154,10 +53206,11 @@ async function loadDashboardReadBundleV252(sessionId,assignmentIds,includeWms=fa
     }
     if (error) {
       if (typeof isStatementTimeoutErrorV264 === 'function' && isStatementTimeoutErrorV264(error)) {
-        outcome = 'timeout-retry';
-        // Keep the optimized RPC available; only a genuinely missing function
-        // may enable the legacy fallback below.
-        throw error;
+        outcome = 'timeout-fallback';
+        // V2.66: this read can fall back without restarting the whole page.
+        // Keep the RPC available for the next navigation/refresh.
+        updateDashboardTimeoutLoadingV264(1);
+        return null;
       }
       if (['PGRST202','42883'].includes(error.code)
           && /get_dashboard_read_bundle_v252/.test(String(error.message || ''))) {
@@ -53249,7 +53302,7 @@ async function loadSvDash() {
       if (!isStatementTimeoutErrorV264(error)) throw error;
       timeoutAttempt++;
       activateDashboardTimeoutFallbackV264(S?._dashTab || _dashTab || 'summary',timeoutAttempt);
-      if (timeoutAttempt > maxAutomaticTimeoutRetries) {
+      if (error?._dashboardPagingExhaustedV266 || timeoutAttempt > maxAutomaticTimeoutRetries) {
         renderDashboardDeferredV265();
         return {deferred:true,reason:'statement-timeout'};
       }
@@ -53488,10 +53541,11 @@ async function loadManagementBundleV263(sessionId,tab,{allowDelta=true,locationI
     }
     if (error) {
       if (typeof isStatementTimeoutErrorV264 === 'function' && isStatementTimeoutErrorV264(error)) {
-        outcome = 'timeout-retry';
-        // Propagate to loadSvDash so the same compact RPC is retried once.
-        // Never switch this tab permanently to the larger legacy query set.
-        throw error;
+        outcome = 'timeout-fallback';
+        // V2.66: continue through the existing scoped, paginated reader now.
+        // Do not reuse stale cache, disable the RPC, or retry the same RPC here.
+        updateDashboardTimeoutLoadingV264(1);
+        return null;
       }
       if (['PGRST202','42883'].includes(error.code) && /get_management_read_bundle_v263/.test(String(error.message || ''))) {
         _managementRpcMissingV263 = true;outcome = 'legacy-fallback';return null;
