@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
+<!-- V2.69: remove Dashboard Zone chips, vertically center the filter, and clear the overview Progress label background. -->
 <!-- V2.68: compact Dashboard Zone selection into one filter and remove the inherited Progress label background. -->
 <!-- V2.67: keep Dashboard WMS status aligned with the confirmation page by applying authoritative status audit history. -->
 <!-- V2.66 hotfix: recover timed-out read RPCs with complete, adaptive pages; no permanent RPC disable. -->
@@ -20774,17 +20775,20 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
 }
 #dash-content #summary-zone-picker-v128 {
   width: 100%;
-  height: 34px;
-  min-height: 34px;
-  padding: 5px 31px 5px 12px;
+  height: 38px;
+  min-height: 38px;
+  padding: 0 34px 0 14px !important;
   border: 1px solid rgba(0,109,119,.16);
   border-radius: 12px;
   color: var(--theme-zone-heading-text);
   background: #ffffff;
   box-shadow: none;
   font-family: 'Mitr','Sarabun',sans-serif;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
+  line-height: normal !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   outline: none;
   appearance: none;
   cursor: pointer;
@@ -20854,7 +20858,8 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
   gap: 6px;
 }
 /* Keep the shared .progress utility from colouring the metric label area. */
-#dash-content .summary-zone-overview-metric-v128.progress {
+#dash-content .summary-zone-overview-metric-v128.progress,
+#dash-content .summary-zone-overview-metric-v128.progress > span {
   background: transparent !important;
 }
 #dash-content .summary-zone-overview-metric-v128 > span {
@@ -25619,7 +25624,7 @@ body.count-page-active #app .count-handheld-page.is-narrow-handheld-v259 .citem-
 <script>
 // V2.50: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.68';
+const APP_VERSION = '2.69';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -55430,10 +55435,6 @@ async function loadSvDashCoreV262() {
             <h2>ความคืบหน้าตาม Zone</h2>
           </div>
           <div class="summary-zone-heading-actions-v128">
-            <div class="summary-zone-heading-chips">
-              <span class="summary-card-chip summary-card-chip-session">ทุกวันใน Session</span>
-              <span class="summary-card-chip">${zoneStats.length} ${zoneStats.length === 1 ? 'Zone' : 'Zones'}</span>
-            </div>
             ${zoneSelectorHtml}
           </div>
         </div>
