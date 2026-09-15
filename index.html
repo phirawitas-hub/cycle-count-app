@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
+<!-- V2.68: compact Dashboard Zone selection into one filter and remove the inherited Progress label background. -->
 <!-- V2.67: keep Dashboard WMS status aligned with the confirmation page by applying authoritative status audit history. -->
 <!-- V2.66 hotfix: recover timed-out read RPCs with complete, adaptive pages; no permanent RPC disable. -->
 <!-- V2.62: bounded read-only network recovery and retry consistent Dashboard scopes. -->
@@ -20785,6 +20786,8 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
   font-size: 10px;
   font-weight: 700;
   outline: none;
+  appearance: none;
+  cursor: pointer;
 }
 #dash-content #summary-zone-picker-v128:focus {
   border-color: var(--theme-zone-heading-text);
@@ -20849,6 +20852,10 @@ body.login-page-active .vespa-login-page{display:block!important;min-height:100s
   min-width: 0;
   display: grid;
   gap: 6px;
+}
+/* Keep the shared .progress utility from colouring the metric label area. */
+#dash-content .summary-zone-overview-metric-v128.progress {
+  background: transparent !important;
 }
 #dash-content .summary-zone-overview-metric-v128 > span {
   display: flex;
@@ -25612,7 +25619,7 @@ body.count-page-active #app .count-handheld-page.is-narrow-handheld-v259 .citem-
 <script>
 // V2.50: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.67';
+const APP_VERSION = '2.68';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -54921,18 +54928,12 @@ async function loadSvDashCoreV262() {
 
   const zoneSelectorHtml = zoneStats.length <= 1
     ? ''
-    : zoneStats.length <= 4
-      ? `<div class="summary-zone-tabs-v128" role="tablist" aria-label="เลือก Zone">
-          <button type="button" class="active" data-summary-zone-tab="all" onclick="setSummaryZoneView('all')">ทุก Zone</button>
-          ${zoneStats.map((z,zoneIndex) => `<button type="button" data-summary-zone-tab="${zoneIndex}" onclick="setSummaryZoneView('${zoneIndex}')">${escapeWmsText(z.zone)}</button>`).join('')}
-        </div>`
-      : `<div class="summary-zone-picker-wrap-v128">
-          <input id="summary-zone-picker-v128" type="search" list="summary-zone-options-v128" placeholder="ค้นหา / เลือก Zone" autocomplete="off" oninput="handleSummaryZonePicker(this.value)">
-          <datalist id="summary-zone-options-v128">
-            <option value="ทุก Zone"></option>
-            ${zoneStats.map(z => `<option value="${escapeWmsText(z.zone)}"></option>`).join('')}
-          </datalist>
-        </div>`;
+    : `<div class="summary-zone-picker-wrap-v128">
+        <select id="summary-zone-picker-v128" aria-label="กรอง Zone" onchange="handleSummaryZonePicker(this.value)">
+          <option value="">ทุก Zone</option>
+          ${zoneStats.map(z => `<option value="${escapeWmsText(z.zone)}">${escapeWmsText(z.zone)}</option>`).join('')}
+        </select>
+      </div>`;
 
   // Hourly chart follows the selected dashboard date range. Count each
   // Location + Item work unit once, using its first Count record time.
