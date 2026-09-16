@@ -25624,7 +25624,7 @@ body.count-page-active #app .count-handheld-page.is-narrow-handheld-v259 .citem-
 <script>
 // V2.50: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.69';
+const APP_VERSION = '2.70';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -29440,7 +29440,7 @@ const DASHBOARD_CACHE_TTL_MS = 300000;
 const PAGE_VIEW_CACHE_TTL_MS = Object.freeze({
   // Cached pages are always refreshed silently after being painted.  A longer
   // TTL therefore improves repeat navigation without giving up fresh data.
-  'c-tasks':300000,
+  // V2.70: tasks wait for the fresh server token; no unverified HTML cache.
   'sv-list':300000,
   'ad-history':600000,
   'ad-manage:sessions':300000,
@@ -31247,19 +31247,33 @@ function changeDashboardSession(sessionId) {
   return refreshDashboardData();
 }
 
-function refreshDashboardData() {
-  if (deferNavigationDuringSaveV251(() => refreshDashboardData(),0)) return;
-  invalidateDashboardCache(S._dashTab || _dashTab || 'summary');
+function refreshDashboardData({preserveVerifiedView=false}={}) {
+  if (deferNavigationDuringSaveV251(() => refreshDashboardData({preserveVerifiedView}),0)) return;
+  const tab = S._dashTab || _dashTab || 'summary';
+  // V2.70: navigation retains a hidden view for the existing server-revision
+  // check. Manual refresh, operational views, and all write invalidators keep
+  // rebuilding; no previously loaded dashboard is painted before verification.
+  if (!preserveVerifiedView || !['summary','executive','team','log'].includes(tab)) {
+    invalidateDashboardCache(tab);
+  }
   if (_dashboardLoadInFlight) return _dashboardLoadInFlight;
   const loadingToken = startPageLoadingVisual({
     title:uiCopy('กำลังโหลดข้อมูล...','Loading data...'),
     subtitle:uiCopy('กำลังอัปเดตข้อมูลล่าสุดของ Session','Updating the latest Session data'),
   });
-  const pending = Promise.resolve().then(() => loadSvDash());
+  const requestScope = _activePageRequestController;
+  const actorId = me?.id;
+  const actorRole = prof?.role;
+  const isCurrentLoad = () => requestScope === _activePageRequestController
+    && !requestScope?.signal?.aborted && S?.page === 'sv-dash'
+    && (S._dashTab || _dashTab || 'summary') === tab
+    && actorId === me?.id && actorRole === prof?.role;
+  const pending = Promise.resolve().then(() => isCurrentLoad() ? loadSvDash() : undefined);
   _dashboardLoadInFlight = pending;
   pending
-    .then(() => finishPageLoadingVisual(loadingToken))
+    .then(() => { if (isCurrentLoad()) finishPageLoadingVisual(loadingToken); })
     .catch(error => {
+      if (!isCurrentLoad()) return;
       failPageLoadingVisual(loadingToken);
       renderPageLoadError(error);
     })
@@ -31403,6 +31417,7 @@ function isInvalidAuthError(error) {
 }
 
 async function clearLocalAuthSession() {
+  _myTasksRawCacheV270 = null;
   stopWarehouseLayoutRealtimeSync();
   stopWarehouseLayoutLiveSync();
   stopLoginSessionGuard(true);
@@ -32964,9 +32979,10 @@ function openDashboardMenu(tab) {
       // stale page request and immediately start loading the tab just chosen.
       beginPageRequestScope();
       _dashboardLoadInFlight = null;
-      invalidateDashboardCache();
+      // Cancellation alone does not invalidate already verified view data.
+      // The new loader still checks the current authorized server revision.
     }
-    refreshDashboardData();
+    refreshDashboardData({preserveVerifiedView:true});
     return;
   }
   render();
@@ -36459,6 +36475,148 @@ function isAbortLikeError(error) {
     || /signal is aborted|aborted without reason|request was replaced/i.test(String(error?.message || ''));
 }
 
+// V2.70: reuse task data only after a fresh authorized server version check.
+// Raw data is memory-only and cloned before workflow/baseline calculations.
+let _myTasksRawCacheV270 = null;
+let _myTasksRpcMissingV270 = false;
+const MY_TASK_ARRAYS_V270 = ['assignments','annual_jobs','annual_items','counts','snapshots','session_rules','baselines'];
+const _myTasksReadMetricsV270 = [];
+const _menuLoadMetricsV270 = [];
+
+function myTasksCacheKeyV270() {
+  return [APP_BUILD_ID,me?.id || '',prof?.role || ''].join('|');
+}
+
+function validateMyTasksBundleV270(p,actorId,role,cached=null) {
+  const invalid = message => { throw Object.assign(new Error(message),{code:'MY_TASKS_READ_INVALID'}); };
+  if (!p || p.schema_version !== 1 || p.actor_id !== actorId || p.actor_role !== role
+      || !/^[a-f0-9]{64}$/.test(p.version_token || '')) {
+    invalid('ข้อมูลรายการงานไม่ตรงกับผู้ใช้หรือสิทธิ์ กรุณาโหลดใหม่');
+  }
+  if (p.unchanged === true) {
+    if (!cached || cached.unchanged !== false || cached.version_token !== p.version_token) {
+      invalid('ไม่พบชุดข้อมูลรายการงานที่ตรวจสอบครบแล้ว กรุณาโหลดใหม่');
+    }
+    validateMyTasksBundleV270(cached,actorId,role);
+    return p;
+  }
+  if (p.unchanged !== false) invalid('สถานะชุดข้อมูลรายการงานไม่ถูกต้อง');
+  for (const key of MY_TASK_ARRAYS_V270) {
+    if (!Array.isArray(p[key]) || p.row_counts?.[key] !== p[key].length) {
+      invalid(`โหลดข้อมูล ${key} ไม่ครบ กรุณาโหลดใหม่`);
+    }
+    if (p[key].some(row => !row || typeof row !== 'object')) invalid('พบข้อมูลรายการงานไม่ถูกต้อง');
+  }
+  for (const key of ['assignments','annual_jobs','annual_items','session_rules','baselines']) {
+    const ids = new Set();
+    for (const row of p[key]) {
+      if (!row.id || ids.has(String(row.id))) invalid('พบรายการงานซ้ำหรือไม่มีรหัส');
+      ids.add(String(row.id));
+    }
+  }
+  const assignments = new Map(p.assignments.map(row => [String(row.id),row]));
+  const jobs = new Map(p.annual_jobs.map(row => [String(row.id),row]));
+  const rules = new Map(p.session_rules.map(row => [String(row.id),row]));
+  for (const row of [...p.assignments,...p.annual_jobs]) {
+    if (!row.session_id || !rules.has(String(row.session_id)) || !row.count_sessions
+        || !Object.prototype.hasOwnProperty.call(row,'assigned_at')
+        || !Object.prototype.hasOwnProperty.call(row,'created_at')) invalid('ข้อมูล Session หรือวันที่มอบหมายงานไม่ครบ');
+  }
+  for (const row of p.assignments) {
+    if (!row.location_id || !row.locations) invalid('ข้อมูล Location ของงานไม่ครบ');
+  }
+  for (const row of p.session_rules) validateDashboardRulesV252(row);
+  for (const row of p.annual_items) {
+    if (!jobs.has(String(row.job_id)) || jobs.get(String(row.job_id)).session_id !== row.session_id
+        || !row.item_id || !row.location_id || !row.locations || !row.items) invalid('รายละเอียด Annual Job ไม่ตรงกับงาน');
+  }
+  const countKeys = new Set();
+  for (const row of p.counts) {
+    const key = `${row.assignment_id}|${row.item_id}|${row.round}`;
+    if (!assignments.has(String(row.assignment_id)) || !row.item_id || ![1,2,3].includes(Number(row.round))
+        || row.count_qty == null || !Number.isFinite(Number(row.count_qty)) || countKeys.has(key)) invalid('ผลนับซ้ำหรือยอดนับไม่ถูกต้อง');
+    countKeys.add(key);
+  }
+  const scopes = new Set(p.assignments.map(row => `${row.session_id}|${row.location_id}`));
+  const snapshotKeys = new Set();
+  for (const row of p.snapshots) {
+    const key = `${row.session_id}|${row.location_id}|${row.item_id}`;
+    if (!scopes.has(`${row.session_id}|${row.location_id}`) || !row.item_id || snapshotKeys.has(key)
+        || row.onhand_qty == null || !Number.isFinite(Number(row.onhand_qty))
+        || !Object.prototype.hasOwnProperty.call(row,'items')) invalid('ข้อมูล OH ซ้ำหรือไม่ตรงกับงาน');
+    snapshotKeys.add(key);
+  }
+  for (const row of p.baselines) {
+    if (!assignments.has(String(row.assignment_id)) || row.action !== WMS_COUNT_BASELINE_ACTION) {
+      invalid('ข้อมูล OH ตอนเริ่มนับไม่ตรงกับงาน');
+    }
+  }
+  return p;
+}
+
+async function loadMyTasksBundleV270() {
+  if (_myTasksRpcMissingV270) return null;
+  const scope = _activePageRequestController;
+  const actorId = me?.id;
+  const role = prof?.role;
+  const key = myTasksCacheKeyV270();
+  let cached = _myTasksRawCacheV270?.key === key ? _myTasksRawCacheV270.payload : null;
+  if (cached) {
+    try { validateMyTasksBundleV270(cached,actorId,role); }
+    catch (_) { cached = null; _myTasksRawCacheV270 = null; }
+  }
+  const started = performance.now();
+  let outcome = 'error';
+  try {
+    let query = sb.rpc('get_my_tasks_read_bundle_v270',{p_known_token:cached?.version_token || null});
+    if (scope?.signal && typeof query.abortSignal === 'function') query = query.abortSignal(scope.signal);
+    const {data,error} = await query;
+    if (scope !== _activePageRequestController || scope?.signal?.aborted || S?.page !== 'c-tasks'
+        || actorId !== me?.id || role !== prof?.role) throw myTasksAbortError();
+    if (error) {
+      if (['PGRST202','42883'].includes(error.code) && /get_my_tasks_read_bundle_v270/.test(String(error.message || ''))) {
+        _myTasksRpcMissingV270 = true;
+        outcome = 'legacy-fallback';
+        return null;
+      }
+      // A timeout, denial or malformed response never authorizes stale data.
+      throw error;
+    }
+    validateMyTasksBundleV270(data,actorId,role,cached);
+    const raw = data.unchanged ? cached : data;
+    _myTasksRawCacheV270 = {key,payload:raw};
+    outcome = data.unchanged ? 'unchanged' : 'full';
+    return {...JSON.parse(JSON.stringify(raw)),generated_at:data.generated_at,_verifiedV270:true};
+  } finally {
+    _myTasksReadMetricsV270.push({at:new Date().toISOString(),outcome,elapsed_ms:Math.round(performance.now()-started)});
+    if (_myTasksReadMetricsV270.length > 50) _myTasksReadMetricsV270.shift();
+  }
+}
+
+async function measureMenuLoadV270(menu,loader) {
+  const started = performance.now();
+  const tab = S?._dashTab || _dashTab || '';
+  let outcome = 'error';
+  try {
+    const result = await loader();
+    // "finished" records loader completion, not a claim that every inner read
+    // succeeded; older loaders may render an error instead of throwing.
+    outcome = result?.deferred ? 'deferred' : 'finished';
+    return result;
+  } catch (error) {
+    outcome = error?.name === 'AbortError' ? 'aborted' : 'error';
+    throw error;
+  } finally {
+    _menuLoadMetricsV270.push({at:new Date().toISOString(),menu,tab,outcome,elapsed_ms:Math.round(performance.now()-started)});
+    if (_menuLoadMetricsV270.length > 100) _menuLoadMetricsV270.shift();
+  }
+}
+
+window.getCycleCountMenuPerformanceV270 = () => ({
+  menus:_menuLoadMetricsV270.map(row => ({...row})),
+  taskReads:_myTasksReadMetricsV270.map(row => ({...row})),
+});
+
 let _myTasksLoadSerial = 0;
 
 function assertActiveMyTasksLoad(loadScope,loadToken) {
@@ -36471,11 +36629,18 @@ function assertActiveMyTasksLoad(loadScope,loadToken) {
 }
 
 async function loadCTasks() {
+  return measureMenuLoadV270('my-tasks',loadCTasksCoreV270);
+}
+
+async function loadCTasksCoreV270() {
   const loadScope = _activePageRequestController;
   const loadToken = ++_myTasksLoadSerial;
   assertActiveMyTasksLoad(loadScope,loadToken);
   let workspace = null;
-  const workspaceResult = await measureMyTasksReadV252(() => sb.rpc('get_my_tasks_workspace'));
+  const verifiedWorkspaceV270 = await loadMyTasksBundleV270();
+  const workspaceResult = verifiedWorkspaceV270
+    ? {data:verifiedWorkspaceV270,error:null}
+    : await measureMyTasksReadV252(() => sb.rpc('get_my_tasks_workspace'));
   assertActiveMyTasksLoad(loadScope,loadToken);
   if (!workspaceResult.error && workspaceResult.data) {
     let payload = workspaceResult.data;
@@ -36518,7 +36683,7 @@ async function loadCTasks() {
   // A deployed RPC can return a structurally valid but stale empty workspace
   // while direct RLS reads already contain newly assigned work. Verify empty
   // fast results once before showing “no assignments”.
-  if (workspace && !normalResult.data?.length && !annualResult.data?.length) {
+  if (workspace && !workspace._verifiedV270 && !normalResult.data?.length && !annualResult.data?.length) {
     const verifiedResults = await Promise.all([
       fetchPagedSupabaseRows(
         'assignments',
@@ -36724,7 +36889,9 @@ async function loadCTasks() {
       }
       taskSnapshotRows = enrichedSnapshots.data || [];
     }
-    const taskBaselineResult = await fetchSupabaseRowsByValues(
+    const taskBaselineResult = workspace?._verifiedV270
+      ? {data:workspace.baselines,error:null}
+      : await fetchSupabaseRowsByValues(
       'audit_log',
       'id,assignment_id,item_id,action,old_value,new_value,created_at',
       'assignment_id',
@@ -36804,6 +36971,12 @@ async function loadCTasks() {
   const allAssignments = asgns;
   const allAnnualJobs = annualJobs;
   if (!allAssignments.length && !allAnnualJobs.length) {
+    // Clear scanner/navigation models when reassignment removed the last job.
+    window._myTasksAllDates = [];
+    window._myAnnualJobsAllDates = [];
+    window._myTasks = [];
+    window._myAnnualJobs = [];
+    window._myAnnualJobItems = [];
     cnt().innerHTML = `<div class="card" style="text-align:center;padding:60px 40px">
       <div style="font-size:60px">📋</div>
       <div style="margin-top:20px;color:var(--text-muted);font-weight:600;font-size:16px">ยังไม่มีงานที่ได้รับมอบหมาย</div>
@@ -53295,6 +53468,10 @@ SELECT current_setting('cycle_count.stock_plan_v252')::jsonb AS query_plan;`;
 window.getCycleCountReadMetrics = () => _dashboardReadMetricsV252.map(row=>({...row}));
 
 async function loadSvDash() {
+  return measureMenuLoadV270('overview',loadSvDashWithRecoveryV270);
+}
+
+async function loadSvDashWithRecoveryV270() {
   const scope = _activePageRequestController;
   let scopeRetry = 0;
   let timeoutAttempt = 0;
@@ -53569,18 +53746,21 @@ async function loadManagementBundleV263(sessionId,tab,{allowDelta=true,locationI
     let raw;
     if (data.unchanged) {
       outcome = 'unchanged';raw = cached;
-      if (metadataWhenUnchanged) return {...data,_unchangedV263:true};
     }
     else {
       outcome = data.delta ? 'location-delta' : 'full';
       raw = locationId ? data : data.delta ? mergeManagementBundleV263(cached,data) : data;
       sizes = {...data.row_counts};
-      if (!locationId) {
-        _managementRawCacheV263.set(key,raw);
-        // Keep the last few Session/tab datasets, scoped by actor and role.
-        while (_managementRawCacheV263.size > 4) _managementRawCacheV263.delete(_managementRawCacheV263.keys().next().value);
-      }
     }
+    if (!locationId) {
+      // V2.70: retain all six Overview tabs plus a small working margin.
+      // Touch only after a successful authorized revision check, including
+      // unchanged metadata reads. Keys remain scoped to actor/role/Session/tab.
+      _managementRawCacheV263.delete(key);
+      _managementRawCacheV263.set(key,raw);
+      while (_managementRawCacheV263.size > 8) _managementRawCacheV263.delete(_managementRawCacheV263.keys().next().value);
+    }
+    if (data.unchanged && metadataWhenUnchanged) return {...data,_unchangedV263:true};
     const value = cloneManagementBundleV263(raw);
     value._unchangedV263 = data.unchanged === true;
     value._changedLocationIdsV263 = data.delta ? [...data.location_ids] : null;
