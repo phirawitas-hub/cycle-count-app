@@ -25624,7 +25624,7 @@ body.count-page-active #app .count-handheld-page.is-narrow-handheld-v259 .citem-
 <script>
 // V2.50: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.70';
+const APP_VERSION = '2.71';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -53854,6 +53854,60 @@ window.getCycleCountPerformanceV263 = () => ({
 });
 
 
+// V2.71: metadata-only checks also cover complete paged fallback reads.
+let _managementViewRpcMissingV271 = false;
+
+async function readManagementViewVersionV271(sessionId,tab) {
+  if (_managementViewRpcMissingV271 || !['summary','executive','team','log'].includes(tab)) return null;
+  const scope = _activePageRequestController;
+  const actorId = me?.id;
+  const role = prof?.role;
+  let query = sb.rpc('get_management_view_version_v271',{p_session_id:sessionId,p_tab:tab});
+  if (scope?.signal && typeof query.abortSignal === 'function') query = query.abortSignal(scope.signal);
+  const {data,error} = await query;
+  if (scope !== _activePageRequestController || scope?.signal?.aborted || S?.page !== 'sv-dash'
+      || actorId !== me?.id || role !== prof?.role || S._dashSid !== sessionId
+      || (S._dashTab || _dashTab || 'summary') !== tab) {
+    throw Object.assign(new Error('การโหลดถูกยกเลิก'),{name:'AbortError'});
+  }
+  if (error) {
+    if (['PGRST202','42883'].includes(error.code) && /get_management_view_version_v271/.test(String(error.message || ''))) {
+      _managementViewRpcMissingV271 = true;
+      return null;
+    }
+    throw error;
+  }
+  if (!data || data.schema_version !== 1 || data.actor_id !== actorId || data.actor_role !== role
+      || data.session_id !== sessionId || data.tab !== tab || data.unchanged !== true
+      || !Number.isSafeInteger(data.revision) || data.revision < 0
+      || !Number.isSafeInteger(data.catalog_revision) || data.catalog_revision < 0) {
+    throw managementErrorV263('ไม่สามารถยืนยันข้อมูลล่าสุดของหน้าได้ กรุณาโหลดใหม่');
+  }
+  return {...data,_unchangedV263:true};
+}
+
+function requireManagementRowsV271(...results) {
+  for (const result of results) {
+    if (result?.error) throw result.error;
+    if (!Array.isArray(result?.data)) {
+      throw managementErrorV263('โหลดข้อมูล Dashboard ไม่ครบ กรุณาลองใหม่');
+    }
+  }
+}
+
+async function verifyManagementFallbackV271(before,sessionId,tab) {
+  if (!before) return null;
+  const after = await readManagementViewVersionV271(sessionId,tab);
+  if (!after || before.actor_id !== after.actor_id || before.actor_role !== after.actor_role
+      || before.session_id !== after.session_id || before.tab !== after.tab
+      || before.revision !== after.revision || before.catalog_revision !== after.catalog_revision) {
+    // Do not paint/cache a collection assembled across different revisions.
+    // The existing bounded scope retry may obtain one complete consistent read.
+    throw managementErrorV263('ข้อมูลเปลี่ยนระหว่างโหลด กำลังตรวจสอบใหม่','DASHBOARD_SCOPE_CHANGED');
+  }
+  return after;
+}
+
 async function loadSvDashCoreV262() {
   if (!['admin','supervisor'].includes(prof?.role)) {
     goPrimary('c-tasks');
@@ -53932,6 +53986,9 @@ async function loadSvDashCoreV262() {
   }
   // Load menu-specific settings only.  V1.77 fetched both Layout documents in
   // front of almost every Dashboard tab even when they were never rendered.
+  const viewVersionV271 = await readManagementViewVersionV271(curSid,tab);
+  if (isStaleLoad()) return;
+  if (paintVerifiedManagementCacheV263(viewVersionV271,tab,curSid,sessOpts)) return;
   const managementBundle = await loadManagementBundleV263(curSid,tab);
   if (isStaleLoad()) return;
   if (managementBundle) applyManagementSettingsV263(managementBundle);
@@ -53965,11 +54022,10 @@ async function loadSvDashCoreV262() {
       ? sb.from('remark_options').select('id,label').eq('context','wms').eq('active',true).order('label')
       : Promise.resolve({ data:[],error:null })),
     managementRowsV263(managementBundle,'found',() => ['summary','executive','variance','wms'].includes(tab)
-      ? sb.from('found_items')
-          .select('id,session_id,status,source_type,location_code,license_plate,lot,inventory_status,item_code,description,uom,qty,actual_counter_name,discovered_at,profiles!found_items_discovered_by_fkey(name)')
-          .eq('session_id',curSid)
-          .eq('status','pending_review')
-          .order('discovered_at',{ ascending:true })
+      ? fetchPagedSupabaseRows('found_items',
+          'id,session_id,status,source_type,location_code,license_plate,lot,inventory_status,item_code,description,uom,qty,actual_counter_name,discovered_at,profiles!found_items_discovered_by_fkey(name)',
+          query => query.eq('session_id',curSid).eq('status','pending_review')
+            .order('discovered_at',{ ascending:true }).order('id'))
       : Promise.resolve({ data:[],error:null })),
     dashboardSettingsPromise,
   ]);
@@ -54046,7 +54102,7 @@ async function loadSvDashCoreV262() {
       ? fetchPagedSupabaseRows(
           'paper_form_counts',
           'source_type,source_assignment_id,source_location_id,source_item_id,location_code,item_code,count1,count2,count3,physical_count,updated_at,created_at',
-          query => query.eq('session_id',curSid).eq('source_type','paper_form'),
+          query => query.eq('session_id',curSid).eq('source_type','paper_form').order('id'),
         )
       : Promise.resolve({ data:[], error:null })),
     // Start confirmed approval history beside Counts and Snapshots instead of
@@ -54071,7 +54127,7 @@ async function loadSvDashCoreV262() {
   if (countResult.error || snapshotResult.error || detailResult.error || annualJobsResult.error || annualJobItemsResult.error || varianceApprovalResult.error || baselineAuditResult.error) {
     throw (countResult.error || snapshotResult.error || detailResult.error || annualJobsResult.error || annualJobItemsResult.error || varianceApprovalResult.error || baselineAuditResult.error);
   }
-  if (paperResult?.error) console.warn('โหลดข้อมูล Form Count สำหรับแดชบอร์ด V.2 ไม่สำเร็จ:',paperResult.error.message);
+  requireManagementRowsV271(countResult,snapshotResult,detailResult,annualJobsResult,annualJobItemsResult,varianceApprovalResult,baselineAuditResult,paperResult);
   const rawCounts = countResult.data || [];
   const activeDateFilter = dashboardDateRange();
   const allCounts = filterRowsByDashboardDate(rawCounts, 'counted_at');
@@ -54151,7 +54207,7 @@ async function loadSvDashCoreV262() {
         'id,session_id,location_id,item_id,assignment_id,action,old_value,new_value,created_at',
         'assignment_id',
         remainingRecoveryAssignmentIds,
-        query => query.eq('session_id',curSid).order('created_at'),
+        query => query.eq('session_id',curSid).order('created_at').order('id'),
       )),
       managementRowsV263(managementBundle,'details',() => recoveryDetailRows.length
         ? Promise.resolve({ data:recoveryDetailRows,error:null })
@@ -54201,16 +54257,15 @@ async function loadSvDashCoreV262() {
   if (tab === 'executive') {
     const executiveItemCodes = [...new Set(allSnapshots.map(snapshot => String(snapshot.items?.code || '').trim()).filter(Boolean))];
     const [itemMasterResult,foundIssueResult] = await Promise.all([
-      managementRowsV263(managementBundle,'master',() => fetchSupabaseRowsByValues('data_info_items','item_code,attributes','item_code',executiveItemCodes)),
+      managementRowsV263(managementBundle,'master',() => fetchSupabaseRowsByValues('data_info_items','item_code,attributes','item_code',executiveItemCodes,query => query.order('item_code'))),
       managementRowsV263(managementBundle,'found',() => fetchPagedSupabaseRows(
         'found_items',
         'id,session_id,assignment_id,location_id,location_code,item_id,item_code,description,qty,type_issue,remark,photo_url,status,source_type,discovered_at,reviewed_at,supervisor_note',
-        query => query.eq('session_id',curSid).order('discovered_at',{ ascending:true }),
+        query => query.eq('session_id',curSid).order('discovered_at',{ ascending:true }).order('id'),
       )),
     ]);
     if (isStaleLoad()) return;
-    if (itemMasterResult.error) console.warn('โหลด Category จาก Item Master สำหรับแดชบอร์ด V.2 ไม่สำเร็จ:',itemMasterResult.error.message);
-    if (foundIssueResult.error) console.warn('โหลด Issue งานพบเพิ่มสำหรับแดชบอร์ด V.2 ไม่สำเร็จ:',foundIssueResult.error.message);
+    requireManagementRowsV271(itemMasterResult,foundIssueResult);
     executiveItemMasterRows = itemMasterResult.data || [];
     executiveFoundRows = filterRowsByDashboardDate(foundIssueResult.data || [],'discovered_at');
     const loadedMasterCodes = new Set(executiveItemMasterRows.map(row => String(row.item_code || '').trim().toLocaleUpperCase('en-US')));
@@ -54218,9 +54273,9 @@ async function loadSvDashCoreV262() {
       .map(row => String(row.item_code || '').trim())
       .filter(code => code && !loadedMasterCodes.has(code.toLocaleUpperCase('en-US'))))];
     if (!managementBundle && foundOnlyCodes.length) {
-      const foundMasterResult = await fetchSupabaseRowsByValues('data_info_items','item_code,attributes','item_code',foundOnlyCodes);
+      const foundMasterResult = await fetchSupabaseRowsByValues('data_info_items','item_code,attributes','item_code',foundOnlyCodes,query => query.order('item_code'));
       if (isStaleLoad()) return;
-      if (foundMasterResult.error) console.warn('โหลด Category ของงานพบเพิ่มจาก Item Master ไม่สำเร็จ:',foundMasterResult.error.message);
+      requireManagementRowsV271(foundMasterResult);
       executiveItemMasterRows.push(...(foundMasterResult.data || []));
     }
   }
@@ -54353,6 +54408,7 @@ async function loadSvDashCoreV262() {
   }
   if (isStaleLoad()) return;
 
+  if (vaError) throw vaError;
   const trackerActorIds = [...new Set([
     ...rawCounts.map(record => record.counted_by),
     ...workTrackerApprovalRows.flatMap(approval => [approval.approved_by,approval.wms_fixed_by,approval.draft_saved_by]),
@@ -54444,22 +54500,23 @@ async function loadSvDashCoreV262() {
         wmsHistoryAssignmentIds,
         query => query.in('action',tab === 'wms'
           ? ['wms_note','wms_note_removed','wms_status_change']
-          : ['wms_status_change']),
+          : ['wms_status_change']).order('id'),
       )
     : Promise.resolve({ data:[],error:null });
   const [
-    { data: itemsData },
-    { data: approversData },
+    { data: itemsData, error:itemsError },
+    { data: approversData, error:approversError },
     { data: wmsNoteRows, error: wmsNoteError },
   ] = await Promise.all([
-    managementRowsV263(managementBundle,'items',() => fetchSupabaseRowsByValues('items', 'id,code,description', 'id', allItemIds)),
-    managementRowsV263(managementBundle,'profiles',() => fetchSupabaseRowsByValues('profiles', 'id,name', 'id', allApproverIds)),
+    managementRowsV263(managementBundle,'items',() => fetchSupabaseRowsByValues('items', 'id,code,description', 'id', allItemIds,query => query.order('id'))),
+    managementRowsV263(managementBundle,'profiles',() => fetchSupabaseRowsByValues('profiles', 'id,name', 'id', allApproverIds,query => query.order('id'))),
     // WMS Remark is part of the saved business record, not optional decoration.
     // Wait for the complete history before rendering/caching the page so a
     // quick tab switch can never preserve a note-less version of the queue.
     wmsHistoryPromise,
   ]);
   if (isStaleLoad()) return;
+  requireManagementRowsV271({data:itemsData,error:itemsError},{data:approversData,error:approversError},{data:wmsNoteRows,error:wmsNoteError});
   const itemMap = Object.fromEntries((itemsData||[]).map(i => [i.id, i]));
   const approverMap = Object.fromEntries((approversData||[]).map(p => [p.id, p]));
   const wmsNoteMap = {};
@@ -54635,12 +54692,15 @@ async function loadSvDashCoreV262() {
 
   const pendingItemIds = [...new Set(pendingWmsRows.map(v => v.item_id).filter(Boolean))];
   if (pendingItemIds.length) {
-    const { data: pendingItems } = await managementRowsV263(managementBundle,'items',() => fetchSupabaseRowsByValues(
+    const { data: pendingItems, error:pendingItemsError } = await managementRowsV263(managementBundle,'items',() => fetchSupabaseRowsByValues(
       'items',
       'id,code,description',
       'id',
       pendingItemIds,
+      query => query.order('id'),
     ));
+    if (isStaleLoad()) return;
+    requireManagementRowsV271({data:pendingItems,error:pendingItemsError});
     const pItemMap = Object.fromEntries((pendingItems||[]).map(i => [i.id, i]));
     pendingWmsRows.forEach(v => { v.items = pItemMap[v.item_id] || { code: '?', description: '' }; });
   }
@@ -55755,6 +55815,8 @@ async function loadSvDashCoreV262() {
   // datasets.
   const dashboardViews = { [tab]:allDashboardViews[tab] || summaryTabHtml };
 
+  const fallbackVersionV271 = !managementBundle
+    ? await verifyManagementFallbackV271(viewVersionV271,curSid,tab) : null;
   if (isStaleLoad()) return;
   _dashboardViewCache = {
     userId:me?.id || '',
@@ -55765,8 +55827,8 @@ async function loadSvDashCoreV262() {
     loadedAt:Date.now(),
     sessionOptionsHtml:sessOpts,
     views:dashboardViews,
-    _revisionV263:managementBundle?.revision ?? null,
-    _catalogRevisionV263:managementBundle?.catalog_revision ?? null,
+    _revisionV263:managementBundle?.revision ?? fallbackVersionV271?.revision ?? null,
+    _catalogRevisionV263:managementBundle?.catalog_revision ?? fallbackVersionV271?.catalog_revision ?? null,
     executiveData,
   };
   _dashboardViewCacheStore.set(dashboardViewCacheKey(tab,curSid),_dashboardViewCache);

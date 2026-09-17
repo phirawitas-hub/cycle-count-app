@@ -45,3 +45,35 @@ bump the catalog revision, as with the existing management revision protocol.
 
 Rollback frontend to the parent commit if required. The additive RPC can remain
 unused safely; no existing function or data was replaced by this migration.
+
+## V2.71 follow-up from live browser testing
+
+V2.70 deployed successfully. A live authenticated Admin browser returned to
+Summary with its real Session data in 980 ms from click to the visible Accuracy
+heading (one automation-assisted sample, not P95). Displayed summary values
+matched the preceding visit. The current Admin had no assigned work, so the
+browser My Tasks check covers the empty state; populated cases were verified
+with the database comparisons above and production-function tests.
+
+Live Team Progress exposed an existing first/full-read timeout and paginated
+fallback. Such fallback results lacked revision metadata, so V2.70 could not
+reuse them safely. V2.71 adds a metadata-only, SECURITY INVOKER read using the
+existing management authorization contract. Static Summary/Executive/Team/Log
+views can now be reused after exact fresh revision verification even when the
+large raw dataset is absent. Paged fallback views are stamped only after equal
+before-and-after revisions; concurrent changes trigger the existing bounded
+retry instead of painting/caching mixed revisions. Operational Tracker/Layout/
+WMS views remain outside this static-view shortcut.
+
+The extended production-function suite passes 58 tests. Read-only database
+checks confirmed metadata-only results/current revisions for all four eligible
+tabs. Full large-Session reads remain a limitation: read-only SQL samples for
+Team took approximately 5.8–6.7 seconds, excluding transport/rendering. No
+claim is made that every first visit or every menu meets 3–5 seconds.
+
+The final review caught legacy fallback reads that swallowed paper/master/found/
+item/profile/WMS-history errors. V2.71 now rejects those failures before rendering
+or certifying the result, including pending-item reads and approval derivation
+errors. Pending found items use complete pagination rather than a capped select;
+fallback pages have unique ordering. A regression executes the actual dashboard
+loader with a paper-read timeout and confirms no view/cache is published.
