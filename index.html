@@ -25624,7 +25624,7 @@ body.count-page-active #app .count-handheld-page.is-narrow-handheld-v259 .citem-
 <script>
 // V2.50: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.71';
+const APP_VERSION = '2.72';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -55289,6 +55289,7 @@ async function loadSvDashCoreV262() {
     byCounter[assigneeName].assignmentMap.set(assignment.id,assignment);
   });
 
+  const teamDetailGroupsV272 = [];
   let peopleRows = '';
   (tab === 'team' ? Object.values(byCounter) : []).sort((a,b) => a.name.localeCompare(b.name, 'th')).forEach((counter, idx) => {
     const items = sortRowsByLocation([...counter.assignmentMap.values()], assignment => assignment.locations?.code);
@@ -55301,6 +55302,8 @@ async function loadSvDashCoreV262() {
     };
     u.pending = Math.max(0,u.total - u.done);
     const p = Math.round(u.done / u.total * 100);
+    // Keep the complete verified detail data off-DOM until this person opens.
+    teamDetailGroupsV272[idx] = u.items.map(a => ({id:a.id,status:a.status,locations:{...a.locations}}));
     peopleRows += `<div class="tab-row" style="border-bottom:1px solid var(--theme-border-color);padding:14px 10px" onclick="toggleCounterDetail('${idx}')">
       <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px">
         <div style="flex:1;min-width:0">
@@ -55319,18 +55322,6 @@ async function loadSvDashCoreV262() {
       <div style="text-align:center;font-size:12px;color:var(--text-muted);font-weight:700;margin-top:10px">▾ ดูรายการ</div>
     </div>
     <div id="udetail_${idx}" data-location-sort-group style="display:none;background:var(--theme-card-bg);padding:14px 18px;border-radius:16px;margin:8px 0 14px;box-shadow:inset 0 0 0 1px var(--theme-border-color)">
-      ${u.items.map(a => {
-        const si = tagInfo(a.status);
-        const l = a.locations;
-        const loc = [l?.zone,l?.row_no,l?.level].filter(Boolean).join(' · ');
-        return `<div data-location-sort-code="${escapeWmsText(l?.code || '')}" style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--theme-border-color);gap:8px">
-          <div style="min-width:0">
-            <div class="mono" style="font-size:14px;font-weight:700; color:var(--text-main);">${l?.code||'?'}</div>
-            <div style="font-size:11px;color:var(--text-muted); margin-top:2px;">${loc}</div>
-          </div>
-          <span class="tag ${si.cls}" style="font-size:10px;flex-shrink:0">${si.lbl}</span>
-        </div>`;
-      }).join('')}
     </div>`;
   });
 
@@ -55830,14 +55821,46 @@ async function loadSvDashCoreV262() {
     _revisionV263:managementBundle?.revision ?? fallbackVersionV271?.revision ?? null,
     _catalogRevisionV263:managementBundle?.catalog_revision ?? fallbackVersionV271?.catalog_revision ?? null,
     executiveData,
+    teamDetailGroupsV272:tab === 'team' ? teamDetailGroupsV272 : null,
   };
   _dashboardViewCacheStore.set(dashboardViewCacheKey(tab,curSid),_dashboardViewCache);
   paintDashboardView(tab, _dashboardViewCache);
 }
 
+function renderTeamDetailRowsV272(items) {
+  const u = {items:sortRowsByLocation(items, a => a.locations?.code)};
+  return u.items.map(a => {
+        const si = tagInfo(a.status);
+        const l = a.locations;
+        const loc = [l?.zone,l?.row_no,l?.level].filter(Boolean).join(' · ');
+        return `<div data-location-sort-code="${escapeWmsText(l?.code || '')}" style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--theme-border-color);gap:8px">
+          <div style="min-width:0">
+            <div class="mono" style="font-size:14px;font-weight:700; color:var(--text-main);">${l?.code||'?'}</div>
+            <div style="font-size:11px;color:var(--text-muted); margin-top:2px;">${loc}</div>
+          </div>
+          <span class="tag ${si.cls}" style="font-size:10px;flex-shrink:0">${si.lbl}</span>
+        </div>`;
+      }).join('');
+}
+
 function toggleCounterDetail(idx) {
-  const el = Q('udetail_'+idx);
-  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  const index = Number(idx);
+  const cache = _dashboardViewCache;
+  if (!Number.isInteger(index) || index < 0 || S?.page !== 'sv-dash'
+      || (S._dashTab || _dashTab) !== 'team' || cache?.userId !== me?.id
+      || cache?.role !== prof?.role || cache?.sessionId !== S._dashSid
+      || cache?.dateFrom !== selectedDateFrom || cache?.dateTo !== selectedDateTo
+      || !Array.isArray(cache?.teamDetailGroupsV272?.[index])) return;
+  const el = Q('udetail_'+index);
+  if (!el) return;
+  if (el.style.display === 'none') {
+    el.innerHTML = renderTeamDetailRowsV272(cache.teamDetailGroupsV272[index]);
+    el.style.display = 'block';
+    queueUiTranslation(el);
+  } else {
+    el.style.display = 'none';
+    el.replaceChildren();
+  }
 }
 
 function showWmsFeedback(message, type='success') {
