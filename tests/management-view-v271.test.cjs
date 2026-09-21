@@ -114,6 +114,7 @@ test('actual loader refuses failed paper read before any fallback view can be ca
   _activePageRequestController:new AbortController(),sb:{from:()=>query},
   readRememberedDashboardSession:()=> 's',resolveDashboardSessionId:()=> 's',rememberDashboardSession(){},
   sessionOptionLabel:()=> 'Session',escapeWmsText:x=>x,uiCopy:x=>x,
+  hasManagementViewCandidateV274:()=>false,
   readManagementViewVersionV271:async()=>payload({tab:'executive'}),paintVerifiedManagementCacheV263:()=>false,
   loadManagementBundleV263:async()=>null,
   managementRowsV263:async(_bundle,key)=>key==='paper'?{data:null,error:failure}:ok,

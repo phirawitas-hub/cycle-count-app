@@ -52,10 +52,9 @@ test('detail expansion follows current location sort direction on each reopen',(
 });
 test('initial Team HTML has empty detail containers and data stays in the verified view cache',()=>{
  const {code:loader}=extractFunction('loadSvDashCoreV262');
- const start=loader.indexOf("  let peopleRows = ''"),end=loader.indexOf('  _svDashOpenVarianceIdx',start);
- const team=loader.slice(start,end);
+ const {code:team}=extractFunction('buildTeamProgressViewV274');
  assert.match(team,/teamDetailGroupsV272\[idx\] = u\.items\.map/);
  assert.doesNotMatch(team,/\$\{u\.items\.map/);
- assert.match(loader,/teamDetailGroupsV272:tab === 'team' \? teamDetailGroupsV272 : null/);
- assert.ok(loader.indexOf('verifyManagementFallbackV271(viewVersionV271,curSid,tab)')<loader.indexOf("teamDetailGroupsV272:tab === 'team'"));
+ assert.match(loader,/teamDetailGroupsV272:team\.teamDetailGroupsV272/);
+ assert.ok(loader.indexOf('verifyManagementFallbackV271(viewVersionV271,curSid,tab)')<loader.indexOf('teamDetailGroupsV272:team.teamDetailGroupsV272'));
 });

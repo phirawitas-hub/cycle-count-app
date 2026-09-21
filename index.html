@@ -25624,7 +25624,7 @@ body.count-page-active #app .count-handheld-page.is-narrow-handheld-v259 .citem-
 <script>
 // V2.50: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.73';
+const APP_VERSION = '2.74';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -49714,6 +49714,28 @@ function warehouseLayoutRackHtml(rack,zone,runtime,statusFilter,search) {
   </section>`;
 }
 
+// V2.74: one render-local index, preserving the old rack-only and zone/rack
+// predicates separately. Never cache derived arrays across live refreshes.
+function warehouseLayoutIndexRacksV274(runtime) {
+  const byRack = new Map(), byZone = new Map();
+  for (const location of runtime.generatedLocations || []) {
+    if (!byRack.has(location.rackId)) byRack.set(location.rackId,[]);
+    byRack.get(location.rackId).push(location);
+    if (!byZone.has(location.zoneId)) byZone.set(location.zoneId,new Map());
+    const zone = byZone.get(location.zoneId);
+    if (!zone.has(location.rackId)) zone.set(location.rackId,[]);
+    zone.get(location.rackId).push(location);
+  }
+  return {...runtime,_rackIndexV274:{byRack,byZone}};
+}
+
+function warehouseLayoutRackLocationsV274(runtime,rackId,zoneId) {
+  const scoped = arguments.length > 2;
+  const index = runtime._rackIndexV274;
+  if (index) return (scoped ? index.byZone.get(zoneId)?.get(rackId) : index.byRack.get(rackId)) || [];
+  return runtime.generatedLocations.filter(location => location.rackId === rackId && (!scoped || location.zoneId === zoneId));
+}
+
 function warehouseLayoutRackSummary(rack,runtime) {
   const skipped = new Set(rack.skipBays || []);
   const activeBays = Array.from({length:rack.bayCount},(_,index) => rack.bayStart+index).filter(bay => !skipped.has(bay));
@@ -49722,7 +49744,7 @@ function warehouseLayoutRackSummary(rack,runtime) {
     result[type] = (result[type] || 0)+1;
     return result;
   },{pillar:0,aisle:0,disabled:0});
-  const rackLocations = runtime.generatedLocations.filter(location => location.rackId === rack.id);
+  const rackLocations = warehouseLayoutRackLocationsV274(runtime,rack.id);
   const live = {not_imported:0,imported:0,counting:0,history_review:0,variance:0,wms_pending:0,completed:0};
   rackLocations.forEach(location => {
     const status = runtime.detailsByCode.get(location.code)?.status || 'not_imported';
@@ -49740,7 +49762,7 @@ function warehouseLayoutRackSummary(rack,runtime) {
 }
 
 function warehouseLayoutMatrixRackHtml(rack,zone,runtime,statusFilter,search) {
-  const rackLocations = runtime.generatedLocations.filter(location => location.zoneId === zone.id && location.rackId === rack.id);
+  const rackLocations = warehouseLayoutRackLocationsV274(runtime,rack.id,zone.id);
   const display = warehouseLayoutRackDisplayMeta(rack,rackLocations);
   const byKey = new Map(rackLocations.map(location => [`${location.level}|${location.bay}`,location]));
   const skipped = new Set(rack.skipBays || []);
@@ -50003,6 +50025,7 @@ async function cleanupWarehouseSnapshotIssues(zoneId='') {
 }
 
 function warehouseLayoutViewHtml(runtime) {
+  runtime = warehouseLayoutIndexRacksV274(runtime);
   const zones = runtime.config.zones || [];
   const currentZoneId = zones.some(zone => zone.id === S._layoutZone)
     ? S._layoutZone
@@ -50040,11 +50063,7 @@ function warehouseLayoutViewHtml(runtime) {
   </div>`;
   if (!zones.length || !zone) return `<div class="warehouse-layout-shell">${hero}${warehouseLayoutEmptyHtml()}</div>`;
 
-  const elements = zone.elements.map(element =>
-    element.type === 'rack'
-      ? warehouseLayoutRackHtml(element,zone,runtime,statusFilter,search)
-      : warehouseLayoutObjectHtml(element,zone)
-  ).join('');
+  // V2.74: only the matrix view is rendered; do not build discarded legacy HTML.
   const missingOutside = zoneRuntime.unmatchedImported;
   const statusCounts = zoneRuntime.statusCounts;
   const planMetrics = planLocationMetrics(runtime,zone);
@@ -54089,6 +54108,15 @@ window.getCycleCountPerformanceV263 = () => ({
 // V2.71: metadata-only checks also cover complete paged fallback reads.
 let _managementViewRpcMissingV271 = false;
 
+function hasManagementViewCandidateV274(tab,sessionId) {
+  if (!['summary','executive','team','log'].includes(tab)) return false;
+  const cached = _dashboardViewCacheStore.get(dashboardViewCacheKey(tab,sessionId));
+  return Boolean(cached?.views?.[tab] && cached.userId === me?.id && cached.role === prof?.role
+    && cached.sessionId === sessionId && cached.dateFrom === selectedDateFrom && cached.dateTo === selectedDateTo
+    && Number.isSafeInteger(cached._revisionV263) && cached._revisionV263 >= 0
+    && Number.isSafeInteger(cached._catalogRevisionV263) && cached._catalogRevisionV263 >= 0);
+}
+
 async function readManagementViewVersionV271(sessionId,tab) {
   if (_managementViewRpcMissingV271 || !['summary','executive','team','log'].includes(tab)) return null;
   const scope = _activePageRequestController;
@@ -54141,6 +54169,13 @@ async function verifyManagementFallbackV271(before,sessionId,tab) {
 }
 
 async function loadSvDashCoreV262() {
+  const readStartedV274 = performance.now();
+  const traceReadV274 = phase => {
+    // Local diagnostic timings only: no Session IDs, identities or row data.
+    console.info('[CycleCount read V2.74]',JSON.stringify({
+      tab,phase,elapsed_ms:Math.round(performance.now()-readStartedV274),
+    }));
+  };
   if (!['admin','supervisor'].includes(prof?.role)) {
     goPrimary('c-tasks');
     return;
@@ -54170,6 +54205,7 @@ async function loadSvDashCoreV262() {
   const { data: sessions, error:sessionsError } = await sessionsQuery;
   if (isStaleLoad()) return;
   if (sessionsError) throw sessionsError;
+  traceReadV274('sessions');
 
   if (!sessions?.length) {
     cnt().innerHTML = `<div class="card" style="text-align:center;padding:60px 40px">
@@ -54218,12 +54254,20 @@ async function loadSvDashCoreV262() {
   }
   // Load menu-specific settings only.  V1.77 fetched both Layout documents in
   // front of almost every Dashboard tab even when they were never rendered.
-  const viewVersionV271 = await readManagementViewVersionV271(curSid,tab);
+  let viewVersionV271 = hasManagementViewCandidateV274(tab,curSid)
+    ? await readManagementViewVersionV271(curSid,tab) : null;
   if (isStaleLoad()) return;
   if (paintVerifiedManagementCacheV263(viewVersionV271,tab,curSid,sessOpts)) return;
   const managementBundle = await loadManagementBundleV263(curSid,tab);
   if (isStaleLoad()) return;
+  traceReadV274(managementBundle ? 'bundle-validated' : 'bundle-fallback');
   if (managementBundle) applyManagementSettingsV263(managementBundle);
+  // A cold successful bundle is already one verified snapshot. On fallback,
+  // obtain the before-version BEFORE settings or any paged business reads.
+  if (!managementBundle && !viewVersionV271) {
+    viewVersionV271 = await readManagementViewVersionV271(curSid,tab);
+    if (isStaleLoad()) return;
+  }
   const dashboardSettingsPromise = managementBundle ? Promise.resolve()
     : tab === 'layout' ? Promise.all([loadWarehouseLayoutConfig(true,true),loadPlanLocationConfig(true,true)])
     : tab === 'summary' ? loadPlanLocationConfig(true,true) : Promise.resolve();
@@ -54484,6 +54528,7 @@ async function loadSvDashCoreV262() {
   if (assignmentStatusRepairs.length) {
     // V2.63: preserve recovered display status without background writes.
   }
+  traceReadV274('historical-recovery');
   let executiveItemMasterRows = [];
   let executiveFoundRows = [];
   if (tab === 'executive') {
@@ -54511,22 +54556,9 @@ async function loadSvDashCoreV262() {
       executiveItemMasterRows.push(...(foundMasterResult.data || []));
     }
   }
-  const emptyLocationItemIds = new Set(
-    allSnapshots
-      .filter(snapshot => isEmptyLocationItem(snapshot.items?.code))
-      .map(snapshot => snapshot.item_id)
-      .filter(Boolean)
-  );
-
   const ohMap = {};
   (allSnapshots||[]).forEach(s => { ohMap[s.location_id + '|' + s.item_id] = +s.onhand_qty; });
 
-  const countByAsgn = {};
-  (allCounts||[]).forEach(c => {
-    if (!countByAsgn[c.assignment_id]) countByAsgn[c.assignment_id] = {};
-    if (!countByAsgn[c.assignment_id][c.item_id]) countByAsgn[c.assignment_id][c.item_id] = {};
-    countByAsgn[c.assignment_id][c.item_id][c.round] = +c.count_qty;
-  });
   // The dashboard date range is useful for summary metrics, but the WMS tab is
   // an operational queue and must always show every outstanding/completed DIFF
   // in the selected Session. Keep a second, unfiltered count map for WMS.
@@ -54565,11 +54597,26 @@ async function loadSvDashCoreV262() {
   varCount = dashboardAssignments.filter(assignmentPendingVarianceReview).length;
   pending = Math.max(0,total - done);
   pct = total ? Math.round((done / total) * 100) : 0;
+  traceReadV274('workflow-derived');
+  // V2.74: Team needs recovered workflow and assignment-date scope, but not
+  // WMS queue enrichment, Summary metrics, or unused chart construction.
+  if (tab === 'team') {
+    const fallbackVersionV271 = !managementBundle
+      ? await verifyManagementFallbackV271(viewVersionV271,curSid,tab) : null;
+    if (isStaleLoad()) return;
+    const team = buildTeamProgressViewV274(dashboardAssignments);
+    paintManagementTabV263(tab,curSid,sessOpts,team.html,{
+      _revisionV263:managementBundle?.revision ?? fallbackVersionV271?.revision ?? null,
+      _catalogRevisionV263:managementBundle?.catalog_revision ?? fallbackVersionV271?.catalog_revision ?? null,
+      teamDetailGroupsV272:team.teamDetailGroupsV272,
+    });
+    traceReadV274('painted');
+    return;
+  }
   const actualCountersByAssignment = buildActualCounterMap(allCounts || []);
   const actualCountersByWork = buildActualCounterWorkMap(allCounts || []);
 
   const diffAssignments = [];
-  const sessionWorkflowByAssignment = new Map();
   for (const a of asgns) {
     const storedWorkflowStatus = a._storedStatus || a.status;
     const storedNeedsSupervisorReview = storedWorkflowStatus === 'round3_done';
@@ -54584,7 +54631,6 @@ async function loadSvDashCoreV262() {
       // the Variance page and can be traced into its WMS stage.
       a._storedStatus === 'approved' ? 'pending' : (a._storedStatus || a.status),
     );
-    sessionWorkflowByAssignment.set(a.id,workflow);
     // The Count History page reads the persisted assignment status. If it says
     // round3_done, the Location was explicitly submitted to the supervisor and
     // must stay in both review queues until an approval row exists. Re-running
@@ -54674,24 +54720,18 @@ async function loadSvDashCoreV262() {
         rules,
       })
     : [];
-  const rawCountByAssignment = {};
-  rawCounts.forEach(record => {
-    if (!rawCountByAssignment[record.assignment_id]) rawCountByAssignment[record.assignment_id] = {};
-    if (!rawCountByAssignment[record.assignment_id][record.item_id]) rawCountByAssignment[record.assignment_id][record.item_id] = {};
-    rawCountByAssignment[record.assignment_id][record.item_id][record.round] = Number(record.count_qty);
-  });
-  const warehouseLayoutAssignments = asgns.map(assignment => {
-    const layoutWorkflow = deriveAssignmentWorkflowStatus(
-      snapshotsByLocation[assignment.location_id] || [],
-      rawCountByAssignment[assignment.id] || {},
-      rules,
-      (assignment._storedStatus || assignment.status) === 'approved'
-        ? 'pending'
-        : (assignment._storedStatus || assignment.status),
-    );
-    return { ...assignment, status:layoutWorkflow.effectiveStatus,_workflow:layoutWorkflow };
-  });
   if (tab === 'layout') {
+    const warehouseLayoutAssignments = asgns.map(assignment => {
+      const layoutWorkflow = deriveAssignmentWorkflowStatus(
+        snapshotsByLocation[assignment.location_id] || [],
+        sessionCountByAsgn[assignment.id] || {},
+        rules,
+        (assignment._storedStatus || assignment.status) === 'approved'
+          ? 'pending'
+          : (assignment._storedStatus || assignment.status),
+      );
+      return { ...assignment, status:layoutWorkflow.effectiveStatus,_workflow:layoutWorkflow };
+    });
     window._warehouseLayoutSessionData = {
       sessionId:curSid,
       sessionName:curName,
@@ -54706,6 +54746,7 @@ async function loadSvDashCoreV262() {
     };
     refreshWarehouseLayoutRuntime();
     paintManagementTabV263(tab,curSid,sessOpts,'<div class="warehouse-layout-root" id="warehouse-layout-root"></div>');
+    traceReadV274('painted');
     return;
   }
   if (tab === 'tracker') {
@@ -55147,9 +55188,23 @@ async function loadSvDashCoreV262() {
     </div>`;
 
     paintManagementTabV263(tab,curSid,sessOpts,wmsTabHtml);
+    traceReadV274('painted');
     return;
   }
 
+  const emptyLocationItemIds = new Set(
+    allSnapshots
+      .filter(snapshot => isEmptyLocationItem(snapshot.items?.code))
+      .map(snapshot => snapshot.item_id)
+      .filter(Boolean)
+  );
+
+  const countByAsgn = {};
+  (allCounts||[]).forEach(c => {
+    if (!countByAsgn[c.assignment_id]) countByAsgn[c.assignment_id] = {};
+    if (!countByAsgn[c.assignment_id][c.item_id]) countByAsgn[c.assignment_id][c.item_id] = {};
+    countByAsgn[c.assignment_id][c.item_id][c.round] = +c.count_qty;
+  });
   // One accuracy record represents one physical Location + Item pair.
   // Counting rounds and reassignment must not create additional accuracy items.
   const accuracyLocationItemKey = (assignmentId, itemId) => {
@@ -55512,50 +55567,7 @@ async function loadSvDashCoreV262() {
   // Variance เป็นข้อมูลซ้อนอยู่ในงานที่นับครบแล้ว จึงไม่หักออกจาก Progress
   const statusGradient = `conic-gradient(#62dbe7 0deg ${doneAngle}deg, #e6e3e5 ${doneAngle}deg 360deg)`;
 
-  const byCounter = {};
-  // Team Progress ต้องเริ่มจากงานที่ได้รับมอบหมายทั้งหมด ไม่ใช่เริ่มจาก Count Record
-  // เพื่อให้งานที่ยังไม่เริ่มนับยังอยู่ในตัวหารของผู้รับมอบหมายด้วย
-  dashboardAssignments.forEach(assignment => {
-    const assigneeName = assignment.profiles?.name || uiCopy('ไม่ระบุผู้รับมอบหมาย','Unassigned');
-    if (!byCounter[assigneeName]) byCounter[assigneeName] = { name:assigneeName, assignmentMap:new Map() };
-    byCounter[assigneeName].assignmentMap.set(assignment.id,assignment);
-  });
-
-  const teamDetailGroupsV272 = [];
-  let peopleRows = '';
-  (tab === 'team' ? Object.values(byCounter) : []).sort((a,b) => a.name.localeCompare(b.name, 'th')).forEach((counter, idx) => {
-    const items = sortRowsByLocation([...counter.assignmentMap.values()], assignment => assignment.locations?.code);
-    const u = {
-      name: counter.name,
-      items,
-      total: items.length,
-      done: items.filter(assignmentPhysicalCountFinished).length,
-      var: items.filter(assignmentPendingVarianceReview).length,
-    };
-    u.pending = Math.max(0,u.total - u.done);
-    const p = Math.round(u.done / u.total * 100);
-    // Keep the complete verified detail data off-DOM until this person opens.
-    teamDetailGroupsV272[idx] = u.items.map(a => ({id:a.id,status:a.status,locations:{...a.locations}}));
-    peopleRows += `<div class="tab-row" style="border-bottom:1px solid var(--theme-border-color);padding:14px 10px" onclick="toggleCounterDetail('${idx}')">
-      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px">
-        <div style="flex:1;min-width:0">
-          <div style="font-size:16px;font-weight:700;color:var(--text-main)">👤 ผู้รับมอบหมาย: <span data-i18n-skip>${escapeWmsText(u.name)}</span></div>
-          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-            <span class="tag tag-green">${u.done} นับครบ</span>
-            ${u.var ? `<span class="tag tag-amber">${u.var} DIFF รอหัวหน้า</span>` : ''}
-            <span class="tag tag-gray">${u.pending} ยังต้องนับ</span>
-          </div>
-        </div>
-        <div style="text-align:right;flex-shrink:0">
-          <div style="font-size:26px;font-weight:800;color:var(--primary-blue);font-family:'Fredoka'">${p}%</div>
-          <div style="font-size:12px;color:var(--text-muted);font-weight:700">นับครบ ${u.done}/${u.total}</div>
-        </div>
-      </div>
-      <div style="text-align:center;font-size:12px;color:var(--text-muted);font-weight:700;margin-top:10px">▾ ดูรายการ</div>
-    </div>
-    <div id="udetail_${idx}" data-location-sort-group style="display:none;background:var(--theme-card-bg);padding:14px 18px;border-radius:16px;margin:8px 0 14px;box-shadow:inset 0 0 0 1px var(--theme-border-color)">
-    </div>`;
-  });
+  const teamDetailGroupsV272 = null; // Team returns before unrelated Summary/WMS work.
 
   _svDashOpenVarianceIdx = null;
   // The Variance page and the WMS workspace must use the same item-level
@@ -55944,11 +55956,7 @@ async function loadSvDashCoreV262() {
       </div>
     </div>` : '';
 
-  const teamProgressTabHtml = tab === 'team' ? `
-    <div>
-      <div style="font-size:18px;font-weight:800;color:var(--text-main);margin-bottom:18px">👥 ความคืบหน้าตามงานที่ได้รับมอบหมาย (Team Progress)</div>
-      ${peopleRows || `<div style="padding:30px 0;text-align:center;color:var(--text-muted);font-size:14px;font-weight:600">ยังไม่มีงานที่ได้รับมอบหมาย</div>`}
-    </div>` : '';
+  const teamProgressTabHtml = ''; // V2.74: Team rendered on its own path.
 
   const varianceTabHtml = tab === 'variance' ? `
     ${varianceQueueOverviewHtml}
@@ -56057,6 +56065,63 @@ async function loadSvDashCoreV262() {
   };
   _dashboardViewCacheStore.set(dashboardViewCacheKey(tab,curSid),_dashboardViewCache);
   paintDashboardView(tab, _dashboardViewCache);
+  traceReadV274('painted');
+}
+
+function buildTeamProgressViewV274(dashboardAssignments) {
+  const tab = 'team';
+  const byCounter = {};
+  // Team Progress ต้องเริ่มจากงานที่ได้รับมอบหมายทั้งหมด ไม่ใช่เริ่มจาก Count Record
+  // เพื่อให้งานที่ยังไม่เริ่มนับยังอยู่ในตัวหารของผู้รับมอบหมายด้วย
+  dashboardAssignments.forEach(assignment => {
+    const assigneeName = assignment.profiles?.name || uiCopy('ไม่ระบุผู้รับมอบหมาย','Unassigned');
+    if (!byCounter[assigneeName]) byCounter[assigneeName] = { name:assigneeName, assignmentMap:new Map() };
+    byCounter[assigneeName].assignmentMap.set(assignment.id,assignment);
+  });
+
+  const teamDetailGroupsV272 = [];
+  let peopleRows = '';
+  (tab === 'team' ? Object.values(byCounter) : []).sort((a,b) => a.name.localeCompare(b.name, 'th')).forEach((counter, idx) => {
+    const items = sortRowsByLocation([...counter.assignmentMap.values()], assignment => assignment.locations?.code);
+    const u = {
+      name: counter.name,
+      items,
+      total: items.length,
+      done: items.filter(assignmentPhysicalCountFinished).length,
+      var: items.filter(assignmentPendingVarianceReview).length,
+    };
+    u.pending = Math.max(0,u.total - u.done);
+    const p = Math.round(u.done / u.total * 100);
+    // Keep the complete verified detail data off-DOM until this person opens.
+    teamDetailGroupsV272[idx] = u.items.map(a => ({id:a.id,status:a.status,locations:{...a.locations}}));
+    peopleRows += `<div class="tab-row" style="border-bottom:1px solid var(--theme-border-color);padding:14px 10px" onclick="toggleCounterDetail('${idx}')">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:16px;font-weight:700;color:var(--text-main)">👤 ผู้รับมอบหมาย: <span data-i18n-skip>${escapeWmsText(u.name)}</span></div>
+          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+            <span class="tag tag-green">${u.done} นับครบ</span>
+            ${u.var ? `<span class="tag tag-amber">${u.var} DIFF รอหัวหน้า</span>` : ''}
+            <span class="tag tag-gray">${u.pending} ยังต้องนับ</span>
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:26px;font-weight:800;color:var(--primary-blue);font-family:'Fredoka'">${p}%</div>
+          <div style="font-size:12px;color:var(--text-muted);font-weight:700">นับครบ ${u.done}/${u.total}</div>
+        </div>
+      </div>
+      <div style="text-align:center;font-size:12px;color:var(--text-muted);font-weight:700;margin-top:10px">▾ ดูรายการ</div>
+    </div>
+    <div id="udetail_${idx}" data-location-sort-group style="display:none;background:var(--theme-card-bg);padding:14px 18px;border-radius:16px;margin:8px 0 14px;box-shadow:inset 0 0 0 1px var(--theme-border-color)">
+    </div>`;
+  });
+
+  const teamProgressTabHtml = tab === 'team' ? `
+    <div>
+      <div style="font-size:18px;font-weight:800;color:var(--text-main);margin-bottom:18px">👥 ความคืบหน้าตามงานที่ได้รับมอบหมาย (Team Progress)</div>
+      ${peopleRows || `<div style="padding:30px 0;text-align:center;color:var(--text-muted);font-size:14px;font-weight:600">ยังไม่มีงานที่ได้รับมอบหมาย</div>`}
+    </div>` : '';
+
+  return {html:teamProgressTabHtml,teamDetailGroupsV272};
 }
 
 function renderTeamDetailRowsV272(items) {
