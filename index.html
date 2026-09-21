@@ -25624,7 +25624,7 @@ body.count-page-active #app .count-handheld-page.is-narrow-handheld-v259 .citem-
 <script>
 // V2.50: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.72';
+const APP_VERSION = '2.73';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -53511,6 +53511,238 @@ const _managementMetricsV263 = [];
 const MANAGEMENT_ARRAYS_V263 = ['assignments','snapshots','counts','approvals','audit','details','jobs','job_items',
   'found','paper','items','locations','profiles','remarks','master','settings'];
 
+// V2.73: wire compaction is lossless. Business calculations receive the same
+// row objects as V2.63, then pass the existing scope/completeness validator.
+const MANAGEMENT_COLUMNS_V273 = {
+  "assignments": [
+    "id",
+    "session_id",
+    "location_id",
+    "assigned_to",
+    "status",
+    "assigned_at",
+    "created_at",
+    "counter_r2_id",
+    "counter_r3_id",
+    "wms_closed_at",
+    "wms_closed_by"
+  ],
+  "snapshots": [
+    "id",
+    "session_id",
+    "created_at",
+    "location_id",
+    "item_id",
+    "onhand_qty",
+    "al_qty"
+  ],
+  "counts": [
+    "id",
+    "assignment_id",
+    "item_id",
+    "round",
+    "count_qty",
+    "counted_by",
+    "counted_at",
+    "actual_counter_name",
+    "type_issue",
+    "remark",
+    "photo_url"
+  ],
+  "approvals": [
+    "id",
+    "assignment_id",
+    "item_id",
+    "final_qty",
+    "variance",
+    "resolution",
+    "supervisor_note",
+    "approved_by",
+    "approved_at",
+    "wms_fixed",
+    "wms_fixed_at",
+    "wms_fixed_by",
+    "review_status",
+    "released_to_wms",
+    "draft_saved_by",
+    "draft_saved_at",
+    "updated_at"
+  ],
+  "audit": [
+    "id",
+    "session_id",
+    "location_id",
+    "item_id",
+    "assignment_id",
+    "action",
+    "old_value",
+    "new_value",
+    "created_at"
+  ],
+  "details": [
+    "id",
+    "session_id",
+    "location_id",
+    "item_id",
+    "license_plate",
+    "lot",
+    "inventory_status",
+    "qty",
+    "uom"
+  ],
+  "jobs": [
+    "id",
+    "session_id",
+    "job_code",
+    "assigned_to",
+    "status",
+    "job_no"
+  ],
+  "job_items": [
+    "id",
+    "session_id",
+    "job_id",
+    "location_id",
+    "item_id",
+    "sort_order"
+  ],
+  "found": [
+    "id",
+    "session_id",
+    "status",
+    "source_type",
+    "location_code",
+    "license_plate",
+    "lot",
+    "inventory_status",
+    "item_code",
+    "description",
+    "uom",
+    "qty",
+    "actual_counter_name",
+    "discovered_at",
+    "discovered_by",
+    "assignment_id",
+    "location_id",
+    "item_id",
+    "type_issue",
+    "remark",
+    "reviewed_at",
+    "supervisor_note",
+    "photo_url"
+  ],
+  "paper": [
+    "id",
+    "session_id",
+    "source_type",
+    "source_assignment_id",
+    "source_location_id",
+    "source_item_id",
+    "location_code",
+    "item_code",
+    "count1",
+    "count2",
+    "count3",
+    "physical_count",
+    "updated_at",
+    "created_at"
+  ],
+  "items": [
+    "id",
+    "code",
+    "description",
+    "uom",
+    "category"
+  ],
+  "locations": [
+    "id",
+    "code",
+    "zone",
+    "area",
+    "row_no",
+    "level"
+  ],
+  "profiles": [
+    "id",
+    "name"
+  ],
+  "remarks": [
+    "id",
+    "label"
+  ],
+  "master": [
+    "id",
+    "item_code",
+    "attributes"
+  ],
+  "settings": [
+    "id",
+    "key",
+    "value"
+  ]
+};
+
+function decodeManagementWireV273(payload) {
+  if (!payload || payload.wire_format == null) return payload; // old RPC / unchanged metadata
+  if (payload.wire_format !== 'columns-v1' || payload.unchanged !== false
+      || !payload.columns || Array.isArray(payload.columns)
+      || Object.keys(payload.columns).length !== MANAGEMENT_ARRAYS_V263.length) {
+    throw managementErrorV263('Invalid management wire format');
+  }
+  const decoded = {...payload};
+  for (const key of MANAGEMENT_ARRAYS_V263) {
+    const expected = MANAGEMENT_COLUMNS_V273[key];
+    const columns = payload.columns[key];
+    const rows = payload[key];
+    if (!Array.isArray(columns) || columns.length !== expected.length
+        || columns.some((name,index) => name !== expected[index])
+        || !Array.isArray(rows) || payload.row_counts?.[key] !== rows.length) {
+      throw managementErrorV263('Incomplete management wire collection: '+key);
+    }
+    decoded[key] = rows.map(values => {
+      if (!Array.isArray(values) || values.length !== columns.length) {
+        throw managementErrorV263('Incomplete management wire row: '+key);
+      }
+      const row = {};
+      for (let index=0;index<columns.length;index++) {
+        if (!(index in values) || values[index] === undefined) {
+          throw managementErrorV263('Missing management wire value: '+key);
+        }
+        row[columns[index]] = values[index];
+      }
+      return row;
+    });
+  }
+  delete decoded.columns;
+  delete decoded.wire_format;
+  return decoded;
+}
+
+async function readManagementWireV273(tab,params,scope) {
+  const actorId = me?.id;
+  const role = prof?.role;
+  const rpcName = ['summary','team','layout','wms'].includes(tab)
+    ? 'get_management_read_bundle_v273' : 'get_management_read_bundle_v263';
+  const request = name => {
+    let query = sb.rpc(name,params);
+    if (scope?.signal && typeof query.abortSignal === 'function') query = query.abortSignal(scope.signal);
+    return query;
+  };
+  const result = await request(rpcName);
+  if (scope !== _activePageRequestController || scope?.signal?.aborted || actorId !== me?.id || role !== prof?.role) {
+    throw Object.assign(new Error('Management read cancelled'),{name:'AbortError'});
+  }
+  // Rolling deployment only: a genuinely absent new endpoint can use the old
+  // one. Permission errors, timeouts and invalid data never trigger this retry.
+  if (rpcName === 'get_management_read_bundle_v273'
+      && ['PGRST202','42883'].includes(result.error?.code)
+      && /get_management_read_bundle_v273/.test(String(result.error?.message || ''))) {
+    return request('get_management_read_bundle_v263');
+  }
+  return result;
+}
+
+
 function managementErrorV263(message,code='MANAGEMENT_READ_INVALID') {
   return Object.assign(new Error(message),{code});
 }
@@ -53719,13 +53951,12 @@ async function loadManagementBundleV263(sessionId,tab,{allowDelta=true,locationI
   let outcome = 'error';
   let sizes = null;
   try {
-    let query = sb.rpc('get_management_read_bundle_v263',{
+    const response = await readManagementWireV273(tab,{
       p_session_id:sessionId,p_tab:tab,
       p_since_revision:cached?.revision ?? null,p_since_catalog:cached?.catalog_revision ?? null,
       p_location_id:locationId || null,
-    });
-    if (scope?.signal && typeof query.abortSignal === 'function') query = query.abortSignal(scope.signal);
-    const {data,error} = await query;
+    },scope);
+    const {error} = response;
     if (scope !== _activePageRequestController || scope?.signal?.aborted || actorId !== me?.id || role !== prof?.role) {
       throw Object.assign(new Error('การโหลดถูกยกเลิก'),{name:'AbortError'});
     }
@@ -53742,6 +53973,7 @@ async function loadManagementBundleV263(sessionId,tab,{allowDelta=true,locationI
       }
       throw error;
     }
+    const data = decodeManagementWireV273(response.data);
     validateManagementBundleV263(data,sessionId,tab,actorId,cached,locationId);
     let raw;
     if (data.unchanged) {

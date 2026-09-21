@@ -9,7 +9,8 @@ const arrays = ['assignments', 'snapshots', 'counts', 'approvals', 'audit', 'det
 const validationFunctions = ['dashboardReadErrorV252', 'validateDashboardRulesV252',
   'managementErrorV263', 'validateManagementBundleV263'];
 const readFunctions = [...validationFunctions, 'managementCacheKeyV263', 'mergeManagementBundleV263',
-  'cloneManagementBundleV263', 'isStatementTimeoutErrorV264', 'loadManagementBundleV263'];
+  'cloneManagementBundleV263', 'isStatementTimeoutErrorV264', 'readManagementWireV273',
+  'decodeManagementWireV273', 'loadManagementBundleV263'];
 
 function managementPayload(overrides = {}) {
   return {
