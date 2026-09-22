@@ -14,7 +14,7 @@ function packed() {
     ...Object.fromEntries(keys.map(k=>[k,[]]))};
 }
 function ctx(extra={}, loader=false) {
-  return productionContext(['managementErrorV263','decodeManagementWireV273','readManagementWireV273',
+  return productionContext(['managementErrorV263','decodeManagementWireV273','readManagementWireV273','readWmsWireV275',
     ...(loader ? ['dashboardReadErrorV252','validateDashboardRulesV252','validateManagementBundleV263',
       'managementCacheKeyV263','mergeManagementBundleV263','cloneManagementBundleV263',
       'isStatementTimeoutErrorV264','loadManagementBundleV263'] : [])], {
@@ -52,11 +52,11 @@ test('old object response and tiny unchanged metadata remain compatible',()=> {
   assert.equal(c.decodeManagementWireV273(old),old);
 });
 test('all four targeted tabs use compact endpoint; other menus retain original endpoint',async()=> {
-  const calls=[];const c=ctx({sb:{rpc:async(name,params)=>{calls.push({name,params});return {data:packed(),error:null};}}});
+  const calls=[];const c=ctx({sb:{rpc:async(name,params)=>{calls.push({name,params});return {data:{...packed(),read_contract:'wms-candidates-v1'},error:null};}}});
   for(const tab of ['summary','team','layout','wms','executive','tracker','log','detail','variance']) {
     const params={p_tab:tab,p_since_revision:10,p_location_id:'loc'};
     await c.readManagementWireV273(tab,params,c._activePageRequestController);
-    assert.equal(calls.at(-1).name,['summary','team','layout','wms'].includes(tab)?'get_management_read_bundle_v273':'get_management_read_bundle_v263');
+    assert.equal(calls.at(-1).name,tab==='wms'?'get_wms_read_bundle_v275':['summary','team','layout'].includes(tab)?'get_management_read_bundle_v273':'get_management_read_bundle_v263');
     assert.equal(calls.at(-1).params,params);
   }
 });

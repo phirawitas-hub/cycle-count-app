@@ -25624,7 +25624,7 @@ body.count-page-active #app .count-handheld-page.is-narrow-handheld-v259 .citem-
 <script>
 // V2.50: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.74';
+const APP_VERSION = '2.75';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -53737,7 +53737,34 @@ function decodeManagementWireV273(payload) {
   return decoded;
 }
 
+// WMS candidates never share revision-only cache reuse with full-session data.
+async function readWmsWireV275(params,scope) {
+  const actorId = me?.id, role = prof?.role;
+  let requestParams = params;
+  for (const name of ['get_wms_read_bundle_v275','get_management_read_bundle_v273','get_management_read_bundle_v263']) {
+    let query = sb.rpc(name,requestParams);
+    if (scope?.signal && typeof query.abortSignal === 'function') query = query.abortSignal(scope.signal);
+    const result = await query;
+    if (scope !== _activePageRequestController || scope?.signal?.aborted || actorId !== me?.id || role !== prof?.role) {
+      throw Object.assign(new Error('Management read cancelled'),{name:'AbortError'});
+    }
+    const missing = ['PGRST202','42883'].includes(result.error?.code)
+      && String(result.error?.message || '').includes(name);
+    if (!missing || name === 'get_management_read_bundle_v263') {
+      if (!result.error && name === 'get_wms_read_bundle_v275'
+          && result.data?.read_contract !== 'wms-candidates-v1') {
+        throw managementErrorV263('Invalid WMS read contract');
+      }
+      return result;
+    }
+    // Only a missing endpoint permits fallback. Never merge a full-session
+    // delta/unchanged response into the narrower WMS candidate cache.
+    requestParams = {...params,p_since_revision:null,p_since_catalog:null};
+  }
+}
+
 async function readManagementWireV273(tab,params,scope) {
+  if (tab === 'wms') return readWmsWireV275(params,scope);
   const actorId = me?.id;
   const role = prof?.role;
   const rpcName = ['summary','team','layout','wms'].includes(tab)
@@ -53840,6 +53867,9 @@ function validateManagementBundleV263(p,sessionId,tab,actorId,cached=null,locati
 function mergeManagementBundleV263(cached,incoming) {
   if (!incoming.delta) return incoming;
   if (!cached) throw managementErrorV263('ไม่มีข้อมูลเดิมสำหรับอัปเดตเฉพาะ Location');
+  if (cached.read_contract !== incoming.read_contract) {
+    throw managementErrorV263('Cannot merge different management read contracts');
+  }
   const locations = new Set(incoming.location_ids.map(String));
   const assignmentIds = new Set([
     ...cached.assignments.filter(row => locations.has(String(row.location_id))).map(row => String(row.id)),
@@ -53965,7 +53995,9 @@ async function loadManagementBundleV263(sessionId,tab,{allowDelta=true,locationI
   const actorId = me?.id;
   const role = prof?.role;
   const key = managementCacheKeyV263(sessionId,tab);
-  const cached = !locationId && allowDelta ? _managementRawCacheV263.get(key) : null;
+  const cacheCandidate = !locationId && allowDelta ? _managementRawCacheV263.get(key) : null;
+  const cached = tab !== 'wms' || cacheCandidate?.read_contract === 'wms-candidates-v1'
+    ? cacheCandidate : null;
   const started = performance.now();
   let outcome = 'error';
   let sizes = null;
@@ -54172,7 +54204,7 @@ async function loadSvDashCoreV262() {
   const readStartedV274 = performance.now();
   const traceReadV274 = phase => {
     // Local diagnostic timings only: no Session IDs, identities or row data.
-    console.info('[CycleCount read V2.74]',JSON.stringify({
+    console.info('[CycleCount read V2.75]',JSON.stringify({
       tab,phase,elapsed_ms:Math.round(performance.now()-readStartedV274),
     }));
   };
