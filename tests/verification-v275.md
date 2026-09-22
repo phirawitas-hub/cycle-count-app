@@ -43,6 +43,30 @@ Largest active session, admin authenticated RLS context. Old and new RPCs compar
 
 Security follow-up references: [function access](https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable), [password protection](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
 
-## Browser verification
+## Browser verification (deployed V2.75, authenticated admin)
 
-Pending V2.75 deployment and authenticated navigation. V2.74 baseline retains all 9 WMS pages, totals, historical notes/variance, and the other three menu outputs for comparison. Do not claim the initial 5-second target is met until measured on the deployed version.
+Pages deployment succeeded; the user logged in again after page navigation. First WMS entry in that page lifetime was measured before any previous WMS read. Database/HTTP caches were NOT forcibly cleared.
+
+| Menu | Observed timing | Method |
+| --- | ---: | --- |
+| WMS first entry | 4,454 ms | Click to loading overlay hidden |
+| WMS re-entry | 1,599 ms | Click to loading overlay hidden |
+| Team first entry | 5,622 ms | Click to loading overlay hidden |
+| Layout first entry | 14,502 ms | Click to loading overlay hidden |
+| Dashboard initial automatic load | 6,140 ms | In-app loader to synchronous renderer completion; NOT click-to-ready |
+
+WMS first-entry cumulative phases: sessions 288 ms, bundle validated 3,403 ms, historical recovery 3,444 ms, workflow 3,457 ms, renderer complete 3,534 ms. Bundle phase is 3,115 ms versus the earlier V2.74 sample 6,762 ms. These are separate observed runs, not a controlled benchmark or SLA guarantee.
+
+Layout cumulative phases: sessions 467 ms, bundle validated 11,606 ms, recovery 11,769 ms, workflow 11,869 ms, renderer complete 12,983 ms. It remains a significant cold-entry bottleneck; V2.75 does not change its endpoint or data scope.
+
+Correctness checks against the retained V2.73/V2.74 UI baseline:
+
+- WMS all 9 full list-page texts exactly match, including quantities, historical variance, notes and close state. Last-page Next is disabled.
+- Complete WMS KPI header and all 7 select controls (values, labels, option lists, disabled state) exactly match.
+- Status filters pending/unfixed/fixed/all each exactly match their baseline list text.
+- WMS totals: 344 rows, 1 pending, 343 reviewed; 219/219 eligible locations closed. Re-entry retains the same KPI header.
+- Dashboard and Team full rendered content exactly match.
+- Layout full text matches after removing only the live clock; all 1,816 Cool Room cell codes, classes and tooltips exactly match. Other zones were not independently retested.
+- Browser warning/error log: empty at final check. No confirmation, close-location, stock or note writes were performed.
+
+Conclusion: first-entry WMS passed 5 seconds in this observed run; repeat entry was faster. The all-menu 5-second target is NOT achieved, and performance across networks/load still needs repeated measurements. Prioritize Layout's scoped read next, then Team/Dashboard, without applying WMS's pruning predicate to those menus.
