@@ -25617,6 +25617,14 @@ body.count-page-active #app .count-handheld-page.is-narrow-handheld-v259 .citem-
  .count-sound-savebar-v260 .btn{width:100%;min-width:0}
 }
 </style>
+<style id="summary-zone-plan-style-v276">
+#dash-content .summary-zone-plan-v276 {display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin:0 0 12px;font-size:12px;color:var(--text-main,#503e3b);}
+#dash-content .summary-zone-plan-v276 label {font-size:12px;font-weight:600;flex:none;}
+#dash-content .summary-zone-plan-v276 select {box-sizing:border-box;flex:1 1 180px;max-width:260px;min-width:0;height:36px;line-height:normal;padding:6px 28px 6px 10px;border:1px solid #e4dbd7;border-radius:10px;background:#fff;color:inherit;font:inherit;}
+#dash-content .summary-zone-plan-v276 span {font-variant-numeric:tabular-nums;white-space:nowrap;}
+#dash-content .summary-zone-plan-v276 small {flex-basis:100%;font-size:10px;line-height:1.5;color:#847671;}
+#dash-content .summary-zones-card:has(.summary-zone-plan-v276) {min-height:340px;}
+</style>
 </head>
 <body data-build="v1-190">
 <div id="app"></div>
@@ -25624,7 +25632,7 @@ body.count-page-active #app .count-handheld-page.is-narrow-handheld-v259 .citem-
 <script>
 // V2.50: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.75';
+const APP_VERSION = '2.76';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -29534,6 +29542,8 @@ function dashboardViewCacheKey(tab, sessionId = S?._dashSid) {
     selectedDateFrom || 'all',
     selectedDateTo || 'all',
     tab || 'summary',
+    (tab || 'summary') === 'summary' && typeof summaryZonePlanModeV276 === 'function'
+      ? summaryZonePlanModeV276(sessionId) : '',
   ].join('|');
 }
 
@@ -48273,6 +48283,92 @@ function planLocationGrandTotal(config=_planLocationConfig) {
   return normalizePlanLocationConfig(config || {}).zones.reduce((sum,item) => sum + Math.max(0,Number(item.plan) || 0),0);
 }
 
+// Preview preference is per actor and Session on this browser only.
+function summaryZonePlanModeV276(sessionId) {
+  const key = `cycle-count:zone-plan:v276:${me?.id || 'anonymous'}:${sessionId || ''}`;
+  const saved = S?._zonePlanModesV276?.[key];
+  if (['central','imported'].includes(saved)) return saved;
+  try {
+    const stored = localStorage.getItem(key);
+    if (['central','imported'].includes(stored)) return stored;
+  } catch (_) {}
+  return sessionId === 'c6cc3bfe-2536-4e20-8569-a4b3389ba640' ? 'imported' : 'central';
+}
+
+function setSummaryZonePlanModeV276(mode) {
+  if (!['central','imported'].includes(mode) || !S?._dashSid
+      || S.page !== 'sv-dash' || (S._dashTab || _dashTab || 'summary') !== 'summary') return;
+  const key = `cycle-count:zone-plan:v276:${me?.id || 'anonymous'}:${S._dashSid}`;
+  S._zonePlanModesV276 = S._zonePlanModesV276 || {};
+  S._zonePlanModesV276[key] = mode;
+  try { localStorage.setItem(key,mode); } catch (_) {}
+  invalidateDashboardCache('summary');
+  return refreshDashboardData();
+}
+
+function buildSummaryZoneProgressV276(assignments,snapshots,roundsByAssignment,approvals,rules,mode) {
+  const zones = new Map();
+  const ensure = name => {
+    const zone = name || 'ไม่ระบุ Zone';
+    if (!zones.has(zone)) zones.set(zone,{all:new Set(),done:new Set()});
+    return zones.get(zone);
+  };
+  if (mode !== 'imported') {
+    // Preserve the existing central Location plan and completion definition.
+    for (const a of assignments || []) {
+      const group = ensure(a.locations?.zone);
+      const key = a.location_id || a.locations?.code || a.id;
+      group.all.add(key);
+      if (assignmentPhysicalCountFinished(a)) group.done.add(key);
+    }
+    return [...zones].map(([zone,z])=>({zone,total:planLocationForZone(zone),assigned:z.all.size,done:z.done.size,unit:'Location'}));
+  }
+  const assignmentsByLocation = new Map();
+  for (const a of assignments || []) {
+    if (!assignmentsByLocation.has(a.location_id)) assignmentsByLocation.set(a.location_id,[]);
+    assignmentsByLocation.get(a.location_id).push(a);
+  }
+  const confirmed = new Set((approvals || [])
+    .filter(row=>varianceReviewState(row)==='confirmed')
+    .map(row=>`${row.assignment_id}|${row.item_id}`));
+  for (const snapshot of snapshots || []) {
+    if (!snapshot.location_id || !snapshot.item_id) continue;
+    const candidates = assignmentsByLocation.get(snapshot.location_id) || [];
+    const group = ensure(snapshot.locations?.zone || candidates[0]?.locations?.zone);
+    const key = `${snapshot.location_id}|${snapshot.item_id}`;
+    group.all.add(key);
+    // Only imported pairs belong to the denominator. Recounts and records for
+    // unimported items cannot create extra jobs. Unassigned imports stay pending.
+    const finished = candidates.some(a=>{
+      if (confirmed.has(`${a.id}|${snapshot.item_id}`)) return true;
+      const rounds = roundsByAssignment?.[a.id]?.[snapshot.item_id] || {};
+      const counted = [1,2,3].some(n=>rounds[n] !== undefined && rounds[n] !== null && rounds[n] !== '');
+      if (!counted) return false;
+      const stored = a._storedStatus || a.status;
+      if (['completed','approved','round3_done'].includes(stored)) return true;
+      const status = a._workflow?.itemStatusByItem?.[String(snapshot.item_id)]
+        || computeItemStatus(snapshot.onhand_qty,rounds[1],rounds[2],rounds[3],rules);
+      return status === 'OK' || status === 'Diff';
+    });
+    if (finished) group.done.add(key);
+  }
+  return [...zones].map(([zone,z])=>({zone,total:z.all.size,assigned:z.all.size,done:z.done.size,unit:'งาน'}));
+}
+
+function summaryZonePlanControlV276(mode,rows) {
+  const total = rows.reduce((n,row)=>n+row.total,0);
+  const unit = mode === 'imported' ? 'งาน' : 'Location';
+  return `<div class="summary-zone-plan-v276">
+    <label for="summary-zone-plan-mode-v276">ฐาน Plan</label>
+    <select id="summary-zone-plan-mode-v276" aria-label="ฐาน Plan ของ Session" onchange="setSummaryZonePlanModeV276(this.value)">
+      <option value="central" ${mode==='central'?'selected':''}>Plan Location เดิม</option>
+      <option value="imported" ${mode==='imported'?'selected':''}>งานที่ Import ใน Session</option>
+    </select>
+    <span>รวม ${total.toLocaleString(uiLocale())} ${unit}</span>
+    <small>${mode==='imported'?'1 งาน = Location + Item · ตรวจนับจบตามกติกา / งาน Import':'ใช้ Plan Location ส่วนกลางตามเดิม'} · จำตัวเลือกแยก Session ในเครื่องนี้</small>
+  </div>`;
+}
+
 function planLocationMetrics(runtime,zone=null) {
   const plan = zone ? planLocationForZone(zone.name) : planLocationGrandTotal();
   const zoneLocations = zone
@@ -54204,7 +54300,7 @@ async function loadSvDashCoreV262() {
   const readStartedV274 = performance.now();
   const traceReadV274 = phase => {
     // Local diagnostic timings only: no Session IDs, identities or row data.
-    console.info('[CycleCount read V2.75]',JSON.stringify({
+    console.info('[CycleCount read V2.76]',JSON.stringify({
       tab,phase,elapsed_ms:Math.round(performance.now()-readStartedV274),
     }));
   };
@@ -55397,14 +55493,10 @@ async function loadSvDashCoreV262() {
 
   // Zone progress is an overall Session view. It intentionally ignores the
   // dashboard date picker so the user always sees cumulative Plan progress.
-  const zoneMap = {};
-  asgns.forEach(a => {
-    const zone = a.locations?.zone || 'ไม่ระบุ Zone';
-    const locKey = a.location_id || a.locations?.code || a.id;
-    if (!zoneMap[zone]) zoneMap[zone] = { all: new Set(), done: new Set() };
-    zoneMap[zone].all.add(locKey);
-    if (assignmentPhysicalCountFinished(a)) zoneMap[zone].done.add(locKey);
-  });
+  const zonePlanModeV276 = summaryZonePlanModeV276(curSid);
+  const zoneProgressV276 = buildSummaryZoneProgressV276(
+    asgns,allSnapshots,sessionCountByAsgn,varianceApprovalResult?.data || [],rules,zonePlanModeV276,
+  );
   const zoneAccuracyMap = {};
   (rawCounts || []).forEach(c => {
     const asgn = asgnInfoMap[c.assignment_id];
@@ -55429,13 +55521,14 @@ async function loadSvDashCoreV262() {
     }
   });
 
-  const zoneStats = Object.entries(zoneMap).map(([zone, z]) => {
+  const zoneStats = zoneProgressV276.map(z => {
+    const zone = z.zone;
     const acc = zoneAccuracyMap[zone] || { countedItems: new Set(), diffItems: new Set() };
     const countedItems = acc.countedItems.size;
     const diffItems = acc.diffItems.size;
-    const planLocations = planLocationForZone(zone);
+    const planLocations = z.total;
     const progressPct = planLocations
-      ? Math.min(100, Math.round((z.done.size / planLocations) * 100))
+      ? Math.min(100, Math.round((z.done / planLocations) * 100))
       : 0;
     const accuracyPct = countedItems
       ? (Math.max(0, ((countedItems - diffItems) / countedItems) * 100)).toFixed(2)
@@ -55443,8 +55536,9 @@ async function loadSvDashCoreV262() {
     return {
       zone,
       total: planLocations,
-      assigned: z.all.size,
-      done: z.done.size,
+      assigned: z.assigned,
+      done: z.done,
+      unit: z.unit,
       pct: progressPct,
       countedItems,
       diffItems,
@@ -55458,9 +55552,9 @@ async function loadSvDashCoreV262() {
         <div class="summary-zone-row-title">${z.zone}</div>
       </div>
       <div class="summary-zone-kpis-v126">
-        <div class="summary-zone-kpi-v126 plan"><span>ตามแผน</span><strong>${z.total.toLocaleString(uiLocale())}</strong><small class="summary-zone-kpi-unit-v199" data-i18n-skip>Location</small></div>
-        <div class="summary-zone-kpi-v126 counted"><span>ตรวจนับแล้ว</span><strong>${z.done.toLocaleString(uiLocale())}</strong><small class="summary-zone-kpi-unit-v199" data-i18n-skip>Location</small></div>
-        <div class="summary-zone-kpi-v126 remaining"><span>คงเหลือ</span><strong>${Math.max(0,z.total-z.done).toLocaleString(uiLocale())}</strong><small class="summary-zone-kpi-unit-v199" data-i18n-skip>Location</small></div>
+        <div class="summary-zone-kpi-v126 plan"><span>ตามแผน</span><strong>${z.total.toLocaleString(uiLocale())}</strong><small class="summary-zone-kpi-unit-v199" data-i18n-skip>${z.unit}</small></div>
+        <div class="summary-zone-kpi-v126 counted"><span>ตรวจนับแล้ว</span><strong>${z.done.toLocaleString(uiLocale())}</strong><small class="summary-zone-kpi-unit-v199" data-i18n-skip>${z.unit}</small></div>
+        <div class="summary-zone-kpi-v126 remaining"><span>คงเหลือ</span><strong>${Math.max(0,z.total-z.done).toLocaleString(uiLocale())}</strong><small class="summary-zone-kpi-unit-v199" data-i18n-skip>${z.unit}</small></div>
         <div class="summary-zone-kpi-v126 diff"><span>DIFF</span><strong>${z.diffItems.toLocaleString(uiLocale())}</strong><small class="summary-zone-kpi-unit-v199" data-i18n-skip>งาน</small></div>
       </div>
       <div class="summary-zone-row-bars">
@@ -55945,6 +56039,7 @@ async function loadSvDashCoreV262() {
             ${zoneSelectorHtml}
           </div>
         </div>
+        ${summaryZonePlanControlV276(zonePlanModeV276,zoneStats)}
         <div id="summary-zone-browser-v128" class="summary-zone-browser-v128">
           <div class="summary-zone-grid">
             <div id="summary-zone-overview-v128" class="summary-zone-overview-v128" ${zoneStats.length === 1 ? 'hidden' : ''}>${zoneOverviewHtml}</div>
