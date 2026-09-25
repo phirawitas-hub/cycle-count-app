@@ -25632,7 +25632,7 @@ body.count-page-active #app .count-handheld-page.is-narrow-handheld-v259 .citem-
 <script>
 // V2.50: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.77';
+const APP_VERSION = '2.78';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -54295,7 +54295,7 @@ async function loadSvDashCoreV262() {
   const readStartedV274 = performance.now();
   const traceReadV274 = phase => {
     // Local diagnostic timings only: no Session IDs, identities or row data.
-    console.info('[CycleCount read V2.77]',JSON.stringify({
+    console.info('[CycleCount read V2.78]',JSON.stringify({
       tab,phase,elapsed_ms:Math.round(performance.now()-readStartedV274),
     }));
   };
@@ -70723,6 +70723,8 @@ function backupTeamSheetColumns(photoBackupMode='storage_url_preserved') {
       col('count2Time','Count 2 Time',22),
       col('count3','Count 3',13,'number'), col('count3Counter','Actual Counter3',22),
       col('count3Time','Count 3 Time',22),
+      col('finalCount','Final Count',14,'number'), col('finalCountCounter','Actual Final Count',24),
+      col('finalCountTime','Final Count Time',22),
       col('physicalCount','Physical Count',16,'number'), col('variance','Variance',14,'number'),
       col('typeIssue','Type Issue',22), col('remark','Count Remark',34),
       col('wmsRemark','WMS Remark',42), ...photoColumns,
@@ -71023,6 +71025,7 @@ function buildTeamBackupData(dataBySheet) {
       remark:record?.remark || '',
     });
     const r1 = countFields(c1), r2 = countFields(c2), r3 = countFields(c3);
+    const finalRound = countFields(finalCountRecord);
     return {
       session:session.name || '', jobCode:jobCodeForStock(sessionId,locationId,itemId),
       sessionStatus:session.status || '', location:location.code || '',
@@ -71035,6 +71038,7 @@ function buildTeamBackupData(dataBySheet) {
       count1:r1.value, count1Counter:r1.counter, count1Time:r1.time, count1User:r1.user, count1Remark:r1.remark,
       count2:r2.value, count2Counter:r2.counter, count2Time:r2.time, count2User:r2.user, count2Remark:r2.remark,
       count3:r3.value, count3Counter:r3.counter, count3Time:r3.time, count3User:r3.user, count3Remark:r3.remark,
+      finalCount:physicalCount, finalCountCounter:finalRound.counter, finalCountTime:finalRound.time,
       physicalCount, variance, result, assignmentStatus:assignment?.status || '',
       assignedUser:profileName(assignment?.assigned_to), round2Counter:counterName(assignment?.counter_r2_id),
       round3Counter:counterName(assignment?.counter_r3_id), approvalResolution:approval?.resolution || '',
@@ -71123,6 +71127,7 @@ function buildTeamBackupData(dataBySheet) {
     count1:null, count1Counter:'', count1Time:'',
     count2:null, count2Counter:'', count2Time:'',
     count3:null, count3Counter:'', count3Time:'',
+    finalCount:null, finalCountCounter:'', finalCountTime:'',
     physicalCount:null, variance:null, result:'ยังไม่ได้นับ',
     typeIssue:'', remark:'', wmsRemark:wmsRemarkTextForWork(assignment?.id,itemId,sessionId,locationId), photoUrl:'', approvalResolution:'', reviewStatus:'ยังไม่ได้ตรวจ',
     releasedToWms:'', supervisorNote:'',
@@ -71238,6 +71243,9 @@ function buildTeamBackupData(dataBySheet) {
         target.count1 = foundQty;
         target.count1Counter = normalizeImportText(found.actual_counter_name) || target.count1Counter || '';
         target.count1Time = discoveredAt || target.count1Time || '';
+        target.finalCount = foundQty;
+        target.finalCountCounter = normalizeImportText(found.actual_counter_name) || target.finalCountCounter || '';
+        target.finalCountTime = discoveredAt || target.finalCountTime || '';
         target.physicalCount = foundQty;
         target.variance = foundQty;
         target.result = found.status === 'pending_review' ? 'Pending Review' : (foundQty === 0 ? 'Match' : 'Gain');
@@ -71290,11 +71298,13 @@ function buildTeamBackupData(dataBySheet) {
       count1:source.count1,
       count2:source.count2,
       count3:source.count3,
+      finalCount:source.finalCount,
       physicalCount:source.physicalCount,
     };
     allocateCountAcrossLpn(rows,totals.count1,'count1');
     allocateCountAcrossLpn(rows,totals.count2,'count2');
     allocateCountAcrossLpn(rows,totals.count3,'count3');
+    allocateCountAcrossLpn(rows,totals.finalCount,'finalCount');
     allocateCountAcrossLpn(rows,totals.physicalCount,'physicalCount');
 
     rows.forEach((row,index) => {
@@ -71316,6 +71326,10 @@ function buildTeamBackupData(dataBySheet) {
       if (totals.count3 === null) {
         row.count3Counter = '';
         row.count3Time = '';
+      }
+      if (totals.finalCount === null) {
+        row.finalCountCounter = '';
+        row.finalCountTime = '';
       }
       if (index > 0) {
         row.alQty = null;
@@ -71811,7 +71825,7 @@ function buildBackupWorkbook(dataBySheet, sessionIds, fileName, formatVersion=BA
     ['WMS_Remarks','ประวัติหมายเหตุที่บันทึกจากหน้าปรับปรุงยอด WMS แสดงทีละรายการ พร้อม Session, Location, Item, ผู้บันทึก และเวลา; ข้อมูลจริงเก็บในชีตระบบ Audit'],
     ['Remark Options','ตัวเลือกหมายเหตุของเมนูเก็บในชีตระบบ Remarks แยกจากข้อความที่เคยบันทึกจริงใน Audit'],
     ['เลข JOB','เชื่อมจาก Annual JOB ตาม Session + Location + Item; รายการที่ไม่ได้อยู่ใน Annual JOB จะแสดงว่าง'],
-    ['Count 1–3','กระจายยอดนับจาก LPN แถวบนลงล่าง โดยเติมได้ไม่เกิน Stock Onhand ของแต่ละ LPN และนำยอดคงเหลือทั้งหมดใส่ LPN แถวสุดท้าย จากนั้นคำนวณ Physical Count และ Variance แยกราย LPN'],
+    ['Count 1–3 และ Final Count','กระจายยอดนับจาก LPN แถวบนลงล่าง โดยเติมได้ไม่เกิน Stock Onhand ของแต่ละ LPN และนำยอดคงเหลือทั้งหมดใส่ LPN แถวสุดท้าย พร้อมแสดงผู้ตรวจนับและเวลาของรอบสุดท้าย จากนั้นคำนวณ Physical Count และ Variance แยกราย LPN'],
     ['Type Issue','แสดงข้อความที่ผู้ใช้เลือกจริง ณ เวลาบันทึก ไม่แสดงรหัสภายใน CUSTOM_... และไม่เปลี่ยนตามการแก้ชื่อตัวเลือกในอนาคต'],
     [photoBackupMode === 'embedded_zip' ? 'เปิดรูป' : 'Photo URL','ใช้รูปถ่ายล่าสุดที่มีจริงของงาน แม้ผลนับรอบสุดท้ายจะไม่ได้แนบรูป'],
     ...(photoBackupMode === 'embedded_zip' ? [
