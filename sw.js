@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cycle-count-pwa-v5';
+const CACHE_NAME = 'cycle-count-pwa-v279';
 
 const APP_SHELL = [
   './',
@@ -16,7 +16,8 @@ self.addEventListener('install', event => {
     })
   );
 
-  self.skipWaiting();
+  // Keep an active counting page on its current worker. The new worker takes
+  // over after old clients close; it never clears IndexedDB pending work.
 });
 
 self.addEventListener('activate', event => {
@@ -24,13 +25,13 @@ self.addEventListener('activate', event => {
     caches.keys().then(keys => {
       return Promise.all(
         keys
-          .filter(key => key !== CACHE_NAME)
+          .filter(key => key.startsWith('cycle-count-pwa-') && key !== CACHE_NAME)
           .map(key => caches.delete(key))
       );
     })
   );
 
-  self.clients.claim();
+  // Do not claim an already-open counting page during a release.
 });
 
 self.addEventListener('fetch', event => {
