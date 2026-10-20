@@ -25632,7 +25632,7 @@ body.count-page-active #app .count-handheld-page.is-narrow-handheld-v259 .citem-
 <script>
 // V2.50: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.80';
+const APP_VERSION = '2.81';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -31431,6 +31431,7 @@ async function clearLocalAuthSession() {
   await _countOfflineDraftChainV279.catch(()=>{});
   await _countNormalDraftChainV280.catch(()=>{});
   closeCountOfflineV279(true);
+  _myTasksOwnerV281=null;_countPrefetchPlanV281=null;
   _myTasksRawCacheV270 = null;
   stopWarehouseLayoutRealtimeSync();
   stopWarehouseLayoutLiveSync();
@@ -36644,7 +36645,13 @@ function assertActiveMyTasksLoad(loadScope,loadToken) {
 }
 
 async function loadCTasks() {
-  return measureMenuLoadV270('my-tasks',loadCTasksCoreV270);
+  if(navigator.onLine===false || S?._countCachedListV281)return renderPreparedTaskListV281();
+  const scope=_activePageRequestController,owner=me?.id;
+  try {return await measureMenuLoadV270('my-tasks',loadCTasksCoreV270);}
+  catch(error) {
+    if(scope!==_activePageRequestController || owner!==me?.id || !transientCountConnectionV280(error))throw error;
+    return renderPreparedTaskListV281();
+  }
 }
 
 async function loadCTasksCoreV270() {
@@ -36985,6 +36992,8 @@ async function loadCTasksCoreV270() {
 
   const allAssignments = asgns;
   const allAnnualJobs = annualJobs;
+  // The validated actor-scoped list deliberately omits assigned_to.
+  _myTasksOwnerV281=me.id;
   if (!allAssignments.length && !allAnnualJobs.length) {
     // Clear scanner/navigation models when reassignment removed the last job.
     window._myTasksAllDates = [];
@@ -37461,13 +37470,15 @@ async function openNextCountFromCachedTasks(aid,assignment,newStatus,annualJobId
   // mutating .status left that stale snapshot in control of the Work KPI.
   syncCachedAssignmentStatusV246(aid,newStatus);
   const cachedTasks = window._myTasks || [];
-  if (!cachedTasks.length) return false;
 
   // Keep the just-saved Location out of the candidate set immediately. This
   // path avoids the expensive full task-list reload that can time out on a
   // rugged Handheld; loadCCount still revalidates the chosen Assignment and
   // its Count rows against the server before showing the next form.
   const request = buildNextCountNavigationRequest(aid,assignment,annualJobId);
+  if(!annualJobId && countContinuityActiveV280(aid)
+    && await openNextPreparedCountV281(request))return true;
+  if (!cachedTasks.length) return false;
   const target = nextCountNavigationTarget(request);
   if (!target) return false;
   if (target.kind === 'annual') {
@@ -37568,6 +37579,7 @@ function refreshMyTaskFilters() {
 function renderMyTasks() {
   const list = Q('mt-list');
   if (!list) return;
+  void prefetchNormalCountV280('').catch(()=>{});
   const asgns = window._myTasks || [];
   const annualJobs = window._myAnnualJobs || [];
   const annualJobItems = window._myAnnualJobItems || [];
@@ -54312,7 +54324,7 @@ async function loadSvDashCoreV262() {
   const readStartedV274 = performance.now();
   const traceReadV274 = phase => {
     // Local diagnostic timings only: no Session IDs, identities or row data.
-    console.info('[CycleCount read V2.80]',JSON.stringify({
+    console.info('[CycleCount read V2.81]',JSON.stringify({
       tab,phase,elapsed_ms:Math.round(performance.now()-readStartedV274),
     }));
   };
@@ -74580,11 +74592,11 @@ function countOutboxV279() {
     notify:()=>{void refreshCountOfflineStatusV279().catch(()=>{});},
   });
   const send=force=>{if(me?.id)void _countOutboxV279.sync(force).catch(error=>countOfflineMessageV279(error.message,true));};
-  window.addEventListener('online',()=>send(true));
+  window.addEventListener('online',()=>{send(true);void prefetchNormalCountV280(S?.aid||'').catch(()=>{});});
   window.addEventListener('offline',()=>{void refreshCountOfflineStatusV279().catch(()=>{});});
   window.addEventListener('focus',()=>send(false));
   document.addEventListener('visibilitychange',()=>send(false));
-  _countOfflineTimerV279=setInterval(()=>{if(navigator.onLine!==false)send(false);},15000);
+  _countOfflineTimerV279=setInterval(()=>{if(navigator.onLine!==false){send(false);void prefetchNormalCountV280(S?.aid||'').catch(()=>{});}},15000);
   return _countOutboxV279;
 }
 
@@ -74807,6 +74819,9 @@ let _countContinuityV280=null;
 let _countNormalDraftChainV280=Promise.resolve();
 let _countNormalStorageErrorV280='';
 let _countPrefetchV280=false;
+let _myTasksOwnerV281=null;
+let _countPrefetchPlanV281=null;
+const _countPreparingV281=new Map();
 
 function countContinuityActiveV280(aid) {
   return Boolean(_countContinuityV280 && _countContinuityV280.owner===me?.id
@@ -74823,13 +74838,16 @@ function transientCountConnectionV280(error) {
 
 async function obtainCountJobV280(aid,{prefetch=false}={}) {
   const box=countOutboxV279(),state=await box.list();
+  const preferPrepared=String(S?._preparedCountV281||'')===String(aid);
+  if(preferPrepared && !prefetch)delete S._preparedCountV281;
   const job=state.jobs.find(j=>j.assignmentId===String(aid));
   const outstanding=job && state.operations.some(op=>op.jobKey===job.key&&!['synced','archived'].includes(op.state));
   const hasDraft=job && state.drafts.some(d=>d.jobKey===job.key&&d.generation===job.generation
     && (String(d.value?.qty??'').trim()!==''||d.value?.photo||d.value?.remark));
-  if(job && !job.reviewArchived && (outstanding||hasDraft||navigator.onLine===false||prefetch))return job;
+  if(job && !job.reviewArchived && (outstanding||hasDraft||navigator.onLine===false||prefetch
+    || preferPrepared))return job;
   if(navigator.onLine===false)throw new Error('เครื่องนี้ยังไม่ได้รับข้อมูล Location นี้ กรุณากลับมามีสัญญาณก่อนเปิดงานใหม่ ผลที่บันทึกไว้ยังอยู่');
-  try {return await box.prepare(aid);}
+  try {return await prepareCountJobV281(aid);}
   catch(error) {
     // Authorization, schema, scope and rule errors must never authorize old data.
     if(job && !job.reviewArchived && transientCountConnectionV280(error))return job;
@@ -74935,14 +74953,115 @@ async function restoreNormalCountDraftsV280(aid) {
 }
 
 async function prefetchNormalCountV280(aid) {
-  if(_countPrefetchV280||navigator.onLine===false)return;
-  _countPrefetchV280=true;const owner=me?.id;
-  try {
-    // Bounded look-ahead, never download a whole Session or another user's tasks.
-    const tasks=(window._myTasks||[]).filter(row=>String(row.id)!==String(aid)&&row.assigned_to===owner&&!assignmentPhysicalCountFinished(row)).slice(0,3);
-    for(const task of tasks){if(owner!==me?.id||navigator.onLine===false)break;
-      try{await obtainCountJobV280(task.id,{prefetch:true});}catch(error){if(transientCountConnectionV280(error))break;}}
-  } finally {_countPrefetchV280=false;}
+  const owner=me?.id;
+  if(!owner || _myTasksOwnerV281!==owner || !['c-count','c-tasks'].includes(S?.page))return;
+  const targets=countTaskTargetsV281(aid).filter(t=>t.assignmentId!==String(aid));
+  _countPrefetchPlanV281={owner,targets,loading:navigator.onLine!==false,error:''};
+  if(navigator.onLine===false){void refreshCountOfflineStatusV279().catch(()=>{});return;}
+  if(_countPrefetchV280)return _countPrefetchV280;
+  _countPrefetchV280=(async()=>{
+    await Promise.resolve(); // Assign the shared promise before an empty route completes.
+    const attempted=new Set();let stop=false;
+    try {
+      // Progressively prepare the filtered route with at most two reads at once.
+      while(!stop && owner===me?.id && _countPrefetchPlanV281?.owner===owner && navigator.onLine!==false) {
+        const batch=_countPrefetchPlanV281.targets.filter(t=>!attempted.has(t.assignmentId)).slice(0,2);
+        if(!batch.length)break;
+        await Promise.all(batch.map(async target=>{
+          attempted.add(target.assignmentId);
+          try {await obtainCountJobV280(target.assignmentId,{prefetch:true});}
+          catch(error) {
+            if(_countPrefetchPlanV281?.owner===owner)_countPrefetchPlanV281.error=error.message||String(error);
+            if(transientCountConnectionV280(error)||['42501','AUTH_REQUIRED','PGRST301'].includes(error.code))stop=true;
+          }
+        }));
+        await refreshCountOfflineStatusV279();
+        if(S?.page==='c-tasks' && S._countCachedListV281)await renderPreparedTaskListV281(false);
+      }
+    } finally {
+      if(_countPrefetchPlanV281?.owner===owner)_countPrefetchPlanV281.loading=false;
+      _countPrefetchV280=false;void refreshCountOfflineStatusV279().catch(()=>{});
+    }
+  })();
+  return _countPrefetchV280;
+}
+
+function prepareCountJobV281(aid) {
+  const key=`${me?.id}|${aid}`;
+  if(!_countPreparingV281.has(key)) {
+    const pending=countOutboxV279().prepare(aid).finally(()=>_countPreparingV281.delete(key));
+    _countPreparingV281.set(key,pending);
+  }
+  return _countPreparingV281.get(key);
+}
+
+function countTaskTargetsV281(aid='') {
+  if(_myTasksOwnerV281!==me?.id)return [];
+  const assignment=(window._myTasks||[]).find(row=>String(row.id)===String(aid));
+  const request=buildNextCountNavigationRequest(aid,assignment);
+  if(S?.page==='c-tasks')request.filters=myTaskNavigationFilterSnapshot(S);
+  const targets=orderedCycleCountNavigationTargets(request.filters,request.sortDirection,request.levelFirst);
+  const index=targets.findIndex(t=>t.assignmentId===String(aid));
+  const ordered=index<0?targets:[...targets.slice(index+1),...targets.slice(0,index+1)];
+  return ordered.filter(t=>t.canOpen);
+}
+
+function readyCountJobsV281(state) {
+  if(state.owner!==me?.id)return new Map();
+  const ready=new Map();
+  for(const job of state.jobs) {
+    if(job.owner!==state.owner || job.envelope?.actor_id!==state.owner || job.reviewArchived)continue;
+    try {
+      const view=countOfflineViewV279(job,state.operations);
+      if(view.pending.some(op=>op.state==='review') || !view.items.some(row=>row.nextRound))continue;
+      ready.set(String(job.assignmentId),{job,view});
+    } catch(_) {/* Invalid cached bundles never become editable forms. */}
+  }
+  return ready;
+}
+
+async function openNextPreparedCountV281(request) {
+  const owner=me?.id,scope=_activePageRequestController;
+  const state=await countOutboxV279().list();
+  if(owner!==me?.id||scope!==_activePageRequestController)return true;
+  const disconnected=navigator.onLine===false || state.operations.some(op=>!['synced','archived'].includes(op.state));
+  const ready=readyCountJobsV281(state),targets=countTaskTargetsV281(request.assignmentId);
+  const candidates=targets.filter(t=>t.assignmentId!==request.assignmentId);
+  const exact=candidates[0];
+  if(exact && ready.has(exact.assignmentId)) {
+    go('c-count',{aid:exact.assignmentId,_preparedCountV281:exact.assignmentId});return true;
+  }
+  if(!disconnected)return false;
+  // Missing cached work must not lead to an unusable count form.
+  const next=candidates.find(t=>ready.has(t.assignmentId));
+  if(next){go('c-count',{aid:next.assignmentId,_preparedCountV281:next.assignmentId});return true;}
+  go('c-tasks',{_countCachedListV281:true,_autoOpenNextCount:null});return true;
+}
+
+async function renderPreparedTaskListV281(startPrefetch=true) {
+  const owner=me?.id,scope=_activePageRequestController;
+  const state=await countOutboxV279().list();
+  if(owner!==me?.id||state.owner!==owner||scope!==_activePageRequestController)return;
+  S._countCachedListV281=true;
+  const ready=readyCountJobsV281(state);
+  if(_myTasksOwnerV281!==owner || !(window._myTasks||[]).length) {
+    // Restore navigation only from this actor's server-validated envelopes.
+    window._myTasks=[...ready.values()].map(({view})=>({...view.bundle.assignment,status:view.workflow.effectiveStatus})).filter(myTaskMatchesDate);
+    window._myAnnualJobs=[];_myTasksOwnerV281=owner;
+  }
+  const targets=countTaskTargetsV281('').filter(t=>ready.has(t.assignmentId));
+  const card=document.createElement('section');card.className='card';
+  const title=document.createElement('h2');title.textContent='งานที่พร้อมนับต่อในเครื่อง';
+  const note=document.createElement('p');note.textContent=`พร้อมนับ ${targets.length} Location ตามตัวกรอง · แสดงเฉพาะงานที่เครื่องรับข้อมูลแล้ว ไม่ใช่ยอดงานทั้งหมด ผลรอส่งยังเก็บอยู่`;
+  card.append(title,note);
+  for(const target of targets){const button=document.createElement('button');button.type='button';button.className='btn btn-primary';button.style.cssText='display:block;margin:12px 0;max-width:100%;white-space:normal';
+    button.textContent=target.locationCode||target.assignmentId;
+    button.onclick=()=>go('c-count',{aid:target.assignmentId,_preparedCountV281:target.assignmentId});card.append(button);}
+  if(!targets.length){const message=document.createElement('p');message.textContent='ยังไม่มีงานถัดไปที่พร้อมในเครื่อง ต้องกลับมามีสัญญาณให้ระบบรับข้อมูลงานก่อน — ไม่ต้องล้างข้อมูลเว็บไซต์';card.append(message);}
+  const reload=document.createElement('button');reload.type='button';reload.className='btn btn-ghost';reload.textContent='เชื่อมต่อแล้ว · โหลดรายการล่าสุด';
+  reload.onclick=()=>go('c-tasks',{_countCachedListV281:false,_autoOpenNextCount:null});card.append(reload);
+  cnt().replaceChildren(card);await refreshCountOfflineStatusV279();
+  if(startPrefetch)void prefetchNormalCountV280('').catch(()=>{});
 }
 
 async function storeNormalCountPhotoV280(itemId,blob) {
@@ -75026,7 +75145,8 @@ function paintCountConnectionV280(state) {
   const draftCount=state.drafts.filter(d=>state.jobs.some(j=>j.key===d.jobKey&&j.generation===d.generation)
     && (String(d.value?.qty??'').trim()!==''||d.value?.photo||d.value?.remark)).length;
   const offline=navigator.onLine===false,retrying=pending.some(op=>op.state==='retry');
-  const show=pending.length||draftCount||offline||_countNormalStorageErrorV280||S?.page==='c-count';
+  const plan=_countPrefetchPlanV281?.owner===me.id?_countPrefetchPlanV281:null;
+  const show=pending.length||draftCount||offline||_countNormalStorageErrorV280||S?.page==='c-count'||(plan&&S?.page==='c-tasks');
   let banner=document.getElementById('count-sync-banner-v280');
   if(!show){banner?.remove();return;}
   if(!banner){banner=document.createElement('div');banner.id='count-sync-banner-v280';banner.setAttribute('role','status');banner.setAttribute('aria-live','polite');}
@@ -75039,6 +75159,13 @@ function paintCountConnectionV280(state) {
     :pending.length?`กำลังรอเซิร์ฟเวอร์ยืนยัน ${pending.length} รายการ · ผลนับเก็บไว้ในเครื่องแล้ว`
     :'ไม่มีผลนับรอส่ง';
   if(draftCount)message+=` · แบบร่างยังไม่กดยืนยัน ${draftCount} รายการ`;
+  if(plan && ['c-count','c-tasks'].includes(S?.page)) {
+    const ready=readyCountJobsV281(state);
+    const total=plan.targets.length,available=plan.targets.filter(t=>ready.has(t.assignmentId)).length;
+    message+=` · งานถัดไปพร้อมออฟไลน์ ${available}/${total} Location`;
+    if(plan.loading)message+=' · กำลังรับข้อมูลงาน';
+    else if(available<total)message+=' · งานที่ยังไม่พร้อมต้องมีสัญญาณก่อน';
+  }
   if(_countContinuityV280?.owner===me?.id&&S?.page==='c-count'&&_countContinuityV280.unsupported)
     message+=' · งาน JOB/Location ว่างนี้ยังต้องออนไลน์ อย่าปิดหน้าหากส่งไม่สำเร็จ';
   banner.replaceChildren(document.createTextNode(message));
