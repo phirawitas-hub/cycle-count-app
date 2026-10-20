@@ -25632,7 +25632,7 @@ body.count-page-active #app .count-handheld-page.is-narrow-handheld-v259 .citem-
 <script>
 // V2.50: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.81';
+const APP_VERSION = '2.82';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -54324,7 +54324,7 @@ async function loadSvDashCoreV262() {
   const readStartedV274 = performance.now();
   const traceReadV274 = phase => {
     // Local diagnostic timings only: no Session IDs, identities or row data.
-    console.info('[CycleCount read V2.81]',JSON.stringify({
+    console.info('[CycleCount read V2.82]',JSON.stringify({
       tab,phase,elapsed_ms:Math.round(performance.now()-readStartedV274),
     }));
   };
@@ -74608,7 +74608,7 @@ function updateCountOfflineLauncherV279() {
     void countOutboxV279().sync().catch(()=>{});
   }
   document.getElementById('count-offline-launcher-v279')?.remove();
-  if(!me?.id)document.getElementById('count-sync-banner-v280')?.remove();
+  if(!me?.id){document.getElementById('count-sync-banner-v280')?.remove();document.getElementById('count-sync-problem-v282')?.remove();}
   setTimeout(()=>{void refreshCountOfflineStatusV279().catch(()=>{});},0);
 }
 
@@ -75144,9 +75144,26 @@ function paintCountConnectionV280(state) {
   const review=pending.filter(op=>op.state==='review'),auth=pending.some(op=>op.state==='auth');
   const draftCount=state.drafts.filter(d=>state.jobs.some(j=>j.key===d.jobKey&&j.generation===d.generation)
     && (String(d.value?.qty??'').trim()!==''||d.value?.photo||d.value?.remark)).length;
-  const offline=navigator.onLine===false,retrying=pending.some(op=>op.state==='retry');
+  const offline=navigator.onLine===false;
+  const retrying=pending.some(op=>op.state==='retry' && /fetch|network|connection|timeout|timed out|offline|failed to send/i.test(String(op.error||'')));
   const plan=_countPrefetchPlanV281?.owner===me.id?_countPrefetchPlanV281:null;
-  const show=pending.length||draftCount||offline||_countNormalStorageErrorV280||S?.page==='c-count'||(plan&&S?.page==='c-tasks');
+  // Normal online progress is silent. Real save failures remain actionable,
+  // separately from the connection-status banner (never pretend they synced).
+  const problem=pending.some(op=>op.state==='retry')&&!retrying;
+  const problemText=_countNormalStorageErrorV280?'เก็บข้อมูลในเครื่องไม่สำเร็จ — อย่าปิดหน้า: '+_countNormalStorageErrorV280
+    :review.length?`ผลนับ ${review.length} รายการต้องตรวจทาน · ยังไม่ส่งทับข้อมูลใหม่`
+    :auth?'ยังส่งผลนับไม่ได้ กรุณาเข้าสู่ระบบบัญชีเดิม'
+    :problem?'เซิร์ฟเวอร์ยังไม่ยืนยันผลนับ กรุณาตรวจรายละเอียดข้อผิดพลาด':'';
+  let issue=document.getElementById('count-sync-problem-v282');
+  if(!problemText || offline || retrying)issue?.remove();
+  else {
+    if(!issue){issue=document.createElement('div');issue.id='count-sync-problem-v282';issue.setAttribute('role','alert');
+      issue.style.cssText='margin:12px;padding:12px;border:1px solid #e8b4b4;border-radius:12px;background:#fff4f4;color:#8b2020;overflow-wrap:anywhere';
+      (document.getElementById('cnt')||document.querySelector('.main-wrapper')||document.body).prepend(issue);}
+    issue.replaceChildren(document.createTextNode(problemText));
+    const action=document.createElement('button');action.type='button';action.className='btn btn-ghost btn-sm';action.textContent='ตรวจผลนับที่ยังไม่สำเร็จ';action.onclick=()=>showCountPendingV280();issue.appendChild(action);
+  }
+  const show=offline||retrying;
   let banner=document.getElementById('count-sync-banner-v280');
   if(!show){banner?.remove();return;}
   if(!banner){banner=document.createElement('div');banner.id='count-sync-banner-v280';banner.setAttribute('role','status');banner.setAttribute('aria-live','polite');}

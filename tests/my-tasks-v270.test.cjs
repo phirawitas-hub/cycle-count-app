@@ -259,6 +259,7 @@ test('menu metric includes the complete loader duration and distinguishes deferr
 });
 
 const coreFunctions = [...helpers, 'measureMenuLoadV270', 'loadCTasks', 'loadCTasksCoreV270',
+  'transientCountConnectionV280',
   'assertActiveMyTasksLoad', 'isAbortLikeError', 'annualAssignmentKey',
   'currentMyTaskDateMode', 'currentMyTaskDateValue', 'myTaskWorkDate', 'myTaskMatchesDate',
   'assignedCountWorkProgressV217'];
@@ -268,6 +269,7 @@ function coreContext(extra = {}) {
   let currentDay = '2026-09-15';
   const forbidden = () => { throw new Error('Unexpected redundant network request'); };
   const ctx = context({
+    navigator:{onLine:true},_myTasksOwnerV281:null,
     _myTasksLoadSerial: 0, MY_TASK_FILTER_FIELDS: [], MY_TASK_DATE_MODES: new Set(['today', 'date', 'all']),
     cnt: () => dom, errBox: message => `error:${message}`,
     // Only the clock boundary is stubbed. Date-mode selection and filtering

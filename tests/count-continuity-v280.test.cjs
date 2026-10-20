@@ -4,9 +4,9 @@ const {productionContext,extractFunction,deferred}=require('./production-harness
 function setup({jobs=[],operations=[],drafts=[],prepare=async()=>({assignmentId:'a',key:'u|a',generation:'g',tailId:null}),enqueue=async()=>({key:'op',request:{record:{photo_url:null}}})}={}) {
   let reads=0,writes=0,syncs=0;
   const box={list:async()=>({owner:'u',jobs,operations,drafts}),prepare:async(...a)=>{reads++;return prepare(...a)},enqueue:async(...a)=>{writes++;return enqueue(...a)},sync:async()=>{syncs++}};
-  const c=productionContext(['countContinuityActiveV280','transientCountConnectionV280','obtainCountJobV280','enqueueNormalCountV280'],{
+  const c=productionContext(['countContinuityActiveV280','transientCountConnectionV280','obtainCountJobV280','prepareCountJobV281','enqueueNormalCountV280'],{
     me:{id:'u'},S:{page:'c-count'},navigator:{onLine:true},countOutboxV279:()=>box,
-  },['_countContinuityV280','_countNormalDraftChainV280','_countNormalStorageErrorV280']);
+  },['_countContinuityV280','_countNormalDraftChainV280','_countNormalStorageErrorV280','_countPreparingV281']);
   c.job=jobs[0]||{key:'u|a',assignmentId:'a',generation:'g',tailId:null};
   vm.runInContext("_countContinuityV280={owner:'u',aid:'a',job,photos:{}}",c);
   return {c,box,stats:()=>({reads,writes,syncs})};

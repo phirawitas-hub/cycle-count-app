@@ -15,10 +15,10 @@ const functions=['createCountOutboxV279','countOfflineViewV279','validateCountOf
   'wmsCountBaselineMap','wmsBaselineStartedAtV254','applyWmsCountBaselines','determineNextRequiredCountRound','deriveAssignmentWorkflowStatus',
   'validateDashboardRulesV252','validateCountReadBundleV261','countReadErrorV261','isEmptyLocationItem','normalizeImportText',
   'assignmentPhysicalCountFinished','escapeWmsText','prepareCountPhoto'];
-functions.push('paintCountConnectionV280','countContinuityActiveV280');
+functions.push('paintCountConnectionV280','countContinuityActiveV280','prefetchNormalCountV280');
 const declarations=['WMS_COUNT_BASELINE_ACTION','_countOutboxV279','_countOfflineUiV279','_countOfflineDraftChainV279',
   '_countOfflineDraftErrorV279','_countOfflinePhotoV279','_countOfflinePaintV279','_countOfflineTimerV279','_countOfflineAutoActorV279'];
-declarations.push('_countContinuityV280','_countNormalStorageErrorV280');
+declarations.push('_countContinuityV280','_countNormalStorageErrorV280','_myTasksOwnerV281','_countPrefetchPlanV281');
 const styles=[...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)].map(m=>m[1]).join('\n');
 const fixtureScript=`var me={id:${JSON.stringify(actor)}},S={page:'c-tasks'};
   window._myTasks=[{id:${JSON.stringify(aid)},status:'pending',locations:{code:'DEMO-A01'},count_sessions:{name:'DEMO Cycle Count'}},

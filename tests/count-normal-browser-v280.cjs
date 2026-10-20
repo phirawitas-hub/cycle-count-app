@@ -22,6 +22,8 @@ const names=['createCountOutboxV279','countOfflineViewV279','validateCountOfflin
 const declarations=['WMS_COUNT_BASELINE_ACTION','_countOutboxV279','_countOfflineUiV279','_countOfflineDraftChainV279',
  '_countOfflineDraftErrorV279','_countOfflinePhotoV279','_countOfflinePaintV279','_countOfflineTimerV279','_countOfflineAutoActorV279',
  '_countContinuityV280','_countNormalDraftChainV280','_countNormalStorageErrorV280','_countPrefetchV280'];
+names.push('prepareCountJobV281','readyCountJobsV281');
+declarations.push('_myTasksOwnerV281','_countPrefetchPlanV281','_countPreparingV281');
 const fixture=`var me={id:${JSON.stringify(actor)}},S={page:'c-count'},_activePageRequestController={};
  var device=new URL(location.href).searchParams.get('device');var currentAid=device==='B'?${JSON.stringify(aid2)}:${JSON.stringify(aid)};
  var _myTasks=[],_selectedCounters=new Set(['ผู้ทดสอบ']),_photoMap={},_countEntryRules={},_countEntryRoundsByItem={};
