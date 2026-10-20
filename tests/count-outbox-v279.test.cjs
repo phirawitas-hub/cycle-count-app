@@ -20,6 +20,16 @@ function ack(args){const req=args.p_request;return {schema_version:1,operation_i
   record:{...req.record,assignment_id:req.assignment_id,counted_at:'2026-10-16T02:00:00Z'}};}
 const record=(qty=0)=>({item_id:'item-a',round:1,count_qty:qty,actual_counter_name:'Counter',type_issue:null,remark:null,photo_url:null});
 
+test('refresh in another tab invalidates old forms even when both tails are null',async()=>{
+  const s=setup();const two=s.create();const old=await s.box.prepare('job-a');
+  const fresh=await two.prepare('job-a');assert.notEqual(old.generation,fresh.generation);
+  await assert.rejects(s.box.enqueue('job-a',record(9),null,null,old.generation),e=>e.code==='LOCAL_CONFLICT');
+  await assert.rejects(s.box.saveDraft('job-a','item-a',1,{qty:9},null,old.generation),e=>e.code==='LOCAL_CONFLICT');
+  assert.equal((await two.list()).operations.length,0);assert.equal((await two.list()).drafts.length,0);
+  await two.enqueue('job-a',record(0),null,null,fresh.generation);
+  assert.equal((await two.list()).operations.length,1);await s.box.close();await two.close();
+});
+
 test('outbox commits locally and survives closing/reopening before any network request',async()=>{
   const {box,create}=setup();await box.prepare('job-a');
   const op=await box.enqueue('job-a',record(0),null);await box.close();
@@ -109,4 +119,25 @@ test('confirmed payloads can be refreshed; rejected work is retained in recovery
   const s=setup();await s.box.prepare('job-a');await s.box.enqueue('job-a',record(),null);
   await assert.rejects(s.box.archiveRejected('job-a'),/ไม่ทราบผล/);await s.box.sync(true);
   const refreshed=await s.box.prepare('job-a');assert.equal(refreshed.tailId,null);assert.equal((await s.box.list()).operations.length,1);await s.box.close();
+});
+
+async function replaceLease(databaseName,protocol,until){
+  const db=await new Promise((resolve,reject)=>{const r=indexedDB.open(databaseName,1);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});
+  await new Promise((resolve,reject)=>{const tx=db.transaction('jobs','readwrite'),s=tx.objectStore('jobs'),r=s.get('actor-a|job-a');
+    r.onsuccess=()=>s.put({...r.result,leaseOwner:'crashed-tab',leaseUntil:until,leaseProtocol:protocol});tx.oncomplete=resolve;tx.onabort=()=>reject(tx.error);});db.close();
+}
+test('V2.80 browser lock recovers a crashed sender immediately without changing operation ID',async()=>{
+  let sends=0;const locks={request:async(name,options,work)=>work({name})};
+  const s=setup({locks});s.options.rpc=async(name,args)=>name.startsWith('get_')?{data:s.envelope}:(sends++,{data:ack(args)});
+  const box=s.create();await box.prepare('job-a');const original=await box.enqueue('job-a',record(),null);
+  await replaceLease(s.options.databaseName,'web-lock-v280',Date.now()+60000);
+  await box.sync(true);const op=(await box.list()).operations[0];assert.equal(sends,1);assert.equal(op.state,'synced');assert.equal(op.key,original.key);await box.close();
+});
+test('V2.80 respects old V2.79 leases and an occupied browser lock',async()=>{
+  let time=1000,available=true;const locks={request:async(name,options,work)=>work(available?{name}:null)};
+  const s=setup({locks,now:()=>time});await s.box.prepare('job-a');await s.box.enqueue('job-a',record(),null);
+  await replaceLease(s.options.databaseName,undefined,61000);await s.box.sync(true);
+  assert.equal((await s.box.list()).operations[0].state,'pending');
+  time=62000;available=false;await s.box.sync(true);assert.equal((await s.box.list()).operations[0].state,'pending');
+  available=true;await s.box.sync(true);assert.equal((await s.box.list()).operations[0].state,'synced');await s.box.close();
 });

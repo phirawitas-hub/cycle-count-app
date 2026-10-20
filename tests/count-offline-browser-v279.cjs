@@ -15,8 +15,10 @@ const functions=['createCountOutboxV279','countOfflineViewV279','validateCountOf
   'wmsCountBaselineMap','wmsBaselineStartedAtV254','applyWmsCountBaselines','determineNextRequiredCountRound','deriveAssignmentWorkflowStatus',
   'validateDashboardRulesV252','validateCountReadBundleV261','countReadErrorV261','isEmptyLocationItem','normalizeImportText',
   'assignmentPhysicalCountFinished','escapeWmsText','prepareCountPhoto'];
+functions.push('paintCountConnectionV280','countContinuityActiveV280');
 const declarations=['WMS_COUNT_BASELINE_ACTION','_countOutboxV279','_countOfflineUiV279','_countOfflineDraftChainV279',
   '_countOfflineDraftErrorV279','_countOfflinePhotoV279','_countOfflinePaintV279','_countOfflineTimerV279','_countOfflineAutoActorV279'];
+declarations.push('_countContinuityV280','_countNormalStorageErrorV280');
 const styles=[...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)].map(m=>m[1]).join('\n');
 const fixtureScript=`var me={id:${JSON.stringify(actor)}},S={page:'c-tasks'};
   window._myTasks=[{id:${JSON.stringify(aid)},status:'pending',locations:{code:'DEMO-A01'},count_sessions:{name:'DEMO Cycle Count'}},
@@ -62,7 +64,7 @@ const pageHtml=`<!doctype html><html lang="th"><meta charset="utf-8"><meta name=
     context=await browser.newContext({viewport:{width:1100,height:900}});
     await context.route('**/*',route=>route.request().url().startsWith(url)?route.continue():route.abort());
     page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
-    await page.goto(url);await page.getByRole('button',{name:'งานในเครื่อง / พื้นที่อับสัญญาณ'}).click();
+    await page.goto(url);await page.evaluate(()=>openCountOfflineV279());
     await page.getByRole('button',{name:'เตรียมงาน',exact:true}).click();
     await page.locator('[name="cc-offline-prepare"]').nth(0).check();await page.locator('[name="cc-offline-prepare"]').nth(1).check();
     await page.getByRole('button',{name:'ดาวน์โหลดชุดงานที่เลือก'}).click();
@@ -79,7 +81,7 @@ const pageHtml=`<!doctype html><html lang="th"><meta charset="utf-8"><meta name=
     await page.evaluate(()=>_countOfflineDraftChainV279);
     // Reload after regaining coverage: persisted drafts belong to the same login.
     await context.setOffline(false);await page.reload();
-    await page.getByRole('button',{name:'งานในเครื่อง / พื้นที่อับสัญญาณ'}).click();
+    await page.evaluate(()=>openCountOfflineV279());
     await page.waitForFunction(()=>document.getElementById('cc-offline-qty')?.value==='8');
     await context.setOffline(true);
     await page.getByRole('button',{name:'เก็บผลนับและทำรายการถัดไป'}).click();
