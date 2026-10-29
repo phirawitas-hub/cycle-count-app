@@ -52,7 +52,7 @@ test('a new account or unsupported workflow cannot enqueue through a previous no
 test('normal handlers intercept legacy writes and local workflow does not run count-start write',()=>{
   const save=extractFunction('saveCountItemFromKeypad').code;
   assert.ok(save.indexOf('saveNormalCountV280(input,record)')<save.indexOf("sb.from('count_records')"));
-  assert.match(extractFunction('submitCount').code,/countContinuityActiveV280\(aid\).*submitNormalCountV280/);
+  assert.match(extractFunction('submitCount').code,/countContinuityActiveV280\(aid\)[\s\S]*submitNormalCountV280/);
   assert.match(extractFunction('loadCCount').code,/!countReadV261\._continuityV280 && asgn.status === 'pending'/);
   assert.match(extractFunction('resolveCountWorkflowAfterSave').code,/normalCountViewBundleV280\(aid\)/);
   assert.match(extractFunction('resolveCountWorkflowAfterSave').code,/ยังรอส่งขึ้นระบบ/);

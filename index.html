@@ -25632,7 +25632,7 @@ body.count-page-active #app .count-handheld-page.is-narrow-handheld-v259 .citem-
 <script>
 // V2.50: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.82';
+const APP_VERSION = '2.84';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -41581,7 +41581,7 @@ async function saveCountItemFromKeypad(input) {
     return false;
   }
   const qty = Number(input.value);
-  if (!Number.isFinite(qty) || qty < 0) {
+  if (String(input.value).trim()==='' || !Number.isFinite(qty) || qty < 0) {
     setCountEntryItemResult(itemId,'warning','QTY ไม่ถูกต้อง');
     return false;
   }
@@ -44137,7 +44137,25 @@ async function handlePhoto(itemId,input) {
 }
 
 async function submitCount(aid, round, idsStr, annualJobId='', options={}) {
-  if (countContinuityActiveV280(aid)) return submitNormalCountV280(aid,idsStr,options);
+  if (countContinuityActiveV280(aid)) {
+    const found = String(idsStr).split(',').some(iid => window._emptyCountItemIds?.has(String(iid)) && Number(Q('q_'+iid)?.value)>0);
+    if (!found) return submitNormalCountV280(aid,idsStr,options);
+    // Found Work requires its LPN/Item workflow, never a positive count against
+    // the empty placeholder. Preserve the entered details while offline.
+    const context = _countContinuityV280;
+    queueNormalCountDraftsV280();
+    await _countNormalDraftChainV280;
+    const state = await countOutboxV279().list();
+    if (context!==_countContinuityV280 || context.owner!==me?.id) return;
+    if (_countNormalStorageErrorV280 || navigator.onLine===false
+      || state.operations.some(op=>op.jobKey===context.job.key && !['synced','archived'].includes(op.state))) {
+      recordCountSaveErrorV256(aid,Q('ca'),_countNormalStorageErrorV280 || 'พบสินค้าใน Location ว่าง: เก็บแบบร่างไว้แล้ว กรุณาเชื่อมต่อและส่งผลค้างของ Location นี้ก่อนยืนยัน Found Work');
+      return;
+    }
+    context.unsupported=true;
+    try { return await submitCount(aid,round,idsStr,annualJobId,options); }
+    finally { if (_countContinuityV280===context) context.unsupported=false; }
+  }
   const countMainV128 = document.querySelector('.count-handheld-page')?.closest('.main-wrapper');
   const countScrollTopV128 = Number(countMainV128?.scrollTop || 0);
   closeCountNumericKeypad();
@@ -74548,7 +74566,7 @@ function validateCountOfflinePreparedV279(data,aid,actorId) {
   }
   validateCountReadBundleV261(data.bundle,aid,true,actorId);
   const view=countOfflineViewV279({envelope:data,generation:'new'},[]);
-  if(!view.items.length || view.items.some(row=>isEmptyLocationItem(row.items?.code))
+  if(!view.items.length || view.items.some(row=>isEmptyLocationItem(row.items?.code) && Number(row.onhand_qty)!==0)
     || data.workflow?.items?.length!==view.items.length || data.workflow.status!==view.workflow.effectiveStatus
     || view.items.some(row=>!data.workflow.items.some(item=>String(item.item_id)===String(row.item_id)
       && item.next_round===row.nextRound && item.status===row.status && Number(item.onhand_qty)===Number(row.onhand_qty)))) {
@@ -74578,6 +74596,8 @@ function countOutboxV279() {
       const view=countOfflineViewV279(job,operations);
       const item=view.items.find(row=>String(row.item_id)===String(record.item_id));
       if(!item || item.nextRound!==record.round)throw new Error('รอบนับของ Item นี้เปลี่ยนแล้ว กรุณาเปิดรายการล่าสุด');
+      if(isEmptyLocationItem(item.items?.code) && (Number(item.onhand_qty)!==0 || Number(record.count_qty)!==0))
+        throw new Error('Location ว่างรับค่า 0 เท่านั้น หากพบสินค้าให้ใช้ขั้นตอน Found Work เมื่อเชื่อมต่อได้');
     },
     photoUrl:(actorId,operationId)=>sb.storage.from('count-photos').getPublicUrl(`${actorId}/${operationId}.jpg`).data.publicUrl,
     upload:async op=>{
@@ -74896,6 +74916,7 @@ async function normalCountViewBundleV280(aid) {
 function normalCountDraftValueV280(input) {
   const iid=input.dataset.itemId,context=_countContinuityV280;
   return {qty:input.value,counters:[...(window._selectedCounters||[])],
+    emptyFields:window._emptyCountItemIds?.has(String(iid)) ? Object.fromEntries(['location','lpn','item','desc','uom'].map(key=>[key,Q('empty_'+key+'_'+iid)?.value||''])) : null,
     typeIssue:getCountTypeIssue(iid)||'',remark:getSelectedCountRemarks(iid).join('\n'),
     photo:context?.photos?.[iid]||null,photoUrl:window._photoMap?.[iid]||null};
 }
@@ -74925,6 +74946,9 @@ async function restoreNormalCountDraftsV280(aid) {
   for(const d of drafts) {
     const input=Q('q_'+d.itemId);if(!input||input.disabled||Number(input.dataset.countRound)!==d.round)continue;
     input.value=d.value.qty??'';
+    for(const [key,value] of Object.entries(d.value.emptyFields||{})) {
+      const field=Q('empty_'+key+'_'+d.itemId);if(field)field.value=value;
+    }
     window._selectedCounters=new Set(d.value.counters||[]);
     const issue=Q('count_type_issue_'+d.itemId);if(issue){issue.innerHTML=countTypeIssueOptions(d.value.typeIssue||'');issue.value=d.value.typeIssue||'';}
     const list=Q('count_remark_options_'+d.itemId),remarks=String(d.value.remark||'').split('\n').filter(Boolean);
@@ -75024,7 +75048,7 @@ async function openNextPreparedCountV281(request) {
   const owner=me?.id,scope=_activePageRequestController;
   const state=await countOutboxV279().list();
   if(owner!==me?.id||scope!==_activePageRequestController)return true;
-  const disconnected=navigator.onLine===false || state.operations.some(op=>!['synced','archived'].includes(op.state));
+  const disconnected=navigator.onLine===false || state.operations.some(op=>op.state==='retry' && transientCountConnectionV280({message:op.error}));
   const ready=readyCountJobsV281(state),targets=countTaskTargetsV281(request.assignmentId);
   const candidates=targets.filter(t=>t.assignmentId!==request.assignmentId);
   const exact=candidates[0];
@@ -75083,6 +75107,13 @@ async function enqueueNormalCountV280(record) {
   if(_countNormalStorageErrorV280)throw new Error('ยังเก็บข้อมูลในเครื่องไม่สำเร็จ: '+_countNormalStorageErrorV280);
   const context=_countContinuityV280;
   if(!countContinuityActiveV280(record.assignment_id)||context.unsupported)throw new Error('งานนี้ยังไม่รองรับคิวอัตโนมัติ');
+  if(window._emptyCountItemIds?.has(String(record.item_id))) {
+    const field=Q('empty_location_'+record.item_id);
+    if(field && importCodeKey(field.value)!==importCodeKey(window._countFoundContext?.locationCode))
+      throw new Error('Location ที่สแกนไม่ตรงกับงานที่เปิด');
+    if(String(Q('empty_item_'+record.item_id)?.value||'').trim())
+      throw new Error('กรอก Item แล้ว กรุณาใช้ขั้นตอน Found Work หรือเคลียร์ Item หาก Location ยังว่าง');
+  }
   const clean={item_id:record.item_id,round:Number(record.round),count_qty:record.count_qty,
     actual_counter_name:record.actual_counter_name,type_issue:record.type_issue,remark:record.remark,photo_url:record.photo_url};
   const attachment=context.photos[record.item_id]||null;

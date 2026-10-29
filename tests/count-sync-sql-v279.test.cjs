@@ -15,6 +15,7 @@ test('V2.79 real PostgreSQL count transaction and production-rule equivalence',a
     await db.exec(read('fixtures/count-sync-schema.sql'));
     await db.exec(read('fixtures/count-rpcs-v278.sql'));
     await db.exec(read('../supabase/migrations/20261016011649_count_sync_receipts_v279.sql'));
+    await db.exec(read('../supabase/migrations/20261029012358_empty_location_zero_count_v284.sql'));
     async function reset(oh=10){
       await db.exec('RESET ROLE; TRUNCATE private.count_sync_receipts_v279,public.count_records,public.audit_log,public.stock_snapshot,public.assignments,public.count_sessions,public.profiles,public.items,public.locations,public.annual_count_job_items;');
       await db.query('INSERT INTO profiles VALUES($1,\'counter\'),($2,\'counter\')',[actor,other]);
@@ -94,6 +95,23 @@ test('V2.79 real PostgreSQL count transaction and production-rule equivalence',a
       await db.exec('SET ROLE anon');await assert.rejects(prepare(),e=>e.code==='42501');await db.exec('RESET ROLE');
       await reset();await db.exec("UPDATE count_sessions SET count_mode='annual'");await assert.rejects(prepare(),e=>e.code==='0A000');
       await reset();await db.exec("UPDATE items SET code='' WHERE code='SKU1'");await assert.rejects(prepare(),e=>e.code==='0A000');
+    });
+    await t.test('empty placeholders prepare and explicit zero commits exactly once, including lost ACK after closure',async()=>{
+      await reset(0);await db.exec("UPDATE items SET code='' WHERE code='SKU1'; SET ROLE authenticated");
+      const env=await prepare();
+      await assert.rejects(submit(uuid(180),request(env,'')),e=>e.code==='22P02');
+      await assert.rejects(submit(uuid(181),request(env,2)),e=>e.code==='0A000');
+      const req=request(env,0),ack=await submit(uuid(182),req);
+      assert.equal(ack.status,'completed');assert.equal(ack.record.count_qty,0);
+      await db.exec('RESET ROLE');
+      await db.exec("UPDATE count_sessions SET status='closed'");
+      assert.deepEqual(await submit(uuid(182),req),ack);
+      assert.deepEqual(await totals(),{counts:1,audits:1,receipts:1,status:'completed'});
+    });
+    await t.test('prepared empty location cannot overwrite stock newly imported by another operator',async()=>{
+      await reset(0);await db.exec("UPDATE items SET code='' WHERE code='SKU1'");const env=await prepare();
+      await db.query('INSERT INTO stock_snapshot(session_id,location_id,item_id,onhand_qty) VALUES($1,$2,$3,20)',[sid,loc,item2]);
+      await assert.rejects(submit(uuid(183),request(env,0)),e=>e.code==='CC409');assert.equal((await totals()).counts,0);
     });
     await t.test('cannot skip rounds or attach remarks without issue classification',async()=>{
       await reset();const env=await prepare();await assert.rejects(submit(uuid(160),request(env,8,2)),e=>e.code==='CC409');

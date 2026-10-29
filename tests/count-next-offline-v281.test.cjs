@@ -61,6 +61,14 @@ test('reviewed, completed, malformed and other-actor jobs are never offered as r
   const s=setup();const jobs=[readyJob('ok'),readyJob('review',{view:{items:[{nextRound:1}],pending:[{state:'review'}]}}),readyJob('done',{view:{items:[{nextRound:null}],pending:[]}}),readyJob('bad',{view:null}),readyJob('other',{owner:'other'}),readyJob('archived',{reviewArchived:true})];
   assert.deepEqual([...s.c.readyCountJobsV281({owner:'u',jobs,operations:[]}).keys()],['ok']);
 });
+
+test('pending send alone does not skip an unprepared next location while online',async()=>{
+  const s=setup();s.jobs.push(readyJob('3'));
+  s.c.countOutboxV279=()=>({list:async()=>({owner:'u',jobs:s.jobs,operations:[{state:'pending'}]})});
+  assert.equal(await s.c.openNextPreparedCountV281({assignmentId:'0'}),false);assert.equal(s.routes.length,0);
+  s.c.countOutboxV279=()=>({list:async()=>({owner:'u',jobs:s.jobs,operations:[{state:'retry',error:'Failed to fetch'}]})});
+  assert.equal(await s.c.openNextPreparedCountV281({assignmentId:'0'}),true);assert.equal(s.routes[0].aid,'3');
+});
 test('production list and next-navigation are wired to readiness, not assigned_to on compact rows',()=>{
   assert.match(extractFunction('renderMyTasks').code,/prefetchNormalCountV280/);
   assert.match(extractFunction('loadCTasksCoreV270').code,/_myTasksOwnerV281=me.id/);
