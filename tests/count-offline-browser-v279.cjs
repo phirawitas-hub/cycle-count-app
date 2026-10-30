@@ -9,7 +9,7 @@ const uuid=n=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
 const [actor,sid,loc,aid,item,loc2,aid2,item2]=[1,3,4,5,6,8,9,7].map(uuid);
 const read=p=>fs.readFileSync(path.join(__dirname,p),'utf8');
 const functions=['createCountOutboxV279','countOfflineViewV279','validateCountOfflinePreparedV279','countPhotoDigestV279','countOutboxV279',
-  'updateCountOfflineLauncherV279','countOfflineMessageV279','refreshCountOfflineStatusV279','openCountOfflineV279','closeCountOfflineV279',
+  'updateCountOfflineLauncherV279','countOfflineMessageV279','refreshCountOfflineStatusNowV285','refreshCountOfflineStatusV279','openCountOfflineV279','closeCountOfflineV279',
   'countOfflineFormValueV279','persistCountOfflineDraftV279','paintCountOfflineV279','exportCountOfflineV279','countOfflineActionV279',
   'computeItemStatus','determineItemNextRequiredRound','stockSnapshotItemKind','operationalStockSnapshotRows','wmsCountBaselineKey',
   'wmsCountBaselineMap','wmsBaselineStartedAtV254','applyWmsCountBaselines','determineNextRequiredCountRound','deriveAssignmentWorkflowStatus',

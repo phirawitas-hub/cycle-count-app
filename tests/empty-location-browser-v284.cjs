@@ -11,7 +11,7 @@ const [actor,sid,loc,aid,item,loc2,aid2,item2]=[1,3,4,5,6,8,9,7].map(uuid);
 const read=p=>fs.readFileSync(path.join(__dirname,p),'utf8');
 async function waitAsync(page,predicate){const until=Date.now()+40000;while(Date.now()<until){if(await page.evaluate(predicate))return;await new Promise(r=>setTimeout(r,100));}throw Error('Async browser condition timed out');}
 const names=['createCountOutboxV279','countOfflineViewV279','validateCountOfflinePreparedV279','countPhotoDigestV279','countOutboxV279',
- 'updateCountOfflineLauncherV279','countOfflineMessageV279','refreshCountOfflineStatusV279','closeCountOfflineV279',
+ 'updateCountOfflineLauncherV279','countOfflineMessageV279','refreshCountOfflineStatusNowV285','refreshCountOfflineStatusV279','closeCountOfflineV279',
  'computeItemStatus','determineItemNextRequiredRound','stockSnapshotItemKind','operationalStockSnapshotRows','wmsCountBaselineKey',
  'wmsCountBaselineMap','wmsBaselineStartedAtV254','applyWmsCountBaselines','determineNextRequiredCountRound','deriveAssignmentWorkflowStatus',
  'validateDashboardRulesV252','validateCountReadBundleV261','countReadErrorV261','isEmptyLocationItem','normalizeImportText',
@@ -163,7 +163,7 @@ const fullPageHtml=html.replace(/<script\b[^>]*\bsrc\s*=\s*['"][^'"]+['"][^>]*>\
     await db.query('insert into locations(id,code) values($1,$2)',[uuid(300+i),'ROUTE-'+i]);
     await db.query('insert into assignments(id,session_id,location_id,assigned_to) values($1,$2,$3,$4)',[uuid(200+i),sid,uuid(300+i),actor]);
     await db.query('insert into stock_snapshot(session_id,location_id,item_id,onhand_qty) values($1,$2,$3,$4)',[sid,uuid(300+i),i%2?item2:item,i%2?0:10]);
-    routeRows.push({id:uuid(200+i),status:'pending',session_id:sid,location_id:uuid(300+i),assigned_at:new Date().toISOString(),locations:{code:'ROUTE-'+i},count_sessions:{name:'DEMO'}});
+    routeRows.push({id:uuid(200+i),status:'pending',session_id:sid,location_id:uuid(300+i),assigned_at:(await db.query('select assigned_at::text as assigned_at from assignments where id=$1',[uuid(200+i)])).rows[0].assigned_at,locations:{code:'ROUTE-'+i},count_sessions:{name:'DEMO'}});
   }
   await db.exec('set role authenticated');
   contextC=await browser.newContext({viewport:{width:1024,height:768}});

@@ -11,7 +11,7 @@ const [actor,sid,loc,aid,item,loc2,aid2,item2]=[1,3,4,5,6,8,9,7].map(uuid);
 const read=p=>fs.readFileSync(path.join(__dirname,p),'utf8');
 async function waitAsync(page,predicate){const until=Date.now()+40000;while(Date.now()<until){if(await page.evaluate(predicate))return;await new Promise(r=>setTimeout(r,100));}throw Error('Async browser condition timed out');}
 const names=['createCountOutboxV279','countOfflineViewV279','validateCountOfflinePreparedV279','countPhotoDigestV279','countOutboxV279',
- 'updateCountOfflineLauncherV279','countOfflineMessageV279','refreshCountOfflineStatusV279','closeCountOfflineV279',
+ 'updateCountOfflineLauncherV279','countOfflineMessageV279','refreshCountOfflineStatusNowV285','refreshCountOfflineStatusV279','closeCountOfflineV279',
  'computeItemStatus','determineItemNextRequiredRound','stockSnapshotItemKind','operationalStockSnapshotRows','wmsCountBaselineKey',
  'wmsCountBaselineMap','wmsBaselineStartedAtV254','applyWmsCountBaselines','determineNextRequiredCountRound','deriveAssignmentWorkflowStatus',
  'validateDashboardRulesV252','validateCountReadBundleV261','countReadErrorV261','isEmptyLocationItem','normalizeImportText',
