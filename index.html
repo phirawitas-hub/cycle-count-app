@@ -25678,6 +25678,24 @@ body.count-page-active #app .count-handheld-page.is-narrow-handheld-v259 .citem-
 @media(max-width:700px){#app .assign-bento-shell :is(.annual-job-sticky-panel,.normal-assignment-sticky-panel){position:static!important}#app .assign-bento-shell :is(.annual-job-sticky-panel,.normal-assignment-sticky-panel) .annual-job-mode-actions{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;overflow:visible!important}#app .assign-bento-shell :is(.annual-job-sticky-panel,.normal-assignment-sticky-panel) .annual-job-mode-button{min-width:0!important;width:100%!important;font-size:11px!important}#app .assign-bento-shell :is(.annual-job-sticky-panel,.normal-assignment-sticky-panel) .annual-job-control-group{padding:9px!important}#app .assign-bento-shell :is(.annual-job-sticky-panel,.normal-assignment-sticky-panel) .annual-job-primary-actions{grid-template-columns:1fr!important}}
 @media(max-width:520px){#assignment-cancel-v286{padding:10px}#assignment-cancel-v286 .assignment-success-modal{width:100%;max-height:94vh;border-radius:16px}#assignment-cancel-v286 .cancel-header-v287{padding:16px}#cancel-content-v286{padding:14px 16px 16px}#assignment-cancel-v286 h2{font-size:20px}#assignment-cancel-v286 .cancel-filters-v286{padding:12px;gap:10px}#assignment-cancel-v286 .cancel-filters-v286 :is(input,select){padding:8px;font-size:13px}#assignment-cancel-v286 .cancel-selection-tools-v287{align-items:flex-start;flex-direction:column}#assignment-cancel-v286 .cancel-selection-tools-v287>div{width:100%}#assignment-cancel-v286 .cancel-selection-tools-v287 .btn{flex:1;padding:8px;font-size:12px}#assignment-cancel-v286 .cancel-row-v286{grid-template-columns:22px minmax(0,1fr);gap:5px 10px}#assignment-cancel-v286 .cancel-row-v286 span{grid-column:2;text-align:left}#assignment-cancel-v286 .cancel-footer-actions-v287 .btn{flex:1;min-width:0}#cancel-list-v286{max-height:28vh}}
 </style>
+<style>
+/* V2.88: accessible Session OH switch, independent of sticky-panel layout. */
+.assign-bento-shell .assign-oh-card{display:grid!important;grid-template-columns:40px minmax(0,1fr) 60px!important;align-items:center!important;gap:12px!important;min-height:96px!important;padding:18px 14px!important;background:var(--theme-card-bg,#fff)!important;box-shadow:none!important}
+.assign-bento-shell .assign-oh-icon{width:40px!important;height:40px!important;border-radius:12px!important;background:color-mix(in srgb,var(--theme-primary-color) 12%,var(--theme-card-bg))!important;color:var(--theme-primary-color)!important;box-shadow:none!important;display:grid;place-items:center}
+.assign-bento-shell .assign-oh-copy{grid-column:auto!important;grid-row:auto!important;display:flex!important;flex-direction:column;gap:7px;min-width:0}
+.assign-bento-shell .assign-oh-copy strong{font-size:13px!important;letter-spacing:0!important}
+.assign-bento-shell #oh-status{display:block!important;font-size:11px!important;line-height:1.5!important;font-weight:500!important;color:var(--theme-muted-text-color,#666)!important;white-space:normal!important}
+.assign-bento-shell .assign-oh-card .assign-switch{grid-column:auto!important;grid-row:auto!important;position:relative;display:block;width:60px!important;height:44px!important;margin:0!important;align-self:center!important;cursor:pointer}
+.assign-bento-shell .assign-oh-card .assign-switch input{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;opacity:0!important;margin:0!important;z-index:2;cursor:pointer}
+.assign-bento-shell .assign-oh-card .assign-switch-track{position:absolute;inset:6px 0!important;border:0!important;border-radius:99px!important;background:#858b93!important;box-shadow:inset 0 1px 2px #0001!important;transition:background .18s ease}
+.assign-bento-shell .assign-oh-card .assign-switch-track::after{width:26px!important;height:26px!important;left:3px!important;top:3px!important;background:#fff!important;box-shadow:0 2px 4px #0003!important;transition:transform .18s ease}
+.assign-bento-shell .assign-oh-card .assign-switch input:checked+.assign-switch-track{background:var(--theme-primary-color,#367a75)!important}
+.assign-bento-shell .assign-oh-card .assign-switch input:checked+.assign-switch-track::after{transform:translateX(28px)!important}
+.assign-bento-shell .assign-oh-card .assign-switch input:focus-visible+.assign-switch-track{outline:3px solid var(--theme-primary-color,#367a75);outline-offset:4px}
+.assign-bento-shell .assign-oh-card .assign-switch input:disabled{cursor:wait}
+.assign-bento-shell .assign-oh-card .assign-switch input:disabled+.assign-switch-track{opacity:.45}
+@media(prefers-reduced-motion:reduce){.assign-switch-track,.assign-switch-track::after{transition:none!important}}
+</style>
 </head>
 <body data-build="v1-190">
 <div id="app"></div>
@@ -25685,7 +25703,7 @@ body.count-page-active #app .count-handheld-page.is-narrow-handheld-v259 .citem-
 <script>
 // V2.50: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.87';
+const APP_VERSION = '2.88';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -61263,13 +61281,13 @@ async function renderManageAssign(container) {
               <small id="assign-session-help" class="assign-session-help">กรุณาเลือก Session ก่อนเริ่มจ่ายงาน</small>
             </div>
             ${isAdminOrSup ? `<div class="assign-config-card assign-oh-card">
-              <span class="assign-oh-icon">👁️</span>
+              <span class="assign-oh-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></span>
               <div class="assign-oh-copy">
-                <strong>OH Visibility</strong>
+                <strong id="oh-label">OH Visibility</strong>
+                <span id="oh-status" aria-live="polite">เลือก Session ก่อน</span>
               </div>
-              <span id="oh-status" class="tag tag-gray">เลือก Session ก่อน</span>
               <label class="assign-switch" aria-label="เปิดหรือปิดการแสดง OH">
-                <input type="checkbox" id="oh-toggle" disabled onchange="toggleOH()">
+                <input type="checkbox" role="switch" id="oh-toggle" aria-labelledby="oh-label" aria-describedby="oh-status" disabled onchange="toggleOH()">
                 <span class="assign-switch-track"></span>
               </label>
             </div>` : ''}
@@ -61278,14 +61296,6 @@ async function renderManageAssign(container) {
             <span>ℹ️</span>
             <span><strong>ผู้รับงาน</strong> = บัญชี Login · <strong>ผู้ตรวจนับ</strong> = ผู้ปฏิบัติงาน</span>
           </div>
-          <details class="assign-zone-details" id="zoneDashDetails" ontoggle="if(this.open)refreshZoneDashboard()">
-            <summary>
-              <span class="assign-summary-icon">📊</span>
-              <span class="assign-summary-copy"><strong>ดูสรุปตาม Zone</strong></span>
-              <span class="assign-chevron"></span>
-            </summary>
-            <div id="zone-dash-body"><div class="load" style="padding:20px;text-align:center">⏳ กำลังคำนวณ...</div></div>
-          </details>
           <div class="assign-step-footer">
             <button class="btn btn-blue" id="assign-session-next" type="button" disabled onclick="focusRoundOneAssignmentWorkspace()">ต่อไป: มอบหมายงาน</button>
           </div>
@@ -62001,7 +62011,6 @@ async function handleAssignSessionChange() {
   if (config.round1Mode === 'annual') await loadAnnualJobWorkspace();
   scheduleAnnualMidnightExpiryCheck();
   if (Q('r23-round')) refreshR23Preview();
-  if (Q('zoneDashDetails')?.open) refreshZoneDashboard();
   focusRoundOneAssignmentWorkspace({ scroll:false });
   showExpiredAssignmentPrompt(config.sessionId,config.round1Mode);
 }
@@ -64453,8 +64462,8 @@ function paintOHToggle(value, disabled=false) {
     tog.disabled = Boolean(disabled);
   }
   if (st) {
-    st.textContent = value ? 'แสดง OH' : 'Blind Count';
-    st.className = `tag ${value?'tag-green':'tag-gray'}`;
+    st.textContent = value ? 'เปิด · แสดงยอด OH' : 'ปิด · Blind Count';
+    st.className = 'oh-state-v288';
   }
 }
 
@@ -64466,7 +64475,11 @@ async function syncOHToggle() {
   const option = [...(select?.options || [])].find(row => row.value === sid);
   const cachedValue = option?.dataset?.showOh === 'true';
   paintOHToggle(cachedValue,true);
-  const { data, error } = await sb.from('count_sessions').select('show_oh').eq('id', sid).maybeSingle();
+  let data, error;
+  try {
+    ({ data, error } = await sb.from('count_sessions').select('show_oh').eq('id', sid).single());
+    if (!error && typeof data?.show_oh!=='boolean') error=new Error('ไม่พบสถานะ OH ของ Session นี้');
+  } catch (failure) { error=failure; }
   if (requestId !== _ohSyncRequestId || Q('as-sess')?.value !== sid) return;
   if (error) {
     paintOHToggle(cachedValue,false);
@@ -64488,7 +64501,11 @@ async function toggleOH() {
   const previousValue = option?.dataset?.showOh === 'true';
   const value = Boolean(tog.checked);
   paintOHToggle(value,true);
-  const { error } = await sb.from('count_sessions').update({ show_oh:value }).eq('id',sid);
+  let data, error;
+  try {
+    ({ data, error } = await sb.from('count_sessions').update({ show_oh:value }).eq('id',sid).select('id,show_oh').single());
+    if (!error && (!data || String(data.id)!==String(sid) || data.show_oh!==value)) error=new Error('ฐานข้อมูลยังไม่ยืนยันการเปลี่ยนค่า OH');
+  } catch (failure) { error=failure; }
   if (error) {
     if (requestId === _ohSyncRequestId && Q('as-sess')?.value === sid) {
       paintOHToggle(previousValue,false);
@@ -74682,14 +74699,42 @@ async function obtainCountJobV280(aid,{prefetch=false}={}) {
   const reissued=current?.assigned_at && before && Date.parse(current.assigned_at)!==Date.parse(before);
   const age=Date.now()-Number(job?.preparedAt||0);
   const fresh=age>=0 && age<(prefetch?300000:30000) && !reissued;
-  if(job && !job.reviewArchived && (outstanding||hasDraft))return job;
-  if(job && !job.reviewArchived && !reissued && (navigator.onLine===false || ((prefetch||preferPrepared)&&fresh)))return job;
+  if(job && !job.reviewArchived && (outstanding||hasDraft))return prefetch?job:refreshPreparedOHV288(job,true);
+  if(job && !job.reviewArchived && !reissued && (navigator.onLine===false || ((prefetch||preferPrepared)&&fresh)))return prefetch?job:refreshPreparedOHV288(job,false);
   if(reissued && navigator.onLine===false)throw new Error('งานนี้ถูกจ่ายใหม่แล้ว ต้องรับข้อมูลล่าสุดขณะมีสัญญาณก่อนนับ ผลเดิมยังเก็บไว้');
   if(navigator.onLine===false)throw new Error('เครื่องนี้ยังไม่ได้รับข้อมูล Location นี้ กรุณากลับมามีสัญญาณก่อนเปิดงานใหม่ ผลที่บันทึกไว้ยังอยู่');
   try {return await prepareCountJobV281(aid);}
   catch(error) {
     // Authorization, schema, scope and rule errors must never authorize old data.
     if(job && !job.reviewArchived && !reissued && transientCountConnectionV280(error))return job;
+    throw error;
+  }
+}
+
+async function refreshPreparedOHV288(job,preserveGeneration) {
+  // A prepared Location is a snapshot, not the current Session setting.
+  // Check only this one field; refresh its signed envelope only when changed.
+  if(navigator.onLine===false)return job;
+  const owner=me?.id,scope=_activePageRequestController;
+  const sid=job.envelope.bundle.assignment.session_id;
+  try {
+    const {data,error}=await sb.from('count_sessions').select('id,show_oh').eq('id',sid).single();
+    assertCountReadScopeV261(scope,owner);
+    if(error)throw error;
+    if(!data || String(data.id)!==String(sid) || typeof data.show_oh!=='boolean')throw new Error('ตรวจสอบค่า OH ของ Session ไม่สำเร็จ');
+    if(data.show_oh===job.envelope.bundle.session.show_oh)return job;
+    // Drafts and queued operations retain their original generation/tokens.
+    // This optional field changes display only and is never persisted/sent.
+    if(preserveGeneration)return {...job,_displayOHV288:data.show_oh};
+    let updated=await prepareCountJobV281(job.assignmentId);
+    // A shared prefetch may have started before the admin changed OH.
+    // Once it settles, one new read obtains the current signed envelope.
+    if(updated.envelope.bundle.session.show_oh!==data.show_oh)updated=await prepareCountJobV281(job.assignmentId);
+    assertCountReadScopeV261(scope,owner);
+    return updated;
+  } catch(error) {
+    assertCountReadScopeV261(scope,owner);
+    if(transientCountConnectionV280(error))return job;
     throw error;
   }
 }
@@ -74727,6 +74772,7 @@ async function normalCountViewBundleV280(aid) {
   const view=countOfflineViewV279(job,state.operations);
   if(view.pending.some(op=>op.state==='review'))throw Object.assign(new Error('ผลนับยังอยู่ในเครื่องและรอตรวจทาน'),{code:'COUNT_PENDING_REVIEW'});
   const bundle=view.bundle;
+  if(typeof context.job?._displayOHV288==='boolean')bundle.session={...bundle.session,show_oh:context.job._displayOHV288};
   bundle.assignment.status=view.workflow.effectiveStatus;
   bundle._continuityV280=true;bundle._pendingV280=view.pending.length>0;
   return bundle;

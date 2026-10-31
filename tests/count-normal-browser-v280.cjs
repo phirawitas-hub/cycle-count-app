@@ -15,7 +15,7 @@ const names=['createCountOutboxV279','countOfflineViewV279','validateCountOfflin
  'computeItemStatus','determineItemNextRequiredRound','stockSnapshotItemKind','operationalStockSnapshotRows','wmsCountBaselineKey',
  'wmsCountBaselineMap','wmsBaselineStartedAtV254','applyWmsCountBaselines','determineNextRequiredCountRound','deriveAssignmentWorkflowStatus',
  'validateDashboardRulesV252','validateCountReadBundleV261','countReadErrorV261','isEmptyLocationItem','normalizeImportText',
- 'assignmentPhysicalCountFinished','escapeWmsText','countContinuityActiveV280','transientCountConnectionV280','obtainCountJobV280',
+ 'assignmentPhysicalCountFinished','escapeWmsText','countContinuityActiveV280','transientCountConnectionV280','obtainCountJobV280','refreshPreparedOHV288',
  'loadCountEntryV280','normalCountViewBundleV280','normalCountDraftValueV280','queueNormalCountDraftsV280','restoreNormalCountDraftsV280',
  'prefetchNormalCountV280','enqueueNormalCountV280','saveNormalCountV280','submitNormalCountV280','paintCountConnectionV280',
  'saveCountItemFromKeypad','resolveCountWorkflowAfterSave','confirmAndAdvanceCountInput','immediateCountRouteExtra'];
@@ -27,7 +27,7 @@ declarations.push('_myTasksOwnerV281','_countPrefetchPlanV281','_countPreparingV
 const fixture=`var me={id:${JSON.stringify(actor)}},S={page:'c-count'},_activePageRequestController={};
  var device=new URL(location.href).searchParams.get('device');var currentAid=device==='B'?${JSON.stringify(aid2)}:${JSON.stringify(aid)};
  var _myTasks=[],_selectedCounters=new Set(['ผู้ทดสอบ']),_photoMap={},_countEntryRules={},_countEntryRoundsByItem={};
- var sb={from:()=>{throw Error('Legacy write/read unexpectedly used')},rpc:async(name,args)=>{try{
+ var sb={from:table=>{if(table!=='count_sessions')throw Error('Unexpected table '+table);const q={select:()=>q,eq:(k,v)=>{if(k!=='id'||v!==${JSON.stringify(sid)})throw Error('Wrong Session');return q;},single:async()=>({data:{id:${JSON.stringify(sid)},show_oh:true},error:null})};return q;},rpc:async(name,args)=>{try{
    const response=await fetch('/rpc/'+name,{method:'POST',headers:{'Content-Type':'application/json','X-Device':device},body:JSON.stringify(args)});return await response.json();
  }catch(error){return {data:null,error:{message:error.message,code:'REQUEST_TIMEOUT'}}}}};
  var Q=id=>document.getElementById(id),getCountTypeIssue=()=>'',getSelectedCountRemarks=()=>[],refreshCountEntrySummary=()=>{},renderCounterPicker=()=>{},refreshCountRemarkSummary=()=>{};
@@ -55,7 +55,7 @@ const pageHtml=`<!doctype html><html lang="th"><meta charset="utf-8"><meta name=
 const fullPageHtml=html.replace(/<script\b[^>]*\bsrc\s*=\s*['"][^'"]+['"][^>]*>\s*<\/script>/gi,'')
  .replace('// Start Application',`boot=async()=>{
    me={id:${JSON.stringify(actor)}};prof={role:'counter',full_name:'ผู้ทดสอบ'};S={page:'c-count',aid:${JSON.stringify(aid)}};
-   sb={from:()=>{throw Error('Unexpected legacy read/write from actual form')},rpc:async(name,args)=>{
+   sb={from:table=>{if(table!=='count_sessions')throw Error('Unexpected table '+table);const q={select:()=>q,eq:(k,v)=>{if(k!=='id'||v!==${JSON.stringify(sid)})throw Error('Wrong Session');return q;},single:async()=>({data:{id:${JSON.stringify(sid)},show_oh:true},error:null})};return q;},rpc:async(name,args)=>{
      const response=await fetch('/rpc/'+name,{method:'POST',headers:{'Content-Type':'application/json','X-Device':'FULL'},body:JSON.stringify(args)});return response.json();}};
    window._myTasks=[];window._lastPickedCounterNames=['ผู้ทดสอบ'];
    document.getElementById('app').innerHTML='<div class="main-wrapper"><header class="topbar">บันทึกการนับ (ข้อมูลจำลอง)</header><main id="cnt" class="page-content"></main></div>';

@@ -58,7 +58,7 @@ function reader(){
  let reads=0;const job={key:'u|a',assignmentId:'a',generation:'g',preparedAt:Date.now()-86400000,envelope:{bundle:{assignment:{assigned_at:'2026-10-28T09:00:00Z'}}}};
  const state={owner:'u',jobs:[job],operations:[],drafts:[]};
  const c=productionContext(['obtainCountJobV280','transientCountConnectionV280'],{me:{id:'u'},S:{page:'c-count',aid:'a',_preparedCountV281:'a'},navigator:{onLine:true},_myTasks:[],
-  countOutboxV279:()=>({list:async aid=>{assert.equal(aid,'a');return state;}}),prepareCountJobV281:async()=>{reads++;return {...job,generation:'fresh'};}});
+  refreshPreparedOHV288:async job=>job,countOutboxV279:()=>({list:async aid=>{assert.equal(aid,'a');return state;}}),prepareCountJobV281:async()=>{reads++;return {...job,generation:'fresh'};}});
  return {c,job,state,reads:()=>reads};
 }
 test('online next-location opening refreshes stale prepared work instead of reusing yesterday forever',async()=>{
