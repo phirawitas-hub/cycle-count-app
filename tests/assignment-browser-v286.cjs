@@ -17,7 +17,7 @@ const output=path.resolve(process.argv[3]||'../../outputs');
  window.fixtureTables=${JSON.stringify(tables)};window.calls=[];
  sb={rpc:(name,args)=>{calls.push(name);return fetch('/rpc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,args})}).then(r=>r.json());},from:table=>{
    const state={filters:[],single:false,from:0,to:Infinity,write:false};
-   const q={select:()=>q,eq:(k,v)=>{state.filters.push(r=>r[k]===v);return q;},in:(k,v)=>{state.filters.push(r=>v.includes(r[k]));return q;},order:()=>q,range:(a,b)=>{state.from=a;state.to=b;return q;},maybeSingle:()=>{state.single=true;return q;},upsert:()=>{state.write=true;return q;},update:()=>{state.write=true;return q;},then:(resolve,reject)=>{
+   const q={select:()=>q,eq:(k,v)=>{state.filters.push(r=>r[k]===v);return q;},in:(k,v)=>{state.filters.push(r=>v.includes(r[k]));return q;},order:()=>q,range:(a,b)=>{state.from=a;state.to=b;return q;},single:()=>{state.single=true;return q;},maybeSingle:()=>{state.single=true;return q;},upsert:()=>{state.write=true;return q;},update:()=>{state.write=true;return q;},then:(resolve,reject)=>{
      calls.push(table);let rows=(fixtureTables[table]||[]).filter(r=>state.filters.every(f=>f(r))).slice(state.from,state.to+1);
      return Promise.resolve({data:state.single?(rows[0]||null):rows,error:state.write&&table!=='app_settings'?{message:'Unexpected fixture write '+table}:null}).then(resolve,reject);
    }};return q;}};
@@ -59,14 +59,18 @@ const output=path.resolve(process.argv[3]||'../../outputs');
     return {overlap:status.right>cancel.left+1&&status.left<cancel.right&&status.bottom>cancel.top&&status.top<cancel.bottom,overflow:panel.scrollWidth>panel.clientWidth+2};
   });assert.deepEqual(layout,{overlap:false,overflow:false});
   await page.locator('.normal-assignment-sticky-panel').screenshot({path:path.join(output,'v287-toolbar-compact.png')});
+  await db.query('update assignments set assigned_to=null,assigned_at=null,expired_at=now(),expired_from=$1 where id=$2',[other,uuid(10003)]);
+  assert.equal(await page.locator('#normal-cancel-unfinished-btn').innerText(),'ยกเลิกงาน');
   await page.locator('#normal-cancel-unfinished-btn').click();await page.waitForFunction(()=>document.getElementById('assignment-cancel-v286')?.state);
   await page.selectOption('#cancel-zone-v286','A');await page.getByRole('button',{name:'เลือกทั้งหมดตามตัวกรอง',exact:true}).click();
   assert.equal(await page.evaluate(()=>Q('assignment-cancel-v286').state.selected.size),5999);
   await page.selectOption('#cancel-zone-v286','B');assert.equal(await page.evaluate(()=>Q('assignment-cancel-v286').state.selected.size),0);
   await page.locator('#cancel-search-v286').fill('B-GA-00003-A');await page.locator('.cancel-row-v286 input').check();
+  assert.match(await page.locator('.cancel-row-v286').innerText(),/งานหมดเวลา รอจ่ายใหม่/);
+  await page.locator('#assignment-cancel-v286').screenshot({path:path.join(output,'v289-expired-cancel.png')});
   page.once('dialog',d=>d.accept());await page.locator('#cancel-confirm-v286').click();await page.locator('#assignment-cancel-v286').waitFor({state:'detached'});
   await page.waitForFunction(()=>window.menuReady);
-  assert.equal((await db.query('select assigned_to from assignments where id=$1',[uuid(10003)])).rows[0].assigned_to,null);
+  const cancelledExpired=(await db.query('select assigned_to,expired_at,expired_from from assignments where id=$1',[uuid(10003)])).rows[0];assert.deepEqual(cancelledExpired,{assigned_to:null,expired_at:null,expired_from:null});
   assert.equal((await db.query('select count(*)::int as n from assignments where assigned_to is null')).rows[0].n,1);
   await page.getByRole('button',{name:'เสร็จสิ้น',exact:true}).click();
   await page.evaluate(()=>setRound1AssignMode('annual'));

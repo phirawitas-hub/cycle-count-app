@@ -25703,7 +25703,7 @@ body.count-page-active #app .count-handheld-page.is-narrow-handheld-v259 .citem-
 <script>
 // V2.50: one authoritative application version for the browser title,
 // Sidebar, login screen, cache/build identity and Backup manifest.
-const APP_VERSION = '2.88';
+const APP_VERSION = '2.89';
 const APP_VERSION_LABEL = `V${APP_VERSION}`;
 const APP_BUILD_ID = `v${APP_VERSION.replace(/\./g,'-')}`;
 const APP_DEFAULT_SUBTITLE = `Warehouse ${APP_VERSION_LABEL}`;
@@ -60802,7 +60802,7 @@ function assignmentCancellationRowsV286(workspace,mode) {
   return sortRowsByLocation([...workspace.locationById.values()].filter(location=>{
     const a=assignments.get(location.id);
     if(a && (assignmentCountingFinished(a.status)||a.wms_closed_at))return false;
-    return mode==='annual'?jobLocations.has(location.id):Boolean(a?.assigned_to&&!jobLocations.has(location.id));
+    return mode==='annual'?jobLocations.has(location.id):Boolean((a?.assigned_to||isExpiredWaitingAssignment(a))&&!jobLocations.has(location.id));
   }).map(location=>({location,assignment:assignments.get(location.id)||null,jobs:[...(jobLocations.get(location.id)||[])],jobIds:[...(jobIdsByLocation.get(location.id)||[])]})),r=>r.location.code);
 }
 
@@ -60820,7 +60820,7 @@ async function openAssignmentCancellationV286(mode) {
   const sid=selectedAssignSessionConfig().sessionId;if(!sid)return;
   closeAssignmentCancellationV286();if(Q('assignment-cancel-v286'))return;
   const panel=document.createElement('div');panel.id='assignment-cancel-v286';panel.className='assignment-success-backdrop';
-  panel.innerHTML='<section class="assignment-success-modal" role="dialog" aria-modal="true" aria-labelledby="cancel-title-v287"><header class="cancel-header-v287"><div><span class="cancel-eyebrow-v287">จัดการงานมอบหมาย</span><h2 id="cancel-title-v287">ยกเลิกงานที่เลือก</h2></div><button class="btn btn-ghost cancel-close-v287" type="button" onclick="closeAssignmentCancellationV286()" aria-label="ปิดหน้าต่างยกเลิกงาน">✕</button></header><div id="cancel-content-v286">กำลังโหลดรายการ...</div></section>';
+  panel.innerHTML='<section class="assignment-success-modal" role="dialog" aria-modal="true" aria-labelledby="cancel-title-v287"><header class="cancel-header-v287"><div><span class="cancel-eyebrow-v287">จัดการงานมอบหมาย</span><h2 id="cancel-title-v287">ยกเลิกงาน</h2></div><button class="btn btn-ghost cancel-close-v287" type="button" onclick="closeAssignmentCancellationV286()" aria-label="ปิดหน้าต่างยกเลิกงาน">✕</button></header><div id="cancel-content-v286">กำลังโหลดรายการ...</div></section>';
   document.body.appendChild(panel);
   try {
     invalidateAssignmentWorkspaceCache(sid);
@@ -60855,7 +60855,7 @@ function renderAssignmentCancellationV286(page=0) {
   const rows=filteredAssignmentCancellationV286(state),pages=Math.max(1,Math.ceil(rows.length/100));
   state.page=Math.max(0,Math.min(page,pages-1));
   const allowed=new Set(rows.map(r=>r.location.id));state.selected=new Set([...state.selected].filter(id=>allowed.has(id)));
-  Q('cancel-list-v286').innerHTML=rows.slice(state.page*100,state.page*100+100).map(row=>'<label class="cancel-row-v286"><input type="checkbox" value="'+row.location.id+'" '+(state.selected.has(row.location.id)?'checked':'')+' onchange="toggleAssignmentCancellationV286(this.value,this.checked)"><strong>'+escapeWmsText(row.location.code)+'</strong><span>'+escapeWmsText(row.jobs.join(', ')||row.assignment?.profiles?.name||'')+'</span></label>').join('')
+  Q('cancel-list-v286').innerHTML=rows.slice(state.page*100,state.page*100+100).map(row=>'<label class="cancel-row-v286"><input type="checkbox" value="'+row.location.id+'" '+(state.selected.has(row.location.id)?'checked':'')+' onchange="toggleAssignmentCancellationV286(this.value,this.checked)"><strong>'+escapeWmsText(row.location.code)+'</strong><span>'+escapeWmsText((isExpiredWaitingAssignment(row.assignment)?'งานหมดเวลา รอจ่ายใหม่ · ':'')+(row.jobs.join(', ')||row.assignment?.profiles?.name||row.assignment?.expired_profiles?.name||''))+'</span></label>').join('')
     +(rows.length?'':'<div class="cancel-empty-v287"><strong>ไม่มี Location ที่ยกเลิกได้</strong><span>ลองเปลี่ยนตัวกรอง · งานที่เสร็จแล้วจะไม่แสดงในรายการนี้</span></div>')
     +(pages>1?'<div class="assign-pagination-v286"><button type="button" class="btn btn-ghost" onclick="renderAssignmentCancellationV286('+ (state.page-1)+')" '+(state.page===0?'disabled':'')+'>ก่อนหน้า</button><span>หน้า '+(state.page+1)+' / '+pages+'</span><button type="button" class="btn btn-ghost" onclick="renderAssignmentCancellationV286('+(state.page+1)+')" '+(state.page===pages-1?'disabled':'')+'>ถัดไป</button></div>':'');
   syncAssignmentCancellationV286();
@@ -60991,7 +60991,7 @@ function annualAssignmentWorkspaceHtml(userOptionsHtml) {
                   <button class="annual-job-mode-button" id="annual-operation-expired" type="button" onclick="setAnnualJobOperationMode('expired')" aria-pressed="false">จ่ายงานหมดเวลา</button>
                 </div>
               </div>
-              <button class="btn btn-amber" id="annual-cancel-unfinished-btn" type="button" onclick="openAssignmentCancellationV286('annual')">ยกเลิกงานที่เลือก</button>
+              <button class="btn btn-amber" id="annual-cancel-unfinished-btn" type="button" onclick="openAssignmentCancellationV286('annual')">ยกเลิกงาน</button>
               <div class="annual-job-status-row">
                 <label class="annual-job-control-field annual-job-status-field"><span>สถานะ JOB</span><select id="annual-job-filter" onchange="renderAnnualJobList()" aria-label="กรองสถานะ JOB">
                   <option value="all">JOB ทั้งหมด</option>
@@ -61332,7 +61332,7 @@ async function renderManageAssign(container) {
                           <button class="annual-job-mode-button" id="normal-operation-expired" type="button" onclick="setNormalAssignmentOperationMode('expired')" aria-pressed="false">จ่ายงานหมดเวลา</button>
                         </div>
                       </div>
-                      <button class="btn btn-amber" id="normal-cancel-unfinished-btn" type="button" onclick="openAssignmentCancellationV286('normal')">ยกเลิกงานที่เลือก</button>
+                      <button class="btn btn-amber" id="normal-cancel-unfinished-btn" type="button" onclick="openAssignmentCancellationV286('normal')">ยกเลิกงาน</button>
                       <div class="annual-job-status-row">${multiFilterFieldHtml('normal-free-status',uiCopy('สถานะงาน','Work Status'))}</div>
                     </div>
                   </section>

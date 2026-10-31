@@ -23,6 +23,7 @@ async function setup(size=8){
  await db.query("insert into assignments(id,session_id,location_id,assigned_to) select ('00000000-0000-4000-8000-'||lpad((10000+i)::text,12,'0'))::uuid,$1,('00000000-0000-4000-8000-'||lpad((100+i)::text,12,'0'))::uuid,$2 from generate_series(0,$3::int-1) i",[sid,other,size]);
  await db.query('insert into stock_snapshot(session_id,location_id,item_id,onhand_qty) select $1,id,$2,10 from locations',[sid,uuid(4)]);
  await db.exec(fs.readFileSync(path.join(__dirname,'../supabase/migrations/20261031032412_assignment_workspace_v286.sql'),'utf8'));
+  await db.exec(fs.readFileSync(path.join(__dirname,'../supabase/migrations/20261031155700_expired_assignment_cancel_v289.sql'),'utf8'));
  await db.query("select set_config('request.jwt.claim.sub',$1,false)",[actor]);await db.exec('set role authenticated');
  return db;
 }
